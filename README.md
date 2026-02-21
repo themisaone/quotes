@@ -4,12 +4,16 @@ A simple and elegant quote collection and management system built with PostgreSQ
 
 ## Features
 
-- 📝 Add, edit, and delete quotes
-- 🔍 Search and filter by quote text, author, book, tags, and date
+- 📝 Add, edit, and delete quotes with images and notes
+- 🔍 Search and filter by quote text, author, source, tags, and type
 - 📚 Beautiful, modern UI with responsive design
-- 🎯 Shows 20 latest quotes by default
-- 🏷️ Tag support for organizing quotes
-- 📅 Date tracking for when quotes were added
+- 👤 Manage authors with images
+- 📖 Manage sources (books, movies, assorted) with images
+- 🏷️ Tag system for organizing quotes
+- 📊 Pagination support (20 quotes per page)
+- 🎨 Multiple views: Quotes, Authors, Sources, Tags
+- 🔄 Refresh buttons on all pages
+- 📅 Timestamp tracking (created_at, updated_at)
 
 ## Prerequisites
 
@@ -24,29 +28,23 @@ npm install
 ```
 
 2. Configure database connection:
-   - Copy `.env.example` to `.env` if needed
-   - Update database credentials in `.env` file:
+   - Create a `.env` file in the root directory
+   - Add your database credentials:
 ```
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=quotes_db
-DB_USER=postgres
-DB_PASSWORD=postgres
+DATABASE_URL=postgresql://username:password@localhost:5432/quotes
 PORT=4000
 ```
 
 3. Create the database:
 ```bash
-createdb quotes_db
-```
-Or using psql:
-```sql
-CREATE DATABASE quotes_db;
+createdb quotes
 ```
 
-4. Run database migration:
+4. Run database migrations:
 ```bash
-npm run migrate
+cd migrations
+node 003_books_to_sources.js
+node 004_add_type_to_quotes.js
 ```
 
 ## Usage
@@ -66,30 +64,86 @@ npm run dev
 http://localhost:4000
 ```
 
+## Project Structure
+
+```
+quotes/
+├── src/                    # Source code
+│   ├── server.js          # Express server
+│   └── db.js              # Database connection
+├── public/                # Frontend files
+│   ├── index.html         # Main HTML
+│   ├── app.js             # Frontend JavaScript
+│   ├── style.css          # Styles
+│   └── favicon.svg        # App icon
+├── migrations/            # Database migrations
+│   ├── 003_books_to_sources.js
+│   └── 004_add_type_to_quotes.js
+├── scripts/               # Utility scripts
+│   ├── migrate.js         # Old migration scripts
+│   ├── setup.js           # Setup utilities
+│   └── ...
+├── docs/                  # Documentation
+│   └── ...
+├── package.json           # Dependencies
+└── README.md             # This file
+```
+
 ## API Endpoints
 
-- `GET /api/quotes` - Get all quotes (with optional filters)
-  - Query params: `quote`, `author`, `book`, `tags`, `date`, `limit`
+### Quotes
+- `GET /api/quotes` - Get all quotes (with filters: quote, author, source, tags, types, limit, offset)
+- `GET /api/quotes/count` - Get total count of quotes (with filters)
 - `GET /api/quotes/:id` - Get single quote
 - `POST /api/quotes` - Create new quote
 - `PUT /api/quotes/:id` - Update quote
 - `DELETE /api/quotes/:id` - Delete quote
 
+### Authors
+- `GET /api/authors` - Get all authors with quote counts
+- `GET /api/authors/:id` - Get single author with quote count
+- `PUT /api/authors/:id` - Update author (name, image)
+- `DELETE /api/authors/:id` - Delete author (only if no quotes)
+
+### Sources
+- `GET /api/sources` - Get all sources with quote counts
+- `GET /api/sources/:id` - Get single source with quote count
+- `PUT /api/sources/:id` - Update source (name, type, image)
+- `DELETE /api/sources/:id` - Delete source (only if no quotes)
+
+### Tags
+- `GET /api/tags` - Get all tags with quote counts
+
 ## Database Schema
 
-The `quotes` table contains:
-- `id` - Auto-incrementing primary key
-- `quote` - The quote text (required)
-- `author` - Author name (optional)
-- `book` - Book title (optional)
-- `tags` - Comma-separated tags (optional)
-- `date` - Date of the quote (defaults to current date)
-- `created_at` - Timestamp when quote was added
+### quotes
+- `id` - Primary key
+- `quote` - Quote text (TEXT, required)
+- `author_id` - Foreign key to authors table
+- `source_id` - Foreign key to sources table
+- `type` - Source type (BOOK|MOVIE|ASSORTED)
+- `tags` - Comma-separated tags (TEXT)
+- `image` - Thumbnail image (TEXT, base64)
+- `image_full` - Full-size image (TEXT, base64)
+- `note` - Additional notes (TEXT)
+- `created_at` - Timestamp
+- `updated_at` - Timestamp
+
+### authors
+- `id` - Primary key
+- `name` - Author name (VARCHAR, unique)
+- `image` - Author image (TEXT, base64)
+
+### sources
+- `id` - Primary key
+- `name` - Source name (VARCHAR, unique)
+- `type` - Source type (BOOK|MOVIE)
+- `image` - Source image (TEXT, base64)
 
 ## Technologies Used
 
 - **Backend**: Node.js, Express.js
-- **Database**: PostgreSQL
+- **Database**: PostgreSQL with pg driver
 - **Frontend**: HTML5, CSS3, Vanilla JavaScript
-- **Styling**: Modern CSS with CSS Grid and Flexbox
-# quotes
+- **Styling**: Modern CSS with CSS Grid, Flexbox, and CSS Variables
+- **Image Processing**: Client-side Canvas API for resizing

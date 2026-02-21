@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quotes Collection</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Side Menu -->
+        <nav class="side-menu">
+            <h2 class="side-menu-title">📚 My Collection</h2>
+            <ul class="side-menu-list">
+                <li><button class="menu-item active" data-view="quotes">💬 Quotes</button></li>
+                <li><button class="menu-item" data-view="authors">✍️ Authors</button></li>
+                <li><button class="menu-item" data-view="sources">📚 Sources</button></li>
+                <li><button class="menu-item" data-view="tags">🏷️ Tags</button></li>
+            </ul>
+        </nav>
+        
+        <!-- Main Content -->
+        <div class="main-content">
+        <!-- Quotes View (default) -->
+        <div id="quotesView" class="view-container">
+            <div class="container">
+        <header>
+            <h1>
+                💬 Quotes Collection 
+                <span class="quote-counts">
+                    <span id="filteredQuotesCount">0</span> / <span id="totalQuotesCount">0</span>
+                </span>
+            </h1>
+            <div class="header-actions">
+                <button id="refreshQuotesBtn" class="btn btn-icon" title="Refresh">🔄</button>
+                <button id="addBulkBtn" class="btn btn-secondary">+ Add Multiple Quotes</button>
+                <button id="addQuoteBtn" class="btn btn-primary">+ Add New Quote</button>
+            </div>
+        </header>
+
+        <!-- Search/Filter Section -->
+        <div class="search-section">
+            <h2>🔍 Search Quotes</h2>
+            
+            <!-- Source Type Filter -->
+            <div class="quote-type-filter">
+                <label><input type="checkbox" id="filterQuoteBook" value="BOOK" checked> 📖 Books</label>
+                <label><input type="checkbox" id="filterQuoteMovie" value="MOVIE" checked> 🎬 Movies</label>
+                <label><input type="checkbox" id="filterQuoteAssorted" value="ASSORTED" checked> 📝 Assorted</label>
+            </div>
+            
+            <div class="search-grid">
+                <div class="search-item">
+                    <label>Quote</label>
+                    <input type="text" id="searchQuote" placeholder="Search in quote text...">
+                </div>
+                <div class="search-item">
+                    <label>Author</label>
+                    <input type="text" id="searchAuthor" placeholder="Search by author...">
+                </div>
+                <div class="search-item">
+                    <label>Source</label>
+                    <input type="text" id="searchSource" placeholder="Search by source...">
+                </div>
+                <div class="search-item autocomplete-wrapper">
+                    <label>Tags</label>
+                    <input type="text" id="searchTags" placeholder="Search by tags..." autocomplete="off">
+                    <div id="tagsSuggestions" class="autocomplete-suggestions"></div>
+                </div>
+                <div class="search-item">
+                    <label>&nbsp;</label>
+                    <button id="clearBtn" class="btn btn-secondary">Clear Filters</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quotes List -->
+        <div class="quotes-section">
+            <h2>Latest Quotes <span id="quoteCount"></span></h2>
+            <div id="quotesList" class="quotes-list">
+                <div class="loading">Loading quotes...</div>
+            </div>
+            
+            <!-- Pagination Controls -->
+            <div id="paginationControls" class="pagination-container"></div>
+        </div><!-- end quotes-section -->
+            </div><!-- end .container -->
+        </div><!-- end quotesView -->
+        
+        <!-- Authors View -->
+        <div id="authorsView" class="view-container" style="display: none;">
+            <div class="container">
+            <header>
+                <h1>✍️ Authors</h1>
+                <div class="header-actions">
+                    <button id="refreshAuthorsBtn" class="btn btn-icon" title="Refresh">🔄</button>
+                </div>
+            </header>
+            
+            <!-- Search and Sort Controls -->
+            <div class="sources-controls">
+                <div class="search-box">
+                    <input type="text" id="searchAuthorName" placeholder="🔍 Search authors...">
+                </div>
+                <div class="sort-controls">
+                    <label>Sort by:</label>
+                    <button id="sortAuthorsByName" class="sort-btn active">Name</button>
+                    <button id="sortAuthorsByCount" class="sort-btn">Number of Quotes</button>
+                </div>
+            </div>
+            
+            <div id="authorsList" class="cards-grid">
+                <div class="loading">Loading authors...</div>
+            </div>
+            </div>
+        </div>
+        
+        <!-- Sources View -->
+        <div id="sourcesView" class="view-container" style="display: none;">
+            <div class="container">
+            <header>
+                <h1>📚 Sources</h1>
+                <div class="header-actions">
+                    <button id="refreshSourcesBtn" class="btn btn-icon" title="Refresh">🔄</button>
+                </div>
+                <!-- Source Type Filter -->
+                <div class="source-type-filter">
+                    <label><input type="checkbox" id="filterBook" value="BOOK" checked> 📖 Books</label>
+                    <label><input type="checkbox" id="filterMovie" value="MOVIE" checked> 🎬 Movies</label>
+                </div>
+            </header>
+            
+            <!-- Search and Sort Controls -->
+            <div class="sources-controls">
+                <div class="search-box">
+                    <input type="text" id="searchSourceName" placeholder="🔍 Search sources...">
+                </div>
+                <div class="sort-controls">
+                    <label>Sort by:</label>
+                    <button id="sortByName" class="sort-btn active">Name</button>
+                    <button id="sortByCount" class="sort-btn">Number of Quotes</button>
+                </div>
+            </div>
+            
+            <div id="sourcesList" class="cards-grid">
+                <div class="loading">Loading sources...</div>
+            </div>
+            </div>
+        </div>
+        
+        <!-- Tags View -->
+        <div id="tagsView" class="view-container" style="display: none;">
+            <div class="container">
+            <header>
+                <h1>🏷️ Tags</h1>
+                <div class="header-actions">
+                    <button id="refreshTagsBtn" class="btn btn-icon" title="Refresh">🔄</button>
+                </div>
+            </header>
+            <div id="tagsList" class="tags-list">
+                <div class="loading">Loading tags...</div>
+            </div>
+            </div>
+        </div>
+        </div><!-- end main-content -->
+    </div><!-- end app-layout -->
+        <!-- Add/Edit Quote Modal -->
+        <div id="quoteModal" class="modal">
+            <div class="modal-content modal-wide">
+                <span class="close">&times;</span>
+                <h2 id="modalTitle">Add New Quote</h2>
+                <form id="quoteForm">
+                    <input type="hidden" id="quoteId">
+                    
+                    <div class="form-group">
+                        <label for="quoteText">Quote *</label>
+                        <textarea id="quoteText" required rows="4" placeholder="Enter the quote text..."></textarea>
+                    </div>
+
+                    <div class="form-row form-row-3">
+                        <div class="form-group autocomplete-wrapper">
+                            <label for="author">Author</label>
+                            <input type="text" id="author" placeholder="Author name" autocomplete="off">
+                            <div id="authorSuggestions" class="autocomplete-suggestions"></div>
+                        </div>
+
+                        <div class="form-group autocomplete-wrapper">
+                            <label for="source">Source</label>
+                            <input type="text" id="source" placeholder="Source title" autocomplete="off">
+                            <div id="sourceSuggestions" class="autocomplete-suggestions"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="sourceType">Type</label>
+                            <select id="sourceType">
+                                <option value="BOOK">📖 Book</option>
+                                <option value="MOVIE">🎬 Movie</option>
+                                <option value="ASSORTED">📝 Assorted</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row form-row-1">
+                        <div class="form-group">
+                            <label for="tags">Tags</label>
+                            <input type="text" id="tags" placeholder="motivation, wisdom">
+                        </div>
+                    </div>
+
+                    <div class="form-row form-row-2">
+                        <div class="form-group">
+                            <label for="note">Note (Optional)</label>
+                            <textarea id="note" rows="2" placeholder="Additional description or context..."></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="quoteImage">
+                                Image (Optional)
+                                <button type="button" class="btn-icon" onclick="document.getElementById('quoteImageFile').click()" title="Upload image">📁</button>
+                                <button type="button" id="clearQuoteImage" class="btn-icon" title="Clear image">🗑️</button>
+                            </label>
+                            <div class="image-upload-area-compact">
+                                <div id="quoteImagePreview" class="image-preview-compact">
+                                    <div class="image-placeholder-compact">
+                                        <span>🖼️</span>
+                                        <p>Paste (Ctrl+V) or click 📁</p>
+                                    </div>
+                                </div>
+                                <input type="file" id="quoteImageFile" accept="image/*" style="display: none;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Save Quote</button>
+                        <button type="button" id="cancelBtn" class="btn btn-secondary">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Edit Author Modal -->
+        <div id="authorModal" class="modal">
+            <div class="modal-content">
+                <span class="close close-author">&times;</span>
+                <h2>Edit Author</h2>
+                <form id="authorForm">
+                    <input type="hidden" id="authorId">
+                    
+                    <div class="form-group">
+                        <label for="authorName">Author Name *</label>
+                        <input type="text" id="authorName" required placeholder="Author name">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="authorImage">Author Picture</label>
+                        <div class="image-upload-area">
+                            <div id="authorImagePreview" class="image-preview">
+                                <div class="image-placeholder">
+                                    <span>📷</span>
+                                    <p>Paste image (Ctrl+V) or click to upload</p>
+                                </div>
+                            </div>
+                            <input type="file" id="authorImageFile" accept="image/*" style="display: none;">
+                            <button type="button" class="btn btn-secondary" onclick="document.getElementById('authorImageFile').click()">Choose File</button>
+                            <button type="button" id="clearAuthorImage" class="btn btn-secondary">Clear Image</button>
+                        </div>
+                        <small>Image will be resized to fit 300px (longest dimension)</small>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                        <button type="button" id="deleteAuthorBtn" class="btn btn-danger" style="display: none;">Delete Author</button>
+                        <button type="button" id="cancelAuthorBtn" class="btn btn-secondary">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Edit Source Modal -->
+        <div id="sourceModal" class="modal">
+            <div class="modal-content">
+                <span class="close close-source">&times;</span>
+                <h2>Edit Source</h2>
+                <form id="sourceForm">
+                    <input type="hidden" id="sourceId">
+                    
+                    <div class="form-group">
+                        <label for="sourceName">Source Title *</label>
+                        <input type="text" id="sourceName" required placeholder="Source title">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="sourceTypeEdit">Type *</label>
+                        <select id="sourceTypeEdit" required>
+                            <option value="BOOK">📖 Book</option>
+                            <option value="MOVIE">🎬 Movie</option>
+                            <option value="ASSORTED">📝 Assorted</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sourceImage">Source Cover</label>
+                        <div class="image-upload-area">
+                            <div id="sourceImagePreview" class="image-preview">
+                                <div class="image-placeholder">
+                                    <span>📚</span>
+                                    <p>Paste image (Ctrl+V) or click to upload</p>
+                                </div>
+                            </div>
+                            <input type="file" id="sourceImageFile" accept="image/*" style="display: none;">
+                            <button type="button" class="btn btn-secondary" onclick="document.getElementById('sourceImageFile').click()">Choose File</button>
+                            <button type="button" id="clearSourceImage" class="btn btn-secondary">Clear Image</button>
+                        </div>
+                        <small>Image will be resized to fit 300px (longest dimension)</small>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                        <button type="button" id="deleteSourceBtn" class="btn btn-danger" style="display: none;">Delete Source</button>
+                        <button type="button" id="cancelSourceBtn" class="btn btn-secondary">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Bulk Import Modal -->
+        <div id="bulkModal" class="modal">
+            <div class="modal-content modal-large">
+                <span class="close close-bulk">&times;</span>
+                <h2>Add Multiple Quotes</h2>
+                <form id="bulkForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="bulkAuthor">Author *</label>
+                            <div class="autocomplete-wrapper">
+                                <input type="text" id="bulkAuthor" required placeholder="Author name">
+                                <div id="bulkAuthorSuggestions" class="suggestions"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="bulkSource">Source</label>
+                            <div class="autocomplete-wrapper">
+                                <input type="text" id="bulkSource" placeholder="Source title">
+                                <div id="bulkSourceSuggestions" class="suggestions"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="bulkSourceType">Type</label>
+                            <select id="bulkSourceType">
+                                <option value="BOOK">📖 Book</option>
+                                <option value="MOVIE">🎬 Movie</option>
+                                <option value="ASSORTED">📝 Assorted</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="bulkQuotes">Quotes (separated by ---) *</label>
+                        <textarea id="bulkQuotes" required rows="15" placeholder="Paste your quotes here, separated by three dashes (---) on a new line:
+
+Quote number one...
+---
+Quote number two...
+---
+Quote number three..."></textarea>
+                        <small>Separate each quote with <code>---</code> on its own line</small>
+                    </div>
+
+                    <div id="bulkPreview" class="bulk-preview" style="display: none;">
+                        <h3>Preview: <span id="quoteCount">0</span> quotes will be added</h3>
+                        <div id="previewList"></div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" id="previewBulkBtn" class="btn btn-secondary">Preview Quotes</button>
+                        <button type="submit" class="btn btn-primary">Add All Quotes</button>
+                        <button type="button" id="cancelBulkBtn" class="btn btn-secondary">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
