@@ -15,6 +15,7 @@ This guide covers deploying the Quotes Database application to Railway (or simil
 ### Step 1: Prepare Your Repository
 
 Ensure your `.gitignore` includes:
+
 ```
 node_modules/
 .env
@@ -43,6 +44,7 @@ Commit and push your code to GitHub.
 ### Step 4: Configure Environment Variables
 
 Railway should automatically set:
+
 - `DATABASE_URL` - PostgreSQL connection string
 - `PORT` - Application port (Railway manages this)
 
@@ -79,6 +81,7 @@ railway run npm run migrate
 **Option C: Add to package.json scripts**
 
 Update `package.json` to run migrations on deployment:
+
 ```json
 {
   "scripts": {
@@ -100,6 +103,7 @@ You can also manually trigger a deployment from the Railway dashboard.
 ### Step 7: Access Your App
 
 Railway will provide a public URL like:
+
 ```
 https://your-app-name.railway.app
 ```
@@ -117,6 +121,7 @@ The migration runner (`npm run migrate`) will execute migrations in order:
 ### For Existing Databases (Your local dev)
 
 If you already have data:
+
 - 001 will use `CREATE TABLE IF NOT EXISTS` (safe to run)
 - 003 and 004 will skip if already migrated
 
@@ -155,11 +160,13 @@ PORT=4000
 ### Migration Fails on Railway
 
 **Check logs:**
+
 ```bash
 railway logs
 ```
 
 **Connect to Railway DB directly:**
+
 ```bash
 railway connect postgres
 ```
@@ -169,6 +176,7 @@ Then run SQL manually if needed.
 ### Database Connection Issues
 
 Ensure `DATABASE_URL` is set:
+
 ```bash
 railway variables
 ```
@@ -176,6 +184,7 @@ railway variables
 ### App Won't Start
 
 Check that:
+
 1. `npm run migrate` completed successfully
 2. `DATABASE_URL` is set
 3. All dependencies are in `package.json` (not devDependencies)
@@ -187,7 +196,7 @@ Check that:
 ✅ Can access the web interface  
 ✅ Can create/read/update/delete quotes  
 ✅ Images upload correctly  
-✅ Search and filters work  
+✅ Search and filters work
 
 ## Rollback Strategy
 
@@ -200,6 +209,7 @@ If deployment fails:
 ## Continuous Deployment
 
 Every push to `main` branch will:
+
 1. Trigger Railway deployment
 2. Run `npm install`
 3. Run `npm run build` (migrations)
@@ -208,6 +218,7 @@ Every push to `main` branch will:
 ## Cost
 
 Railway offers:
+
 - **Free tier**: $5/month credit (enough for small apps)
 - **Pro tier**: $20/month + usage
 
@@ -216,6 +227,7 @@ PostgreSQL database counts toward usage.
 ## Security
 
 Railway automatically provides:
+
 - HTTPS
 - Environment variable encryption
 - DDoS protection
@@ -226,6 +238,7 @@ Railway automatically provides:
 ## Alternative Platforms
 
 This setup also works with:
+
 - **Heroku** - Similar workflow, add Heroku PostgreSQL addon
 - **Render** - Similar workflow, native PostgreSQL support
 - **Fly.io** - Requires `fly.toml` configuration

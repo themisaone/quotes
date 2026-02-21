@@ -3,6 +3,7 @@
 ## ✅ Fixed Multiple CSS Issues
 
 ### **Problems Found:**
+
 1. ❌ Grid layout not working properly
 2. ❌ Elements stacking vertically instead of horizontally
 3. ❌ Duplicate label CSS causing conflicts
@@ -18,19 +19,20 @@
 **Problem:** All `.form-group` had `flex: 1`, interfering with grid layout.
 
 **Fix:**
+
 ```css
 .form-group {
-    margin-bottom: 1.5rem;
-    /* Removed: flex: 1 */
+  margin-bottom: 1.5rem;
+  /* Removed: flex: 1 */
 }
 
 .form-row .form-group {
-    flex: 1;  /* Only for flex rows */
+  flex: 1; /* Only for flex rows */
 }
 
 .form-row-2 .form-group,
 .form-row-3 .form-group {
-    margin-bottom: 0;  /* Remove extra margin in grid */
+  margin-bottom: 0; /* Remove extra margin in grid */
 }
 ```
 
@@ -39,17 +41,18 @@
 **Problem:** Label had conflicting display properties (both `flex` and `block`).
 
 **Fix:**
+
 ```css
 label {
-    display: block;  /* Default */
-    margin-bottom: 0.5rem;
-    font-weight: 500;
-    color: var(--text-primary);
+  display: block; /* Default */
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: var(--text-primary);
 }
 
 label:has(.btn-icon) {
-    display: flex;  /* Only when it has icon buttons */
-    align-items: center;
+  display: flex; /* Only when it has icon buttons */
+  align-items: center;
 }
 ```
 
@@ -58,11 +61,12 @@ label:has(.btn-icon) {
 **Problem:** Too small (80px) and missing width property.
 
 **Fix:**
+
 ```css
 .image-upload-area-compact {
-    min-height: 120px;  /* Was 80px */
-    width: 100%;  /* Added */
-    padding: 0.75rem;  /* Was 0.5rem */
+  min-height: 120px; /* Was 80px */
+  width: 100%; /* Added */
+  padding: 0.75rem; /* Was 0.5rem */
 }
 ```
 
@@ -71,12 +75,13 @@ label:has(.btn-icon) {
 **Problem:** Grid layouts not responsive on mobile.
 
 **Fix:**
+
 ```css
 @media (max-width: 768px) {
-    .form-row-2,
-    .form-row-3 {
-        grid-template-columns: 1fr;  /* Stack on mobile */
-    }
+  .form-row-2,
+  .form-row-3 {
+    grid-template-columns: 1fr; /* Stack on mobile */
+  }
 }
 ```
 
@@ -85,6 +90,7 @@ label:has(.btn-icon) {
 ## ✨ Result
 
 ### **Desktop View (Wide Screen):**
+
 ```
 ┌───────────────────────────────────────────┐
 │ Author        Book          Tags         │  ← 3 columns
@@ -94,6 +100,7 @@ label:has(.btn-icon) {
 ```
 
 ### **Mobile View (< 768px):**
+
 ```
 ┌─────────────┐
 │ Author      │
@@ -110,6 +117,7 @@ label:has(.btn-icon) {
 ## 📝 Changes Summary
 
 **Fixed:**
+
 - ✅ Grid layout now displays correctly (3 columns, then 2 columns)
 - ✅ Labels display properly (block by default, flex with icons)
 - ✅ Image upload area proper size and width
@@ -118,6 +126,7 @@ label:has(.btn-icon) {
 - ✅ Proper spacing and margins
 
 **Files Modified:**
+
 - ✅ `public/style.css`
 
 ---

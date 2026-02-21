@@ -9,24 +9,29 @@ You can now add multiple quotes from the same author/book in one go!
 ## 🎯 How It Works
 
 ### **1. Click "Add Multiple Quotes" Button**
+
 - New button appears at the top of the page
 - Opens a bulk import modal
 
 ### **2. Fill in Common Details**
+
 - **Author** (required) - The author for all quotes
 - **Book** (optional) - The book for all quotes
 - Both have autocomplete from existing entries
 
 ### **3. Paste Multiple Quotes**
+
 - Paste all your quotes in the textarea
 - **Separate each quote with `---` on its own line**
 - Quotes can be multi-line (line breaks preserved)
 
 ### **4. Preview (Optional)**
+
 - Click "Preview Quotes" to see how they'll be split
 - Shows count and formatted preview of each quote
 
 ### **5. Add All Quotes**
+
 - Click "Add All Quotes"
 - Confirms before adding
 - Shows progress while adding
@@ -40,11 +45,11 @@ You can now add multiple quotes from the same author/book in one go!
 «Den som ikke sier stort, snakker heller ikke så mye dritt, det pleide far din å si,»
 ---
 Natt og dag
-Folk sa alltid at Ove og kona hans var som natt og dag. 
+Folk sa alltid at Ove og kona hans var som natt og dag.
 Ove skjønte selvsagt at de mente det var han som var natten.
 ---
 Kvinnfolk og planlegging
-Men sånn var det jo med kvinnfolk. 
+Men sånn var det jo med kvinnfolk.
 De kunne ikke holde seg til en plan om de så ble limt fast til den,
 ---
 Derfor
@@ -58,33 +63,39 @@ Han skrev kanskje ikke dikt til henne, han sang ingen serenader, han kom ikke hj
 ## ✨ Features
 
 **1. Separator: `---`**
+
 - ✅ Three dashes on its own line
 - ✅ Must have newline before and after
 - ✅ Clean, readable separator
 
 **2. Multi-line Quotes:**
+
 - ✅ Each quote can have multiple paragraphs
 - ✅ Line breaks preserved
 - ✅ Just like single quote entry
 
 **3. Preview:**
+
 - ✅ See how quotes will be split
 - ✅ Shows count: "X quotes will be added"
 - ✅ Each quote numbered and formatted
 - ✅ Scrollable preview list
 
 **4. Progress Tracking:**
+
 - ✅ Button shows "Adding quotes... (3/10)"
 - ✅ Real-time progress
 - ✅ Summary at the end
 
 **5. Error Handling:**
+
 - ✅ Validates author is provided
 - ✅ Validates quotes exist
 - ✅ Confirms before adding
 - ✅ Reports success/failure count
 
 **6. Autocomplete:**
+
 - ✅ Author field has autocomplete
 - ✅ Book field has autocomplete
 - ✅ Reuse existing authors/books easily
@@ -94,6 +105,7 @@ Han skrev kanskje ikke dikt til henne, han sang ingen serenader, han kom ikke hj
 ## 🚀 Usage Scenarios
 
 ### **Scenario 1: Copying Quotes from a Book**
+
 1. Read book, collect multiple quotes
 2. Type them all in a document with `---` between
 3. Copy all at once
@@ -103,12 +115,14 @@ Han skrev kanskje ikke dikt til henne, han sang ingen serenader, han kom ikke hj
 7. Add all at once!
 
 ### **Scenario 2: Importing from Notes**
+
 1. Have notes with many quotes
 2. Format with `---` separator
 3. Bulk import to database
 4. Saves tons of time!
 
 ### **Scenario 3: Same Author, Different Quotes**
+
 1. Reading through an author's work
 2. Collect multiple memorable quotes
 3. Don't want to click "Add Quote" 20 times
@@ -119,6 +133,7 @@ Han skrev kanskje ikke dikt til henne, han sang ingen serenader, han kom ikke hj
 ## 📊 How It Processes
 
 **Step-by-step:**
+
 ```
 1. Split text by "\n---\n" (newline, dashes, newline)
 2. Trim whitespace from each quote
@@ -138,6 +153,7 @@ Han skrev kanskje ikke dikt til henne, han sang ingen serenader, han kom ikke hj
 ## 🎨 UI Elements
 
 **Bulk Import Modal:**
+
 - ✅ Larger modal (`max-width: 800px`)
 - ✅ Author field with autocomplete
 - ✅ Book field with autocomplete
@@ -147,6 +163,7 @@ Han skrev kanskje ikke dikt til henne, han sang ingen serenader, han kom ikke hj
 - ✅ Three buttons: Preview, Add All, Cancel
 
 **Preview Display:**
+
 - ✅ Gray background container
 - ✅ Quote count at top
 - ✅ Scrollable list (max 300px)
@@ -159,6 +176,7 @@ Han skrev kanskje ikke dikt til henne, han sang ingen serenader, han kom ikke hj
 ## 💡 Tips
 
 **Best Practices:**
+
 1. ✅ Use `---` on its own line (not `----` or `--`)
 2. ✅ Add blank line before and after `---`
 3. ✅ Use Preview to verify splitting is correct
@@ -166,12 +184,14 @@ Han skrev kanskje ikke dikt til henne, han sang ingen serenader, han kom ikke hj
 5. ✅ Author is required, book is optional
 
 **Common Mistakes:**
+
 - ❌ Using `----` (4 dashes) - won't work
 - ❌ No newline before/after `---` - won't split
 - ❌ Forgetting to fill author field
 - ❌ Not using separator at all
 
 **Good Separator:**
+
 ```
 Quote one
 ---
@@ -179,6 +199,7 @@ Quote two
 ```
 
 **Bad Separator:**
+
 ```
 Quote one
 ----
@@ -190,29 +211,32 @@ Quote two
 ## 🔧 Technical Details
 
 ### **Splitting Logic:**
+
 ```javascript
 const quotes = quotesText
-    .split(/\n---\n/)  // Regex: newline + three dashes + newline
-    .map(q => q.trim())  // Remove whitespace
-    .filter(q => q.length > 0);  // Remove empty
+  .split(/\n---\n/) // Regex: newline + three dashes + newline
+  .map((q) => q.trim()) // Remove whitespace
+  .filter((q) => q.length > 0); // Remove empty
 ```
 
 ### **Adding Process:**
+
 ```javascript
 for (let i = 0; i < quotes.length; i++) {
-    await fetch('/api/quotes', {
-        method: 'POST',
-        body: JSON.stringify({
-            quote: quotes[i],
-            author: author,
-            book: book,
-            tags: ''
-        })
-    });
+  await fetch("/api/quotes", {
+    method: "POST",
+    body: JSON.stringify({
+      quote: quotes[i],
+      author: author,
+      book: book,
+      tags: "",
+    }),
+  });
 }
 ```
 
 ### **Progress Display:**
+
 ```javascript
 submitBtn.textContent = `Adding quotes... (${i + 1}/${quotes.length})`;
 ```
@@ -222,11 +246,13 @@ submitBtn.textContent = `Adding quotes... (${i + 1}/${quotes.length})`;
 ## 📝 Files Modified
 
 **Frontend:**
+
 - ✅ `public/index.html` - Added bulk import modal & button
 - ✅ `public/style.css` - Added bulk modal styles
 - ✅ `public/app.js` - Added bulk import functions
 
 **Backend:**
+
 - ✅ No changes needed! Uses existing POST endpoint
 
 ---
@@ -234,10 +260,12 @@ submitBtn.textContent = `Adding quotes... (${i + 1}/${quotes.length})`;
 ## 🎉 Result
 
 **Save Time!**
+
 - Before: Add 10 quotes = Click "Add" button 10 times
 - After: Add 10 quotes = One bulk import!
 
 **Perfect for:**
+
 - ✅ Book quote collections
 - ✅ Author compilations
 - ✅ Importing from notes

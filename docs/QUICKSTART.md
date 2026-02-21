@@ -74,9 +74,10 @@ If you want to test that everything works, you can:
 ## 📋 Database Schema
 
 The `quotes` table has these fields:
+
 - **quote** (required) - The quote text
 - **author** (optional) - Author name
-- **book** (optional) - Book title  
+- **book** (optional) - Book title
 - **tags** (optional) - Comma-separated tags like "wisdom, motivation"
 - **date** (optional) - Date for the quote (defaults to today)
 - **created_at** - Auto-generated timestamp

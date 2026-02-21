@@ -5,12 +5,14 @@
 ### **Current Behavior:**
 
 **Client-Side Resizing:**
+
 ```javascript
 // Image is resized BEFORE sending to server
 const resizedBase64 = resizeImage(img, 300);
 ```
 
 **What Happens:**
+
 1. ✅ User uploads/pastes image (any size: 5000x3000px, 10MB)
 2. ✅ JavaScript resizes to **300px** (longest dimension) in browser
 3. ✅ Converts to JPEG at 85% quality (~20-50KB)
@@ -18,6 +20,7 @@ const resizedBase64 = resizeImage(img, 300);
 5. ✅ Stored in database as base64 string
 
 **Result:**
+
 - ❌ **Original high-resolution image is LOST**
 - ✅ Only the 300px thumbnail is saved
 - ✅ Small file size (~20-50KB instead of 5-10MB)
@@ -28,6 +31,7 @@ const resizedBase64 = resizeImage(img, 300);
 ## 💡 Why This Design?
 
 ### **Pros:**
+
 - ✅ Prevents "413 Payload Too Large" errors
 - ✅ Fast uploads (small files)
 - ✅ Fast page loading
@@ -36,6 +40,7 @@ const resizedBase64 = resizeImage(img, 300);
 - ✅ Good enough for thumbnail display
 
 ### **Cons:**
+
 - ❌ Can't zoom to see full detail
 - ❌ Can't print high resolution
 - ❌ Original lost forever
@@ -45,20 +50,23 @@ const resizedBase64 = resizeImage(img, 300);
 ## 🔄 Alternative Approaches
 
 ### **Option 1: Keep Current (Recommended)**
+
 - **Use Case:** Thumbnails, visual references, book covers
 - **Pro:** Simple, fast, no storage issues
 - **Con:** Low resolution only
 
 ### **Option 2: Save Both Sizes**
+
 - **Change:** Save original + thumbnail
 - **Pro:** Can zoom/download original
 - **Con:** Much more storage, slower uploads
-- **Implementation:** 
+- **Implementation:**
   - Store original in file system or cloud storage (S3, etc.)
   - Store thumbnail in database
   - Add "View Full Size" button
 
 ### **Option 3: Store Original, Generate Thumbnail on Server**
+
 - **Change:** Upload full size, resize on server
 - **Pro:** Original preserved, consistent resizing
 - **Con:** Server processing, larger uploads, storage needed
@@ -68,6 +76,7 @@ const resizedBase64 = resizeImage(img, 300);
   - Store both versions
 
 ### **Option 4: External Image Hosting**
+
 - **Change:** Upload to Imgur/CloudFront/similar
 - **Pro:** No storage concerns, CDN delivery
 - **Con:** Depends on external service, API keys needed
@@ -77,6 +86,7 @@ const resizedBase64 = resizeImage(img, 300);
 ## 📊 Current vs. Proposed Storage
 
 ### **Current (300px thumbnails):**
+
 ```
 1000 quotes with images:
 - Average: 30KB per image
@@ -85,6 +95,7 @@ const resizedBase64 = resizeImage(img, 300);
 ```
 
 ### **If Storing Originals:**
+
 ```
 1000 quotes with images:
 - Average: 2MB per original
@@ -100,6 +111,7 @@ const resizedBase64 = resizeImage(img, 300);
 **For Quote Collection Use Case:**
 
 **Keep Current System** ✅
+
 - Quote images are typically:
   - Book covers (don't need high res)
   - Screenshots (300px is enough)
@@ -108,6 +120,7 @@ const resizedBase64 = resizeImage(img, 300);
 - Keep it simple and fast
 
 **Only Change If:**
+
 - Need to print quotes with images
 - Need to zoom to see fine details
 - Collecting art/photography quotes
@@ -120,16 +133,19 @@ const resizedBase64 = resizeImage(img, 300);
 Let me know and I can implement:
 
 **Option A: Simple File Storage**
+
 - Save original images to `uploads/originals/` folder
 - Keep thumbnail in database
 - Add "View Original" link
 
 **Option B: Dual Storage**
+
 - Store both sizes in database
 - Show thumbnail by default
 - Click to expand to full size
 
 **Option C: Cloud Storage**
+
 - Integrate with cloud service (S3, Cloudinary, etc.)
 - Upload full size there
 - Store URL in database

@@ -23,6 +23,7 @@ A simple and elegant quote collection and management system built with PostgreSQ
 ## Installation
 
 1. Install dependencies:
+
 ```bash
 npm install
 ```
@@ -30,17 +31,20 @@ npm install
 2. Configure database connection:
    - Create a `.env` file in the root directory
    - Add your database credentials:
+
 ```
 DATABASE_URL=postgresql://username:password@localhost:5432/quotes
 PORT=4000
 ```
 
 3. Create the database:
+
 ```bash
 createdb quotes
 ```
 
 4. Run database migrations:
+
 ```bash
 cd migrations
 node 003_books_to_sources.js
@@ -50,16 +54,19 @@ node 004_add_type_to_quotes.js
 ## Usage
 
 1. Start the server:
+
 ```bash
 npm start
 ```
 
 For development with auto-reload:
+
 ```bash
 npm run dev
 ```
 
 2. Open your browser and navigate to:
+
 ```
 http://localhost:4000
 ```
@@ -92,6 +99,7 @@ quotes/
 ## API Endpoints
 
 ### Quotes
+
 - `GET /api/quotes` - Get all quotes (with filters: quote, author, source, tags, types, limit, offset)
 - `GET /api/quotes/count` - Get total count of quotes (with filters)
 - `GET /api/quotes/:id` - Get single quote
@@ -100,23 +108,27 @@ quotes/
 - `DELETE /api/quotes/:id` - Delete quote
 
 ### Authors
+
 - `GET /api/authors` - Get all authors with quote counts
 - `GET /api/authors/:id` - Get single author with quote count
 - `PUT /api/authors/:id` - Update author (name, image)
 - `DELETE /api/authors/:id` - Delete author (only if no quotes)
 
 ### Sources
+
 - `GET /api/sources` - Get all sources with quote counts
 - `GET /api/sources/:id` - Get single source with quote count
 - `PUT /api/sources/:id` - Update source (name, type, image)
 - `DELETE /api/sources/:id` - Delete source (only if no quotes)
 
 ### Tags
+
 - `GET /api/tags` - Get all tags with quote counts
 
 ## Database Schema
 
 ### quotes
+
 - `id` - Primary key
 - `quote` - Quote text (TEXT, required)
 - `author_id` - Foreign key to authors table
@@ -130,11 +142,13 @@ quotes/
 - `updated_at` - Timestamp
 
 ### authors
+
 - `id` - Primary key
 - `name` - Author name (VARCHAR, unique)
 - `image` - Author image (TEXT, base64)
 
 ### sources
+
 - `id` - Primary key
 - `name` - Source name (VARCHAR, unique)
 - `type` - Source type (BOOK|MOVIE)

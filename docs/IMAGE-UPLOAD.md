@@ -3,17 +3,20 @@
 ## ✅ New Features Implemented
 
 ### **Clickable Author & Book Names**
+
 - ✅ Author names in quote cards are now **clickable links**
 - ✅ Book names in quote cards are now **clickable links**
 - ✅ Visual styling (underlined, blue color, hover effect)
 
 ### **Edit Modals**
+
 - ✅ Click author name → opens **Author Edit Modal**
 - ✅ Click book name → opens **Book Edit Modal**
 - ✅ Change name
 - ✅ Upload/paste picture
 
 ### **Image Upload & Processing**
+
 - ✅ **Upload via file picker** - Click "Choose File" button
 - ✅ **Paste image** - Use Ctrl+V (Cmd+V on Mac) to paste from clipboard
 - ✅ **Click preview area** - Opens file picker
@@ -26,6 +29,7 @@
 ## 🎯 How to Use
 
 ### **Edit Author:**
+
 1. Click on any author name in a quote card
 2. Modal opens with current author info
 3. **Change name** if needed
@@ -35,6 +39,7 @@
 5. Click "Save Changes"
 
 ### **Edit Book:**
+
 1. Click on any book name in a quote card
 2. Modal opens with current book info
 3. **Change name** if needed
@@ -48,11 +53,13 @@
 ## 📸 Image Features
 
 ### **Supported Methods:**
+
 1. **File Upload** - Traditional file picker
 2. **Paste** - Copy image anywhere, open modal, press Ctrl+V
 3. **Click Preview** - Click the preview area to open file picker
 
 ### **Auto-Resizing:**
+
 - Images automatically scaled to fit **300px** (longest dimension)
 - **Portrait images**: Height = 300px, width scaled proportionally
 - **Landscape images**: Width = 300px, height scaled proportionally
@@ -61,6 +68,7 @@
 - Server-side processing with Sharp library
 
 ### **Image Storage:**
+
 - Stored as **base64** in database
 - No separate file storage needed
 - Portable and simple
@@ -70,11 +78,13 @@
 ## 🎨 Visual Changes
 
 ### **Quote Cards:**
+
 - Author names: Blue, underlined, hover effect
 - Book names: Blue, underlined, hover effect
 - Cursor changes to pointer on hover
 
 ### **Edit Modals:**
+
 - Large preview area (300px max)
 - Dashed border with hover effect
 - Icon placeholder (📷 for authors, 📚 for books)
@@ -86,6 +96,7 @@
 ## 💾 Technical Details
 
 ### **Image Processing (Server-side):**
+
 ```javascript
 // Uses Sharp library
 - Accepts base64 images
@@ -96,15 +107,17 @@
 ```
 
 ### **API Endpoints:**
+
 ```
 PUT /api/authors/:id
   Body: { name, image }
-  
+
 PUT /api/books/:id
   Body: { name, image }
 ```
 
 ### **Database:**
+
 - `authors.image` - Stores base64 image
 - `books.image` - Stores base64 image
 - VARCHAR(500) extended if needed for larger images

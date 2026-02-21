@@ -9,11 +9,13 @@ The application needs to connect to PostgreSQL. You mentioned ADMINISTE already 
 #### Find your PostgreSQL credentials:
 
 Check if you can connect using your system user:
+
 ```bash
 psql -d postgres
 ```
 
 If that works, update `.env` file to:
+
 ```
 DB_USER=mirjok
 DB_PASSWORD=
@@ -76,6 +78,7 @@ CREATE INDEX idx_quotes_created_at ON quotes(created_at DESC);
 ```
 
 Then start the server:
+
 ```bash
 npm start
 ```
@@ -87,6 +90,7 @@ npm start
 ### Connection Issues
 
 If you get "password authentication failed":
+
 1. Check the `.env` file has correct credentials
 2. Try using your system username instead of 'postgres'
 3. Check PostgreSQL is running: `sudo systemctl status postgresql`
@@ -94,6 +98,7 @@ If you get "password authentication failed":
 ### Database Already Exists
 
 If the database already exists, just run the migration:
+
 ```bash
 npm run migrate
 ```
@@ -101,6 +106,7 @@ npm run migrate
 ## Features
 
 Once running, you can:
+
 - ✨ Add new quotes with author, book, tags, and date
 - 🔍 Search and filter quotes by any field
 - ✏️ Edit existing quotes

@@ -5,7 +5,7 @@
 Your Quotes application is now **fully operational**!
 
 - **Database**: `quotes_db` created in PostgreSQL ✓
-- **Server**: Running on http://localhost:4000 ✓  
+- **Server**: Running on http://localhost:4000 ✓
 - **Connection**: Using credentials from APISERVER (lewel_admin) ✓
 - **First Quote**: Successfully added and displayed ✓
 
@@ -14,6 +14,7 @@ Your Quotes application is now **fully operational**!
 ## 🌐 Access Your Application
 
 **Open in your browser:**
+
 ```
 http://localhost:4000
 ```
@@ -25,17 +26,20 @@ The server is already running in the background!
 ## ✨ What's Working
 
 ### Database
+
 - ✅ Separate `quotes_db` database created
 - ✅ `quotes` table with all requested fields
 - ✅ Connected using your existing PostgreSQL credentials
 
 ### Backend API
+
 - ✅ Server running on port 4000
 - ✅ All CRUD endpoints working
 - ✅ Search/filter functionality active
 - ✅ Returns 20 most recent quotes
 
 ### Frontend
+
 - ✅ Beautiful, modern UI
 - ✅ Add new quotes (modal form)
 - ✅ Search by: Quote, Author, Book, Tags, Date
@@ -50,8 +54,8 @@ The server is already running in the background!
 
 You have **1 quote** in the database:
 
-| Quote | Author | Tags | Date |
-|-------|--------|------|------|
+| Quote                                                   | Author     | Tags                      | Date      |
+| ------------------------------------------------------- | ---------- | ------------------------- | --------- |
 | "The only way to do great work is to love what you do." | Steve Jobs | motivation, work, passion | 2/20/2026 |
 
 ---
@@ -59,17 +63,20 @@ You have **1 quote** in the database:
 ## 🎯 Quick Actions
 
 ### Add More Quotes
+
 1. Click "+ Add New Quote" button
 2. Fill in the quote text (required)
 3. Optionally add: Author, Book, Tags, Date
 4. Click "Save Quote"
 
 ### Search Quotes
+
 - Type in any search field to filter instantly
 - Search works across all fields
 - Results update in real-time (300ms debounce)
 
 ### Edit/Delete
+
 - Click "Edit" button on any quote to modify it
 - Click "Delete" button to remove (with confirmation)
 
@@ -78,6 +85,7 @@ You have **1 quote** in the database:
 ## 🛠️ Managing the Server
 
 ### Stop the Server
+
 ```bash
 # Find the process
 ps aux | grep "node server.js"
@@ -87,12 +95,14 @@ pkill -f "node server.js"
 ```
 
 ### Start the Server Again
+
 ```bash
 cd /home/mirjok/Dev/OWNAI/Misa/quotes
 npm start
 ```
 
 Or use the quick start script:
+
 ```bash
 ./start.sh
 ```
@@ -110,6 +120,7 @@ Or use the quick start script:
 ## 🔧 Configuration
 
 The `.env` file is configured with:
+
 ```
 DB_HOST=localhost
 DB_PORT=5432
@@ -142,6 +153,7 @@ PORT=4000
 ## 🎨 Features Highlight
 
 ### Beautiful Quote Cards
+
 - Left border accent (indigo color)
 - Italic quote text with quotation marks
 - Metadata display (Author, Book, Date)
@@ -149,12 +161,14 @@ PORT=4000
 - Edit/Delete buttons
 
 ### Search Section
+
 - 5 search fields (one for each data field)
 - Clear Filters button
 - Real-time filtering
 - Shows result count
 
 ### Modal Form
+
 - Clean, modern design
 - Form validation
 - Date picker
@@ -166,6 +180,7 @@ PORT=4000
 ## 🚀 Next Steps
 
 You can now:
+
 - Start collecting your favorite quotes
 - Use tags to organize them by theme
 - Search through your collection
@@ -177,7 +192,7 @@ You can now:
 ## 📖 Documentation
 
 - **QUICKSTART.md** - Setup guide
-- **OVERVIEW.md** - Feature overview  
+- **OVERVIEW.md** - Feature overview
 - **README.md** - Technical documentation
 - **SETUP.md** - Detailed setup instructions
 

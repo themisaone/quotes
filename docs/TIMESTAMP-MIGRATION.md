@@ -9,10 +9,12 @@ The database now uses standard timestamp tracking with `created_at` and `updated
 ## 🎯 What Changed
 
 ### **Before:**
+
 - `created_at` - When quote was added to DB
 - `date` - Optional date field (confusing purpose)
 
 ### **After:**
+
 - `created_at` - When quote was first added (never changes)
 - `updated_at` - When quote was last modified (updates automatically)
 
@@ -39,21 +41,25 @@ UPDATE quotes SET updated_at = created_at WHERE updated_at IS NULL;
 ### **Server Changes:**
 
 **POST /api/quotes:**
+
 - Removed date parameter
 - `updated_at` set automatically by database default
 
 **PUT /api/quotes/:id:**
+
 - Removed date parameter
 - `updated_at` always set to `CURRENT_TIMESTAMP` on update
 
 ### **Frontend Changes:**
 
 **Removed:**
+
 - ✅ Date input field from quote form
 - ✅ Date handling in form submission
 - ✅ Date initialization in edit modal
 
 **Updated:**
+
 - ✅ Quote cards now show `Created` and `Updated` timestamps
 - ✅ Both display as full date/time (not just date)
 
@@ -77,6 +83,7 @@ UPDATE quotes SET updated_at = created_at WHERE updated_at IS NULL;
 ### **Timeline Examples:**
 
 **Example 1: New Quote (just added)**
+
 ```
 Created: 2/20/2026, 3:45:23 PM
 Updated: 2/20/2026, 3:45:23 PM
@@ -84,6 +91,7 @@ Updated: 2/20/2026, 3:45:23 PM
 ```
 
 **Example 2: Edited Quote**
+
 ```
 Created: 2/15/2026, 10:30:00 AM
 Updated: 2/20/2026, 4:12:10 PM
@@ -91,6 +99,7 @@ Updated: 2/20/2026, 4:12:10 PM
 ```
 
 **Example 3: Multiple Edits**
+
 ```
 Created: 2/10/2026, 9:00:00 AM
 Updated: 2/20/2026, 5:30:45 PM
@@ -102,21 +111,25 @@ Updated: 2/20/2026, 5:30:45 PM
 ## ✨ Benefits
 
 **1. Standard Practice:**
+
 - ✅ Industry-standard field names
 - ✅ Used by most databases/ORMs
 - ✅ Clear, unambiguous meaning
 
 **2. Automatic Tracking:**
+
 - ✅ No manual date entry needed
 - ✅ Server handles timestamps
 - ✅ Can't be forgotten or wrong
 
 **3. Full Timestamps:**
+
 - ✅ Date AND time
 - ✅ Precise to the second
 - ✅ Timezone aware
 
 **4. Audit Trail:**
+
 - ✅ See when quotes were added
 - ✅ See when quotes were last modified
 - ✅ Track activity over time
@@ -126,17 +139,20 @@ Updated: 2/20/2026, 5:30:45 PM
 ## 🚀 Usage
 
 ### **Adding New Quote:**
+
 1. Fill in quote, author, book, tags
 2. Click "Save"
 3. ✅ `created_at` and `updated_at` set automatically to now
 
 ### **Editing Quote:**
+
 1. Edit any field (quote text, author, book, tags)
 2. Click "Save"
 3. ✅ `created_at` unchanged (original creation time)
 4. ✅ `updated_at` updated to now
 
 ### **Viewing Quote:**
+
 - **Created**: Shows when you first added it
 - **Updated**: Shows last modification time
 - If same → Quote never edited
@@ -147,19 +163,23 @@ Updated: 2/20/2026, 5:30:45 PM
 ## 🎯 Use Cases
 
 **Scenario 1: Track Recent Activity**
+
 - Sort by `updated_at` to see recently modified quotes
 - Useful for: "What did I work on today?"
 
 **Scenario 2: Find Old Quotes**
+
 - Sort by `created_at` to see your oldest quotes
 - Useful for: "My first quotes ever"
 
 **Scenario 3: Audit Changes**
+
 - Compare `created_at` vs `updated_at`
 - Large difference = heavily edited
 - Same timestamp = original, untouched
 
 **Scenario 4: Activity Timeline**
+
 - See when you were actively collecting quotes
 - Gaps in `created_at` = periods of inactivity
 - Clusters of `updated_at` = editing sessions
@@ -169,13 +189,16 @@ Updated: 2/20/2026, 5:30:45 PM
 ## 📝 Files Modified
 
 **Database:**
+
 - ✅ `migrate-timestamps.js` - New migration script
 - ✅ `quotes` table - Renamed `date` → `updated_at`
 
 **Backend:**
+
 - ✅ `server.js` - Removed date parameter, auto-update `updated_at`
 
 **Frontend:**
+
 - ✅ `public/index.html` - Removed date input field
 - ✅ `public/app.js` - Removed date handling, updated card display
 
@@ -184,6 +207,7 @@ Updated: 2/20/2026, 5:30:45 PM
 ## 🔄 Backwards Compatibility
 
 **Existing Quotes:**
+
 - ✅ All existing quotes preserved
 - ✅ Old `date` values converted to `updated_at`
 - ✅ If `date` was null → set to `created_at`
@@ -196,17 +220,21 @@ Updated: 2/20/2026, 5:30:45 PM
 ### **PostgreSQL Types:**
 
 **created_at:**
+
 ```sql
 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 ```
+
 - Set once on INSERT
 - Never modified
 - Timezone aware
 
 **updated_at:**
+
 ```sql
 updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 ```
+
 - Set on INSERT (defaults to now)
 - Set on UPDATE (explicitly to CURRENT_TIMESTAMP)
 - Timezone aware
@@ -214,11 +242,14 @@ updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 ### **JavaScript Display:**
 
 ```javascript
-const createdDate = quote.created_at ? 
-    new Date(quote.created_at).toLocaleString() : '';
-const updatedDate = quote.updated_at ? 
-    new Date(quote.updated_at).toLocaleString() : '';
+const createdDate = quote.created_at
+  ? new Date(quote.created_at).toLocaleString()
+  : "";
+const updatedDate = quote.updated_at
+  ? new Date(quote.updated_at).toLocaleString()
+  : "";
 ```
+
 - Uses `toLocaleString()` for full date/time
 - Shows in user's local timezone
 - Format: "2/20/2026, 3:45:23 PM"
@@ -228,6 +259,7 @@ const updatedDate = quote.updated_at ?
 ## 🎉 Result
 
 **Clean, Standard Timestamp Tracking!**
+
 - ✅ `created_at` - When added (immutable)
 - ✅ `updated_at` - When modified (automatic)
 - ✅ No manual date entry needed

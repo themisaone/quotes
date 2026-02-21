@@ -48,27 +48,32 @@ quotes/
 ## Key Changes
 
 ### 1. Source Code (`src/`)
+
 - Moved `server.js` and `db.js` into a dedicated `src/` directory
 - Updated `package.json` scripts to point to `src/server.js`
 - Updated `server.js` to use `path.join(__dirname, '../public')` for static files
 
 ### 2. Documentation (`docs/`)
+
 - All `.md` documentation files moved to `docs/` directory
 - `README.md` remains in root for visibility
 - Includes feature documentation, migration guides, and setup instructions
 
 ### 3. Scripts (`scripts/`)
+
 - Old migration scripts (`migrate*.js`)
 - Setup utilities (`setup.js`, `setup.sh`)
 - Deprecated utilities (`imageProcessor.js`)
 - Utility scripts (`update-image-columns.js`)
 
 ### 4. Migrations (`migrations/`)
+
 - Contains current, active database migrations
 - Named with numeric prefixes (003, 004, etc.)
 - Should be run in order
 
 ### 5. Public (`public/`)
+
 - Unchanged - still contains frontend assets
 - Served statically by Express
 

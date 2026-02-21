@@ -4,8 +4,8 @@
  * Run this for fresh deployments (e.g., Railway, new environments)
  */
 
-const { Pool } = require('pg');
-require('dotenv').config();
+const { Pool } = require("pg");
+require("dotenv").config();
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -13,14 +13,14 @@ const pool = new Pool({
 
 async function migrate() {
   const client = await pool.connect();
-  
+
   try {
-    console.log('Starting initial schema migration...');
-    
-    await client.query('BEGIN');
-    
+    console.log("Starting initial schema migration...");
+
+    await client.query("BEGIN");
+
     // Create authors table
-    console.log('Creating authors table...');
+    console.log("Creating authors table...");
     await client.query(`
       CREATE TABLE IF NOT EXISTS authors (
         id SERIAL PRIMARY KEY,
@@ -28,9 +28,9 @@ async function migrate() {
         image TEXT
       )
     `);
-    
+
     // Create sources table (renamed from books)
-    console.log('Creating sources table...');
+    console.log("Creating sources table...");
     await client.query(`
       CREATE TABLE IF NOT EXISTS sources (
         id SERIAL PRIMARY KEY,
@@ -40,9 +40,9 @@ async function migrate() {
         CONSTRAINT sources_type_check CHECK (type IN ('BOOK', 'MOVIE'))
       )
     `);
-    
+
     // Create quotes table with all current fields
-    console.log('Creating quotes table...');
+    console.log("Creating quotes table...");
     await client.query(`
       CREATE TABLE IF NOT EXISTS quotes (
         id SERIAL PRIMARY KEY,
@@ -59,9 +59,9 @@ async function migrate() {
         CONSTRAINT quotes_type_check CHECK (type IN ('BOOK', 'MOVIE', 'ASSORTED'))
       )
     `);
-    
+
     // Create indexes for better query performance
-    console.log('Creating indexes...');
+    console.log("Creating indexes...");
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_quotes_author_id ON quotes(author_id)
     `);
@@ -71,21 +71,22 @@ async function migrate() {
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_quotes_created_at ON quotes(created_at DESC)
     `);
-    
-    await client.query('COMMIT');
-    
-    console.log('✅ Initial schema migration completed successfully!');
-    console.log('');
-    console.log('Created tables:');
-    console.log('  - authors (id, name, image)');
-    console.log('  - sources (id, name, type, image)');
-    console.log('  - quotes (id, quote, author_id, source_id, type, tags, image, image_full, note, created_at, updated_at)');
-    console.log('');
-    console.log('Created indexes for optimal performance');
-    
+
+    await client.query("COMMIT");
+
+    console.log("✅ Initial schema migration completed successfully!");
+    console.log("");
+    console.log("Created tables:");
+    console.log("  - authors (id, name, image)");
+    console.log("  - sources (id, name, type, image)");
+    console.log(
+      "  - quotes (id, quote, author_id, source_id, type, tags, image, image_full, note, created_at, updated_at)",
+    );
+    console.log("");
+    console.log("Created indexes for optimal performance");
   } catch (error) {
-    await client.query('ROLLBACK');
-    console.error('❌ Migration failed:', error.message);
+    await client.query("ROLLBACK");
+    console.error("❌ Migration failed:", error.message);
     console.error(error);
     process.exit(1);
   } finally {

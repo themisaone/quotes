@@ -7,6 +7,7 @@ I've created a complete, production-ready Quotes management application for you!
 ### ✨ What You Get
 
 **Backend:**
+
 - Express.js REST API server
 - PostgreSQL database integration
 - Full CRUD operations (Create, Read, Update, Delete)
@@ -14,12 +15,14 @@ I've created a complete, production-ready Quotes management application for you!
 - Runs on port 4000 as requested
 
 **Database:**
+
 - PostgreSQL table: `quotes`
 - Fields: Quote, Author, Book, Tags, Date
 - Optimized indexing for performance
 - Automatic timestamps
 
 **Frontend:**
+
 - Beautiful, modern responsive UI
 - Real-time search across all fields
 - Shows 20 most recent quotes by default
@@ -32,6 +35,7 @@ I've created a complete, production-ready Quotes management application for you!
 ## 🚀 How to Start
 
 ### Prerequisites Check
+
 - ✅ Node.js installed
 - ✅ PostgreSQL installed and running
 - ⚠️ Need: PostgreSQL credentials from your ADMINISTE project
@@ -39,6 +43,7 @@ I've created a complete, production-ready Quotes management application for you!
 ### Quick Start (3 steps)
 
 1. **Update database credentials in `.env` file:**
+
    ```bash
    # Use the same credentials as ADMINISTE
    DB_USER=your_username
@@ -46,11 +51,13 @@ I've created a complete, production-ready Quotes management application for you!
    ```
 
 2. **Create database and run migration:**
+
    ```bash
    npm run migrate
    ```
 
 3. **Start the server:**
+
    ```bash
    npm start
    # or use: ./start.sh
@@ -79,7 +86,7 @@ quotes/
 ├── db.js                  # PostgreSQL connection
 ├── migrate.js             # Database schema setup
 ├── setup.js               # Automated setup helper
-├── setup.sh               # Shell setup script  
+├── setup.sh               # Shell setup script
 ├── start.sh               # Quick start script
 ├── package.json           # Dependencies
 ├── .env                   # Configuration (UPDATE!)
@@ -94,6 +101,7 @@ quotes/
 ## 🎯 Features in Detail
 
 ### Search & Filter
+
 - Search by quote text
 - Filter by author name
 - Filter by book title
@@ -102,12 +110,14 @@ quotes/
 - Real-time results (debounced)
 
 ### Quote Management
+
 - Add new quotes with all fields
 - Edit existing quotes
 - Delete quotes (with confirmation)
 - View 20 most recent quotes
 
 ### User Experience
+
 - Clean, modern interface
 - Responsive design (mobile & desktop)
 - Smooth animations
@@ -127,6 +137,7 @@ DELETE /api/quotes/:id       # Delete quote
 ```
 
 Query parameters for filtering:
+
 - `quote` - Search in quote text
 - `author` - Filter by author
 - `book` - Filter by book
@@ -171,6 +182,7 @@ npm run setup      # Automated setup (tries common credentials)
 ## 🎨 Color Scheme
 
 The app uses a modern, professional color scheme:
+
 - Primary: Indigo (#6366f1)
 - Background: Light gray (#f8fafc)
 - Text: Slate tones
@@ -181,6 +193,7 @@ The app uses a modern, professional color scheme:
 ## 🤝 Support
 
 If you need help:
+
 1. Check QUICKSTART.md for setup instructions
 2. Verify PostgreSQL is running
 3. Ensure credentials in `.env` are correct

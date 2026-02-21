@@ -1,12 +1,15 @@
 # Pagination Implementation
 
 ## Summary
+
 Added pagination controls to display 20 quotes per page with navigation buttons.
 
 ## Changes Made
 
 ### 1. Backend (`server.js`)
+
 **Updated `GET /api/quotes` endpoint** to support pagination:
+
 - Added `offset` parameter (default: 0)
 - Query now uses `LIMIT` and `OFFSET` for pagination
 
@@ -20,6 +23,7 @@ params.push(parseInt(limit), parseInt(offset));
 ### 2. Frontend JavaScript (`public/app.js`)
 
 #### State Management
+
 ```javascript
 let currentPage = 1;
 const quotesPerPage = 20;
@@ -27,19 +31,23 @@ let totalQuotes = 0;
 ```
 
 #### Updated `loadQuotes()`
+
 - Calculates offset based on current page
 - Sends `limit` and `offset` params to API
 - Calls `updatePaginationControls()` after loading
 
 #### Updated `loadTotalCount()`
+
 - Stores total count in `totalQuotes` variable
 - Updates pagination controls after fetching count
 
 #### Updated Search/Filter Functions
+
 - `debounceSearch()` - Resets to page 1 when searching
 - `clearFilters()` - Resets to page 1 when clearing filters
 
 #### New Pagination Functions
+
 ```javascript
 function updatePaginationControls() {
     // Displays:
@@ -56,13 +64,17 @@ window.goToPage(page) {
 ```
 
 ### 3. Frontend HTML (`public/index.html`)
+
 Added pagination container after quotes list:
+
 ```html
 <div id="paginationControls" class="pagination-container"></div>
 ```
 
 ### 4. Frontend CSS (`public/style.css`)
+
 Added styling for pagination:
+
 - `.pagination-container` - Flexbox layout, space-between
 - `.pagination-info` - Shows "Showing X-Y of Z"
 - `.pagination-buttons` - Button group with spacing
@@ -73,6 +85,7 @@ Added styling for pagination:
 ## User Experience
 
 ### Pagination Display
+
 ```
 Showing 1-20 of 28 quotes
 
@@ -80,6 +93,7 @@ Showing 1-20 of 28 quotes
 ```
 
 ### Features
+
 - **First**: Jump to page 1
 - **Previous**: Go back one page
 - **Next**: Go forward one page
@@ -93,6 +107,7 @@ Showing 1-20 of 28 quotes
 ## Technical Details
 
 ### Offset Calculation
+
 ```javascript
 const offset = (currentPage - 1) * quotesPerPage;
 // Page 1: offset = 0 (items 1-20)
@@ -101,6 +116,7 @@ const offset = (currentPage - 1) * quotesPerPage;
 ```
 
 ### Total Pages Calculation
+
 ```javascript
 const totalPages = Math.ceil(totalQuotes / quotesPerPage);
 // 28 quotes / 20 per page = 2 pages
@@ -108,6 +124,7 @@ const totalPages = Math.ceil(totalQuotes / quotesPerPage);
 ```
 
 ### Display Range
+
 ```javascript
 const startItem = totalQuotes === 0 ? 0 : (currentPage - 1) * quotesPerPage + 1;
 const endItem = Math.min(currentPage * quotesPerPage, totalQuotes);
