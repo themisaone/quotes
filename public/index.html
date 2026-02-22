@@ -9,9 +9,9 @@
   </head>
   <body>
     <div class="app-layout">
-      <!-- Side Menu -->
-      <nav class="side-menu">
-        <h2 class="side-menu-title">My Collection</h2>
+        <!-- Side Menu -->
+        <nav class="side-menu">
+            <h2 class="side-menu-title">📚 My Collection</h2>
 
         <div class="menu-divider"></div>
 
@@ -83,37 +83,39 @@
 
             <!-- Search/Filter Section -->
             <div class="search-section">
-              <h2>🔍 Search Quotes</h2>
-
-              <!-- Source Type Filter -->
-              <div class="quote-type-filter">
-                <label
-                  ><input
-                    type="checkbox"
-                    id="filterQuoteBook"
-                    value="BOOK"
-                    checked
-                  />
-                  📖 Books</label
-                >
-                <label
-                  ><input
-                    type="checkbox"
-                    id="filterQuoteMovie"
-                    value="MOVIE"
-                    checked
-                  />
-                  🎬 Movies</label
-                >
-                <label
-                  ><input
-                    type="checkbox"
-                    id="filterQuoteAssorted"
-                    value="ASSORTED"
-                    checked
-                  />
-                  📝 Assorted</label
-                >
+              <div class="search-header">
+                <h2>🔍 Search Quotes</h2>
+                
+                <!-- Source Type Filter -->
+                <div class="quote-type-filter">
+                  <label
+                    ><input
+                      type="checkbox"
+                      id="filterQuoteBook"
+                      value="BOOK"
+                      checked
+                    />
+                    📖 Books</label
+                  >
+                  <label
+                    ><input
+                      type="checkbox"
+                      id="filterQuoteMovie"
+                      value="MOVIE"
+                      checked
+                    />
+                    🎬 Movies</label
+                  >
+                  <label
+                    ><input
+                      type="checkbox"
+                      id="filterQuoteAssorted"
+                      value="ASSORTED"
+                      checked
+                    />
+                    📝 Assorted</label
+                  >
+                </div>
               </div>
 
               <div class="search-grid">
@@ -195,23 +197,28 @@
               </div>
             </header>
 
-            <!-- Search and Sort Controls -->
-            <div class="sources-controls">
-              <div class="search-box">
-                <input
-                  type="text"
-                  id="searchAuthorName"
-                  placeholder="🔍 Search authors..."
-                />
-              </div>
-              <div class="sort-controls">
-                <label>Sort by:</label>
-                <button id="sortAuthorsByName" class="sort-btn active">
-                  Name
-                </button>
-                <button id="sortAuthorsByCount" class="sort-btn">
-                  Number of Quotes
-                </button>
+            <!-- Search/Filter Section -->
+            <div class="search-section">
+              <h2>🔍 Search Authors</h2>
+
+              <!-- Search and Sort Controls -->
+              <div class="sources-controls">
+                <div class="search-box">
+                  <input
+                    type="text"
+                    id="searchAuthorName"
+                    placeholder="🔍 Search authors..."
+                  />
+                </div>
+                <div class="sort-controls">
+                  <label>Sort by:</label>
+                  <button id="sortAuthorsByName" class="sort-btn active">
+                    Name
+                  </button>
+                  <button id="sortAuthorsByCount" class="sort-btn">
+                    Number of Quotes
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -235,44 +242,52 @@
                   🔄
                 </button>
               </div>
-              <!-- Source Type Filter -->
-              <div class="source-type-filter">
-                <label
-                  ><input
-                    type="checkbox"
-                    id="filterBook"
-                    value="BOOK"
-                    checked
-                  />
-                  📖 Books</label
-                >
-                <label
-                  ><input
-                    type="checkbox"
-                    id="filterMovie"
-                    value="MOVIE"
-                    checked
-                  />
-                  🎬 Movies</label
-                >
-              </div>
             </header>
 
-            <!-- Search and Sort Controls -->
-            <div class="sources-controls">
-              <div class="search-box">
-                <input
-                  type="text"
-                  id="searchSourceName"
-                  placeholder="🔍 Search sources..."
-                />
+            <!-- Search/Filter Section -->
+            <div class="search-section">
+              <div class="search-header">
+                <h2>🔍 Search Sources</h2>
+                
+                <!-- Source Type Filter -->
+                <div class="source-type-filter">
+                  <label
+                    ><input
+                      type="checkbox"
+                      id="filterBook"
+                      value="BOOK"
+                      checked
+                    />
+                    📖 Books</label
+                  >
+                  <label
+                    ><input
+                      type="checkbox"
+                      id="filterMovie"
+                      value="MOVIE"
+                      checked
+                    />
+                    🎬 Movies</label
+                  >
+                </div>
               </div>
-              <div class="sort-controls">
-                <label>Sort by:</label>
-                <button id="sortByName" class="sort-btn active">Name</button>
-                <button id="sortByCount" class="sort-btn">
-                  Number of Quotes
-                </button>
+
+              <!-- Search and Sort Controls -->
+              <div class="sources-controls">
+                <div class="search-box">
+                  <input
+                    type="text"
+                    id="searchSourceName"
+                    placeholder="🔍 Search sources..."
+                  />
+                </div>
+                <div class="sort-controls">
+                  <label>Sort by:</label>
+                  <button id="sortByName" class="sort-btn active">Name</button>
+                  <button id="sortByCount" class="sort-btn">
+                    Number of Quotes
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -311,6 +326,7 @@
       <div class="modal-content modal-wide">
         <span class="close">&times;</span>
         <h2 id="modalTitle">Add New Quote</h2>
+        <div id="quoteMetadata" class="quote-metadata" style="display: none;"></div>
         <form id="quoteForm">
           <input type="hidden" id="quoteId" />
 
@@ -363,62 +379,63 @@
             </div>
           </div>
 
-          <div class="form-row form-row-1">
-            <div class="form-group">
-              <label for="tags">Tags</label>
-              <input type="text" id="tags" placeholder="motivation, wisdom" />
-            </div>
+          <div class="form-group" style="margin-top: 1.5rem;">
+            <label for="tags">Tags</label>
+            <input type="text" id="tags" placeholder="motivation, wisdom" />
           </div>
 
-          <div class="form-row form-row-2">
-            <div class="form-group">
-              <label for="note">Note (Optional)</label>
-              <textarea
-                id="note"
-                rows="2"
-                placeholder="Additional description or context..."
-              ></textarea>
-            </div>
-
-            <div class="form-group">
-              <label for="quoteImage">
-                Image (Optional)
-                <button
-                  type="button"
-                  class="btn-icon"
-                  onclick="document.getElementById('quoteImageFile').click()"
-                  title="Upload image"
-                >
-                  📁
-                </button>
-                <button
-                  type="button"
-                  id="clearQuoteImage"
-                  class="btn-icon"
-                  title="Clear image"
-                >
-                  🗑️
-                </button>
-              </label>
-              <div class="image-upload-area-compact">
-                <div id="quoteImagePreview" class="image-preview-compact">
-                  <div class="image-placeholder-compact">
-                    <span>🖼️</span>
-                    <p>Paste (Ctrl+V) or click 📁</p>
+          <div class="form-group" style="margin-top: 1.5rem;">
+            <div style="display: flex; gap: 1.5rem; align-items: stretch;">
+              <div style="display: flex; flex-direction: column;">
+                <label for="quoteImage">Quote Image</label>
+                <div class="image-upload-area-horizontal" style="flex: 1;">
+                  <div id="quoteImagePreview" class="image-preview">
+                    <div class="image-placeholder">
+                      <span>🖼️</span>
+                      <p>Paste image (Ctrl+V) or click to upload</p>
+                    </div>
+                  </div>
+                  <div class="image-controls">
+                    <input
+                      type="file"
+                      id="quoteImageFile"
+                      accept="image/*"
+                      style="display: none"
+                    />
+                    <button
+                      type="button"
+                      class="btn btn-secondary"
+                      onclick="document.getElementById('quoteImageFile').click()"
+                    >
+                      Choose File
+                    </button>
+                    <button
+                      type="button"
+                      id="clearQuoteImage"
+                      class="btn btn-secondary"
+                    >
+                      Clear Image
+                    </button>
+                    <small
+                      >Full resolution image saved. Preview shows scaled version.</small
+                    >
                   </div>
                 </div>
-                <input
-                  type="file"
-                  id="quoteImageFile"
-                  accept="image/*"
-                  style="display: none"
-                />
+              </div>
+              <div style="flex: 1; display: flex; flex-direction: column;">
+                <label for="note">Note (Optional)</label>
+                <textarea
+                  id="note"
+                  placeholder="Additional context..."
+                  style="width: 100%; flex: 1; min-height: 200px; resize: vertical;"
+                ></textarea>
               </div>
             </div>
           </div>
 
           <div class="form-actions">
             <button type="submit" class="btn btn-primary">Save Quote</button>
+            <button type="button" id="deleteQuoteBtn" class="btn btn-danger" style="display: none">Delete Quote</button>
             <button type="button" id="cancelBtn" class="btn btn-secondary">
               Cancel
             </button>
@@ -447,37 +464,39 @@
 
           <div class="form-group">
             <label for="authorImage">Author Picture</label>
-            <div class="image-upload-area">
+            <div class="image-upload-area-horizontal">
               <div id="authorImagePreview" class="image-preview">
                 <div class="image-placeholder">
                   <span>📷</span>
                   <p>Paste image (Ctrl+V) or click to upload</p>
                 </div>
               </div>
-              <input
-                type="file"
-                id="authorImageFile"
-                accept="image/*"
-                style="display: none"
-              />
-              <button
-                type="button"
-                class="btn btn-secondary"
-                onclick="document.getElementById('authorImageFile').click()"
-              >
-                Choose File
-              </button>
-              <button
-                type="button"
-                id="clearAuthorImage"
-                class="btn btn-secondary"
-              >
-                Clear Image
-              </button>
+              <div class="image-controls">
+                <input
+                  type="file"
+                  id="authorImageFile"
+                  accept="image/*"
+                  style="display: none"
+                />
+                <button
+                  type="button"
+                  class="btn btn-secondary"
+                  onclick="document.getElementById('authorImageFile').click()"
+                >
+                  Choose File
+                </button>
+                <button
+                  type="button"
+                  id="clearAuthorImage"
+                  class="btn btn-secondary"
+                >
+                  Clear Image
+                </button>
+                <small
+                  >Image will be resized to fit 300px (longest dimension)</small
+                >
+              </div>
             </div>
-            <small
-              >Image will be resized to fit 300px (longest dimension)</small
-            >
           </div>
 
           <div class="form-actions">
@@ -531,37 +550,39 @@
 
           <div class="form-group">
             <label for="sourceImage">Source Cover</label>
-            <div class="image-upload-area">
+            <div class="image-upload-area-horizontal">
               <div id="sourceImagePreview" class="image-preview">
                 <div class="image-placeholder">
                   <span>📚</span>
                   <p>Paste image (Ctrl+V) or click to upload</p>
                 </div>
               </div>
-              <input
-                type="file"
-                id="sourceImageFile"
-                accept="image/*"
-                style="display: none"
-              />
-              <button
-                type="button"
-                class="btn btn-secondary"
-                onclick="document.getElementById('sourceImageFile').click()"
-              >
-                Choose File
-              </button>
-              <button
-                type="button"
-                id="clearSourceImage"
-                class="btn btn-secondary"
-              >
-                Clear Image
-              </button>
+              <div class="image-controls">
+                <input
+                  type="file"
+                  id="sourceImageFile"
+                  accept="image/*"
+                  style="display: none"
+                />
+                <button
+                  type="button"
+                  class="btn btn-secondary"
+                  onclick="document.getElementById('sourceImageFile').click()"
+                >
+                  Choose File
+                </button>
+                <button
+                  type="button"
+                  id="clearSourceImage"
+                  class="btn btn-secondary"
+                >
+                  Clear Image
+                </button>
+                <small
+                  >Image will be resized to fit 300px (longest dimension)</small
+                >
+              </div>
             </div>
-            <small
-              >Image will be resized to fit 300px (longest dimension)</small
-            >
           </div>
 
           <div class="form-actions">

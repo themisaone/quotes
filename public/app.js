@@ -75,6 +75,18 @@ function setupEventListeners() {
   cancelBtn.addEventListener("click", closeQuoteModal);
   quoteForm.addEventListener("submit", handleSubmit);
   clearBtn.addEventListener("click", clearFilters);
+  
+  // Delete quote button in modal
+  const deleteQuoteBtn = document.getElementById("deleteQuoteBtn");
+  if (deleteQuoteBtn) {
+    deleteQuoteBtn.addEventListener("click", () => {
+      const quoteId = document.getElementById("quoteId").value;
+      if (quoteId) {
+        closeQuoteModal();
+        deleteQuote(quoteId);
+      }
+    });
+  }
 
   // Refresh buttons
   const refreshQuotesBtn = document.getElementById("refreshQuotesBtn");
@@ -418,12 +430,37 @@ function openAddModal() {
   currentQuoteImage = "";
   currentQuoteImageFull = "";
   clearImagePreview(quoteImagePreview, "quote");
+  
+  // Hide metadata for new quotes
+  const metadataEl = document.getElementById("quoteMetadata");
+  if (metadataEl) {
+    metadataEl.style.display = "none";
+  }
+  
+  // Hide delete button for new quotes
+  const deleteQuoteBtn = document.getElementById("deleteQuoteBtn");
+  if (deleteQuoteBtn) {
+    deleteQuoteBtn.style.display = "none";
+  }
+  
   quoteModal.style.display = "block";
 }
 
 function openEditModal(quote) {
   modalTitle.textContent = "Edit Quote";
   editingQuoteId = quote.id;
+  
+  // Set the hidden quoteId input for delete button
+  document.getElementById("quoteId").value = quote.id;
+
+  // Display metadata (created/updated dates)
+  const metadataEl = document.getElementById("quoteMetadata");
+  const createdDate = quote.created_at ? new Date(quote.created_at).toLocaleString() : "";
+  const updatedDate = quote.updated_at ? new Date(quote.updated_at).toLocaleString() : "";
+  if (createdDate || updatedDate) {
+    metadataEl.innerHTML = `${createdDate ? `Created: ${createdDate}` : ''} ${createdDate && updatedDate ? ' | ' : ''} ${updatedDate ? `Updated: ${updatedDate}` : ''}`;
+    metadataEl.style.display = "block";
+  }
 
   document.getElementById("quoteText").value = quote.quote;
   document.getElementById("author").value = quote.author_name || "";
@@ -443,6 +480,12 @@ function openEditModal(quote) {
     displayImage(quoteImagePreview, currentQuoteImage);
   } else {
     clearImagePreview(quoteImagePreview, "quote");
+  }
+  
+  // Show delete button for editing
+  const deleteQuoteBtn = document.getElementById("deleteQuoteBtn");
+  if (deleteQuoteBtn) {
+    deleteQuoteBtn.style.display = "inline-block";
   }
 
   quoteModal.style.display = "block";
@@ -649,18 +692,22 @@ function displayQuotes(quotes) {
 
   quotesList.innerHTML = quotes.map((quote) => createQuoteCard(quote)).join("");
 
-  // Add event listeners to action buttons
-  document.querySelectorAll(".btn-edit").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const quoteId = btn.dataset.id;
+  // Add click handlers to quote cards (open edit modal)
+  document.querySelectorAll(".quote-card").forEach((card) => {
+    card.addEventListener("click", (e) => {
+      // Don't open modal if clicking on interactive elements
+      if (e.target.closest('.author-link') || 
+          e.target.closest('.source-link') || 
+          e.target.closest('.expand-btn') ||
+          e.target.closest('.quote-image-thumb')) {
+        return;
+      }
+      
+      const quoteId = card.dataset.quoteId;
       const quote = quotes.find((q) => q.id == quoteId);
-      openEditModal(quote);
-    });
-  });
-
-  document.querySelectorAll(".quote-card .btn-danger").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      deleteQuote(btn.dataset.id);
+      if (quote) {
+        openEditModal(quote);
+      }
     });
   });
 
@@ -714,23 +761,17 @@ function createQuoteCard(quote) {
   const expandBtnId = `expand-${quote.id}`;
 
   return `
-        <div class="quote-card">
-            ${quote.image ? `<div class="quote-image-thumb" onclick="showFullImage('${quote.image_full || quote.image}')"><img src="${quote.image}" alt="Quote image"></div>` : ""}
-            <div class="quote-text ${isLongQuote ? "collapsible" : ""}" id="${quoteId}" data-expanded="false">${escapeHtml(isLongQuote ? shortQuote : quote.quote)}</div>
-            ${isLongQuote ? `<button class="expand-btn" id="${expandBtnId}" onclick="toggleQuoteExpand('${quote.id}')">▼ Show more</button>` : ""}
+        <div class="quote-card" data-quote-id="${quote.id}" style="cursor: pointer;">
+            ${quote.image ? `<div class="quote-image-thumb" onclick="event.stopPropagation(); showFullImage('${quote.image_full || quote.image}')"><img src="${quote.image}" alt="Quote image"></div>` : ""}
+            ${quote.note ? `<div class="quote-note-title">${escapeHtml(quote.note)}</div>` : ''}
+            <div class="quote-content-row">
+                <div class="quote-text ${isLongQuote ? "collapsible" : ""}" id="${quoteId}" data-expanded="false">${escapeHtml(isLongQuote ? shortQuote : quote.quote)}</div>
+                ${tags ? `<div class="quote-tags-inline">${tags}</div>` : ''}
+            </div>
+            ${isLongQuote ? `<button class="expand-btn" id="${expandBtnId}" onclick="event.stopPropagation(); toggleQuoteExpand('${quote.id}')">▼ Show more</button>` : ""}
             <div class="quote-meta">
                 ${author ? `<div class="meta-item"><span class="meta-label">Author:</span> <span class="meta-value clickable author-link" data-id="${quote.author_id}" data-name="${escapeHtml(author)}">${escapeHtml(author)}</span></div>` : ""}
                 ${source ? `<div class="meta-item"><span class="meta-label">Source:</span> <span class="meta-value clickable source-link" data-id="${quote.source_id}" data-name="${escapeHtml(source)}" data-type="${sourceType}">${sourceIcon} ${escapeHtml(source)}</span></div>` : ""}
-                ${quote.note ? `<div class="meta-item"><span class="meta-label">📝 Has Note</span></div>` : ""}
-                ${createdDate ? `<div class="meta-item"><span class="meta-label">Created:</span> <span class="meta-value">${createdDate}</span></div>` : ""}
-                ${updatedDate ? `<div class="meta-item"><span class="meta-label">Updated:</span> <span class="meta-value">${updatedDate}</span></div>` : ""}
-            </div>
-            <div class="quote-footer">
-                ${tags ? `<div class="quote-tags">${tags}</div>` : '<div class="quote-tags"></div>'}
-                <div class="quote-actions">
-                    <button class="btn btn-edit" data-id="${quote.id}">Edit</button>
-                    <button class="btn btn-danger" data-id="${quote.id}">Delete</button>
-                </div>
             </div>
         </div>
     `;

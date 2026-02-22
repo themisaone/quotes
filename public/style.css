@@ -143,9 +143,8 @@ header h1 {
   display: flex;
   gap: 1.5rem;
   align-items: center;
-  flex-basis: 100%;
-  padding-top: 0.5rem;
-  margin-top: -1rem;
+  padding: 0;
+  margin: 0;
 }
 
 .source-type-filter label {
@@ -168,11 +167,11 @@ header h1 {
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
-  margin-bottom: 2rem;
-  padding: 1rem;
-  background: var(--surface);
-  border-radius: 8px;
-  box-shadow: var(--shadow);
+  margin-top: 1rem;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .search-box {
@@ -236,13 +235,24 @@ header h1 {
   }
 }
 
+.search-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.search-header h2 {
+  margin: 0;
+}
+
 .quote-type-filter {
   display: flex;
   gap: 1.5rem;
   align-items: center;
-  padding: 1rem 0;
-  margin-bottom: 1rem;
-  border-bottom: 1px solid var(--border);
+  padding: 0;
+  margin: 0;
+  border-bottom: none;
 }
 
 .quote-type-filter label {
@@ -374,10 +384,15 @@ h2 {
   background: var(--surface);
   color: var(--text-primary);
   border: 1px solid var(--border);
-  padding: 0.5rem 0.75rem;
+  padding: 0.75rem 1rem;
   font-size: 1.2rem;
   min-width: auto;
   transition: all 0.2s;
+  border-radius: 8px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-icon:hover {
@@ -435,16 +450,20 @@ h2 {
   margin: 5% auto;
   padding: 2rem;
   border-radius: 12px;
-  width: 90%;
+  width: fit-content;
   max-width: 600px;
-  max-height: 85vh;
+  max-height: 90vh;
   overflow-y: auto;
   box-shadow: var(--shadow-lg);
   animation: slideDown 0.3s;
 }
 
+.modal-content .form-group {
+  min-width: 0;
+}
+
 .modal-wide {
-  max-width: 900px !important;
+  max-width: 1100px !important;
 }
 
 @keyframes slideDown {
@@ -471,13 +490,28 @@ h2 {
   color: var(--text-primary);
 }
 
+.modal-content h2 {
+  margin-bottom: 0.5rem;
+}
+
+.quote-metadata {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: 1.5rem;
+  font-style: italic;
+}
+
 /* Form */
 .form-group {
   margin-bottom: 1.5rem;
 }
 
+.modal-content .form-group:last-of-type {
+  margin-bottom: 0;
+}
+
 .form-row .form-group {
-  flex: 1;
+  margin-bottom: 0;
 }
 
 .form-row-2 .form-group,
@@ -532,6 +566,7 @@ h2 {
 .form-row {
   display: flex;
   gap: 1rem;
+  align-items: flex-end;
 }
 
 .form-row-2 {
@@ -544,20 +579,6 @@ h2 {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 1rem;
-}
-
-.btn-icon {
-  background: none;
-  border: none;
-  font-size: 1.2rem;
-  cursor: pointer;
-  padding: 0.25rem;
-  margin-left: 0.5rem;
-  transition: transform 0.2s;
-}
-
-.btn-icon:hover {
-  transform: scale(1.2);
 }
 
 label {
@@ -586,6 +607,10 @@ select {
   background-color: var(--surface);
 }
 
+#quoteText {
+  font-style: italic;
+}
+
 input:focus,
 textarea:focus,
 select:focus {
@@ -604,7 +629,7 @@ textarea {
 .form-actions {
   display: flex;
   gap: 1rem;
-  margin-top: 2rem;
+  margin-top: 0;
 }
 
 /* Search Section */
@@ -663,6 +688,12 @@ textarea {
   position: relative;
 }
 
+.quote-card:hover {
+  background: #f0f5ff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
 .quote-image-thumb {
   max-width: 240px;
   max-height: 240px;
@@ -687,19 +718,38 @@ textarea {
   border-radius: 8px;
 }
 
-.quote-card:hover {
-  transform: translateX(4px);
-  box-shadow: var(--shadow);
+.quote-content-row {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: 0.875rem;
+}
+
+.quote-note-title {
+  font-weight: bold;
+  font-size: 1rem;
+  color: var(--text-primary);
+  margin-bottom: 0;
 }
 
 .quote-text {
   font-size: 1.125rem;
   font-style: italic;
   color: var(--text-primary);
-  margin-bottom: 0.875rem;
   line-height: 1.5;
   white-space: pre-wrap; /* Preserve newlines and whitespace */
   word-wrap: break-word; /* Break long words if needed */
+  flex: 1;
+}
+
+.quote-tags-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: flex-start;
+  justify-content: flex-end;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 /* Opening quote mark */
@@ -776,24 +826,99 @@ textarea {
   margin-top: 0.5rem;
 }
 
-.image-preview {
+.image-upload-area-horizontal {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+  margin-top: 0.5rem;
+  width: fit-content;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.image-upload-area-horizontal .image-preview {
+  flex-shrink: 0;
+  width: auto;
+  max-width: 600px;
+}
+
+.image-upload-area-horizontal .image-preview-large {
+  width: auto;
+  max-width: 600px;
+  min-height: 300px;
+}
+
+.image-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  flex: 1;
+  align-self: flex-start;
+}
+
+.image-controls button {
   width: 100%;
-  max-width: 300px;
+  max-width: 200px;
+}
+
+.image-controls small {
+  display: block;
+  margin-top: 0.5rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  word-wrap: break-word;
+  max-width: 200px;
+}
+
+.image-preview {
+  width: 300px;
+  height: auto;
   min-height: 200px;
-  border: 2px dashed var(--border);
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 1rem;
-  background: var(--background);
+  background: var(--surface);
   cursor: pointer;
   transition: all 0.2s;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
+  border: none;
 }
 
-.image-preview:hover {
+.image-preview-large {
+  width: fit-content !important;
+  max-width: 300px;
+  height: auto !important;
+  min-height: 200px;
+  overflow: visible;
+}
+
+.image-preview-large:has(img) {
+  min-height: 0;
+  border: none !important;
+  border-radius: 0;
+  display: block;
+  margin-bottom: 0;
+}
+
+.image-preview-large:not(:has(img)) {
+  border: 2px dashed var(--border);
+  width: 300px !important;
+}
+
+.image-preview:has(img) {
+  min-height: 0;
+  border: none !important;
+  border-radius: 0;
+}
+
+.image-preview:not(:has(img)) {
+  border: 2px dashed var(--border);
+}
+
+.image-preview:not(:has(img)):hover {
   border-color: var(--primary-color);
   background: #f0f0ff;
 }
@@ -822,8 +947,11 @@ textarea {
 .image-preview img {
   max-width: 100%;
   max-height: 300px;
+  width: auto;
+  height: auto;
   display: block;
   object-fit: contain;
+  border: none;
 }
 
 .image-upload-area button {
@@ -1131,6 +1259,7 @@ textarea {
 
 .author-card:hover,
 .source-card:hover {
+  background: #f0f5ff;
   transform: translateY(-4px);
   box-shadow: var(--shadow-lg);
 }
@@ -1236,6 +1365,7 @@ textarea {
 }
 
 .tag-card:hover {
+  background: #f0f5ff;
   transform: translateX(5px);
   box-shadow: var(--shadow-lg);
 }
