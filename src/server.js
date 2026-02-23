@@ -483,6 +483,33 @@ app.get("/api/quotes", async (req, res) => {
   }
 });
 
+// Get random quote (must be before /:id route)
+app.get("/api/quotes/random", async (req, res) => {
+  try {
+    const result = await pool.query(
+      `
+      SELECT q.*, 
+             a.name as author, 
+             s.name as source
+      FROM quotes q
+      LEFT JOIN authors a ON q.author_id = a.id
+      LEFT JOIN sources s ON q.source_id = s.id
+      ORDER BY RANDOM()
+      LIMIT 1
+    `
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "No quotes found" });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error("Error fetching random quote:", error);
+    res.status(500).json({ error: "Failed to fetch random quote" });
+  }
+});
+
 // Get single quote by ID
 app.get("/api/quotes/:id", async (req, res) => {
   try {

@@ -8,6 +8,22 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
+    <!-- Welcome Quote Overlay -->
+    <div id="welcomeQuoteOverlay" class="welcome-overlay" style="display: none;">
+      <div class="welcome-quote-card">
+        <div class="welcome-quote-content">
+          <div class="welcome-quote-text"></div>
+          <div class="welcome-quote-meta">
+            <div class="welcome-quote-author"></div>
+            <div class="welcome-quote-source"></div>
+          </div>
+          <div class="welcome-quote-tags"></div>
+          <div class="welcome-quote-note"></div>
+        </div>
+        <div class="welcome-quote-hint">Click anywhere to continue</div>
+      </div>
+    </div>
+
     <div class="app-layout">
         <!-- Side Menu -->
         <nav class="side-menu">
@@ -47,6 +63,15 @@
             <button id="exportPdfBtn" class="menu-item">
               📄 Export to PDF
             </button>
+          </li>
+        </ul>
+
+        <div class="menu-divider"></div>
+
+        <h3 class="menu-section-title">Utilities</h3>
+        <ul class="menu-list menu-operations">
+          <li>
+            <button id="randomQuoteBtn" class="menu-item">🎲 Random Quote</button>
           </li>
         </ul>
       </nav>
@@ -340,33 +365,31 @@
             ></textarea>
           </div>
 
-          <div class="form-row form-row-3">
-            <div class="form-group autocomplete-wrapper">
+          <div class="form-row">
+            <div class="form-group">
               <label for="author">Author</label>
-              <input
-                type="text"
-                id="author"
-                placeholder="Author name"
-                autocomplete="off"
-              />
-              <div
-                id="authorSuggestions"
-                class="autocomplete-suggestions"
-              ></div>
+              <div class="autocomplete-wrapper">
+                <input
+                  type="text"
+                  id="author"
+                  placeholder="Author name"
+                  autocomplete="off"
+                />
+                <div id="authorSuggestions" class="autocomplete-suggestions"></div>
+              </div>
             </div>
 
-            <div class="form-group autocomplete-wrapper">
+            <div class="form-group">
               <label for="source">Source</label>
-              <input
-                type="text"
-                id="source"
-                placeholder="Source title"
-                autocomplete="off"
-              />
-              <div
-                id="sourceSuggestions"
-                class="autocomplete-suggestions"
-              ></div>
+              <div class="autocomplete-wrapper">
+                <input
+                  type="text"
+                  id="source"
+                  placeholder="Source title"
+                  autocomplete="off"
+                />
+                <div id="sourceSuggestions" class="autocomplete-suggestions"></div>
+              </div>
             </div>
 
             <div class="form-group">
@@ -622,15 +645,21 @@
                   id="bulkAuthor"
                   required
                   placeholder="Author name"
+                  autocomplete="off"
                 />
-                <div id="bulkAuthorSuggestions" class="suggestions"></div>
+                <div id="bulkAuthorSuggestions" class="autocomplete-suggestions"></div>
               </div>
             </div>
             <div class="form-group">
               <label for="bulkSource">Source</label>
               <div class="autocomplete-wrapper">
-                <input type="text" id="bulkSource" placeholder="Source title" />
-                <div id="bulkSourceSuggestions" class="suggestions"></div>
+                <input 
+                  type="text" 
+                  id="bulkSource" 
+                  placeholder="Source title"
+                  autocomplete="off"
+                />
+                <div id="bulkSourceSuggestions" class="autocomplete-suggestions"></div>
               </div>
             </div>
             <div class="form-group">
@@ -643,8 +672,8 @@
             </div>
           </div>
 
-          <div class="form-group">
-            <label for="bulkQuotes">Quotes (separated by ---) *</label>
+          <div class="form-group" style="margin-top: 1.5rem;">
+            <label for="bulkQuotes">Quotes *</label>
             <textarea
               id="bulkQuotes"
               required
