@@ -315,27 +315,11 @@ function setupEventListeners() {
 }
 
 // Autocomplete Functions
-function debounceAutocomplete(value, type) {
-  clearTimeout(autocompleteTimeout);
-  autocompleteTimeout = setTimeout(() => {
-    if (value.length >= 1) {
-      fetchSuggestions(value, type);
-    } else {
-      if (type === "author") {
-        authorSuggestions.classList.remove("show");
-      } else {
-        sourceSuggestions.classList.remove("show");
-      }
-    }
-  }, 200);
-}
-
 async function fetchSuggestions(search, type, container, input) {
   try {
     const endpoint = type === "authors" ? "authors" : "sources";
-    const response = await fetch(
-      `${API_URL}/${endpoint}?search=${encodeURIComponent(search)}`,
-    );
+    const url = `${API_URL}/${endpoint}?search=${encodeURIComponent(search)}`;
+    const response = await fetch(url);
     const items = await response.json();
 
     // Hide if no results
@@ -739,12 +723,6 @@ function createQuoteCard(quote) {
         .join("")
     : "";
 
-  const createdDate = quote.created_at
-    ? new Date(quote.created_at).toLocaleString()
-    : "";
-  const updatedDate = quote.updated_at
-    ? new Date(quote.updated_at).toLocaleString()
-    : "";
   const author = quote.author_name || "";
   const source = quote.source_name || "";
   const sourceType = quote.source_type || "BOOK";
@@ -762,17 +740,19 @@ function createQuoteCard(quote) {
 
   return `
         <div class="quote-card" data-quote-id="${quote.id}" style="cursor: pointer;">
-            ${quote.image ? `<div class="quote-image-thumb" onclick="event.stopPropagation(); showFullImage('${quote.image_full || quote.image}')"><img src="${quote.image}" alt="Quote image"></div>` : ""}
             ${quote.note ? `<div class="quote-note-title">${escapeHtml(quote.note)}</div>` : ''}
-            <div class="quote-content-row">
-                <div class="quote-text ${isLongQuote ? "collapsible" : ""}" id="${quoteId}" data-expanded="false">${escapeHtml(isLongQuote ? shortQuote : quote.quote)}</div>
-                ${tags ? `<div class="quote-tags-inline">${tags}</div>` : ''}
+            <div class="quote-main-content">
+                <div class="quote-text-column">
+                    <div class="quote-text ${isLongQuote ? "collapsible" : ""}" id="${quoteId}" data-expanded="false">${escapeHtml(isLongQuote ? shortQuote : quote.quote)}</div>
+                    ${isLongQuote ? `<button class="expand-btn" id="${expandBtnId}" onclick="event.stopPropagation(); toggleQuoteExpand('${quote.id}')">▼ Show more</button>` : ""}
+                </div>
+                <div class="quote-side-column">
+                    ${author ? `<div class="meta-item"><span class="meta-label">✍️ Author:</span> <span class="meta-value clickable author-link" data-id="${quote.author_id}" data-name="${escapeHtml(author)}">${escapeHtml(author)}</span></div>` : ""}
+                    ${source ? `<div class="meta-item"><span class="meta-label">Source:</span> <span class="meta-value clickable source-link" data-id="${quote.source_id}" data-name="${escapeHtml(source)}" data-type="${sourceType}">${sourceIcon} ${escapeHtml(source)}</span></div>` : ""}
+                    ${quote.image ? `<div class="quote-image-thumb" onclick="event.stopPropagation(); showFullImage('${quote.image_full || quote.image}')"><img src="${quote.image}" alt="Quote image"></div>` : ""}
+                </div>
             </div>
-            ${isLongQuote ? `<button class="expand-btn" id="${expandBtnId}" onclick="event.stopPropagation(); toggleQuoteExpand('${quote.id}')">▼ Show more</button>` : ""}
-            <div class="quote-meta">
-                ${author ? `<div class="meta-item"><span class="meta-label">Author:</span> <span class="meta-value clickable author-link" data-id="${quote.author_id}" data-name="${escapeHtml(author)}">${escapeHtml(author)}</span></div>` : ""}
-                ${source ? `<div class="meta-item"><span class="meta-label">Source:</span> <span class="meta-value clickable source-link" data-id="${quote.source_id}" data-name="${escapeHtml(source)}" data-type="${sourceType}">${sourceIcon} ${escapeHtml(source)}</span></div>` : ""}
-            </div>
+            ${tags ? `<div class="quote-tags-section">${tags}</div>` : ''}
         </div>
     `;
 }
@@ -1288,6 +1268,17 @@ function openBulkModal() {
   bulkForm.reset();
   bulkPreview.style.display = "none";
   previewList.innerHTML = "";
+  
+  // Clear autocomplete suggestions
+  if (bulkAuthorSuggestions) {
+    bulkAuthorSuggestions.innerHTML = "";
+    bulkAuthorSuggestions.style.display = "none";
+  }
+  if (bulkSourceSuggestions) {
+    bulkSourceSuggestions.innerHTML = "";
+    bulkSourceSuggestions.style.display = "none";
+  }
+  
   bulkModal.style.display = "block";
 }
 
@@ -1440,7 +1431,7 @@ const originalDebounceAutocomplete = debounceAutocomplete;
 function debounceAutocomplete(value, type) {
   clearTimeout(autocompleteTimeout);
   autocompleteTimeout = setTimeout(() => {
-    if (value.length < 2) {
+    if (value.length < 1) {
       // Hide suggestions if input is too short
       if (type === "author") authorSuggestions.classList.remove("show");
       else if (type === "source") sourceSuggestions.classList.remove("show");
@@ -2175,3 +2166,123 @@ async function handleImportFile(event) {
     event.target.value = "";
   }
 }
+
+// Welcome Quote Feature
+async function showWelcomeQuote() {
+  try {
+    // Fetch a random quote
+    const response = await fetch(`${API_URL}/quotes/random`);
+    if (!response.ok) {
+      console.log("No quotes available for welcome screen");
+      return;
+    }
+
+    const quote = await response.json();
+    
+    // Get overlay elements
+    const overlay = document.getElementById("welcomeQuoteOverlay");
+    const textEl = overlay.querySelector(".welcome-quote-text");
+    const authorEl = overlay.querySelector(".welcome-quote-author");
+    const sourceEl = overlay.querySelector(".welcome-quote-source");
+    const tagsEl = overlay.querySelector(".welcome-quote-tags");
+    const noteEl = overlay.querySelector(".welcome-quote-note");
+    
+    // Populate quote data
+    textEl.textContent = quote.quoteText || quote.quote || "";
+    
+    // Author with icon
+    if (quote.author) {
+      authorEl.textContent = `✍️ ${quote.author}`;
+    } else {
+      authorEl.textContent = "";
+    }
+    
+    // Source with icon based on type and conditional bullet
+    if (quote.source) {
+      // Determine icon based on source type
+      let sourceIcon = "📝"; // Default for ASSORTED
+      if (quote.type === "BOOK" || quote.source_type === "BOOK") {
+        sourceIcon = "📚";
+      } else if (quote.type === "MOVIE" || quote.source_type === "MOVIE") {
+        sourceIcon = "🎬";
+      }
+      
+      sourceEl.style.display = "inline";
+      // Add bullet before source when author exists
+      if (quote.author) {
+        sourceEl.style.marginLeft = "0.5rem";
+        sourceEl.textContent = `• ${sourceIcon} ${quote.source}`;
+      } else {
+        sourceEl.style.marginLeft = "0";
+        sourceEl.textContent = `${sourceIcon} ${quote.source}`;
+      }
+    } else {
+      sourceEl.textContent = "";
+      sourceEl.style.display = "none";
+    }
+    
+    // Tags display
+    if (quote.tags && quote.tags.trim()) {
+      const tags = quote.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+      if (tags.length > 0) {
+        tagsEl.innerHTML = tags.map(tag => `<span class="tag">${tag}</span>`).join('');
+        tagsEl.style.display = "flex";
+      } else {
+        tagsEl.innerHTML = "";
+        tagsEl.style.display = "none";
+      }
+    } else {
+      tagsEl.innerHTML = "";
+      tagsEl.style.display = "none";
+    }
+    
+    // Note display
+    if (quote.note && quote.note.trim()) {
+      noteEl.textContent = quote.note;
+      noteEl.style.display = "block";
+    } else {
+      noteEl.textContent = "";
+      noteEl.style.display = "none";
+    }
+    
+    // Show overlay
+    overlay.style.display = "flex";
+    
+    // Function to close overlay
+    function closeOverlay() {
+      overlay.style.display = "none";
+      overlay.removeEventListener("click", closeOverlay);
+      document.removeEventListener("keydown", handleKeyPress);
+    }
+    
+    // Handle keyboard events
+    function handleKeyPress(e) {
+      if (e.key === "Escape" || e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        closeOverlay();
+      }
+    }
+    
+    // Close on click
+    overlay.addEventListener("click", closeOverlay);
+    
+    // Close on Escape/Enter/Space
+    document.addEventListener("keydown", handleKeyPress);
+    
+  } catch (error) {
+    console.error("Error showing welcome quote:", error);
+  }
+}
+
+// Show welcome quote on app load
+window.addEventListener("DOMContentLoaded", () => {
+  // Show welcome quote after a short delay to ensure smooth loading
+  setTimeout(showWelcomeQuote, 300);
+  
+  // Add event listener for Random Quote button
+  const randomQuoteBtn = document.getElementById("randomQuoteBtn");
+  if (randomQuoteBtn) {
+    randomQuoteBtn.addEventListener("click", showWelcomeQuote);
+  }
+});
+
