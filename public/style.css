@@ -89,6 +89,20 @@ body {
   color: white;
 }
 
+/* Desktop: show full text with icons */
+.menu-icon {
+  display: inline;
+}
+
+.menu-text,
+.menu-text-desktop {
+  display: inline;
+}
+
+.menu-text-mobile {
+  display: none;
+}
+
 .menu-divider {
   height: 1px;
   background: var(--border);
@@ -237,12 +251,24 @@ header h1 {
 
 .search-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   margin-bottom: 1.5rem;
+  gap: 1rem;
 }
 
 .search-header h2 {
+  margin: 0;
+}
+
+.search-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.search-title-row h2 {
   margin: 0;
 }
 
@@ -666,9 +692,17 @@ textarea {
 
 /* Quotes List */
 .quotes-section {
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.quotes-section h2 {
   background: var(--surface);
-  padding: 2rem;
-  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  margin: 0 0 1rem 0;
+  border-radius: 8px;
   box-shadow: var(--shadow);
 }
 
@@ -680,22 +714,24 @@ textarea {
 
 .quotes-list {
   display: grid;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .quote-card {
-  background: var(--background);
+  background: var(--surface);
   padding: 1.25rem;
   border-radius: 10px;
-  border-left: 4px solid var(--primary-color);
+  border: 2px solid var(--border);
   transition: all 0.2s;
   position: relative;
 }
 
 .quote-card:hover {
-  background: #f0f5ff;
+  background: #f0fff4;
+  border-color: var(--border);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   transform: translateY(-2px);
+  cursor: pointer;
 }
 
 .quote-image-thumb {
@@ -1776,7 +1812,7 @@ textarea {
   gap: 12px;
 }
 
-.tag-edit-btn {
+.tag-delete-btn {
   background: transparent;
   border: 1px solid var(--border);
   font-size: 14px;
@@ -1787,14 +1823,14 @@ textarea {
   opacity: 0;
 }
 
-.tag-edit-btn:hover {
-  background: var(--primary-color);
+.tag-delete-btn:hover {
+  background: #dc2626;
   color: white;
-  border-color: var(--primary-color);
+  border-color: #dc2626;
   transform: scale(1.1);
 }
 
-.tag-card:hover .tag-edit-btn {
+.tag-card:hover .tag-delete-btn {
   opacity: 1;
 }
 
@@ -1861,7 +1897,7 @@ textarea {
     opacity: 1;
   }
   
-  .tag-edit-btn {
+  .tag-delete-btn {
     opacity: 1;
   }
 }
@@ -2005,36 +2041,140 @@ textarea {
 /* ============= ENHANCED MOBILE OPTIMIZATION ============= */
 
 @media (max-width: 768px) {
+  /* Hide desktop-only elements on mobile */
+  .desktop-only,
+  .menu-operations.desktop-only,
+  .menu-section-title.desktop-only,
+  .menu-divider.desktop-only {
+    display: none !important;
+  }
+  
+  /* Move side menu to bottom as navigation bar */
+  .app-layout {
+    flex-direction: column !important;
+  }
+  
+  .side-menu {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    padding: 0.3rem 0.5rem !important;
+    border-right: none !important;
+    border-top: 2px solid var(--border) !important;
+    z-index: 1000 !important;
+    background: var(--surface) !important;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1) !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+  }
+  
+  .side-menu-title {
+    display: none !important;
+  }
+  
+  .menu-divider {
+    display: none !important;
+  }
+  
+  .menu-section-title {
+    display: none !important;
+  }
+  
+  .menu-list {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-around !important;
+    align-items: center !important;
+    gap: 0.2rem !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    flex: 1 !important;
+  }
+  
+  .menu-utilities {
+    flex: 0 0 auto !important;
+    justify-content: flex-end !important;
+    border-left: 2px solid var(--border) !important;
+    padding-left: 0.5rem !important;
+  }
+  
+  .menu-list li {
+    flex: 1 1 25% !important;
+    min-width: 60px !important;
+    text-align: center !important;
+  }
+  
+  .menu-utilities li {
+    flex: 0 0 auto !important;
+    min-width: 50px !important;
+  }
+  
+  .menu-item {
+    padding: 0.5rem 0.1rem !important;
+    font-size: 1.5rem !important;
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 0 !important;
+    border-radius: 8px !important;
+    white-space: nowrap !important;
+  }
+  
+  .menu-item.active {
+    background: var(--primary-color) !important;
+    color: white !important;
+  }
+  
+  .main-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+    padding: 0.15rem !important;
+    padding-left: 0.25rem !important;
+    padding-right: 0.15rem !important;
+    padding-top: 1rem !important;
+    padding-bottom: 60px !important; /* Space for bottom horizontal menu */
+  }
+  
   /* Reduce overall padding and spacing */
   body {
     font-size: 11px !important;  /* Was 14px, now 20% smaller */
   }
   
-  .main-content {
-    padding: 0.15rem !important;
-    padding-left: 0.25rem !important;
-    padding-right: 0.15rem !important;
+  .quotes-section {
+    padding: 0 !important;
   }
   
-  .quotes-section {
-    padding: 0.5rem !important;
-    padding-left: 0.25rem !important;
-    padding-right: 0.15rem !important;
+  .quotes-section h2 {
+    padding: 0.5rem 0.25rem !important;
+    margin: 0 0 0.5rem 0 !important;
+    font-size: 1rem !important;
   }
   
   .container {
     padding: 0.15rem !important;
     padding-left: 0.25rem !important;
     padding-right: 0.15rem !important;
+    padding-top: 0rem !important;
   }
   
   /* Compact header */
   header {
-    margin-bottom: 0.3rem !important;
+    margin-bottom: 0.15rem !important;
+    margin-top: 0rem !important;
+    gap: 0.2rem !important;
   }
   
   h1 {
-    font-size: 1.2rem !important;  /* Was 1.5rem, now 20% smaller */
+    font-size: 1.0rem !important;  /* Was 1.5rem, now 20% smaller */
     margin-bottom: 0.3rem !important;
   }
   
@@ -2073,7 +2213,7 @@ textarea {
   }
   
   .quotes-list {
-    gap: 0.3rem !important;
+    gap: 0.5rem !important;
   }
   
   .quote-text {
@@ -2156,8 +2296,8 @@ textarea {
     flex-direction: column !important;
     align-items: flex-start !important;
     gap: 0.3rem !important;
-    margin-bottom: 0.7rem !important;
-    padding-bottom: 0.3rem !important;
+    margin-bottom: 0.5rem !important;
+    padding-bottom: 0.25rem !important;
   }
   
   .search-header h2 {
@@ -2165,39 +2305,38 @@ textarea {
     width: 100% !important;
   }
   
+  .search-title-row {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    width: 100% !important;
+    gap: 0.5rem !important;
+  }
+  
+  .search-title-row h2 {
+    margin: 0 !important;
+    flex: 1 !important;
+  }
+  
   .quote-type-filter,
   .source-type-filter {
     display: flex !important;
-    flex-wrap: wrap !important;
+    flex-wrap: nowrap !important;
+    justify-content: flex-end !important;
     width: 100% !important;
-    margin-top: 0 !important;
-    gap: 0.3rem !important;
+    margin-top: 0rem !important;
+    gap: 0.5rem !important;
   }
   
   .quote-type-filter label,
   .source-type-filter label {
     font-size: 11px !important;
-    margin-right: 0.3rem !important;
+    margin-right: 0 !important;
+    flex: 0 0 auto !important;
+    justify-content: center !important;
   }
   
   /* Search grid - button in normal flow for now */
-  .search-grid {
-    gap: 0.5rem !important;
-    grid-template-columns: 1fr 1fr !important;
-  }
-  
-  .search-grid .search-item:last-child {
-    grid-column: 1 / -1 !important;
-  }
-  
-  .search-grid .search-item:last-child label {
-    display: none !important;
-  }
-  
-  #clearBtn {
-    width: 100% !important;
-  }
-  
   .search-grid {
     gap: 0.5rem !important;
     grid-template-columns: 1fr 1fr !important;
@@ -2277,6 +2416,12 @@ textarea {
     padding: 0.3rem 0.6rem !important;
     font-size: 11px !important;
     line-height: 1.2 !important;
+  }
+  
+  /* Keep Clear Filters button same size as other action buttons */
+  .search-title-row .btn-primary {
+    padding: 0.3rem 0.6rem !important;
+    font-size: 11px !important;
   }
   
   .btn-icon {
@@ -2379,29 +2524,85 @@ textarea {
   
   /* Compact side menu */
   .side-menu {
-    padding: 0.5rem !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    background: #e3f2fd !important; /* Light bluish background */
+    border-top: 1px solid #90caf9 !important; /* Bluish border */
+    border-right: none !important;
+    padding: 0 !important;
+    z-index: 1000 !important;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1) !important;
+    display: flex !important;
+    flex-direction: row !important;
+    overflow-x: hidden !important;
+    overflow-y: hidden !important;
   }
   
   .side-menu-title {
-    font-size: 1rem !important;  /* Was 1.25rem, now 20% smaller */
-    margin-bottom: 0.5rem !important;
+    display: none !important;
   }
   
-  .menu-item {
-    padding: 0.3rem 0.5rem !important;
-    font-size: 0.76rem !important;  /* Was 0.95rem, now 20% smaller */
-    margin-bottom: 0.15rem !important;
+  .menu-divider {
+    display: none !important;
   }
   
   .menu-section-title {
-    font-size: 0.7rem !important;
-    margin-top: 0.5rem !important;
-    margin-bottom: 0.25rem !important;
+    display: none !important;
+  }
+  
+  .menu-list {
+    display: flex !important;
+    flex-direction: row !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    list-style: none !important;
+    white-space: nowrap !important;
+    flex: 1 !important;
+  }
+  
+  .menu-list li {
+    flex: 1 !important;
+    display: flex !important;
+  }
+  
+  .menu-item {
+    padding: 0.5rem 0.3rem !important;
+    font-size: 1.2rem !important;
+    margin-bottom: 0 !important;
+    border-radius: 0 !important;
+    white-space: nowrap !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0 !important;
+    width: 100% !important;
+  }
+  
+  .menu-item.active {
+    background: var(--primary-color) !important;
+    color: white !important;
+  }
+  
+  /* Hide text labels on mobile, show only icons */
+  .menu-text,
+  .menu-text-desktop,
+  .menu-text-mobile {
+    display: none !important;
+  }
+  
+  .menu-icon {
+    display: inline !important;
   }
   
   .header-actions {
     gap: 0.5rem !important;
     align-items: center !important;
+    margin-top: 0.2rem !important;
+    margin-bottom: 0.2rem !important;
   }
   
   .header-actions .btn-icon {

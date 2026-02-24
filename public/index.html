@@ -51,43 +51,37 @@
         <ul class="menu-list">
           <li>
             <button class="menu-item active" data-view="quotes">
-              💬 Quotes
+              <span class="menu-icon">💬</span><span class="menu-text"> Quotes</span>
             </button>
           </li>
           <li>
-            <button class="menu-item" data-view="authors">✍️ Authors</button>
+            <button class="menu-item" data-view="authors"><span class="menu-icon">✍️</span><span class="menu-text"> Authors</span></button>
           </li>
           <li>
-            <button class="menu-item" data-view="sources">📚 Sources</button>
+            <button class="menu-item" data-view="sources"><span class="menu-icon">📚</span><span class="menu-text"> Sources</span></button>
           </li>
-          <li><button class="menu-item" data-view="tags">🏷️ Tags</button></li>
+          <li><button class="menu-item" data-view="tags"><span class="menu-icon">🏷️</span><span class="menu-text"> Tags</span></button></li>
+          <li>
+            <button id="randomQuoteBtn" class="menu-item"><span class="menu-icon">🎲</span><span class="menu-text-desktop"> Random Quote</span><span class="menu-text-mobile"> Random</span></button>
+          </li>
         </ul>
 
-        <div class="menu-divider"></div>
+        <div class="menu-divider desktop-only"></div>
 
-        <h3 class="menu-section-title">Operations</h3>
-        <ul class="menu-list menu-operations">
+        <h3 class="menu-section-title desktop-only">Admin Operations</h3>
+        <ul class="menu-list menu-operations desktop-only">
           <li>
-            <button id="exportJsonBtn" class="menu-item">💾 Backup Data</button>
+            <button id="exportJsonBtn" class="menu-item"><span class="menu-icon">💾</span><span class="menu-text"> Backup Data</span></button>
           </li>
           <li>
             <button id="importJsonBtn" class="menu-item">
-              📥 Restore Data
+              <span class="menu-icon">📥</span><span class="menu-text"> Restore Data</span>
             </button>
           </li>
           <li>
             <button id="exportPdfBtn" class="menu-item">
-              📄 Export to PDF
+              <span class="menu-icon">📄</span><span class="menu-text"> Export to PDF</span>
             </button>
-          </li>
-        </ul>
-
-        <div class="menu-divider"></div>
-
-        <h3 class="menu-section-title">Utilities</h3>
-        <ul class="menu-list menu-operations">
-          <li>
-            <button id="randomQuoteBtn" class="menu-item">🎲 Random Quote</button>
           </li>
         </ul>
       </nav>
@@ -125,7 +119,12 @@
             <!-- Search/Filter Section -->
             <div class="search-section">
               <div class="search-header">
-                <h2>🔍 Search Quotes</h2>
+                <div class="search-title-row">
+                  <h2>🔍 Search Quotes</h2>
+                  <button id="clearBtn" class="btn btn-primary">
+                    Clear Filters
+                  </button>
+                </div>
                 
                 <!-- Source Type Filter -->
                 <div class="quote-type-filter">
@@ -197,18 +196,12 @@
                     class="autocomplete-suggestions"
                   ></div>
                 </div>
-                <div class="search-item">
-                  <label>&nbsp;</label>
-                  <button id="clearBtn" class="btn btn-secondary">
-                    Clear Filters
-                  </button>
-                </div>
               </div>
             </div>
 
             <!-- Quotes List -->
             <div class="quotes-section">
-              <h2>Latest Quotes <span id="quoteCount"></span></h2>
+              <h2>⏳ Latest Quotes <span id="quoteCount"></span></h2>
               <div id="quotesList" class="quotes-list">
                 <div class="loading">Loading quotes...</div>
               </div>

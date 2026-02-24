@@ -7,16 +7,14 @@ const pool = require("./db");
 async function checkTagTablesExist() {
   try {
     const result = await pool.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_name = 'tags'
-      ) AND EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_name = 'quote_tags'
-      )
+      SELECT 
+        (SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'tags')) AND
+        (SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'quote_tags')) 
+        AS exists
     `);
     return result.rows[0].exists;
   } catch (error) {
+    console.error("Error checking tag tables:", error);
     return false;
   }
 }
@@ -33,6 +31,7 @@ async function getOrCreateTagIds(tagNames, client = pool) {
   }
 
   const hasNewTables = await checkTagTablesExist();
+  console.log("getOrCreateTagIds - Tables exist:", hasNewTables);
   if (!hasNewTables) {
     return []; // Skip if tables don't exist yet
   }
@@ -43,14 +42,19 @@ async function getOrCreateTagIds(tagNames, client = pool) {
     const trimmedTag = tagName.trim();
     if (!trimmedTag) continue;
 
-    const result = await client.query(
-      `INSERT INTO tags (name) 
-       VALUES ($1) 
-       ON CONFLICT (name) DO UPDATE SET name = tags.name
-       RETURNING id`,
-      [trimmedTag]
-    );
-    tagIds.push(result.rows[0].id);
+    try {
+      const result = await client.query(
+        `INSERT INTO tags (name) 
+         VALUES ($1) 
+         ON CONFLICT (name) DO UPDATE SET name = tags.name
+         RETURNING id`,
+        [trimmedTag]
+      );
+      console.log("Created/found tag:", trimmedTag, "ID:", result.rows[0].id);
+      tagIds.push(result.rows[0].id);
+    } catch (error) {
+      console.error("Error creating tag:", trimmedTag, error);
+    }
   }
 
   return tagIds;

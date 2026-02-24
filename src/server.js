@@ -497,8 +497,13 @@ app.get("/api/quotes/count", async (req, res) => {
         .split(",")
         .map((tag) => tag.trim())
         .filter((tag) => tag);
+      
       searchTags.forEach((tag) => {
-        query += ` AND q.tags ILIKE $${paramCounter}`;
+        query += ` AND EXISTS (
+          SELECT 1 FROM quote_tags qt 
+          JOIN tags t ON qt.tag_id = t.id 
+          WHERE qt.quote_id = q.id AND t.name ILIKE $${paramCounter}
+        )`;
         params.push(`%${tag}%`);
         paramCounter++;
       });
@@ -538,7 +543,7 @@ app.get("/api/quotes", async (req, res) => {
     } = req.query;
 
     let query = `
-      SELECT q.*, 
+      SELECT DISTINCT q.*, 
              a.name as author_name, a.image as author_image,
              s.name as source_name, s.image as source_image, q.type as source_type
       FROM quotes q
@@ -575,36 +580,24 @@ app.get("/api/quotes", async (req, res) => {
       console.log("Searching for tags:", searchTags); // Debug log
       
       if (searchTags.length > 0) {
-        // Check if we have new tag tables
-        const hasNewTables = await checkTagTablesExist();
+        // Use the new tag system - search using JOIN
+        query = query.replace(
+          "FROM quotes q",
+          `FROM quotes q
+           INNER JOIN quote_tags qt ON q.id = qt.quote_id
+           INNER JOIN tags t ON qt.tag_id = t.id`
+        );
         
-        if (hasNewTables) {
-          // Use the new tag system - search using JOIN
-          query = query.replace(
-            "FROM quotes q",
-            `FROM quotes q
-             INNER JOIN quote_tags qt ON q.id = qt.quote_id
-             INNER JOIN tags t ON qt.tag_id = t.id`
-          );
-          
-          // For each tag, require a match (AND logic)
-          searchTags.forEach((tag) => {
-            query += ` AND EXISTS (
-              SELECT 1 FROM quote_tags qt2
-              INNER JOIN tags t2 ON qt2.tag_id = t2.id
-              WHERE qt2.quote_id = q.id AND t2.name ILIKE $${paramCounter}
-            )`;
-            params.push(`%${tag}%`);
-            paramCounter++;
-          });
-        } else {
-          // Fallback to old system (comma-separated tags column)
-          searchTags.forEach((tag) => {
-            query += ` AND q.tags ILIKE $${paramCounter}`;
-            params.push(`%${tag}%`);
-            paramCounter++;
-          });
-        }
+        // For each tag, require a match (AND logic)
+        searchTags.forEach((tag) => {
+          query += ` AND EXISTS (
+            SELECT 1 FROM quote_tags qt2
+            INNER JOIN tags t2 ON qt2.tag_id = t2.id
+            WHERE qt2.quote_id = q.id AND t2.name ILIKE $${paramCounter}
+          )`;
+          params.push(`%${tag}%`);
+          paramCounter++;
+        });
       }
     }
 
@@ -792,11 +785,12 @@ app.post("/api/quotes", async (req, res) => {
     }
 
     // Create the quote - still store tags column for backward compatibility
+    // Insert the quote
     const result = await client.query(
-      `INSERT INTO quotes (quote, author_id, source_id, tags, image, image_full, note, type) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+      `INSERT INTO quotes (quote, author_id, source_id, image, image_full, note, type) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7) 
        RETURNING *`,
-      [quote, authorId, sourceId, tags, image, image_full, note, sourceType],
+      [quote, authorId, sourceId, image, image_full, note, sourceType],
     );
 
     const quoteId = result.rows[0].id;
@@ -827,19 +821,13 @@ app.post("/api/quotes", async (req, res) => {
     );
 
     // Add tags to response
-    const hasNewTables = await checkTagTablesExist();
-    if (hasNewTables) {
-      const quoteTags = await getTagsForQuote(quoteId);
-      const quoteWithTags = {
-        ...completeQuote.rows[0],
-        tags: quoteTags.length > 0 ? quoteTags.map((t) => t.name).join(", ") : (completeQuote.rows[0].tags || ""),
-        tag_objects: quoteTags,
-      };
-      res.status(201).json(quoteWithTags);
-    } else {
-      // Fallback: use tags from old column
-      res.status(201).json(completeQuote.rows[0]);
-    }
+    const quoteTags = await getTagsForQuote(quoteId);
+    const quoteWithTags = {
+      ...completeQuote.rows[0],
+      tags: quoteTags.length > 0 ? quoteTags.map((t) => t.name).join(", ") : "",
+      tag_objects: quoteTags,
+    };
+    res.status(201).json(quoteWithTags);
   } catch (error) {
     await client.query("ROLLBACK");
     console.error("Error creating quote:", error);
@@ -937,14 +925,10 @@ app.put("/api/quotes/:id", async (req, res) => {
       paramCounter++;
     }
 
-    // Handle tags - store in both places during transition
+    // Handle tags
     let tagsToUpdate = null;
     if (tags !== undefined) {
       tagsToUpdate = tags;
-      // Store in old tags column for backward compatibility
-      updateFields.push(`tags = $${paramCounter}`);
-      params.push(tags);
-      paramCounter++;
     }
 
     if (image !== undefined) {
@@ -990,10 +974,23 @@ app.put("/api/quotes/:id", async (req, res) => {
 
     // Handle tags update if provided (only if new tables exist)
     if (tagsToUpdate !== null) {
+      console.log("UPDATE TAGS - Input:", tagsToUpdate);
       const tagNames = parseTagInput(tagsToUpdate);
+      console.log("UPDATE TAGS - Parsed tag names:", tagNames);
       const tagIds = await getOrCreateTagIds(tagNames, client);
+      console.log("UPDATE TAGS - Tag IDs:", tagIds);
+      
+      // Always update associations, even if empty (to clear tags)
       if (tagIds.length > 0) {
         await associateTagsWithQuote(id, tagIds, client);
+        console.log("UPDATE TAGS - Associated tags with quote");
+      } else {
+        // Clear all tag associations if no tags provided
+        const hasNewTables = await checkTagTablesExist();
+        if (hasNewTables) {
+          await client.query("DELETE FROM quote_tags WHERE quote_id = $1", [id]);
+          console.log("UPDATE TAGS - Cleared all tag associations");
+        }
       }
     }
 
@@ -1061,50 +1058,14 @@ app.delete("/api/quotes/:id", async (req, res) => {
 // Get all tags with quote counts
 app.get("/api/tags", async (req, res) => {
   try {
-    // Try new normalized structure first
-    const checkTable = await pool.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_name = 'tags'
-      )
+    const result = await pool.query(`
+      SELECT t.id, t.name, COUNT(qt.quote_id)::int as quote_count
+      FROM tags t
+      LEFT JOIN quote_tags qt ON t.id = qt.tag_id
+      GROUP BY t.id, t.name
+      ORDER BY t.name ASC
     `);
-    
-    if (checkTable.rows[0].exists) {
-      // Use new structure
-      const result = await pool.query(`
-        SELECT t.id, t.name, COUNT(qt.quote_id)::int as quote_count
-        FROM tags t
-        LEFT JOIN quote_tags qt ON t.id = qt.tag_id
-        GROUP BY t.id, t.name
-        ORDER BY t.name ASC
-      `);
-      res.json(result.rows);
-    } else {
-      // Fallback to old structure (comma-separated)
-      const result = await pool.query(`
-        SELECT tags FROM quotes WHERE tags IS NOT NULL AND tags != ''
-      `);
-
-      const tagCounts = {};
-      result.rows.forEach((row) => {
-        const tags = row.tags
-          .split(",")
-          .map((tag) => tag.trim())
-          .filter((tag) => tag);
-        tags.forEach((tag) => {
-          tagCounts[tag] = (tagCounts[tag] || 0) + 1;
-        });
-      });
-
-      const tagsArray = Object.entries(tagCounts)
-        .map(([name, count]) => ({
-          name,
-          quote_count: count,
-        }))
-        .sort((a, b) => a.name.localeCompare(b.name));
-
-      res.json(tagsArray);
-    }
+    res.json(result.rows);
   } catch (error) {
     console.error("Error fetching tags:", error);
     res.status(500).json({ error: "Failed to fetch tags" });
@@ -1182,20 +1143,6 @@ app.put("/api/tags/:id", async (req, res) => {
         ON CONFLICT (quote_id, tag_id) DO NOTHING
       `, [targetTagId, id]);
       
-      // Update old tags column in quotes for backward compatibility
-      await client.query(`
-        UPDATE quotes
-        SET tags = (
-          SELECT string_agg(t.name, ', ' ORDER BY t.name)
-          FROM quote_tags qt
-          JOIN tags t ON qt.tag_id = t.id
-          WHERE qt.quote_id = quotes.id
-        )
-        WHERE id IN (
-          SELECT quote_id FROM quote_tags WHERE tag_id = $1 OR tag_id = $2
-        )
-      `, [targetTagId, id]);
-      
       // Delete the old tag (cascade will remove old associations)
       await client.query("DELETE FROM tags WHERE id = $1", [id]);
       
@@ -1214,20 +1161,6 @@ app.put("/api/tags/:id", async (req, res) => {
         "UPDATE tags SET name = $1 WHERE id = $2",
         [trimmedName, id]
       );
-      
-      // Update old tags column in quotes for backward compatibility
-      await client.query(`
-        UPDATE quotes
-        SET tags = (
-          SELECT string_agg(t.name, ', ' ORDER BY t.name)
-          FROM quote_tags qt
-          JOIN tags t ON qt.tag_id = t.id
-          WHERE qt.quote_id = quotes.id
-        )
-        WHERE id IN (
-          SELECT quote_id FROM quote_tags WHERE tag_id = $1
-        )
-      `, [id]);
       
       await client.query("COMMIT");
       
@@ -1249,24 +1182,52 @@ app.put("/api/tags/:id", async (req, res) => {
 
 // Delete tag
 app.delete("/api/tags/:id", async (req, res) => {
+  const client = await pool.connect();
   try {
+    await client.query("BEGIN");
+    
     const { id } = req.params;
     
-    const result = await pool.query(
+    // Get quotes that have this tag before deleting
+    const quotesWithTag = await client.query(
+      "SELECT quote_id FROM quote_tags WHERE tag_id = $1",
+      [id]
+    );
+    const affectedQuoteIds = quotesWithTag.rows.map(row => row.quote_id);
+    
+    // Delete the tag (CASCADE will remove quote_tags entries)
+    const result = await client.query(
       "DELETE FROM tags WHERE id = $1 RETURNING name",
       [id]
     );
     
     if (result.rows.length === 0) {
+      await client.query("ROLLBACK");
       return res.status(404).json({ error: "Tag not found" });
     }
+    
+    // Update the old tags column for affected quotes
+    for (const quoteId of affectedQuoteIds) {
+      const remainingTags = await client.query(
+        `SELECT t.name FROM tags t 
+         JOIN quote_tags qt ON t.id = qt.tag_id 
+         WHERE qt.quote_id = $1 
+         ORDER BY t.name`,
+        [quoteId]
+      );
+    }
+    
+    await client.query("COMMIT");
     
     res.json({ 
       message: `Tag "${result.rows[0].name}" deleted successfully` 
     });
   } catch (error) {
+    await client.query("ROLLBACK");
     console.error("Error deleting tag:", error);
     res.status(500).json({ error: "Failed to delete tag" });
+  } finally {
+    client.release();
   }
 });
 
@@ -1311,21 +1272,6 @@ app.post("/api/tags/bulk-add", async (req, res) => {
     `, [targetTagId, sourceTagId]);
     
     const affectedCount = result.rows.length;
-    
-    // Update old tags column in affected quotes for backward compatibility
-    if (affectedCount > 0) {
-      const quoteIds = result.rows.map(r => r.quote_id);
-      await client.query(`
-        UPDATE quotes
-        SET tags = (
-          SELECT string_agg(t.name, ', ' ORDER BY t.name)
-          FROM quote_tags qt
-          JOIN tags t ON qt.tag_id = t.id
-          WHERE qt.quote_id = quotes.id
-        )
-        WHERE id = ANY($1)
-      `, [quoteIds]);
-    }
     
     await client.query("COMMIT");
     

@@ -1911,7 +1911,7 @@ function displayTags(tags) {
             </div>
             <div class="tag-card-actions">
                 <div class="tag-card-count">${tag.quote_count} quotes</div>
-                <button class="tag-edit-btn" onclick="event.stopPropagation(); editTag(${tag.id}, '${escapeHtml(tag.name)}')" title="Rename tag">✏️</button>
+                <button class="tag-delete-btn" onclick="event.stopPropagation(); deleteTag(${tag.id}, '${escapeHtml(tag.name)}')" title="Delete tag">🗑️</button>
             </div>
         </div>
     `,
@@ -2107,9 +2107,30 @@ let renameContext = {
   oldName: null
 };
 
-function editTag(id, name) {
-  renameContext = { type: 'tag', id, oldName: name };
-  showRenameModal('Tag', name);
+async function deleteTag(id, name) {
+  const confirmDelete = confirm(
+    `Are you sure you want to delete the tag "${name}"?\n\nThis will remove the tag from all quotes that have it. The quotes themselves will not be deleted.`
+  );
+  
+  if (!confirmDelete) return;
+  
+  try {
+    const response = await fetch(`${API_URL}/tags/${id}`, {
+      method: "DELETE",
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || "Failed to delete tag");
+    }
+    
+    showNotification(data.message, "success");
+    loadTags(); // Refresh the tags list
+  } catch (error) {
+    console.error("Error deleting tag:", error);
+    showNotification(`Error: ${error.message}`, "error");
+  }
 }
 
 function editAuthor(id, name) {
