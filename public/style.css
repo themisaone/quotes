@@ -1600,3 +1600,885 @@ textarea {
     flex-direction: column;
   }
 }
+
+/* ============= RENAME FUNCTIONALITY ============= */
+
+/* Rename Modal */
+.rename-modal-content {
+  max-width: 500px;
+  padding: 24px;
+}
+
+.rename-modal-content h2 {
+  margin: 0 0 20px 0;
+  font-size: 1.5rem;
+  color: var(--text-primary);
+}
+
+.rename-input {
+  width: 100%;
+  padding: 12px;
+  font-size: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  margin-bottom: 16px;
+  font-family: inherit;
+}
+
+.rename-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
+}
+
+.rename-warning {
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  color: #856404;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.warning-icon {
+  font-size: 20px;
+}
+
+.rename-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.btn-secondary {
+  padding: 10px 20px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-primary);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  background: var(--bg-secondary);
+}
+
+.btn-primary {
+  padding: 10px 20px;
+  border: none;
+  background: var(--primary-color);
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.btn-primary:hover {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Edit buttons on cards */
+.edit-btn {
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+  opacity: 0.6;
+}
+
+.edit-btn:hover {
+  opacity: 1;
+  background: rgba(var(--primary-rgb), 0.1);
+  transform: scale(1.1);
+}
+
+/* Filter buttons on cards */
+.filter-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--border);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  opacity: 0;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.filter-btn:hover {
+  background: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+  transform: scale(1.05);
+}
+
+.author-card:hover .filter-btn,
+.source-card:hover .filter-btn {
+  opacity: 1;
+}
+
+/* Source name as link */
+.card-link {
+  color: var(--primary-color);
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.card-link:hover {
+  text-decoration: underline;
+  color: var(--primary-hover);
+}
+
+/* Tag card updates */
+.tag-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: var(--card-bg);
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid var(--border);
+}
+
+.tag-card:hover {
+  background: var(--hover-bg);
+  transform: translateX(4px);
+}
+
+.tag-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tag-edit-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+  opacity: 0;
+}
+
+.tag-edit-btn:hover {
+  background: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+  transform: scale(1.1);
+}
+
+.tag-card:hover .tag-edit-btn {
+  opacity: 1;
+}
+
+/* Author/Source card updates */
+.card-content {
+  flex: 1;
+  cursor: pointer;
+}
+
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.author-card:hover .card-actions,
+.source-card:hover .card-actions {
+  opacity: 1;
+}
+
+.author-card,
+.source-card {
+  position: relative;
+  cursor: pointer;
+}
+
+/* Notifications */
+@keyframes slideIn {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+}
+
+/* Mobile adjustments for rename */
+@media (max-width: 768px) {
+  .rename-modal-content {
+    margin: 20px;
+  }
+  
+  .card-actions {
+    opacity: 1;
+  }
+  
+  .filter-btn {
+    opacity: 1;
+  }
+  
+  .tag-edit-btn {
+    opacity: 1;
+  }
+}
+
+/* ============= TAG OPERATIONS PANEL ============= */
+
+.tag-operations-panel {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.operations-title {
+  margin: 0 0 20px 0;
+  font-size: 1.25rem;
+  color: var(--text-primary);
+}
+
+.operation-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.operation-card:last-child {
+  margin-bottom: 0;
+}
+
+.operation-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.operation-icon {
+  font-size: 20px;
+}
+
+.operation-header h4 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.operation-description {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  margin-bottom: 12px;
+  font-style: italic;
+}
+
+.operation-form {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.operation-form .autocomplete-wrapper {
+  position: relative;
+}
+
+.operation-input {
+  flex: 1;
+  min-width: 200px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 14px;
+  width: 100%;
+}
+
+.operation-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
+}
+
+.operation-arrow {
+  font-size: 20px;
+  color: var(--text-secondary);
+}
+
+/* Autocomplete styling for tag operations */
+.create-new {
+  background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.1), rgba(var(--primary-rgb), 0.2));
+  font-weight: 500;
+  color: var(--primary-color);
+}
+
+.create-new:hover {
+  background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.2), rgba(var(--primary-rgb), 0.3));
+}
+
+.no-match {
+  color: var(--text-secondary);
+  font-style: italic;
+  cursor: default;
+}
+
+.no-match:hover {
+  background: var(--bg-secondary);
+}
+
+.tag-count {
+  color: var(--text-secondary);
+  font-size: 0.85em;
+}
+
+@media (max-width: 768px) {
+  .tag-operations-panel {
+    padding: 16px;
+  }
+  
+  .operation-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .operation-form .autocomplete-wrapper {
+    min-width: 100%;
+  }
+  
+  .operation-input {
+    min-width: 100%;
+  }
+  
+  .operation-arrow {
+    align-self: center;
+    transform: rotate(90deg);
+  }
+}
+
+/* ============= ENHANCED MOBILE OPTIMIZATION ============= */
+
+@media (max-width: 768px) {
+  /* Reduce overall padding and spacing */
+  body {
+    font-size: 11px !important;  /* Was 14px, now 20% smaller */
+  }
+  
+  .main-content {
+    padding: 0.15rem !important;
+    padding-left: 0.25rem !important;
+    padding-right: 0.15rem !important;
+  }
+  
+  .quotes-section {
+    padding: 0.5rem !important;
+    padding-left: 0.25rem !important;
+    padding-right: 0.15rem !important;
+  }
+  
+  .container {
+    padding: 0.15rem !important;
+    padding-left: 0.25rem !important;
+    padding-right: 0.15rem !important;
+  }
+  
+  /* Compact header */
+  header {
+    margin-bottom: 0.3rem !important;
+  }
+  
+  h1 {
+    font-size: 1.2rem !important;  /* Was 1.5rem, now 20% smaller */
+    margin-bottom: 0.3rem !important;
+  }
+  
+  h2 {
+    font-size: 0.8rem !important;  /* Reduced further for mobile */
+    margin-bottom: 0.3rem !important;
+  }
+  
+  h3 {
+    font-size: 0.88rem !important;  /* Was 1.1rem, now 20% smaller */
+  }
+  
+  /* Compact quote cards */
+  .quote-card {
+    padding: 0.2rem !important;
+    padding-left: 0.3rem !important;
+    margin-bottom: 0.3rem !important;
+    margin-left: 0 !important;
+  }
+  
+  .quote-main-content {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+  
+  .quote-text-column {
+    width: 100% !important;
+  }
+  
+  .quote-side-column {
+    width: 100% !important;
+    min-width: 0 !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    gap: 0.5rem !important;
+  }
+  
+  .quotes-list {
+    gap: 0.3rem !important;
+  }
+  
+  .quote-text {
+    font-size: 0.8rem !important;  /* Was 1rem, now 20% smaller */
+    line-height: 1.5 !important;
+    margin-bottom: 0.3rem !important;
+  }
+  
+  .quote-meta {
+    font-size: 0.55rem !important;  /* Reduced even more */
+    gap: 0.3rem !important;
+    grid-template-columns: 1fr !important;  /* Stack vertically on mobile */
+    padding-top: 0.3rem !important;
+  }
+  
+  .meta-item {
+    font-size: 0.55rem !important;
+    display: block !important;
+  }
+  
+  .meta-label {
+    font-size: 0.55rem !important;
+  }
+  
+  .meta-value {
+    font-size: 0.55rem !important;
+  }
+  
+  .quote-author,
+  .quote-source {
+    font-size: 0.55rem !important;  /* Reduced from 0.65rem */
+  }
+  
+  .quote-author strong,
+  .quote-source strong {
+    font-size: 0.55rem !important;
+  }
+  
+  .quote-note {
+    font-size: 0.55rem !important;  /* Reduced from 0.65rem */
+  }
+  
+  .quote-note-title {
+    font-size: 0.8rem !important;  /* Same as quote text */
+    font-weight: bold !important;
+  }
+  
+  /* Compact tags in quotes */
+  .quote-tags-section {
+    padding-top: 0.3rem !important;
+    margin-top: 0.3rem !important;
+    gap: 0.25rem !important;
+  }
+  
+  .quote-tags {
+    gap: 0.25rem !important;
+  }
+  
+  .tag {
+    padding: 0.15rem 0.4rem !important;
+    font-size: 0.5rem !important;
+    border-radius: 12px !important;
+  }
+  
+  .quote-actions {
+    gap: 0.5rem !important;
+    margin-top: 0.75rem !important;
+  }
+  
+  /* Compact search section */
+  .search-section {
+    padding: 0.5rem !important;
+    margin-bottom: 0.5rem !important;
+    border-radius: 8px !important;
+    position: relative !important;
+  }
+  
+  .search-header {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.3rem !important;
+    margin-bottom: 0.7rem !important;
+    padding-bottom: 0.3rem !important;
+  }
+  
+  .search-header h2 {
+    margin-bottom: 0 !important;
+    width: 100% !important;
+  }
+  
+  .quote-type-filter,
+  .source-type-filter {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    width: 100% !important;
+    margin-top: 0 !important;
+    gap: 0.3rem !important;
+  }
+  
+  .quote-type-filter label,
+  .source-type-filter label {
+    font-size: 11px !important;
+    margin-right: 0.3rem !important;
+  }
+  
+  /* Search grid - button in normal flow for now */
+  .search-grid {
+    gap: 0.5rem !important;
+    grid-template-columns: 1fr 1fr !important;
+  }
+  
+  .search-grid .search-item:last-child {
+    grid-column: 1 / -1 !important;
+  }
+  
+  .search-grid .search-item:last-child label {
+    display: none !important;
+  }
+  
+  #clearBtn {
+    width: 100% !important;
+  }
+  
+  .search-grid {
+    gap: 0.5rem !important;
+    grid-template-columns: 1fr 1fr !important;
+  }
+  
+  .search-item {
+    margin-bottom: 0.3rem !important;
+  }
+  
+  .search-item input {
+    padding: 0.5rem !important;
+    font-size: 11px !important;  /* Was 14px, now 20% smaller */
+  }
+  
+  .search-item label {
+    margin-bottom: 0.1rem !important;
+    font-size: 0.7rem !important;  /* Was 0.875rem, now 20% smaller */
+  }
+  
+  /* Make Clear Filters button span full width */
+  .search-actions {
+    grid-column: 1 / -1 !important;
+    margin-top: 0.3rem !important;
+  }
+  
+  .search-actions button {
+    width: 100% !important;
+  }
+  
+  /* Compact checkboxes */
+  input[type="checkbox"] {
+    width: 14px !important;
+    height: 14px !important;
+  }
+  
+  .checkbox-label {
+    font-size: 11px !important;  /* Was 14px, now 20% smaller */
+  }
+  
+  /* Compact cards grid */
+  .cards-grid {
+    gap: 0.3rem !important;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
+    margin-top: 0.5rem !important;
+  }
+  
+  .card {
+    padding: 0.3rem !important;
+    padding-left: 0.5rem !important;
+  }
+  
+  .card-image {
+    width: 80px !important;
+    height: 80px !important;
+    font-size: 1.6rem !important;  /* Was 2rem, now 20% smaller */
+  }
+  
+  .card-name {
+    font-size: 0.76rem !important;  /* Was 0.95rem, now 20% smaller */
+    margin-top: 0.5rem !important;
+  }
+  
+  .card-quote-count {
+    font-size: 0.64rem !important;  /* Was 0.8rem, now 20% smaller */
+    margin-top: 0.25rem !important;
+  }
+  
+  /* Compact buttons */
+  .btn {
+    padding: 0.3rem 0.6rem !important;
+    font-size: 11px !important;  /* Was 14px, now 20% smaller */
+    line-height: 1.2 !important;
+  }
+  
+  .btn-primary,
+  .btn-secondary {
+    padding: 0.3rem 0.6rem !important;
+    font-size: 11px !important;
+    line-height: 1.2 !important;
+  }
+  
+  .btn-icon {
+    padding: 0.25rem !important;
+    font-size: 1rem !important;  /* Was 1.25rem, now 20% smaller */
+  }
+  
+  /* Compact quote counters */
+  .quote-counts {
+    font-size: 0.7rem !important;
+    gap: 0.3rem !important;
+  }
+  
+  .quote-counts #filteredQuotesCount,
+  .quote-counts #totalQuotesCount {
+    padding: 0.2rem 0.4rem !important;
+    font-size: 0.75rem !important;
+    border-radius: 4px !important;
+  }
+  
+  /* Compact pagination */
+  .pagination-info {
+    font-size: 0.7rem !important;  /* Was 0.875rem, now 20% smaller */
+  }
+  
+  .pagination-container {
+    gap: 0.25rem !important;
+    margin-top: 0.5rem !important;
+    margin-bottom: 0.5rem !important;
+    padding: 0.3rem !important;
+  }
+  
+  .pagination-buttons {
+    gap: 0.15rem !important;
+  }
+  
+  .pagination-buttons button {
+    padding: 0.15rem 0.3rem !important;
+    font-size: 11px !important;  /* Was 14px, now 20% smaller */
+    line-height: 1 !important;
+  }
+  
+  /* Compact modals */
+  .modal-content {
+    padding: 1.5rem !important;
+    margin: 1rem !important;
+    max-width: calc(100% - 2rem) !important;
+  }
+  
+  /* Compact form elements */
+  input[type="text"],
+  input[type="date"],
+  textarea,
+  select {
+    padding: 0.5rem !important;
+    font-size: 11px !important;  /* Was 14px, now 20% smaller */
+  }
+  
+  textarea {
+    min-height: 100px !important;
+  }
+  
+  /* Compact tag operations */
+  .tag-operations-panel {
+    padding: 0.3rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+  
+  .operation-card {
+    padding: 0.3rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+  
+  .operations-title {
+    font-size: 0.88rem !important;  /* Was 1.1rem, now 20% smaller */
+    margin-bottom: 0.75rem !important;
+  }
+  
+  .operation-header h4 {
+    font-size: 0.76rem !important;  /* Was 0.95rem, now 20% smaller */
+  }
+  
+  /* Compact tags list */
+  .tags-list {
+    gap: 0.3rem !important;
+  }
+  
+  .tag-card {
+    padding: 0.3rem !important;
+    padding-left: 0.5rem !important;
+  }
+  
+  .tag-card-name {
+    font-size: 0.76rem !important;  /* Was 0.95rem, now 20% smaller */
+  }
+  
+  .tag-card-count {
+    font-size: 0.64rem !important;  /* Was 0.8rem, now 20% smaller */
+  }
+  
+  /* Compact side menu */
+  .side-menu {
+    padding: 0.5rem !important;
+  }
+  
+  .side-menu-title {
+    font-size: 1rem !important;  /* Was 1.25rem, now 20% smaller */
+    margin-bottom: 0.5rem !important;
+  }
+  
+  .menu-item {
+    padding: 0.3rem 0.5rem !important;
+    font-size: 0.76rem !important;  /* Was 0.95rem, now 20% smaller */
+    margin-bottom: 0.15rem !important;
+  }
+  
+  .menu-section-title {
+    font-size: 0.7rem !important;
+    margin-top: 0.5rem !important;
+    margin-bottom: 0.25rem !important;
+  }
+  
+  .header-actions {
+    gap: 0.5rem !important;
+    align-items: center !important;
+  }
+  
+  .header-actions .btn-icon {
+    padding: 0.25rem 0.4rem !important;
+    font-size: 0.95rem !important;
+    line-height: 1.2 !important;
+    min-height: auto !important;
+    height: auto !important;
+  }
+  
+  /* Compact welcome/random quote */
+  .welcome-quote-card {
+    padding: 1rem !important;
+    max-width: 95% !important;
+  }
+  
+  .welcome-quote-text {
+    font-size: 0.9rem !important;  /* Reduced by 25% */
+    line-height: 1.4 !important;
+    margin-bottom: 0.75rem !important;
+  }
+  
+  .welcome-quote-author {
+    font-size: 0.8rem !important;  /* Reduced by 30% */
+  }
+  
+  .welcome-quote-source {
+    font-size: 0.8rem !important;  /* Reduced by 30% */
+  }
+  
+  .welcome-quote-note {
+    font-size: 0.75rem !important;  /* Reduced by 25% */
+  }
+  
+  .welcome-quote-tags {
+    gap: 0.3rem !important;
+  }
+  
+  .welcome-quote-tags .tag {
+    font-size: 0.65rem !important;  /* Reduced by 25% */
+    padding: 0.2rem 0.5rem !important;
+  }
+}
+
+/* Extra small screens (phones in portrait) */
+@media (max-width: 480px) {
+  .container {
+    padding: 0.5rem;
+  }
+  
+  h1 {
+    font-size: 1.35rem;
+  }
+  
+  .quote-card {
+    padding: 0.75rem;
+  }
+  
+  .cards-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 0.75rem;
+  }
+  
+  .card-image {
+    width: 60px;
+    height: 60px;
+    font-size: 1.5rem;
+  }
+  
+  .tag-operations-panel {
+    padding: 0.75rem;
+  }
+  
+  .operation-card {
+    padding: 0.75rem;
+  }
+}
+
+
+

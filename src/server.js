@@ -2,6 +2,14 @@ const express = require("express");
 const cors = require("cors");
 const path = require("path");
 const pool = require("./db");
+const {
+  checkTagTablesExist,
+  getOrCreateTagIds,
+  associateTagsWithQuote,
+  getTagsForQuote,
+  getTagsForQuotes,
+  parseTagInput,
+} = require("./tagHelpers");
 require("dotenv").config();
 
 const app = express();
@@ -92,35 +100,94 @@ app.post("/api/authors", async (req, res) => {
   }
 });
 
-// Update author
+// Update author (rename with auto-merge detection)
 app.put("/api/authors/:id", async (req, res) => {
+  const client = await pool.connect();
+  
   try {
+    await client.query("BEGIN");
+    
     const { id } = req.params;
     let { name, image } = req.body;
 
     // Image is already resized on client-side, no need to process again
-    // Just validate it's a data URL
+    // Just validate it's a data URL if provided
     if (image && !image.startsWith("data:image")) {
       return res.status(400).json({ error: "Invalid image format" });
     }
 
-    const result = await pool.query(
+    // Check if author exists
+    const authorCheck = await client.query(
+      "SELECT id, name, image FROM authors WHERE id = $1",
+      [id]
+    );
+    
+    if (authorCheck.rows.length === 0) {
+      return res.status(404).json({ error: "Author not found" });
+    }
+    
+    const oldName = authorCheck.rows[0].name;
+    
+    // If name is being changed, check for merge
+    if (name && name.trim() !== oldName) {
+      const trimmedName = name.trim();
+      
+      // Check if target name already exists
+      const existingAuthor = await client.query(
+        "SELECT id, name FROM authors WHERE LOWER(name) = LOWER($1) AND id != $2",
+        [trimmedName, id]
+      );
+      
+      if (existingAuthor.rows.length > 0) {
+        // Author with this name exists - need to merge
+        const targetAuthorId = existingAuthor.rows[0].id;
+        
+        // Move all quotes from old author to existing author
+        await client.query(
+          "UPDATE quotes SET author_id = $1 WHERE author_id = $2",
+          [targetAuthorId, id]
+        );
+        
+        // Delete the old author
+        await client.query("DELETE FROM authors WHERE id = $1", [id]);
+        
+        await client.query("COMMIT");
+        
+        return res.json({
+          merged: true,
+          oldName,
+          newName: existingAuthor.rows[0].name,
+          targetAuthorId,
+          message: `Author "${oldName}" merged into existing author "${existingAuthor.rows[0].name}"`
+        });
+      }
+    }
+    
+    // Simple update (rename and/or image update)
+    const result = await client.query(
       `UPDATE authors 
        SET name = COALESCE($1, name),
            image = COALESCE($2, image)
        WHERE id = $3
        RETURNING *`,
-      [name, image, id],
+      [name?.trim(), image, id]
     );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Author not found" });
-    }
+    await client.query("COMMIT");
 
-    res.json(result.rows[0]);
+    res.json({
+      merged: false,
+      oldName,
+      newName: result.rows[0].name,
+      author: result.rows[0],
+      message: name ? `Author renamed from "${oldName}" to "${result.rows[0].name}"` : "Author updated"
+    });
   } catch (error) {
+    await client.query("ROLLBACK");
     console.error("Error updating author:", error);
     res.status(500).json({ error: "Failed to update author" });
+  } finally {
+    client.release();
   }
 });
 
@@ -264,36 +331,95 @@ app.post("/api/sources", async (req, res) => {
   }
 });
 
-// Update source
+// Update source (rename with auto-merge detection)
 app.put("/api/sources/:id", async (req, res) => {
+  const client = await pool.connect();
+  
   try {
+    await client.query("BEGIN");
+    
     const { id } = req.params;
     let { name, image, type } = req.body;
 
     // Image is already resized on client-side, no need to process again
-    // Just validate it's a data URL
+    // Just validate it's a data URL if provided
     if (image && !image.startsWith("data:image")) {
       return res.status(400).json({ error: "Invalid image format" });
     }
 
-    const result = await pool.query(
+    // Check if source exists
+    const sourceCheck = await client.query(
+      "SELECT id, name, image, type FROM sources WHERE id = $1",
+      [id]
+    );
+    
+    if (sourceCheck.rows.length === 0) {
+      return res.status(404).json({ error: "Source not found" });
+    }
+    
+    const oldName = sourceCheck.rows[0].name;
+    
+    // If name is being changed, check for merge
+    if (name && name.trim() !== oldName) {
+      const trimmedName = name.trim();
+      
+      // Check if target name already exists
+      const existingSource = await client.query(
+        "SELECT id, name FROM sources WHERE LOWER(name) = LOWER($1) AND id != $2",
+        [trimmedName, id]
+      );
+      
+      if (existingSource.rows.length > 0) {
+        // Source with this name exists - need to merge
+        const targetSourceId = existingSource.rows[0].id;
+        
+        // Move all quotes from old source to existing source
+        await client.query(
+          "UPDATE quotes SET source_id = $1 WHERE source_id = $2",
+          [targetSourceId, id]
+        );
+        
+        // Delete the old source
+        await client.query("DELETE FROM sources WHERE id = $1", [id]);
+        
+        await client.query("COMMIT");
+        
+        return res.json({
+          merged: true,
+          oldName,
+          newName: existingSource.rows[0].name,
+          targetSourceId,
+          message: `Source "${oldName}" merged into existing source "${existingSource.rows[0].name}"`
+        });
+      }
+    }
+    
+    // Simple update (rename and/or image/type update)
+    const result = await client.query(
       `UPDATE sources 
        SET name = COALESCE($1, name),
            image = COALESCE($2, image),
            type = COALESCE($3, type)
        WHERE id = $4
        RETURNING *`,
-      [name, image, type, id],
+      [name?.trim(), image, type, id]
     );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Source not found" });
-    }
+    await client.query("COMMIT");
 
-    res.json(result.rows[0]);
+    res.json({
+      merged: false,
+      oldName,
+      newName: result.rows[0].name,
+      source: result.rows[0],
+      message: name ? `Source renamed from "${oldName}" to "${result.rows[0].name}"` : "Source updated"
+    });
   } catch (error) {
+    await client.query("ROLLBACK");
     console.error("Error updating source:", error);
     res.status(500).json({ error: "Failed to update source" });
+  } finally {
+    client.release();
   }
 });
 
@@ -442,17 +568,44 @@ app.get("/api/quotes", async (req, res) => {
     }
 
     if (tags) {
-      // Split tags by comma and search for each individually (AND logic)
       const searchTags = tags
         .split(",")
         .map((tag) => tag.trim())
         .filter((tag) => tag);
       console.log("Searching for tags:", searchTags); // Debug log
-      searchTags.forEach((tag) => {
-        query += ` AND q.tags ILIKE $${paramCounter}`;
-        params.push(`%${tag}%`);
-        paramCounter++;
-      });
+      
+      if (searchTags.length > 0) {
+        // Check if we have new tag tables
+        const hasNewTables = await checkTagTablesExist();
+        
+        if (hasNewTables) {
+          // Use the new tag system - search using JOIN
+          query = query.replace(
+            "FROM quotes q",
+            `FROM quotes q
+             INNER JOIN quote_tags qt ON q.id = qt.quote_id
+             INNER JOIN tags t ON qt.tag_id = t.id`
+          );
+          
+          // For each tag, require a match (AND logic)
+          searchTags.forEach((tag) => {
+            query += ` AND EXISTS (
+              SELECT 1 FROM quote_tags qt2
+              INNER JOIN tags t2 ON qt2.tag_id = t2.id
+              WHERE qt2.quote_id = q.id AND t2.name ILIKE $${paramCounter}
+            )`;
+            params.push(`%${tag}%`);
+            paramCounter++;
+          });
+        } else {
+          // Fallback to old system (comma-separated tags column)
+          searchTags.forEach((tag) => {
+            query += ` AND q.tags ILIKE $${paramCounter}`;
+            params.push(`%${tag}%`);
+            paramCounter++;
+          });
+        }
+      }
     }
 
     if (date) {
@@ -476,7 +629,32 @@ app.get("/api/quotes", async (req, res) => {
     params.push(parseInt(limit), parseInt(offset));
 
     const result = await pool.query(query, params);
-    res.json(result.rows);
+    
+    // Add tags to each quote
+    if (result.rows.length > 0) {
+      const hasNewTables = await checkTagTablesExist();
+      
+      if (hasNewTables) {
+        const quoteIds = result.rows.map(q => q.id);
+        const tagsMap = await getTagsForQuotes(quoteIds);
+        
+        const quotesWithTags = result.rows.map(quote => {
+          const quoteTags = tagsMap.get(quote.id) || [];
+          return {
+            ...quote,
+            tags: quoteTags.length > 0 ? quoteTags.map((t) => t.name).join(", ") : (quote.tags || ""),
+            tag_objects: quoteTags,
+          };
+        });
+        
+        res.json(quotesWithTags);
+      } else {
+        // Fallback: tags already in quote.tags from old column
+        res.json(result.rows);
+      }
+    } else {
+      res.json([]);
+    }
   } catch (error) {
     console.error("Error fetching quotes:", error);
     res.status(500).json({ error: "Failed to fetch quotes" });
@@ -503,7 +681,20 @@ app.get("/api/quotes/random", async (req, res) => {
       return res.status(404).json({ error: "No quotes found" });
     }
 
-    res.json(result.rows[0]);
+    // Add tags to response
+    const hasNewTables = await checkTagTablesExist();
+    if (hasNewTables) {
+      const quoteTags = await getTagsForQuote(result.rows[0].id);
+      const quoteWithTags = {
+        ...result.rows[0],
+        tags: quoteTags.length > 0 ? quoteTags.map((t) => t.name).join(", ") : (result.rows[0].tags || ""),
+        tag_objects: quoteTags,
+      };
+      res.json(quoteWithTags);
+    } else {
+      // Fallback: use tags from old column
+      res.json(result.rows[0]);
+    }
   } catch (error) {
     console.error("Error fetching random quote:", error);
     res.status(500).json({ error: "Failed to fetch random quote" });
@@ -531,7 +722,20 @@ app.get("/api/quotes/:id", async (req, res) => {
       return res.status(404).json({ error: "Quote not found" });
     }
 
-    res.json(result.rows[0]);
+    // Add tags to response
+    const hasNewTables = await checkTagTablesExist();
+    if (hasNewTables) {
+      const quoteTags = await getTagsForQuote(id);
+      const quoteWithTags = {
+        ...result.rows[0],
+        tags: quoteTags.length > 0 ? quoteTags.map((t) => t.name).join(", ") : (result.rows[0].tags || ""),
+        tag_objects: quoteTags,
+      };
+      res.json(quoteWithTags);
+    } else {
+      // Fallback: use tags from old column
+      res.json(result.rows[0]);
+    }
   } catch (error) {
     console.error("Error fetching quote:", error);
     res.status(500).json({ error: "Failed to fetch quote" });
@@ -587,7 +791,7 @@ app.post("/api/quotes", async (req, res) => {
       sourceId = sourceResult.rows[0].id;
     }
 
-    // Create the quote - store type in quotes table now
+    // Create the quote - still store tags column for backward compatibility
     const result = await client.query(
       `INSERT INTO quotes (quote, author_id, source_id, tags, image, image_full, note, type) 
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
@@ -595,9 +799,20 @@ app.post("/api/quotes", async (req, res) => {
       [quote, authorId, sourceId, tags, image, image_full, note, sourceType],
     );
 
+    const quoteId = result.rows[0].id;
+
+    // Handle tags using new tag system (if tables exist)
+    const tagNames = parseTagInput(tags);
+    if (tagNames.length > 0) {
+      const tagIds = await getOrCreateTagIds(tagNames, client);
+      if (tagIds.length > 0) {
+        await associateTagsWithQuote(quoteId, tagIds, client);
+      }
+    }
+
     await client.query("COMMIT");
 
-    // Fetch the complete quote with author and source details
+    // Fetch the complete quote with author, source, and tags
     const completeQuote = await pool.query(
       `
       SELECT q.*, 
@@ -608,10 +823,23 @@ app.post("/api/quotes", async (req, res) => {
       LEFT JOIN sources s ON q.source_id = s.id
       WHERE q.id = $1
     `,
-      [result.rows[0].id],
+      [quoteId],
     );
 
-    res.status(201).json(completeQuote.rows[0]);
+    // Add tags to response
+    const hasNewTables = await checkTagTablesExist();
+    if (hasNewTables) {
+      const quoteTags = await getTagsForQuote(quoteId);
+      const quoteWithTags = {
+        ...completeQuote.rows[0],
+        tags: quoteTags.length > 0 ? quoteTags.map((t) => t.name).join(", ") : (completeQuote.rows[0].tags || ""),
+        tag_objects: quoteTags,
+      };
+      res.status(201).json(quoteWithTags);
+    } else {
+      // Fallback: use tags from old column
+      res.status(201).json(completeQuote.rows[0]);
+    }
   } catch (error) {
     await client.query("ROLLBACK");
     console.error("Error creating quote:", error);
@@ -709,7 +937,11 @@ app.put("/api/quotes/:id", async (req, res) => {
       paramCounter++;
     }
 
+    // Handle tags - store in both places during transition
+    let tagsToUpdate = null;
     if (tags !== undefined) {
+      tagsToUpdate = tags;
+      // Store in old tags column for backward compatibility
       updateFields.push(`tags = $${paramCounter}`);
       params.push(tags);
       paramCounter++;
@@ -756,9 +988,18 @@ app.put("/api/quotes/:id", async (req, res) => {
       return res.status(404).json({ error: "Quote not found" });
     }
 
+    // Handle tags update if provided (only if new tables exist)
+    if (tagsToUpdate !== null) {
+      const tagNames = parseTagInput(tagsToUpdate);
+      const tagIds = await getOrCreateTagIds(tagNames, client);
+      if (tagIds.length > 0) {
+        await associateTagsWithQuote(id, tagIds, client);
+      }
+    }
+
     await client.query("COMMIT");
 
-    // Fetch the complete quote with author and source details
+    // Fetch the complete quote with author, source, and tags
     const completeQuote = await pool.query(
       `
       SELECT q.*, 
@@ -772,7 +1013,20 @@ app.put("/api/quotes/:id", async (req, res) => {
       [id],
     );
 
-    res.json(completeQuote.rows[0]);
+    // Add tags to response
+    const hasNewTables = await checkTagTablesExist();
+    if (hasNewTables) {
+      const quoteTags = await getTagsForQuote(id);
+      const quoteWithTags = {
+        ...completeQuote.rows[0],
+        tags: quoteTags.length > 0 ? quoteTags.map((t) => t.name).join(", ") : (completeQuote.rows[0].tags || ""),
+        tag_objects: quoteTags,
+      };
+      res.json(quoteWithTags);
+    } else {
+      // Fallback: use tags from old column
+      res.json(completeQuote.rows[0]);
+    }
   } catch (error) {
     await client.query("ROLLBACK");
     console.error("Error updating quote:", error);
@@ -807,34 +1061,287 @@ app.delete("/api/quotes/:id", async (req, res) => {
 // Get all tags with quote counts
 app.get("/api/tags", async (req, res) => {
   try {
-    const result = await pool.query(`
-      SELECT tags FROM quotes WHERE tags IS NOT NULL AND tags != ''
+    // Try new normalized structure first
+    const checkTable = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_name = 'tags'
+      )
     `);
+    
+    if (checkTable.rows[0].exists) {
+      // Use new structure
+      const result = await pool.query(`
+        SELECT t.id, t.name, COUNT(qt.quote_id)::int as quote_count
+        FROM tags t
+        LEFT JOIN quote_tags qt ON t.id = qt.tag_id
+        GROUP BY t.id, t.name
+        ORDER BY t.name ASC
+      `);
+      res.json(result.rows);
+    } else {
+      // Fallback to old structure (comma-separated)
+      const result = await pool.query(`
+        SELECT tags FROM quotes WHERE tags IS NOT NULL AND tags != ''
+      `);
 
-    // Parse tags and count them
-    const tagCounts = {};
-    result.rows.forEach((row) => {
-      const tags = row.tags
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter((tag) => tag);
-      tags.forEach((tag) => {
-        tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+      const tagCounts = {};
+      result.rows.forEach((row) => {
+        const tags = row.tags
+          .split(",")
+          .map((tag) => tag.trim())
+          .filter((tag) => tag);
+        tags.forEach((tag) => {
+          tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+        });
       });
-    });
 
-    // Convert to array and sort by count (descending)
-    const tagsArray = Object.entries(tagCounts)
-      .map(([name, count]) => ({
-        name,
-        quote_count: count,
-      }))
-      .sort((a, b) => b.quote_count - a.quote_count);
+      const tagsArray = Object.entries(tagCounts)
+        .map(([name, count]) => ({
+          name,
+          quote_count: count,
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
 
-    res.json(tagsArray);
+      res.json(tagsArray);
+    }
   } catch (error) {
     console.error("Error fetching tags:", error);
     res.status(500).json({ error: "Failed to fetch tags" });
+  }
+});
+
+// Create new tag
+app.post("/api/tags", async (req, res) => {
+  try {
+    const { name } = req.body;
+    
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: "Tag name is required" });
+    }
+    
+    const result = await pool.query(
+      `INSERT INTO tags (name) 
+       VALUES ($1) 
+       ON CONFLICT (name) DO UPDATE SET name = tags.name
+       RETURNING *`,
+      [name.trim()]
+    );
+    
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error("Error creating tag:", error);
+    res.status(500).json({ error: "Failed to create tag" });
+  }
+});
+
+// Rename tag (with auto-merge detection)
+app.put("/api/tags/:id", async (req, res) => {
+  const client = await pool.connect();
+  
+  try {
+    await client.query("BEGIN");
+    
+    const { id } = req.params;
+    const { name } = req.body;
+    
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: "Tag name is required" });
+    }
+    
+    const trimmedName = name.trim();
+    
+    // Check if tag exists
+    const tagCheck = await client.query(
+      "SELECT id, name FROM tags WHERE id = $1",
+      [id]
+    );
+    
+    if (tagCheck.rows.length === 0) {
+      return res.status(404).json({ error: "Tag not found" });
+    }
+    
+    const oldName = tagCheck.rows[0].name;
+    
+    // Check if target name already exists
+    const existingTag = await client.query(
+      "SELECT id, name FROM tags WHERE LOWER(name) = LOWER($1) AND id != $2",
+      [trimmedName, id]
+    );
+    
+    if (existingTag.rows.length > 0) {
+      // Tag with this name exists - need to merge
+      const targetTagId = existingTag.rows[0].id;
+      
+      // Move all quote associations from old tag to existing tag
+      await client.query(`
+        INSERT INTO quote_tags (quote_id, tag_id)
+        SELECT quote_id, $1
+        FROM quote_tags
+        WHERE tag_id = $2
+        ON CONFLICT (quote_id, tag_id) DO NOTHING
+      `, [targetTagId, id]);
+      
+      // Update old tags column in quotes for backward compatibility
+      await client.query(`
+        UPDATE quotes
+        SET tags = (
+          SELECT string_agg(t.name, ', ' ORDER BY t.name)
+          FROM quote_tags qt
+          JOIN tags t ON qt.tag_id = t.id
+          WHERE qt.quote_id = quotes.id
+        )
+        WHERE id IN (
+          SELECT quote_id FROM quote_tags WHERE tag_id = $1 OR tag_id = $2
+        )
+      `, [targetTagId, id]);
+      
+      // Delete the old tag (cascade will remove old associations)
+      await client.query("DELETE FROM tags WHERE id = $1", [id]);
+      
+      await client.query("COMMIT");
+      
+      return res.json({
+        merged: true,
+        oldName,
+        newName: existingTag.rows[0].name,
+        targetTagId,
+        message: `Tag "${oldName}" merged into existing tag "${existingTag.rows[0].name}"`
+      });
+    } else {
+      // Simple rename
+      await client.query(
+        "UPDATE tags SET name = $1 WHERE id = $2",
+        [trimmedName, id]
+      );
+      
+      // Update old tags column in quotes for backward compatibility
+      await client.query(`
+        UPDATE quotes
+        SET tags = (
+          SELECT string_agg(t.name, ', ' ORDER BY t.name)
+          FROM quote_tags qt
+          JOIN tags t ON qt.tag_id = t.id
+          WHERE qt.quote_id = quotes.id
+        )
+        WHERE id IN (
+          SELECT quote_id FROM quote_tags WHERE tag_id = $1
+        )
+      `, [id]);
+      
+      await client.query("COMMIT");
+      
+      return res.json({
+        merged: false,
+        oldName,
+        newName: trimmedName,
+        message: `Tag renamed from "${oldName}" to "${trimmedName}"`
+      });
+    }
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Error renaming tag:", error);
+    res.status(500).json({ error: "Failed to rename tag" });
+  } finally {
+    client.release();
+  }
+});
+
+// Delete tag
+app.delete("/api/tags/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const result = await pool.query(
+      "DELETE FROM tags WHERE id = $1 RETURNING name",
+      [id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Tag not found" });
+    }
+    
+    res.json({ 
+      message: `Tag "${result.rows[0].name}" deleted successfully` 
+    });
+  } catch (error) {
+    console.error("Error deleting tag:", error);
+    res.status(500).json({ error: "Failed to delete tag" });
+  }
+});
+
+// Add tag to all quotes that have another tag
+app.post("/api/tags/bulk-add", async (req, res) => {
+  const client = await pool.connect();
+  
+  try {
+    await client.query("BEGIN");
+    
+    const { sourceTagId, targetTagId } = req.body;
+    
+    if (!sourceTagId || !targetTagId) {
+      return res.status(400).json({ error: "Both source and target tag IDs are required" });
+    }
+    
+    if (sourceTagId === targetTagId) {
+      return res.status(400).json({ error: "Source and target tags cannot be the same" });
+    }
+    
+    // Get tag names for response
+    const tagsInfo = await client.query(
+      "SELECT id, name FROM tags WHERE id = ANY($1)",
+      [[sourceTagId, targetTagId]]
+    );
+    
+    if (tagsInfo.rows.length !== 2) {
+      return res.status(404).json({ error: "One or both tags not found" });
+    }
+    
+    const sourceTag = tagsInfo.rows.find(t => t.id == sourceTagId);
+    const targetTag = tagsInfo.rows.find(t => t.id == targetTagId);
+    
+    // Add target tag to all quotes that have source tag (if not already present)
+    const result = await client.query(`
+      INSERT INTO quote_tags (quote_id, tag_id)
+      SELECT qt.quote_id, $1
+      FROM quote_tags qt
+      WHERE qt.tag_id = $2
+      ON CONFLICT (quote_id, tag_id) DO NOTHING
+      RETURNING quote_id
+    `, [targetTagId, sourceTagId]);
+    
+    const affectedCount = result.rows.length;
+    
+    // Update old tags column in affected quotes for backward compatibility
+    if (affectedCount > 0) {
+      const quoteIds = result.rows.map(r => r.quote_id);
+      await client.query(`
+        UPDATE quotes
+        SET tags = (
+          SELECT string_agg(t.name, ', ' ORDER BY t.name)
+          FROM quote_tags qt
+          JOIN tags t ON qt.tag_id = t.id
+          WHERE qt.quote_id = quotes.id
+        )
+        WHERE id = ANY($1)
+      `, [quoteIds]);
+    }
+    
+    await client.query("COMMIT");
+    
+    res.json({
+      success: true,
+      affectedCount,
+      sourceTag: sourceTag.name,
+      targetTag: targetTag.name,
+      message: `Added tag "${targetTag.name}" to ${affectedCount} quote(s) that have tag "${sourceTag.name}"`
+    });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Error bulk adding tag:", error);
+    res.status(500).json({ error: "Failed to bulk add tag" });
+  } finally {
+    client.release();
   }
 });
 
@@ -1304,6 +1811,8 @@ function escapeHtml(text) {
 }
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server is running on port ${PORT}`);
+  console.log(`Local: http://localhost:${PORT}`);
+  console.log(`Network: http://0.0.0.0:${PORT}`);
 });

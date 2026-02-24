@@ -24,6 +24,22 @@
       </div>
     </div>
 
+    <!-- Rename Modal -->
+    <div id="renameModal" class="modal" style="display: none;">
+      <div class="modal-content rename-modal-content">
+        <h2 id="renameModalTitle">Rename</h2>
+        <input type="text" id="renameInput" class="rename-input" placeholder="Enter new name" />
+        <div id="renameWarning" class="rename-warning" style="display: none;">
+          <span class="warning-icon">⚠️</span>
+          <span id="renameWarningText"></span>
+        </div>
+        <div class="rename-modal-actions">
+          <button id="renameCancelBtn" class="btn-secondary">Cancel</button>
+          <button id="renameConfirmBtn" class="btn-primary">Rename</button>
+        </div>
+      </div>
+    </div>
+
     <div class="app-layout">
         <!-- Side Menu -->
         <nav class="side-menu">
@@ -337,6 +353,67 @@
                 </button>
               </div>
             </header>
+            
+            <!-- Tag Operations Panel -->
+            <div class="tag-operations-panel">
+              <h3 class="operations-title">⚙️ Tag Operations</h3>
+              
+              <div class="operation-card">
+                <div class="operation-header">
+                  <span class="operation-icon">✏️</span>
+                  <h4>Rename Tag</h4>
+                </div>
+                <div class="operation-form">
+                  <div class="autocomplete-wrapper" style="flex: 1; min-width: 200px;">
+                    <input 
+                      type="text" 
+                      id="renameTagInput" 
+                      class="operation-input" 
+                      placeholder="Select tag to rename..." 
+                      autocomplete="off"
+                    />
+                    <div id="renameTagSuggestions" class="autocomplete-suggestions"></div>
+                  </div>
+                  <input type="text" id="renameTagNewName" class="operation-input" placeholder="New name" />
+                  <button id="renameTagBtn" class="btn btn-primary">Rename</button>
+                </div>
+              </div>
+              
+              <div class="operation-card">
+                <div class="operation-header">
+                  <span class="operation-icon">➕</span>
+                  <h4>Add Tag to Tagged Quotes</h4>
+                </div>
+                <div class="operation-description">
+                  Add a tag to all quotes that have another specific tag (you can create a new tag)
+                </div>
+                <div class="operation-form">
+                  <div class="autocomplete-wrapper" style="flex: 1; min-width: 200px;">
+                    <input 
+                      type="text" 
+                      id="sourceTagInput" 
+                      class="operation-input" 
+                      placeholder="Quotes that have this tag..." 
+                      autocomplete="off"
+                    />
+                    <div id="sourceTagSuggestions" class="autocomplete-suggestions"></div>
+                  </div>
+                  <span class="operation-arrow">→</span>
+                  <div class="autocomplete-wrapper" style="flex: 1; min-width: 200px;">
+                    <input 
+                      type="text" 
+                      id="targetTagInput" 
+                      class="operation-input" 
+                      placeholder="Will also get this tag (or create new)..." 
+                      autocomplete="off"
+                    />
+                    <div id="targetTagSuggestions" class="autocomplete-suggestions"></div>
+                  </div>
+                  <button id="addTagToTaggedBtn" class="btn btn-primary">Apply</button>
+                </div>
+              </div>
+            </div>
+            
             <div id="tagsList" class="tags-list">
               <div class="loading">Loading tags...</div>
             </div>

@@ -8,7 +8,12 @@ const { Pool } = require("pg");
 require("dotenv").config();
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: process.env.DATABASE_URL || undefined,
+  host: process.env.DB_HOST || "localhost",
+  port: process.env.DB_PORT || 5432,
+  database: process.env.DB_NAME || "quotes_db",
+  user: process.env.DB_USER || "postgres",
+  password: process.env.DB_PASSWORD || "postgres",
 });
 
 async function migrate() {
@@ -60,6 +65,27 @@ async function migrate() {
       )
     `);
 
+    // Create tags table
+    console.log("Creating tags table...");
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tags (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) UNIQUE NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // Create quote_tags junction table
+    console.log("Creating quote_tags junction table...");
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS quote_tags (
+        quote_id INTEGER REFERENCES quotes(id) ON DELETE CASCADE,
+        tag_id INTEGER REFERENCES tags(id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT NOW(),
+        PRIMARY KEY (quote_id, tag_id)
+      )
+    `);
+
     // Create indexes for better query performance
     console.log("Creating indexes...");
     await client.query(`
@@ -70,6 +96,15 @@ async function migrate() {
     `);
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_quotes_created_at ON quotes(created_at DESC)
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name)
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_quote_tags_quote_id ON quote_tags(quote_id)
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_quote_tags_tag_id ON quote_tags(tag_id)
     `);
 
     await client.query("COMMIT");
@@ -82,6 +117,8 @@ async function migrate() {
     console.log(
       "  - quotes (id, quote, author_id, source_id, type, tags, image, image_full, note, created_at, updated_at)",
     );
+    console.log("  - tags (id, name, created_at)");
+    console.log("  - quote_tags (quote_id, tag_id, created_at)");
     console.log("");
     console.log("Created indexes for optimal performance");
   } catch (error) {

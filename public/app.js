@@ -1,4 +1,5 @@
-const API_URL = "http://localhost:4000/api";
+// Auto-detect API URL based on current host
+const API_URL = `${window.location.protocol}//${window.location.hostname}:${window.location.port || '4000'}/api`;
 
 // Pagination state
 let currentPage = 1;
@@ -1736,7 +1737,11 @@ function displayAuthors(authors) {
             <div class="card-image">
                 ${author.image ? `<img src="${author.image}" alt="${escapeHtml(author.name)}">` : "✍️"}
             </div>
-            <div class="card-name">${escapeHtml(author.name)}</div>
+            <div class="card-name">
+                <a href="#" onclick="event.stopPropagation(); filterByAuthor('${escapeHtml(author.name)}'); return false;" class="card-link">
+                    ${escapeHtml(author.name)}
+                </a>
+            </div>
             <div class="card-quote-count">${parseInt(author.quote_count) || 0} quotes</div>
         </div>
     `,
@@ -1848,13 +1853,17 @@ function displaySources(sources) {
             <div class="card-image">
                 ${source.image ? `<img src="${source.image}" alt="${escapeHtml(source.name)}">` : typeIcon}
             </div>
-            <div class="card-name">${escapeHtml(source.name)}</div>
+            <div class="card-name">
+                <a href="#" onclick="event.stopPropagation(); filterBySource('${escapeHtml(source.name)}'); return false;" class="card-link">
+                    ${escapeHtml(source.name)}
+                </a>
+            </div>
             <div class="card-quote-count">${parseInt(source.quote_count) || 0} quotes</div>
             ${
               source.primary_author_name
                 ? `
                 <div class="card-author">
-                    <a href="#" onclick="event.stopPropagation(); openAuthorModal(${source.primary_author_id}, '${escapeHtml(source.primary_author_name)}'); return false;">
+                    <a href="#" onclick="event.stopPropagation(); filterByAuthor('${escapeHtml(source.primary_author_name)}'); return false;">
                         by ${escapeHtml(source.primary_author_name)}
                     </a>
                 </div>
@@ -1900,19 +1909,123 @@ function displayTags(tags) {
                 <span class="tag-card-icon">🏷️</span>
                 <span>${escapeHtml(tag.name)}</span>
             </div>
-            <div class="tag-card-count">${tag.quote_count} quotes</div>
+            <div class="tag-card-actions">
+                <div class="tag-card-count">${tag.quote_count} quotes</div>
+                <button class="tag-edit-btn" onclick="event.stopPropagation(); editTag(${tag.id}, '${escapeHtml(tag.name)}')" title="Rename tag">✏️</button>
+            </div>
         </div>
     `,
     )
     .join("");
+  
+  // Setup tag operation autocompletes
+  setupTagOperationsAutocomplete(tags);
+}
+
+// Store all tags for autocomplete
+let allTagsForOperations = [];
+
+function setupTagOperationsAutocomplete(tags) {
+  allTagsForOperations = tags;
+  
+  const renameTagInput = document.getElementById('renameTagInput');
+  const sourceTagInput = document.getElementById('sourceTagInput');
+  const targetTagInput = document.getElementById('targetTagInput');
+  
+  if (renameTagInput) {
+    setupTagAutocomplete(renameTagInput, 'renameTagSuggestions', false);
+  }
+  
+  if (sourceTagInput) {
+    setupTagAutocomplete(sourceTagInput, 'sourceTagSuggestions', false);
+  }
+  
+  if (targetTagInput) {
+    setupTagAutocomplete(targetTagInput, 'targetTagSuggestions', true); // Allow new tags
+  }
+}
+
+let tagAutocompleteTimeout;
+
+function setupTagAutocomplete(input, suggestionsId, allowNew) {
+  const suggestionsDiv = document.getElementById(suggestionsId);
+  if (!suggestionsDiv) return;
+  
+  input.addEventListener('input', () => {
+    clearTimeout(tagAutocompleteTimeout);
+    tagAutocompleteTimeout = setTimeout(() => {
+      const value = input.value.trim().toLowerCase();
+      
+      if (value.length === 0) {
+        suggestionsDiv.innerHTML = '';
+        suggestionsDiv.classList.remove('show');
+        return;
+      }
+      
+      const matches = allTagsForOperations.filter(tag => 
+        tag.name.toLowerCase().includes(value)
+      );
+      
+      if (matches.length === 0) {
+        if (allowNew) {
+          suggestionsDiv.innerHTML = `<div class="autocomplete-item create-new">
+            <span>✨ Create new tag: "${escapeHtml(input.value)}"</span>
+          </div>`;
+          suggestionsDiv.classList.add('show');
+        } else {
+          suggestionsDiv.innerHTML = '<div class="autocomplete-item no-match">No matching tags found</div>';
+          suggestionsDiv.classList.add('show');
+        }
+        return;
+      }
+      
+      suggestionsDiv.innerHTML = matches.map(tag => `
+        <div class="autocomplete-item" data-tag-id="${tag.id}" data-tag-name="${escapeHtml(tag.name)}">
+          ${escapeHtml(tag.name)} <span class="tag-count">(${tag.quote_count})</span>
+        </div>
+      `).join('');
+      
+      suggestionsDiv.classList.add('show');
+      
+      // Add click handlers
+      suggestionsDiv.querySelectorAll('.autocomplete-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const tagName = item.getAttribute('data-tag-name') || input.value;
+          input.value = tagName;
+          input.setAttribute('data-tag-id', item.getAttribute('data-tag-id') || '');
+          input.setAttribute('data-tag-name', tagName);
+          suggestionsDiv.classList.remove('show');
+        });
+      });
+    }, 200);
+  });
+  
+  // Hide suggestions when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!input.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+      suggestionsDiv.classList.remove('show');
+    }
+  });
 }
 
 function filterByTag(tagName) {
+  console.log("Filtering by tag:", tagName);
+  
   // Switch to quotes view and filter by tag
   switchView("quotes");
+  
+  // Clear other filters
+  document.getElementById("searchQuote").value = "";
+  document.getElementById("searchAuthor").value = "";
+  document.getElementById("searchSource").value = "";
+  
+  // Set tag filter
   document.getElementById("searchTags").value = tagName;
   currentPage = 1;
-  loadQuotes();
+  
+  setTimeout(() => {
+    loadQuotes();
+  }, 50);
 
   // Update active menu item
   document.querySelectorAll(".menu-item[data-view]").forEach((item) => {
@@ -1922,6 +2035,426 @@ function filterByTag(tagName) {
     }
   });
 }
+
+function filterByAuthor(authorName) {
+  console.log("Filtering by author:", authorName);
+  
+  // Switch to quotes view and filter by author
+  switchView("quotes");
+  
+  // Clear other filters
+  document.getElementById("searchQuote").value = "";
+  document.getElementById("searchSource").value = "";
+  document.getElementById("searchTags").value = "";
+  
+  // Set author filter
+  const authorField = document.getElementById("searchAuthor");
+  authorField.value = authorName;
+  
+  console.log("Author field value:", authorField.value);
+  
+  // Reset pagination and force reload
+  currentPage = 1;
+  
+  // Small delay to ensure view switch completes
+  setTimeout(() => {
+    console.log("Loading quotes for author:", authorName);
+    loadQuotes();
+  }, 50);
+
+  // Update active menu item
+  document.querySelectorAll(".menu-item[data-view]").forEach((item) => {
+    item.classList.remove("active");
+    if (item.dataset.view === "quotes") {
+      item.classList.add("active");
+    }
+  });
+}
+
+function filterBySource(sourceName) {
+  console.log("Filtering by source:", sourceName);
+  
+  // Switch to quotes view and filter by source
+  switchView("quotes");
+  
+  // Clear other filters
+  document.getElementById("searchQuote").value = "";
+  document.getElementById("searchAuthor").value = "";
+  document.getElementById("searchTags").value = "";
+  
+  // Set source filter
+  document.getElementById("searchSource").value = sourceName;
+  currentPage = 1;
+  
+  setTimeout(() => {
+    loadQuotes();
+  }, 50);
+
+  // Update active menu item
+  document.querySelectorAll(".menu-item[data-view]").forEach((item) => {
+    item.classList.remove("active");
+    if (item.dataset.view === "quotes") {
+      item.classList.add("active");
+    }
+  });
+}
+
+// ============= RENAME FUNCTIONALITY =============
+
+let renameContext = {
+  type: null, // 'tag', 'author', 'source'
+  id: null,
+  oldName: null
+};
+
+function editTag(id, name) {
+  renameContext = { type: 'tag', id, oldName: name };
+  showRenameModal('Tag', name);
+}
+
+function editAuthor(id, name) {
+  renameContext = { type: 'author', id, oldName: name };
+  showRenameModal('Author', name);
+}
+
+function editSource(id, name) {
+  renameContext = { type: 'source', id, oldName: name };
+  showRenameModal('Source', name);
+}
+
+function showRenameModal(type, currentName) {
+  const modal = document.getElementById('renameModal');
+  const title = document.getElementById('renameModalTitle');
+  const input = document.getElementById('renameInput');
+  const warning = document.getElementById('renameWarning');
+  
+  title.textContent = `Rename ${type}`;
+  input.value = currentName;
+  warning.style.display = 'none';
+  
+  modal.style.display = 'flex';
+  input.focus();
+  input.select();
+}
+
+function hideRenameModal() {
+  const modal = document.getElementById('renameModal');
+  modal.style.display = 'none';
+  renameContext = { type: null, id: null, oldName: null };
+}
+
+async function performRename() {
+  const input = document.getElementById('renameInput');
+  const newName = input.value.trim();
+  
+  if (!newName) {
+    alert('Please enter a name');
+    return;
+  }
+  
+  if (newName === renameContext.oldName) {
+    hideRenameModal();
+    return;
+  }
+  
+  const confirmBtn = document.getElementById('renameConfirmBtn');
+  const originalText = confirmBtn.textContent;
+  confirmBtn.textContent = '⏳ Renaming...';
+  confirmBtn.disabled = true;
+  
+  try {
+    let endpoint, refreshFunction;
+    
+    switch (renameContext.type) {
+      case 'tag':
+        endpoint = `tags/${renameContext.id}`;
+        refreshFunction = loadTags;
+        break;
+      case 'author':
+        endpoint = `authors/${renameContext.id}`;
+        refreshFunction = loadAuthors;
+        break;
+      case 'source':
+        endpoint = `sources/${renameContext.id}`;
+        refreshFunction = loadSources;
+        break;
+    }
+    
+    const response = await fetch(`${API_URL}/${endpoint}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newName })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to rename');
+    }
+    
+    const result = await response.json();
+    
+    hideRenameModal();
+    
+    // Show appropriate message
+    if (result.merged) {
+      showNotification(
+        `✅ ${result.message}\n\nAll quotes have been moved to the existing ${renameContext.type}.`,
+        'success'
+      );
+    } else {
+      showNotification(
+        `✅ ${result.message}`,
+        'success'
+      );
+    }
+    
+    // Refresh the view
+    refreshFunction();
+    
+  } catch (error) {
+    console.error('Error renaming:', error);
+    showNotification(`❌ ${error.message}`, 'error');
+    confirmBtn.textContent = originalText;
+    confirmBtn.disabled = false;
+  }
+}
+
+function showNotification(message, type = 'info') {
+  // Create notification element
+  const notification = document.createElement('div');
+  notification.className = `notification notification-${type}`;
+  notification.textContent = message;
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: ${type === 'success' ? '#4caf50' : type === 'error' ? '#f44336' : '#2196f3'};
+    color: white;
+    padding: 16px 24px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 10000;
+    font-size: 14px;
+    max-width: 400px;
+    animation: slideIn 0.3s ease;
+  `;
+  
+  document.body.appendChild(notification);
+  
+  // Auto-remove after 4 seconds
+  setTimeout(() => {
+    notification.style.animation = 'slideOut 0.3s ease';
+    setTimeout(() => notification.remove(), 300);
+  }, 4000);
+}
+
+// Event listeners for rename modal
+document.addEventListener('DOMContentLoaded', () => {
+  const renameModal = document.getElementById('renameModal');
+  const renameCancelBtn = document.getElementById('renameCancelBtn');
+  const renameConfirmBtn = document.getElementById('renameConfirmBtn');
+  const renameInput = document.getElementById('renameInput');
+  
+  // Cancel button
+  renameCancelBtn.addEventListener('click', hideRenameModal);
+  
+  // Confirm button
+  renameConfirmBtn.addEventListener('click', performRename);
+  
+  // Enter key to confirm
+  renameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      performRename();
+    } else if (e.key === 'Escape') {
+      hideRenameModal();
+    }
+  });
+  
+  // Click outside to close
+  renameModal.addEventListener('click', (e) => {
+    if (e.target === renameModal) {
+      hideRenameModal();
+    }
+  });
+});
+
+// ============= TAG OPERATIONS =============
+
+// Handle rename tag from operations panel
+document.addEventListener('DOMContentLoaded', () => {
+  const renameTagBtn = document.getElementById('renameTagBtn');
+  const renameTagInput = document.getElementById('renameTagInput');
+  const renameTagNewName = document.getElementById('renameTagNewName');
+  
+  if (renameTagBtn && renameTagInput && renameTagNewName) {
+    // Auto-fill new name when tag is selected
+    renameTagInput.addEventListener('change', () => {
+      renameTagNewName.value = renameTagInput.value;
+    });
+    
+    renameTagBtn.addEventListener('click', async () => {
+      const tagId = renameTagInput.getAttribute('data-tag-id');
+      const oldName = renameTagInput.getAttribute('data-tag-name') || renameTagInput.value;
+      const newName = renameTagNewName.value.trim();
+      
+      if (!tagId) {
+        alert('Please select a tag to rename');
+        return;
+      }
+      
+      if (!newName) {
+        alert('Please enter a new name');
+        return;
+      }
+      
+      const originalText = renameTagBtn.textContent;
+      renameTagBtn.textContent = '⏳ Renaming...';
+      renameTagBtn.disabled = true;
+      
+      try {
+        const response = await fetch(`${API_URL}/tags/${tagId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: newName })
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to rename tag');
+        }
+        
+        const result = await response.json();
+        
+        if (result.merged) {
+          showNotification(
+            `✅ ${result.message}\n\nAll quotes have been moved to the existing tag.`,
+            'success'
+          );
+        } else {
+          showNotification(`✅ ${result.message}`, 'success');
+        }
+        
+        // Reset form
+        renameTagInput.value = '';
+        renameTagInput.removeAttribute('data-tag-id');
+        renameTagInput.removeAttribute('data-tag-name');
+        renameTagNewName.value = '';
+        
+        // Reload tags
+        loadTags();
+        
+      } catch (error) {
+        console.error('Error renaming tag:', error);
+        showNotification(`❌ ${error.message}`, 'error');
+      } finally {
+        renameTagBtn.textContent = originalText;
+        renameTagBtn.disabled = false;
+      }
+    });
+  }
+  
+  // Handle add tag to tagged quotes
+  const addTagToTaggedBtn = document.getElementById('addTagToTaggedBtn');
+  const sourceTagInput = document.getElementById('sourceTagInput');
+  const targetTagInput = document.getElementById('targetTagInput');
+  
+  if (addTagToTaggedBtn && sourceTagInput && targetTagInput) {
+    addTagToTaggedBtn.addEventListener('click', async () => {
+      const sourceTagId = sourceTagInput.getAttribute('data-tag-id');
+      const sourceTagName = sourceTagInput.value.trim();
+      const targetTagValue = targetTagInput.value.trim();
+      const targetTagId = targetTagInput.getAttribute('data-tag-id');
+      
+      if (!sourceTagId || !sourceTagName) {
+        alert('Please select the source tag (quotes that have this tag)');
+        return;
+      }
+      
+      if (!targetTagValue) {
+        alert('Please enter or select the target tag (tag to add)');
+        return;
+      }
+      
+      // Check if creating new tag or using existing
+      const isNewTag = !targetTagId;
+      
+      let confirmMessage;
+      if (isNewTag) {
+        confirmMessage = `Create new tag "${targetTagValue}" and add it to all quotes that have "${sourceTagName}"?`;
+      } else {
+        confirmMessage = `Add tag "${targetTagValue}" to all quotes that have "${sourceTagName}"?\n\nThis will not remove the existing tag.`;
+      }
+      
+      if (!confirm(confirmMessage)) {
+        return;
+      }
+      
+      const originalText = addTagToTaggedBtn.textContent;
+      addTagToTaggedBtn.textContent = '⏳ Processing...';
+      addTagToTaggedBtn.disabled = true;
+      
+      try {
+        // If new tag, create it first
+        let finalTargetTagId = targetTagId;
+        
+        if (isNewTag) {
+          const createResponse = await fetch(`${API_URL}/tags`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: targetTagValue })
+          });
+          
+          if (!createResponse.ok) {
+            throw new Error('Failed to create new tag');
+          }
+          
+          const newTag = await createResponse.json();
+          finalTargetTagId = newTag.id;
+        }
+        
+        // Now add the tag to all quotes with source tag
+        const response = await fetch(`${API_URL}/tags/bulk-add`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            sourceTagId: sourceTagId, 
+            targetTagId: finalTargetTagId 
+          })
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to add tags');
+        }
+        
+        const result = await response.json();
+        
+        showNotification(
+          `✅ ${result.message}`,
+          'success'
+        );
+        
+        // Reset form
+        sourceTagInput.value = '';
+        sourceTagInput.removeAttribute('data-tag-id');
+        sourceTagInput.removeAttribute('data-tag-name');
+        targetTagInput.value = '';
+        targetTagInput.removeAttribute('data-tag-id');
+        targetTagInput.removeAttribute('data-tag-name');
+        
+        // Reload tags (counts may have changed)
+        loadTags();
+        
+      } catch (error) {
+        console.error('Error adding tags:', error);
+        showNotification(`❌ ${error.message}`, 'error');
+      } finally {
+        addTagToTaggedBtn.textContent = originalText;
+        addTagToTaggedBtn.disabled = false;
+      }
+    });
+  }
+});
 
 // ============= PDF EXPORT =============
 
