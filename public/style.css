@@ -1328,8 +1328,8 @@ textarea {
 /* Cards Grid for Authors/Books */
 .cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 2rem;
+  grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
+  gap: 1rem;
   margin-top: 2rem;
 }
 
@@ -1337,7 +1337,7 @@ textarea {
 .source-card {
   background: var(--surface);
   border-radius: 12px;
-  padding: 1.5rem;
+  padding: 1rem;
   box-shadow: var(--shadow);
   transition: all 0.2s;
   cursor: pointer;
