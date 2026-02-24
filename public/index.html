@@ -121,40 +121,37 @@
               <div class="search-header">
                 <div class="search-title-row">
                   <h2>🔍 Search Quotes</h2>
-                  <button id="clearBtn" class="btn btn-primary">
-                    Clear Filters
-                  </button>
-                </div>
-                
-                <!-- Source Type Filter -->
-                <div class="quote-type-filter">
-                  <label
-                    ><input
-                      type="checkbox"
-                      id="filterQuoteBook"
-                      value="BOOK"
-                      checked
-                    />
-                    📖 Books</label
-                  >
-                  <label
-                    ><input
-                      type="checkbox"
-                      id="filterQuoteMovie"
-                      value="MOVIE"
-                      checked
-                    />
-                    🎬 Movies</label
-                  >
-                  <label
-                    ><input
-                      type="checkbox"
-                      id="filterQuoteAssorted"
-                      value="ASSORTED"
-                      checked
-                    />
-                    📝 Assorted</label
-                  >
+                  
+                  <!-- Source Type Filter -->
+                  <div class="quote-type-filter">
+                    <label
+                      ><input
+                        type="checkbox"
+                        id="filterQuoteBook"
+                        value="BOOK"
+                        checked
+                      />
+                      📖 Books</label
+                    >
+                    <label
+                      ><input
+                        type="checkbox"
+                        id="filterQuoteMovie"
+                        value="MOVIE"
+                        checked
+                      />
+                      🎬 Movies</label
+                    >
+                    <label
+                      ><input
+                        type="checkbox"
+                        id="filterQuoteAssorted"
+                        value="ASSORTED"
+                        checked
+                      />
+                      📝 Assorted</label
+                    >
+                  </div>
                 </div>
               </div>
 
@@ -196,6 +193,12 @@
                     class="autocomplete-suggestions"
                   ></div>
                 </div>
+                <div class="search-item">
+                  <label>&nbsp;</label>
+                  <button id="clearBtn" class="btn btn-primary">
+                    Clear Filters
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -223,10 +226,10 @@
               <div class="header-actions">
                 <button
                   id="refreshAuthorsBtn"
-                  class="btn btn-icon"
+                  class="btn btn-refresh"
                   title="Refresh"
                 >
-                  🔄
+                  Refresh
                 </button>
               </div>
             </header>
@@ -270,10 +273,10 @@
               <div class="header-actions">
                 <button
                   id="refreshSourcesBtn"
-                  class="btn btn-icon"
+                  class="btn btn-refresh"
                   title="Refresh"
                 >
-                  🔄
+                  Refresh
                 </button>
               </div>
             </header>
@@ -281,28 +284,30 @@
             <!-- Search/Filter Section -->
             <div class="search-section">
               <div class="search-header">
-                <h2>🔍 Search Sources</h2>
-                
-                <!-- Source Type Filter -->
-                <div class="source-type-filter">
-                  <label
-                    ><input
-                      type="checkbox"
-                      id="filterBook"
-                      value="BOOK"
-                      checked
-                    />
-                    📖 Books</label
-                  >
-                  <label
-                    ><input
-                      type="checkbox"
-                      id="filterMovie"
-                      value="MOVIE"
-                      checked
-                    />
-                    🎬 Movies</label
-                  >
+                <div class="search-title-row">
+                  <h2>🔍 Search Sources</h2>
+                  
+                  <!-- Source Type Filter -->
+                  <div class="source-type-filter">
+                    <label
+                      ><input
+                        type="checkbox"
+                        id="filterBook"
+                        value="BOOK"
+                        checked
+                      />
+                      📖 Books</label
+                    >
+                    <label
+                      ><input
+                        type="checkbox"
+                        id="filterMovie"
+                        value="MOVIE"
+                        checked
+                      />
+                      🎬 Movies</label
+                    >
+                  </div>
                 </div>
               </div>
 
@@ -339,17 +344,22 @@
               <div class="header-actions">
                 <button
                   id="refreshTagsBtn"
-                  class="btn btn-icon"
+                  class="btn btn-refresh"
                   title="Refresh"
                 >
-                  🔄
+                  Refresh
                 </button>
               </div>
             </header>
             
             <!-- Tag Operations Panel -->
             <div class="tag-operations-panel">
-              <h3 class="operations-title">⚙️ Tag Operations</h3>
+              <h3 class="operations-title" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="toggleTagOperations()">
+                <span>⚙️ Tag Operations</span>
+                <span id="tagOperationsToggle" style="font-size: 1rem;">▶</span>
+              </h3>
+              
+              <div id="tagOperationsContent">
               
               <div class="operation-card">
                 <div class="operation-header">
@@ -367,7 +377,10 @@
                     />
                     <div id="renameTagSuggestions" class="autocomplete-suggestions"></div>
                   </div>
-                  <input type="text" id="renameTagNewName" class="operation-input" placeholder="New name" />
+                  <span class="operation-arrow">→</span>
+                  <div style="flex: 1; min-width: 200px;">
+                    <input type="text" id="renameTagNewName" class="operation-input" placeholder="New name" />
+                  </div>
                   <button id="renameTagBtn" class="btn btn-primary">Rename</button>
                 </div>
               </div>
@@ -376,9 +389,7 @@
                 <div class="operation-header">
                   <span class="operation-icon">➕</span>
                   <h4>Add Tag to Tagged Quotes</h4>
-                </div>
-                <div class="operation-description">
-                  Add a tag to all quotes that have another specific tag (you can create a new tag)
+                  <span class="operation-description-inline">Add a tag to all quotes that have another specific tag (you can create a new tag)</span>
                 </div>
                 <div class="operation-form">
                   <div class="autocomplete-wrapper" style="flex: 1; min-width: 200px;">
@@ -403,6 +414,26 @@
                     <div id="targetTagSuggestions" class="autocomplete-suggestions"></div>
                   </div>
                   <button id="addTagToTaggedBtn" class="btn btn-primary">Apply</button>
+                </div>
+              </div>
+              </div>
+            </div>
+            
+            <!-- Search Tags Section -->
+            <div class="search-tags-panel">
+              <h3 class="search-tags-title">🔍 Search Tags</h3>
+              <div class="search-tags-content">
+                <input 
+                  type="text" 
+                  id="searchSourcesInput" 
+                  class="search-tags-input" 
+                  placeholder="Search tags..." 
+                  autocomplete="off"
+                />
+                <div class="search-tags-sort">
+                  <span>Sort by:</span>
+                  <button id="sortTagsByName" class="btn-sort active">Name</button>
+                  <button id="sortTagsByCount" class="btn-sort">Number of Quotes</button>
                 </div>
               </div>
             </div>

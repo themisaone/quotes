@@ -1880,6 +1880,7 @@ async function loadTags() {
   try {
     const response = await fetch(`${API_URL}/tags`);
     const tags = await response.json();
+    allTags = tags; // Store globally for search/filter
     displayTags(tags);
   } catch (error) {
     console.error("Error loading tags:", error);
@@ -2839,4 +2840,89 @@ window.addEventListener("DOMContentLoaded", () => {
     randomQuoteBtn.addEventListener("click", showWelcomeQuote);
   }
 });
+
+
+// Toggle Tag Operations panel
+function toggleTagOperations() {
+  const content = document.getElementById("tagOperationsContent");
+  const toggle = document.getElementById("tagOperationsToggle");
+  
+  if (content.style.display === "none" || !content.style.display) {
+    content.style.display = "block";
+    toggle.textContent = "▼";
+    localStorage.setItem("tagOperationsExpanded", "true");
+  } else {
+    content.style.display = "none";
+    toggle.textContent = "▶";
+    localStorage.setItem("tagOperationsExpanded", "false");
+  }
+}
+
+// Restore Tag Operations state on load
+function restoreTagOperationsState() {
+  const isExpanded = localStorage.getItem("tagOperationsExpanded") === "true";
+  const content = document.getElementById("tagOperationsContent");
+  const toggle = document.getElementById("tagOperationsToggle");
+  
+  if (content && toggle) {
+    if (isExpanded) {
+      content.style.display = "block";
+      toggle.textContent = "▼";
+    } else {
+      content.style.display = "none";
+      toggle.textContent = "▶";
+    }
+  }
+}
+
+// Search tags functionality
+let allTags = [];
+let currentSortBy = "name";
+
+document.addEventListener("DOMContentLoaded", () => {
+  const searchInput = document.getElementById("searchSourcesInput");
+  const sortByName = document.getElementById("sortTagsByName");
+  const sortByCount = document.getElementById("sortTagsByCount");
+  
+  // Restore Tag Operations collapsed/expanded state
+  restoreTagOperationsState();
+  
+  if (searchInput) {
+    searchInput.addEventListener("input", filterTags);
+  }
+  
+  if (sortByName) {
+    sortByName.addEventListener("click", () => {
+      currentSortBy = "name";
+      sortByName.classList.add("active");
+      sortByCount.classList.remove("active");
+      filterTags();
+    });
+  }
+  
+  if (sortByCount) {
+    sortByCount.addEventListener("click", () => {
+      currentSortBy = "count";
+      sortByCount.classList.add("active");
+      sortByName.classList.remove("active");
+      filterTags();
+    });
+  }
+});
+
+function filterTags() {
+  const searchValue = document.getElementById("searchSourcesInput")?.value.toLowerCase() || "";
+  
+  let filteredTags = allTags.filter(tag => 
+    tag.name.toLowerCase().includes(searchValue)
+  );
+  
+  if (currentSortBy === "count") {
+    filteredTags.sort((a, b) => b.quote_count - a.quote_count);
+  } else {
+    filteredTags.sort((a, b) => a.name.localeCompare(b.name));
+  }
+  
+  displayTags(filteredTags);
+}
 
