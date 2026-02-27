@@ -756,6 +756,39 @@ textarea {
   position: relative;
 }
 
+.quote-card.has-image {
+  display: flex;
+  gap: 1rem;
+  padding: 0;
+}
+
+.quote-card.has-image .quote-card-content {
+  flex: 1;
+  padding: 1.25rem;
+  min-width: 0;
+}
+
+.quote-card.has-image .quote-image-thumb {
+  width: 240px;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0.75rem 0.75rem 0.75rem 0;
+  border-radius: 0 8px 8px 0;
+  align-self: stretch;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.quote-card.has-image .quote-image-thumb img {
+  width: 100% !important;
+  height: auto !important;
+  object-fit: contain !important;
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  margin-bottom: 0.75rem !important;
+}
+
 .quote-card:hover {
   background: #f0fff4;
   border-color: var(--border);
@@ -801,21 +834,68 @@ textarea {
 
 .quote-main-content {
   display: flex;
-  gap: 1.5rem;
-  align-items: flex-start;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .quote-text-column {
-  flex: 1;
-  min-width: 0;
+  width: 100%;
 }
 
 .quote-side-column {
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  align-self: flex-start;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
   min-width: 200px;
+  padding-top: 0.75rem;
+  margin-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.quote-metadata-left {
+  flex: 0 1 auto;
+}
+
+.quote-tags-inline {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  flex: 0 1 auto;
+}
+
+.quote-tags-inline .tag {
+  font-size: 0.65rem;
+  padding: 0.2rem 0.5rem;
+}
+
+.meta-item-combined {
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.meta-from {
+  color: var(--text-secondary);
+  font-style: italic;
+  font-size: 0.7rem;
+}
+
+.quote-side-column .meta-item {
+  font-size: 0.75rem;
+}
+
+.quote-side-column .meta-label {
+  font-size: 0.7rem;
+}
+
+.quote-side-column .meta-value {
+  font-size: 0.75rem;
 }
 
 .quote-text {
@@ -835,11 +915,6 @@ textarea {
   padding-top: 1rem;
   border-top: 1px solid var(--border);
   margin-top: 1rem;
-}
-
-/* Remove old inline tags style */
-.quote-tags-inline {
-  display: none;
 }
 
 /* Opening quote mark */
@@ -897,8 +972,11 @@ textarea {
 .meta-label {
   font-weight: 600;
   color: var(--text-secondary);
-  display: inline-block;
-  min-width: 60px;
+  margin-right: 0.5rem;
+}
+
+.meta-value {
+  color: var(--text-primary);
 }
 
 .meta-value {
@@ -1072,10 +1150,10 @@ textarea {
 
 .tag {
   display: inline-block;
-  background: var(--primary-color);
+  background: #2d6a4f;
   color: white;
   padding: 0.25rem 0.75rem;
-  border-radius: 20px;
+  border-radius: 12px;
   font-size: 0.75rem;
 }
 
@@ -1328,16 +1406,17 @@ textarea {
 /* Cards Grid for Authors/Books */
 .cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.75rem;
   margin-top: 2rem;
+  align-items: start;
 }
 
 .author-card,
 .source-card {
   background: var(--surface);
   border-radius: 12px;
-  padding: 1rem;
+  padding: 0.35rem;
   box-shadow: var(--shadow);
   transition: all 0.2s;
   cursor: pointer;
@@ -1345,14 +1424,13 @@ textarea {
   flex-direction: column;
   align-items: center;
   text-align: center;
-}
-
-.author-card {
-  min-height: 320px;
+  gap: 0.35rem;
+  align-self: start;
+  height: fit-content;
 }
 
 .source-card {
-  min-height: 380px;
+  min-height: 260px;
 }
 
 .author-card:hover,
@@ -1365,15 +1443,15 @@ textarea {
 /* Author card image - larger, square */
 .author-card .card-image {
   width: 100%;
-  max-width: 180px;
-  height: 180px;
+  max-width: 120px;
+  height: 120px;
   border-radius: 8px;
-  margin-bottom: 1rem;
+  margin: 0.7rem 0 0 0;
   background: var(--background);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 4rem;
+  font-size: 2.8rem;
   flex-shrink: 0;
   overflow: hidden;
 }
@@ -1388,15 +1466,15 @@ textarea {
 /* Source card image - book cover style (taller) */
 .source-card .card-image {
   width: 100%;
-  max-width: 130px;
-  height: 190px;
+  max-width: 95px;
+  height: 130px;
   border-radius: 8px;
-  margin-bottom: 1rem;
+  margin: 0.7rem 0 0 0;
   background: var(--background);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 3.5rem;
+  font-size: 2.3rem;
   flex-shrink: 0;
   overflow: hidden;
 }
@@ -1409,20 +1487,20 @@ textarea {
 }
 
 .card-name {
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 600;
-  margin-bottom: 0.5rem;
+  margin: 0;
   color: var(--text-primary);
-  line-height: 1.3;
+  line-height: 1.2;
   word-wrap: break-word;
   width: 100%;
 }
 
 .card-quote-count {
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   color: var(--text-secondary);
   font-weight: 500;
-  margin-bottom: 0.5rem;
+  margin: 0;
 }
 
 .card-author {
@@ -1539,14 +1617,14 @@ textarea {
 }
 
 .welcome-quote-content {
-  text-align: center;
+  text-align: left;
 }
 
 .welcome-quote-text {
-  font-size: 1.35rem;
-  line-height: 1.6;
+  font-size: 1.2rem;
+  line-height: 1.5;
   color: var(--text-primary);
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
   font-weight: 300;
   position: relative;
   font-style: italic;
@@ -1556,10 +1634,10 @@ textarea {
 
 .welcome-quote-text::before {
   content: '"';
-  font-size: 4rem;
+  font-size: 1.5rem;
   position: absolute;
-  left: -2rem;
-  top: -1rem;
+  left: -1rem;
+  top: -0.2rem;
   color: var(--primary-color);
   opacity: 0.3;
   font-family: Georgia, serif;
@@ -1567,57 +1645,69 @@ textarea {
 
 .welcome-quote-text::after {
   content: '"';
-  font-size: 4rem;
+  font-size: 1.5rem;
   position: absolute;
-  right: -2rem;
-  bottom: -2rem;
+  right: -1rem;
+  bottom: -0.5rem;
   color: var(--primary-color);
   opacity: 0.3;
   font-family: Georgia, serif;
 }
 
 .welcome-quote-meta {
-  margin-bottom: 1rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.welcome-meta-left {
+  flex: 0 1 auto;
+  font-size: 0.85rem;
+}
+
+.welcome-meta-left .meta-value {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.welcome-meta-left .meta-from {
+  color: var(--text-secondary);
+  font-style: italic;
+  font-size: 0.75rem;
+}
+
+.welcome-meta-tags {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  flex: 0 1 auto;
 }
 
 .welcome-quote-author {
-  font-size: 1.35rem;
-  font-weight: 500;
-  color: var(--primary-color);
-  display: inline;
+  display: none;
 }
 
 .welcome-quote-source {
-  font-size: 1.35rem;
-  font-weight: 500;
-  color: var(--text-secondary);
-  display: inline;
-  margin-left: 0.5rem;
+  display: none;
 }
 
 .welcome-quote-tags {
-  margin-top: 1rem;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.welcome-quote-tags .tag {
-  background: var(--primary-color);
-  color: white;
-  padding: 0.35rem 0.75rem;
-  border-radius: 16px;
-  font-size: 0.875rem;
-  font-weight: 500;
+  display: none;
 }
 
 .welcome-quote-note {
-  font-size: 1rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: var(--text-secondary);
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--border);
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
   white-space: pre-wrap;
   word-wrap: break-word;
   line-height: 1.5;

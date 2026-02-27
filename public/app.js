@@ -416,6 +416,13 @@ function openAddModal() {
   currentQuoteImageFull = "";
   clearImagePreview(quoteImagePreview, "quote");
   
+  // Set default values for new quotes
+  authorInput.value = "Unknown Author";
+  const sourceTypeSelect = document.getElementById("sourceType");
+  if (sourceTypeSelect) {
+    sourceTypeSelect.value = "ASSORTED";
+  }
+  
   // Hide metadata for new quotes
   const metadataEl = document.getElementById("quoteMetadata");
   if (metadataEl) {
@@ -740,20 +747,26 @@ function createQuoteCard(quote) {
   const expandBtnId = `expand-${quote.id}`;
 
   return `
-        <div class="quote-card" data-quote-id="${quote.id}" style="cursor: pointer;">
-            ${quote.note ? `<div class="quote-note-title">${escapeHtml(quote.note)}</div>` : ''}
-            <div class="quote-main-content">
-                <div class="quote-text-column">
-                    <div class="quote-text ${isLongQuote ? "collapsible" : ""}" id="${quoteId}" data-expanded="false">${escapeHtml(isLongQuote ? shortQuote : quote.quote)}</div>
-                    ${isLongQuote ? `<button class="expand-btn" id="${expandBtnId}" onclick="event.stopPropagation(); toggleQuoteExpand('${quote.id}')">▼ Show more</button>` : ""}
-                </div>
-                <div class="quote-side-column">
-                    ${author ? `<div class="meta-item"><span class="meta-label">✍️ Author:</span> <span class="meta-value clickable author-link" data-id="${quote.author_id}" data-name="${escapeHtml(author)}">${escapeHtml(author)}</span></div>` : ""}
-                    ${source ? `<div class="meta-item"><span class="meta-label">Source:</span> <span class="meta-value clickable source-link" data-id="${quote.source_id}" data-name="${escapeHtml(source)}" data-type="${sourceType}">${sourceIcon} ${escapeHtml(source)}</span></div>` : ""}
-                    ${quote.image ? `<div class="quote-image-thumb" onclick="event.stopPropagation(); showFullImage('${quote.image_full || quote.image}')"><img src="${quote.image}" alt="Quote image"></div>` : ""}
+        <div class="quote-card ${quote.image ? 'has-image' : ''}" data-quote-id="${quote.id}" style="cursor: pointer;">
+            <div class="quote-card-content">
+                ${quote.note ? `<div class="quote-note-title">${escapeHtml(quote.note)}</div>` : ''}
+                <div class="quote-main-content">
+                    <div class="quote-text-column">
+                        <div class="quote-text ${isLongQuote ? "collapsible" : ""}" id="${quoteId}" data-expanded="false">${escapeHtml(isLongQuote ? shortQuote : quote.quote)}</div>
+                        ${isLongQuote ? `<button class="expand-btn" id="${expandBtnId}" onclick="event.stopPropagation(); toggleQuoteExpand('${quote.id}')">▼ Show more</button>` : ""}
+                    </div>
+                    <div class="quote-side-column">
+                        <div class="quote-metadata-left">
+                            ${author && source ? `<div class="meta-item-combined"><span class="meta-value clickable author-link" data-id="${quote.author_id}" data-name="${escapeHtml(author)}">${escapeHtml(author)}</span> <span class="meta-from">from</span> <span class="meta-value clickable source-link" data-id="${quote.source_id}" data-name="${escapeHtml(source)}" data-type="${sourceType}">${sourceIcon} ${escapeHtml(source)}</span></div>` : 
+                            author ? `<div class="meta-item"><span class="meta-value clickable author-link" data-id="${quote.author_id}" data-name="${escapeHtml(author)}">${escapeHtml(author)}</span></div>` :
+                            source ? `<div class="meta-item"><span class="meta-value clickable source-link" data-id="${quote.source_id}" data-name="${escapeHtml(source)}" data-type="${sourceType}">${sourceIcon} ${escapeHtml(source)}</span></div>` : ""
+                            }
+                        </div>
+                        ${tags ? `<div class="quote-tags-inline">${tags}</div>` : ''}
+                    </div>
                 </div>
             </div>
-            ${tags ? `<div class="quote-tags-section">${tags}</div>` : ''}
+            ${quote.image ? `<div class="quote-image-thumb" onclick="event.stopPropagation(); showFullImage('${quote.image_full || quote.image}')"><img src="${quote.image}" alt="Quote image"></div>` : ""}
         </div>
     `;
 }
@@ -2723,8 +2736,13 @@ async function handleImportFile(event) {
 }
 
 // Welcome Quote Feature
-async function showWelcomeQuote() {
+async function showWelcomeQuote(force = false) {
   try {
+    // Only show automatically if not already shown in this session
+    if (!force && sessionStorage.getItem('welcomeQuoteShown')) {
+      return;
+    }
+    
     // Fetch a random quote
     const response = await fetch(`${API_URL}/quotes/random`);
     if (!response.ok) {
@@ -2745,50 +2763,44 @@ async function showWelcomeQuote() {
     // Populate quote data
     textEl.textContent = quote.quoteText || quote.quote || "";
     
-    // Author with icon
-    if (quote.author) {
-      authorEl.textContent = `✍️ ${quote.author}`;
-    } else {
-      authorEl.textContent = "";
+    // Determine icon based on source type
+    let sourceIcon = "📖"; // Default for BOOK
+    if (quote.type === "MOVIE" || quote.source_type === "MOVIE") {
+      sourceIcon = "🎬";
+    } else if (quote.type === "ASSORTED" || quote.source_type === "ASSORTED") {
+      sourceIcon = "📝";
     }
     
-    // Source with icon based on type and conditional bullet
-    if (quote.source) {
-      // Determine icon based on source type
-      let sourceIcon = "📝"; // Default for ASSORTED
-      if (quote.type === "BOOK" || quote.source_type === "BOOK") {
-        sourceIcon = "📚";
-      } else if (quote.type === "MOVIE" || quote.source_type === "MOVIE") {
-        sourceIcon = "🎬";
-      }
-      
-      sourceEl.style.display = "inline";
-      // Add bullet before source when author exists
-      if (quote.author) {
-        sourceEl.style.marginLeft = "0.5rem";
-        sourceEl.textContent = `• ${sourceIcon} ${quote.source}`;
-      } else {
-        sourceEl.style.marginLeft = "0";
-        sourceEl.textContent = `${sourceIcon} ${quote.source}`;
-      }
-    } else {
-      sourceEl.textContent = "";
-      sourceEl.style.display = "none";
+    // Format: "Author from 📖 Source"
+    let metaHTML = "";
+    if (quote.author && quote.source) {
+      metaHTML = `<span class="meta-value">${escapeHtml(quote.author)}</span> <span class="meta-from">from</span> <span class="meta-value">${sourceIcon} ${escapeHtml(quote.source)}</span>`;
+    } else if (quote.author) {
+      metaHTML = `<span class="meta-value">${escapeHtml(quote.author)}</span>`;
+    } else if (quote.source) {
+      metaHTML = `<span class="meta-value">${sourceIcon} ${escapeHtml(quote.source)}</span>`;
     }
     
-    // Tags display
+    // Create metadata wrapper with tags
+    const metaWrapper = overlay.querySelector(".welcome-quote-meta");
+    metaWrapper.innerHTML = "";
+    
+    if (metaHTML) {
+      const metaLeft = document.createElement("div");
+      metaLeft.className = "welcome-meta-left";
+      metaLeft.innerHTML = metaHTML;
+      metaWrapper.appendChild(metaLeft);
+    }
+    
+    // Tags display on same line
     if (quote.tags && quote.tags.trim()) {
       const tags = quote.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
       if (tags.length > 0) {
-        tagsEl.innerHTML = tags.map(tag => `<span class="tag">${tag}</span>`).join('');
-        tagsEl.style.display = "flex";
-      } else {
-        tagsEl.innerHTML = "";
-        tagsEl.style.display = "none";
+        const tagsRight = document.createElement("div");
+        tagsRight.className = "welcome-meta-tags";
+        tagsRight.innerHTML = tags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('');
+        metaWrapper.appendChild(tagsRight);
       }
-    } else {
-      tagsEl.innerHTML = "";
-      tagsEl.style.display = "none";
     }
     
     // Note display
@@ -2802,6 +2814,11 @@ async function showWelcomeQuote() {
     
     // Show overlay
     overlay.style.display = "flex";
+    
+    // Mark as shown in this session (only for automatic display)
+    if (!force) {
+      sessionStorage.setItem('welcomeQuoteShown', 'true');
+    }
     
     // Function to close overlay
     function closeOverlay() {
@@ -2837,7 +2854,7 @@ window.addEventListener("DOMContentLoaded", () => {
   // Add event listener for Random Quote button
   const randomQuoteBtn = document.getElementById("randomQuoteBtn");
   if (randomQuoteBtn) {
-    randomQuoteBtn.addEventListener("click", showWelcomeQuote);
+    randomQuoteBtn.addEventListener("click", () => showWelcomeQuote(true));
   }
 });
 
