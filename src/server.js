@@ -461,7 +461,7 @@ app.delete("/api/sources/:id", async (req, res) => {
 // Get total quote count
 app.get("/api/quotes/count", async (req, res) => {
   try {
-    const { quote, author, source, tags, types } = req.query;
+    const { quote, author, source, tags, types, hasAuthor, hasSource, hasNote, hasTags, hasImage } = req.query;
 
     let query = `
       SELECT COUNT(*) as count
@@ -520,6 +520,37 @@ app.get("/api/quotes/count", async (req, res) => {
       }
     }
 
+    // Metadata filters
+    if (hasAuthor === 'true') {
+      query += ` AND q.author_id IS NOT NULL`;
+    } else if (hasAuthor === 'false') {
+      query += ` AND q.author_id IS NULL`;
+    }
+
+    if (hasSource === 'true') {
+      query += ` AND q.source_id IS NOT NULL`;
+    } else if (hasSource === 'false') {
+      query += ` AND q.source_id IS NULL`;
+    }
+
+    if (hasNote === 'true') {
+      query += ` AND q.note IS NOT NULL AND q.note != ''`;
+    } else if (hasNote === 'false') {
+      query += ` AND (q.note IS NULL OR q.note = '')`;
+    }
+
+    if (hasTags === 'true') {
+      query += ` AND EXISTS (SELECT 1 FROM quote_tags WHERE quote_id = q.id)`;
+    } else if (hasTags === 'false') {
+      query += ` AND NOT EXISTS (SELECT 1 FROM quote_tags WHERE quote_id = q.id)`;
+    }
+
+    if (hasImage === 'true') {
+      query += ` AND q.image IS NOT NULL AND q.image != ''`;
+    } else if (hasImage === 'false') {
+      query += ` AND (q.image IS NULL OR q.image = '')`;
+    }
+
     const result = await pool.query(query, params);
     res.json({ count: parseInt(result.rows[0].count) });
   } catch (error) {
@@ -538,6 +569,11 @@ app.get("/api/quotes", async (req, res) => {
       tags,
       date,
       types,
+      hasAuthor,
+      hasSource,
+      hasNote,
+      hasTags,
+      hasImage,
       limit = 20,
       offset = 0,
     } = req.query;
@@ -618,7 +654,38 @@ app.get("/api/quotes", async (req, res) => {
       }
     }
 
-    query += ` ORDER BY q.created_at DESC LIMIT $${paramCounter} OFFSET $${paramCounter + 1}`;
+    // Metadata filters
+    if (hasAuthor === 'true') {
+      query += ` AND q.author_id IS NOT NULL`;
+    } else if (hasAuthor === 'false') {
+      query += ` AND q.author_id IS NULL`;
+    }
+
+    if (hasSource === 'true') {
+      query += ` AND q.source_id IS NOT NULL`;
+    } else if (hasSource === 'false') {
+      query += ` AND q.source_id IS NULL`;
+    }
+
+    if (hasNote === 'true') {
+      query += ` AND q.note IS NOT NULL AND q.note != ''`;
+    } else if (hasNote === 'false') {
+      query += ` AND (q.note IS NULL OR q.note = '')`;
+    }
+
+    if (hasTags === 'true') {
+      query += ` AND EXISTS (SELECT 1 FROM quote_tags WHERE quote_id = q.id)`;
+    } else if (hasTags === 'false') {
+      query += ` AND NOT EXISTS (SELECT 1 FROM quote_tags WHERE quote_id = q.id)`;
+    }
+
+    if (hasImage === 'true') {
+      query += ` AND q.image IS NOT NULL AND q.image != ''`;
+    } else if (hasImage === 'false') {
+      query += ` AND (q.image IS NULL OR q.image = '')`;
+    }
+
+    query += ` ORDER BY q.updated_at DESC LIMIT $${paramCounter} OFFSET $${paramCounter + 1}`;
     params.push(parseInt(limit), parseInt(offset));
 
     const result = await pool.query(query, params);

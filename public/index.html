@@ -84,6 +84,15 @@
             </button>
           </li>
         </ul>
+
+        <div class="menu-divider desktop-only"></div>
+
+        <h3 class="menu-section-title desktop-only">Settings</h3>
+        <ul class="menu-list desktop-only">
+          <li>
+            <button class="menu-item" data-view="settings"><span class="menu-icon">⚙️</span><span class="menu-text"> Application Settings</span></button>
+          </li>
+        </ul>
       </nav>
 
       <!-- Main Content -->
@@ -116,6 +125,62 @@
               </div>
             </header>
 
+            <!-- Metadata Search Section -->
+            <div id="metadataSearchSection" class="metadata-search-section" style="display: none;">
+              <h2>🔍 Search Metadata</h2>
+              <div class="metadata-search-controls">
+                <div class="metadata-search-item">
+                  <input type="checkbox" id="searchHasAuthor" />
+                  <label for="searchHasAuthor">Quote</label>
+                  <select id="searchAuthorCondition">
+                    <option value="has">Does have</option>
+                    <option value="not">Does not have</option>
+                  </select>
+                  <span>Author</span>
+                </div>
+                
+                <div class="metadata-search-item">
+                  <input type="checkbox" id="searchHasSource" />
+                  <label for="searchHasSource">Quote</label>
+                  <select id="searchSourceCondition">
+                    <option value="has">Does have</option>
+                    <option value="not">Does not have</option>
+                  </select>
+                  <span>Source</span>
+                </div>
+                
+                <div class="metadata-search-item">
+                  <input type="checkbox" id="searchHasNote" />
+                  <label for="searchHasNote">Quote</label>
+                  <select id="searchNoteCondition">
+                    <option value="has">Does have</option>
+                    <option value="not">Does not have</option>
+                  </select>
+                  <span>Note</span>
+                </div>
+                
+                <div class="metadata-search-item">
+                  <input type="checkbox" id="searchHasTags" />
+                  <label for="searchHasTags">Quote</label>
+                  <select id="searchTagsCondition">
+                    <option value="has">Does have</option>
+                    <option value="not">Does not have</option>
+                  </select>
+                  <span>Tags</span>
+                </div>
+                
+                <div class="metadata-search-item">
+                  <input type="checkbox" id="searchHasImage" />
+                  <label for="searchHasImage">Quote</label>
+                  <select id="searchImageCondition">
+                    <option value="has">Does have</option>
+                    <option value="not">Does not have</option>
+                  </select>
+                  <span>Image</span>
+                </div>
+              </div>
+            </div>
+
             <!-- Search/Filter Section -->
             <div class="search-section">
               <div class="search-header">
@@ -137,10 +202,10 @@
                       ><input
                         type="checkbox"
                         id="filterQuoteMovie"
-                        value="MOVIE"
+                        value="MOVIE-TV"
                         checked
                       />
-                      🎬 Movies</label
+                      🎬 Movies & TV</label
                     >
                     <label
                       ><input
@@ -222,7 +287,13 @@
         <div id="authorsView" class="view-container" style="display: none">
           <div class="container">
             <header>
-              <h1>✍️ Authors</h1>
+              <h1>
+                ✍️ Authors
+                <span class="quote-counts">
+                  <span id="filteredAuthorsCount">0</span> /
+                  <span id="totalAuthorsCount">0</span>
+                </span>
+              </h1>
               <div class="header-actions">
                 <button
                   id="refreshAuthorsBtn"
@@ -269,7 +340,13 @@
         <div id="sourcesView" class="view-container" style="display: none">
           <div class="container">
             <header>
-              <h1>📚 Sources</h1>
+              <h1>
+                📚 Sources
+                <span class="quote-counts">
+                  <span id="filteredSourcesCount">0</span> /
+                  <span id="totalSourcesCount">0</span>
+                </span>
+              </h1>
               <div class="header-actions">
                 <button
                   id="refreshSourcesBtn"
@@ -302,10 +379,10 @@
                       ><input
                         type="checkbox"
                         id="filterMovie"
-                        value="MOVIE"
+                        value="MOVIE-TV"
                         checked
                       />
-                      🎬 Movies</label
+                      🎬 Movies & TV</label
                     >
                   </div>
                 </div>
@@ -340,7 +417,13 @@
         <div id="tagsView" class="view-container" style="display: none">
           <div class="container">
             <header>
-              <h1>🏷️ Tags</h1>
+              <h1>
+                🏷️ Tags
+                <span class="quote-counts">
+                  <span id="filteredTagsCount">0</span> /
+                  <span id="totalTagsCount">0</span>
+                </span>
+              </h1>
               <div class="header-actions">
                 <button
                   id="refreshTagsBtn"
@@ -443,6 +526,37 @@
             </div>
           </div>
         </div>
+        
+        <!-- Settings View -->
+        <div id="settingsView" class="view-container" style="display: none">
+          <div class="container">
+            <header>
+              <h1>⚙️ Settings</h1>
+            </header>
+            
+            <div class="settings-section">
+              <h2>Tag Management</h2>
+              <div class="setting-item">
+                <label class="setting-label">
+                  <input type="checkbox" id="enableTagOperations" />
+                  <span>Enable Tag Operations</span>
+                </label>
+                <p class="setting-description">Show advanced tag operations panel in the Tags page (rename, bulk add, etc.)</p>
+              </div>
+            </div>
+            
+            <div class="settings-section">
+              <h2>Search Features</h2>
+              <div class="setting-item">
+                <label class="setting-label">
+                  <input type="checkbox" id="enableQuoteMetaSearches" />
+                  <span>Quote Meta Searches</span>
+                </label>
+                <p class="setting-description">Enable advanced metadata search capabilities for quotes.</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       <!-- end main-content -->
     </div>
@@ -466,8 +580,17 @@
             ></textarea>
           </div>
 
+          <div class="form-group">
+            <label for="note">Note (Optional)</label>
+            <textarea
+              id="note"
+              placeholder="Additional context..."
+              rows="2"
+            ></textarea>
+          </div>
+
           <div class="form-row">
-            <div class="form-group">
+            <div class="form-group" style="flex: 2;">
               <label for="author">Author</label>
               <div class="autocomplete-wrapper">
                 <input
@@ -480,7 +603,7 @@
               </div>
             </div>
 
-            <div class="form-group">
+            <div class="form-group" style="flex: 2;">
               <label for="source">Source</label>
               <div class="autocomplete-wrapper">
                 <input
@@ -493,19 +616,27 @@
               </div>
             </div>
 
-            <div class="form-group">
+            <div class="form-group" style="flex: 1.3;">
               <label for="sourceType">Type</label>
               <select id="sourceType">
                 <option value="BOOK">📖 Book</option>
-                <option value="MOVIE">🎬 Movie</option>
+                <option value="MOVIE-TV">🎬 Movies & TV</option>
                 <option value="ASSORTED">📝 Assorted</option>
               </select>
             </div>
           </div>
 
           <div class="form-group" style="margin-top: 1.5rem;">
-            <label for="tags">Tags</label>
-            <input type="text" id="tags" placeholder="motivation, wisdom" />
+            <label for="tagInput">Tags</label>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <div class="autocomplete-wrapper" style="flex: 1;">
+                <input type="text" id="tagInput" placeholder="Type tag name..." autocomplete="off" />
+                <div id="tagInputSuggestions" class="autocomplete-suggestions"></div>
+              </div>
+              <button type="button" id="addTagBtn" class="btn btn-primary" style="white-space: nowrap;">+ Add Tag</button>
+            </div>
+            <div id="selectedTags" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem;"></div>
+            <input type="hidden" id="tags" />
           </div>
 
           <div class="form-group" style="margin-top: 1.5rem;">
@@ -545,14 +676,6 @@
                     >
                   </div>
                 </div>
-              </div>
-              <div style="flex: 1; display: flex; flex-direction: column;">
-                <label for="note">Note (Optional)</label>
-                <textarea
-                  id="note"
-                  placeholder="Additional context..."
-                  style="width: 100%; flex: 1; min-height: 200px; resize: vertical;"
-                ></textarea>
               </div>
             </div>
           </div>

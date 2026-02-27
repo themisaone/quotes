@@ -458,7 +458,10 @@ function openEditModal(quote) {
   document.getElementById("author").value = quote.author_name || "";
   document.getElementById("source").value = quote.source_name || "";
   document.getElementById("sourceType").value = quote.source_type || "BOOK";
-  document.getElementById("tags").value = quote.tags || "";
+  
+  // Populate tags using new system
+  populateTagsForEdit(quote.tags || "");
+  
   noteInput.value = quote.note || "";
 
   // Store source_id for updating
@@ -515,11 +518,33 @@ async function loadQuotes() {
     if (document.getElementById("filterQuoteBook")?.checked)
       selectedTypes.push("BOOK");
     if (document.getElementById("filterQuoteMovie")?.checked)
-      selectedTypes.push("MOVIE");
+      selectedTypes.push("MOVIE-TV");
     if (document.getElementById("filterQuoteAssorted")?.checked)
       selectedTypes.push("ASSORTED");
     if (selectedTypes.length > 0 && selectedTypes.length < 3) {
       params.append("types", selectedTypes.join(","));
+    }
+
+    // Add metadata search filters
+    if (document.getElementById("searchHasAuthor")?.checked) {
+      const condition = document.getElementById("searchAuthorCondition")?.value;
+      params.append("hasAuthor", condition === "has" ? "true" : "false");
+    }
+    if (document.getElementById("searchHasSource")?.checked) {
+      const condition = document.getElementById("searchSourceCondition")?.value;
+      params.append("hasSource", condition === "has" ? "true" : "false");
+    }
+    if (document.getElementById("searchHasNote")?.checked) {
+      const condition = document.getElementById("searchNoteCondition")?.value;
+      params.append("hasNote", condition === "has" ? "true" : "false");
+    }
+    if (document.getElementById("searchHasTags")?.checked) {
+      const condition = document.getElementById("searchTagsCondition")?.value;
+      params.append("hasTags", condition === "has" ? "true" : "false");
+    }
+    if (document.getElementById("searchHasImage")?.checked) {
+      const condition = document.getElementById("searchImageCondition")?.value;
+      params.append("hasImage", condition === "has" ? "true" : "false");
     }
 
     // Add pagination params
@@ -563,11 +588,35 @@ async function loadTotalCount() {
     if (document.getElementById("filterQuoteBook")?.checked)
       selectedTypes.push("BOOK");
     if (document.getElementById("filterQuoteMovie")?.checked)
-      selectedTypes.push("MOVIE");
+      selectedTypes.push("MOVIE-TV");
     if (document.getElementById("filterQuoteAssorted")?.checked)
       selectedTypes.push("ASSORTED");
     if (selectedTypes.length > 0 && selectedTypes.length < 3) {
       params.append("types", selectedTypes.join(","));
+    }
+
+    // Add metadata search parameters
+    if (document.getElementById('enableQuoteMetaSearches')?.checked) {
+      if (document.getElementById('searchHasAuthor')?.checked) {
+        const condition = document.getElementById('searchAuthorCondition').value;
+        params.append('hasAuthor', condition === 'has' ? 'true' : 'false');
+      }
+      if (document.getElementById('searchHasSource')?.checked) {
+        const condition = document.getElementById('searchSourceCondition').value;
+        params.append('hasSource', condition === 'has' ? 'true' : 'false');
+      }
+      if (document.getElementById('searchHasNote')?.checked) {
+        const condition = document.getElementById('searchNoteCondition').value;
+        params.append('hasNote', condition === 'has' ? 'true' : 'false');
+      }
+      if (document.getElementById('searchHasTags')?.checked) {
+        const condition = document.getElementById('searchTagsCondition').value;
+        params.append('hasTags', condition === 'has' ? 'true' : 'false');
+      }
+      if (document.getElementById('searchHasImage')?.checked) {
+        const condition = document.getElementById('searchImageCondition').value;
+        params.append('hasImage', condition === 'has' ? 'true' : 'false');
+      }
     }
 
     const filteredResponse = await fetch(
@@ -735,7 +784,7 @@ function createQuoteCard(quote) {
   const source = quote.source_name || "";
   const sourceType = quote.source_type || "BOOK";
   const sourceIcon =
-    sourceType === "MOVIE" ? "🎬" : sourceType === "ASSORTED" ? "📝" : "📖";
+    sourceType === "MOVIE-TV" ? "🎬" : sourceType === "ASSORTED" ? "📝" : "📖";
 
   // Check if quote is long (more than 10 lines)
   const lines = quote.quote.split("\n");
@@ -1653,18 +1702,23 @@ function switchView(view) {
   const authorsView = document.getElementById("authorsView");
   const sourcesView = document.getElementById("sourcesView");
   const tagsView = document.getElementById("tagsView");
+  const settingsView = document.getElementById("settingsView");
 
   // Hide all views
   if (quotesView) quotesView.style.display = "none";
   if (authorsView) authorsView.style.display = "none";
   if (sourcesView) sourcesView.style.display = "none";
   if (tagsView) tagsView.style.display = "none";
+  if (settingsView) settingsView.style.display = "none";
 
   // Show selected view and load data
   if (view === "quotes" && quotesView) {
     quotesView.style.display = "block";
     loadQuotes();
     loadTotalCount();
+    // Check if Metadata Search should be shown
+    const metaSearchEnabled = localStorage.getItem('enableQuoteMetaSearches') === 'true';
+    toggleMetadataSearchSection(metaSearchEnabled);
   } else if (view === "authors" && authorsView) {
     authorsView.style.display = "block";
     loadAuthors();
@@ -1692,6 +1746,11 @@ function switchView(view) {
   } else if (view === "tags" && tagsView) {
     tagsView.style.display = "block";
     loadTags();
+    // Check if Tag Operations should be shown
+    const tagOpsEnabled = localStorage.getItem('enableTagOperations') !== 'false';
+    toggleTagOperationsPanel(tagOpsEnabled);
+  } else if (view === "settings" && settingsView) {
+    settingsView.style.display = "block";
   }
 }
 
@@ -1699,6 +1758,9 @@ async function loadAuthors() {
   try {
     const response = await fetch(`${API_URL}/authors`);
     let authors = await response.json();
+    
+    // Store total count
+    const totalCount = authors.length;
 
     // Filter by search term
     const searchTerm = document
@@ -1710,6 +1772,9 @@ async function loadAuthors() {
         author.name.toLowerCase().includes(searchTerm),
       );
     }
+    
+    // Store filtered count
+    const filteredCount = authors.length;
 
     // Sort authors
     const sortBy = window.authorSortBy || "name"; // Default to name
@@ -1723,6 +1788,16 @@ async function loadAuthors() {
     }
 
     displayAuthors(authors);
+    
+    // Update counters
+    const totalCountElement = document.getElementById("totalAuthorsCount");
+    const filteredCountElement = document.getElementById("filteredAuthorsCount");
+    if (totalCountElement) {
+      totalCountElement.textContent = totalCount;
+    }
+    if (filteredCountElement) {
+      filteredCountElement.textContent = filteredCount;
+    }
   } catch (error) {
     console.error("Error loading authors:", error);
     document.getElementById("authorsList").innerHTML =
@@ -1799,15 +1874,22 @@ async function loadSources() {
 
     const response = await fetch(`${API_URL}/sources`);
     let sources = await response.json();
+    
+    // Store total count
+    const totalCount = sources.length;
 
-    // Filter by type if filters exist
+    // Filter by type if filters exist AND at least one is unchecked
     if (document.getElementById("filterBook")) {
-      sources = sources.filter((source) => {
-        if (!source.type) return filterBook; // Default to BOOK if no type
-        if (source.type === "BOOK") return filterBook;
-        if (source.type === "MOVIE") return filterMovie;
-        return false;
-      });
+      // Only apply filter if not both are checked (i.e., user is actually filtering)
+      if (!filterBook || !filterMovie) {
+        sources = sources.filter((source) => {
+          if (!source.type) return filterBook; // Default to BOOK if no type
+          if (source.type === "BOOK") return filterBook;
+          if (source.type === "MOVIE-TV") return filterMovie;
+          if (source.type === "ASSORTED") return true; // Always show ASSORTED
+          return false;
+        });
+      }
     }
 
     // Filter by search term
@@ -1820,6 +1902,9 @@ async function loadSources() {
         source.name.toLowerCase().includes(searchTerm),
       );
     }
+    
+    // Store filtered count
+    const filteredCount = sources.length;
 
     // Sort sources
     const sortBy = window.sourceSortBy || "name"; // Default to name
@@ -1833,6 +1918,16 @@ async function loadSources() {
     }
 
     displaySources(sources);
+    
+    // Update counters
+    const totalCountElement = document.getElementById("totalSourcesCount");
+    const filteredCountElement = document.getElementById("filteredSourcesCount");
+    if (totalCountElement) {
+      totalCountElement.textContent = totalCount;
+    }
+    if (filteredCountElement) {
+      filteredCountElement.textContent = filteredCount;
+    }
   } catch (error) {
     console.error("Error loading sources:", error);
     document.getElementById("sourcesList").innerHTML =
@@ -1856,7 +1951,7 @@ function displaySources(sources) {
   sourcesList.innerHTML = sources
     .map((source) => {
       const typeIcon =
-        source.type === "MOVIE"
+        source.type === "MOVIE-TV"
           ? "🎬"
           : source.type === "ASSORTED"
             ? "📝"
@@ -1894,6 +1989,17 @@ async function loadTags() {
     const response = await fetch(`${API_URL}/tags`);
     const tags = await response.json();
     allTags = tags; // Store globally for search/filter
+    
+    // Update counters
+    const totalCountElement = document.getElementById("totalTagsCount");
+    const filteredCountElement = document.getElementById("filteredTagsCount");
+    if (totalCountElement) {
+      totalCountElement.textContent = tags.length;
+    }
+    if (filteredCountElement) {
+      filteredCountElement.textContent = tags.length;
+    }
+    
     displayTags(tags);
   } catch (error) {
     console.error("Error loading tags:", error);
@@ -2513,7 +2619,7 @@ async function exportToPdf() {
     if (document.getElementById("filterQuoteBook")?.checked)
       selectedTypes.push("BOOK");
     if (document.getElementById("filterQuoteMovie")?.checked)
-      selectedTypes.push("MOVIE");
+      selectedTypes.push("MOVIE-TV");
     if (document.getElementById("filterQuoteAssorted")?.checked)
       selectedTypes.push("ASSORTED");
     if (selectedTypes.length > 0 && selectedTypes.length < 3) {
@@ -2765,7 +2871,7 @@ async function showWelcomeQuote(force = false) {
     
     // Determine icon based on source type
     let sourceIcon = "📖"; // Default for BOOK
-    if (quote.type === "MOVIE" || quote.source_type === "MOVIE") {
+    if (quote.type === "MOVIE-TV" || quote.source_type === "MOVIE-TV") {
       sourceIcon = "🎬";
     } else if (quote.type === "ASSORTED" || quote.source_type === "ASSORTED") {
       sourceIcon = "📝";
@@ -2940,6 +3046,281 @@ function filterTags() {
     filteredTags.sort((a, b) => a.name.localeCompare(b.name));
   }
   
+  // Update counters
+  const totalCountElement = document.getElementById("totalTagsCount");
+  const filteredCountElement = document.getElementById("filteredTagsCount");
+  if (totalCountElement) {
+    totalCountElement.textContent = allTags.length;
+  }
+  if (filteredCountElement) {
+    filteredCountElement.textContent = filteredTags.length;
+  }
+  
   displayTags(filteredTags);
 }
 
+
+// Tag Management for Quote Modal
+let selectedTagsArray = [];
+
+function initializeTagInput() {
+  const tagInput = document.getElementById('tagInput');
+  const addTagBtn = document.getElementById('addTagBtn');
+  const tagInputSuggestions = document.getElementById('tagInputSuggestions');
+  
+  if (!tagInput || !addTagBtn) return;
+  
+  // Autocomplete for tag input - match ONLY existing tags
+  tagInput.addEventListener('input', async (e) => {
+    const search = e.target.value.trim();
+    
+    if (search.length < 1) {
+      tagInputSuggestions.classList.remove('show');
+      return;
+    }
+    
+    try {
+      const response = await fetch(`${API_URL}/tags?search=${encodeURIComponent(search)}`);
+      const tags = await response.json();
+      
+      if (!tags || tags.length === 0) {
+        tagInputSuggestions.classList.remove('show');
+        tagInputSuggestions.innerHTML = '';
+        return;
+      }
+      
+      // Show only exact tag matches (not partial matches from comma-separated strings)
+      const exactMatches = tags.filter(tag => 
+        tag.name && tag.name.toLowerCase().includes(search.toLowerCase())
+      ).slice(0, 10);
+      
+      if (exactMatches.length === 0) {
+        tagInputSuggestions.classList.remove('show');
+        return;
+      }
+      
+      tagInputSuggestions.innerHTML = exactMatches
+        .map(tag => `<div class="autocomplete-item" data-value="${escapeHtml(tag.name)}">${escapeHtml(tag.name)}</div>`)
+        .join('');
+      
+      // Add click handlers
+      tagInputSuggestions.querySelectorAll('.autocomplete-item').forEach(item => {
+        item.addEventListener('click', () => {
+          tagInput.value = item.dataset.value;
+          tagInputSuggestions.classList.remove('show');
+          addTagFromInput();
+        });
+      });
+      
+      tagInputSuggestions.classList.add('show');
+    } catch (error) {
+      console.error('Error fetching tags:', error);
+    }
+  });
+  
+  // Add tag on button click
+  addTagBtn.addEventListener('click', addTagFromInput);
+  
+  // Add tag on Enter key
+  tagInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addTagFromInput();
+    } else if (e.key === 'Escape') {
+      tagInputSuggestions.classList.remove('show');
+    }
+  });
+  
+  // Close suggestions when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#tagInput') && !e.target.closest('#tagInputSuggestions')) {
+      tagInputSuggestions.classList.remove('show');
+    }
+  });
+}
+
+function addTagFromInput() {
+  const tagInput = document.getElementById('tagInput');
+  const tagValue = tagInput.value.trim();
+  
+  if (!tagValue) return;
+  
+  // Check if tag already added
+  if (selectedTagsArray.includes(tagValue)) {
+    tagInput.value = '';
+    return;
+  }
+  
+  // Add to array
+  selectedTagsArray.push(tagValue);
+  
+  // Update display
+  updateSelectedTagsDisplay();
+  
+  // Update hidden input
+  document.getElementById('tags').value = selectedTagsArray.join(',');
+  
+  // Clear input
+  tagInput.value = '';
+  document.getElementById('tagInputSuggestions').classList.remove('show');
+}
+
+function removeTag(tagName) {
+  selectedTagsArray = selectedTagsArray.filter(t => t !== tagName);
+  updateSelectedTagsDisplay();
+  document.getElementById('tags').value = selectedTagsArray.join(',');
+}
+
+function updateSelectedTagsDisplay() {
+  const container = document.getElementById('selectedTags');
+  if (!container) return;
+  
+  if (selectedTagsArray.length === 0) {
+    container.innerHTML = '';
+    return;
+  }
+  
+  container.innerHTML = selectedTagsArray.map(tag => `
+    <span class="tag-removable" style="background: #2d6a4f; color: white; padding: 0.35rem 0.6rem; border-radius: 12px; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+      ${escapeHtml(tag)}
+      <span onclick="removeTag('${escapeHtml(tag).replace(/'/g, "\\'")}')" style="font-weight: bold; cursor: pointer;">&times;</span>
+    </span>
+  `).join('');
+}
+
+// Initialize tag input when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+  initializeTagInput();
+});
+
+// Update openAddModal to reset tags
+const originalOpenAddModal = openAddModal;
+openAddModal = function() {
+  selectedTagsArray = [];
+  updateSelectedTagsDisplay();
+  originalOpenAddModal();
+};
+
+// Update openEditModal to populate tags
+function populateTagsForEdit(tagsString) {
+  if (!tagsString || !tagsString.trim()) {
+    selectedTagsArray = [];
+  } else {
+    selectedTagsArray = tagsString.split(',').map(t => t.trim()).filter(t => t);
+  }
+  updateSelectedTagsDisplay();
+  document.getElementById('tags').value = selectedTagsArray.join(',');
+}
+
+// Settings Management
+function initializeSettings() {
+  const enableTagOpsCheckbox = document.getElementById('enableTagOperations');
+  const enableQuoteMetaSearchesCheckbox = document.getElementById('enableQuoteMetaSearches');
+  
+  // Tag Operations setting
+  if (enableTagOpsCheckbox) {
+    // Load saved setting from localStorage
+    const tagOpsEnabled = localStorage.getItem('enableTagOperations') !== 'false'; // Default true
+    enableTagOpsCheckbox.checked = tagOpsEnabled;
+    
+    // Apply initial state
+    toggleTagOperationsPanel(tagOpsEnabled);
+    
+    // Listen for changes
+    enableTagOpsCheckbox.addEventListener('change', (e) => {
+      const isEnabled = e.target.checked;
+      localStorage.setItem('enableTagOperations', isEnabled);
+      toggleTagOperationsPanel(isEnabled);
+    });
+  }
+  
+  // Quote Meta Searches setting
+  if (enableQuoteMetaSearchesCheckbox) {
+    // Load saved setting from localStorage
+    const quoteMetaSearchesEnabled = localStorage.getItem('enableQuoteMetaSearches') === 'true'; // Default false
+    enableQuoteMetaSearchesCheckbox.checked = quoteMetaSearchesEnabled;
+    
+    // Apply initial state
+    toggleMetadataSearchSection(quoteMetaSearchesEnabled);
+    
+    // Listen for changes
+    enableQuoteMetaSearchesCheckbox.addEventListener('change', (e) => {
+      const isEnabled = e.target.checked;
+      localStorage.setItem('enableQuoteMetaSearches', isEnabled);
+      toggleMetadataSearchSection(isEnabled);
+    });
+  }
+}
+
+function toggleMetadataSearchSection(show) {
+  const metadataSection = document.getElementById('metadataSearchSection');
+  if (metadataSection) {
+    metadataSection.style.display = show ? 'block' : 'none';
+  }
+}
+
+function toggleTagOperationsPanel(show) {
+  const tagOpsPanel = document.querySelector('.tag-operations-panel');
+  if (tagOpsPanel) {
+    tagOpsPanel.style.display = show ? 'block' : 'none';
+  }
+}
+
+// Initialize settings on page load
+document.addEventListener('DOMContentLoaded', () => {
+  initializeSettings();
+});
+
+// Also check when switching to tags view
+const originalSwitchView = window.switchView;
+if (typeof switchView === 'function') {
+  window.switchView = function(viewName) {
+    originalSwitchView(viewName);
+    if (viewName === 'tags') {
+      const tagOpsEnabled = localStorage.getItem('enableTagOperations') !== 'false';
+      toggleTagOperationsPanel(tagOpsEnabled);
+    }
+  };
+}
+
+// Setup metadata search event listeners
+function setupMetadataSearchListeners() {
+  const metadataCheckboxes = [
+    'searchHasAuthor', 'searchHasSource', 'searchHasNote', 
+    'searchHasTags', 'searchHasImage'
+  ];
+  
+  const metadataSelects = [
+    'searchAuthorCondition', 'searchSourceCondition', 'searchNoteCondition',
+    'searchTagsCondition', 'searchImageCondition'
+  ];
+  
+  // Add listeners to checkboxes
+  metadataCheckboxes.forEach(id => {
+    const checkbox = document.getElementById(id);
+    if (checkbox && !checkbox.hasAttribute('data-listener')) {
+      checkbox.addEventListener('change', () => {
+        currentPage = 1;
+        loadQuotes();
+      });
+      checkbox.setAttribute('data-listener', 'true');
+    }
+  });
+  
+  // Add listeners to dropdowns
+  metadataSelects.forEach(id => {
+    const select = document.getElementById(id);
+    if (select && !select.hasAttribute('data-listener')) {
+      select.addEventListener('change', () => {
+        currentPage = 1;
+        loadQuotes();
+      });
+      select.setAttribute('data-listener', 'true');
+    }
+  });
+}
+
+// Call when switching to quotes view or when metadata section is shown
+document.addEventListener('DOMContentLoaded', () => {
+  setupMetadataSearchListeners();
+});
