@@ -595,6 +595,12 @@ h2 {
   animation: fadeIn 0.2s;
 }
 
+.modal[style*="display: block"] {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -606,11 +612,12 @@ h2 {
 
 .modal-content {
   background-color: var(--surface);
-  margin: 5% auto;
+  margin: 0;
   padding: 2rem;
   border-radius: 12px;
   width: fit-content;
-  max-width: 600px;
+  min-width: min(calc(80ch + 4rem), 90vw);
+  max-width: min(calc(80ch + 4rem), 90vw);
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: var(--shadow-lg);
@@ -619,6 +626,30 @@ h2 {
 
 .modal-content .form-group {
   min-width: 0;
+}
+
+.modal-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 0.4rem;
+  padding-right: 2rem; /* Space for X close button */
+}
+
+.modal-header-row h2 {
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.modal-header-row .quote-metadata {
+  margin: 0;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  text-align: right;
+  flex-shrink: 0;
+  align-self: center;
+  line-height: 1;
 }
 
 .modal-wide {
@@ -663,6 +694,11 @@ h2 {
 /* Form */
 .form-group {
   margin-bottom: 1.5rem;
+}
+
+.quote-editor-group {
+  width: 100%;
+  max-width: 100%;
 }
 
 .modal-content .form-group:last-of-type {
@@ -729,7 +765,18 @@ h2 {
 .form-row {
   display: flex;
   gap: 1rem;
-  align-items: flex-end;
+  align-items: flex-start;
+}
+
+.form-row-with-separator {
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  margin-top: 1rem !important;
+}
+
+.form-group-with-separator {
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
 }
 
 .form-row-2 {
@@ -761,7 +808,7 @@ input[type="date"],
 textarea,
 select {
   width: 100%;
-  padding: 0.75rem;
+  padding: 0.5rem;
   border: 1px solid var(--border);
   border-radius: 8px;
   font-size: 1rem;
@@ -899,24 +946,28 @@ textarea {
 }
 
 .quote-card.has-image .quote-image-thumb {
-  width: 240px;
+  width: auto;
+  max-width: 250px;
   flex-shrink: 0;
   margin: 0;
-  padding: 0.75rem 0.75rem 0.75rem 0;
-  border-radius: 0 8px 8px 0;
-  align-self: stretch;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
+  padding: 0;
+  border-radius: 8px;
+  align-self: flex-start;
+  line-height: 0;
+  font-size: 0;
 }
 
 .quote-card.has-image .quote-image-thumb img {
-  width: 100% !important;
+  max-width: 250px;
+  width: auto;
   height: auto !important;
   object-fit: contain !important;
   border-radius: 8px;
   box-shadow: var(--shadow);
-  margin-bottom: 0.75rem !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: block;
+  vertical-align: top;
 }
 
 .quote-card:hover {
@@ -938,9 +989,16 @@ textarea {
   transition: transform 0.2s ease-in-out;
 }
 
-.quote-side-column .quote-image-thumb {
-  margin-top: 1rem;
-  margin-left: 0;
+.quote-image-thumb {
+  max-width: 250px;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: transform 0.2s;
+  align-self: flex-start;
+  margin: 0;
+  padding: 0;
+  line-height: 0;
+  font-size: 0;
 }
 
 .quote-image-thumb:hover {
@@ -953,26 +1011,102 @@ textarea {
   object-fit: cover;
   display: block;
   border-radius: 8px;
+  margin: 0;
+  padding: 0;
+  vertical-align: top;
 }
 
 .quote-note-title {
-  font-weight: bold;
-  font-size: 1rem;
-  color: var(--text-primary);
+  font-weight: normal;
+  font-size: 0.9rem;
+  color: #6b7280;
+  font-style: italic;
+  text-align: right;
   margin-bottom: 0.5rem;
+  line-height: 1;
+  padding: 0;
+}
+
+/* Top section with note, text, and image */
+.quote-top-section {
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.quote-left-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  align-self: flex-start;
+  min-width: 0;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .quote-main-content {
   display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.quote-text-wrapper {
+  flex: 1;
+  display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.5rem;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  min-width: 0;
 }
 
-.quote-text-column {
-  width: 100%;
+.quote-text {
+  flex: 1;
+  font-size: 1.125rem;
+  font-style: italic;
+  color: var(--text-primary);
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  margin: 0;
 }
 
-.quote-side-column {
+/* Collapsible long quotes */
+.quote-text.collapsible {
+  max-height: 250px;
+  overflow: hidden;
+  position: relative;
+}
+
+.quote-text.collapsible[data-expanded="true"] {
+  max-height: none;
+  overflow: visible;
+}
+
+/* Quote separator line */
+.quote-separator {
+  height: 1px;
+  background: rgba(0, 0, 0, 0.1);
+  margin: 0.75rem 0;
+}
+
+/* Metadata row below separator */
+.quote-metadata-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.quote-metadata-left {
+  flex: 1;
+}
   display: flex;
   flex-direction: row;
   justify-content: space-between;
@@ -1016,26 +1150,106 @@ textarea {
   font-size: 0.7rem;
 }
 
-.quote-side-column .meta-item {
-  font-size: 0.95rem;
+/* Quill formatted content in quote cards */
+.quote-text p {
+  margin: 0 0 0.2em 0;
+  line-height: 1.3;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
-.quote-side-column .meta-label {
-  font-size: 0.85rem;
+.quote-text strong {
+  font-weight: 700;
 }
 
-.quote-side-column .meta-value {
-  font-size: 0.95rem;
-}
-
-.quote-text {
-  font-size: 1.125rem;
+.quote-text em {
   font-style: italic;
-  color: var(--text-primary);
-  line-height: 1.5;
-  white-space: pre-wrap; /* Preserve newlines and whitespace */
-  word-wrap: break-word; /* Break long words if needed */
-  margin: 0;
+}
+
+.quote-text h1, .quote-text h2, .quote-text h3 {
+  font-weight: 600;
+  margin: 0.5em 0;
+  background: none !important;
+  padding: 0 !important;
+  border: none !important;
+}
+
+/* Reduce top margin for first header in quote text */
+.quote-text-wrapper h1:first-child,
+.quote-text-wrapper h2:first-child,
+.quote-text-wrapper h3:first-child,
+.quote-text h1:first-child,
+.quote-text h2:first-child,
+.quote-text h3:first-child {
+  margin-top: 0;
+}
+
+.quote-text h1 {
+  font-size: 1.5em;
+}
+
+.quote-text h2 {
+  font-size: 1.3em;
+  background: none !important;
+}
+
+.quote-text h3 {
+  font-size: 1.1em;
+}
+
+.quote-text ul, .quote-text ol {
+  margin: 0.5em 0;
+  padding-left: 1.5em;
+}
+
+/* Quill editor container */
+#quoteEditor {
+  width: 100% !important; /* Match note field width */
+  min-width: auto !important;
+  max-width: 100% !important;
+  height: calc(6.4rem + 42px + 24px) !important; /* 4 lines (6.4rem) + toolbar (42px) + padding (24px) */
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden; /* Prevent container from expanding */
+  box-sizing: border-box;
+  background: white;
+}
+
+.ql-container {
+  font-family: inherit;
+  font-size: 1rem;
+  height: calc(6.4rem + 24px) !important; /* 4 lines + padding (toolbar is separate) */
+  width: 100% !important;
+  box-sizing: border-box;
+}
+
+.ql-toolbar.ql-snow {
+  padding: 4px 8px !important;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+}
+
+.ql-editor {
+  min-height: 100% !important;
+  max-height: 100% !important;
+  height: 100% !important;
+  width: 100% !important;
+  max-width: 100%;
+  overflow-y: auto !important; /* Force scrollbar when content exceeds height */
+  overflow-x: hidden;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  font-size: 1rem !important;
+  line-height: 1.6 !important;
+  box-sizing: border-box;
+  padding: 12px 15px !important; /* Quill default padding */
+}
+
+/* Remove Quill's default h2 styling */
+.ql-editor h2 {
+  background: none !important;
+  padding: 0 !important;
+  margin: 0.5em 0 !important;
 }
 
 .quote-tags-section {
@@ -1048,19 +1262,10 @@ textarea {
 }
 
 /* Opening quote mark */
-.quote-text::before {
-  content: '"';
-  color: var(--primary-color);
-  font-size: 1.2em;
-  margin-right: 0.1em;
-}
-
-/* Closing quote mark */
+/* No quotation marks - removed for cleaner display */
+.quote-text::before,
 .quote-text::after {
-  content: '"';
-  color: var(--primary-color);
-  font-size: 1.2em;
-  margin-left: 0.1em;
+  display: none;
 }
 
 .expand-btn {
@@ -1071,6 +1276,7 @@ textarea {
   font-size: 0.875rem;
   cursor: pointer;
   padding: 0.25rem 0;
+  margin-top: 0.5rem;
   margin-bottom: 0.5rem;
   font-weight: 500;
   transition: color 0.2s;
@@ -1088,11 +1294,6 @@ textarea {
   margin-bottom: 0.75rem;
   padding-top: 0.75rem;
   border-top: 1px solid var(--border);
-}
-
-.quote-side-column .meta-item {
-  font-size: 1rem;
-  line-height: 1.5;
 }
 
 .meta-item {
@@ -1377,6 +1578,35 @@ textarea {
     display: block !important;
   }
   
+  /* Modal adjustments for tablet */
+  .modal-content {
+    padding: 1.25rem !important;
+  }
+  
+  .modal-header-row {
+    margin-bottom: 0.75rem !important;
+    align-items: center !important;
+  }
+  
+  .modal-header-row h2 {
+    margin: 0 !important;
+    line-height: 1 !important;
+  }
+  
+  .modal-header-row .quote-metadata {
+    align-self: center !important;
+    line-height: 1 !important;
+  }
+  
+  /* Quote editor shorter on tablet */
+  #quoteEditor {
+    height: calc(3.2rem + 42px + 24px) !important; /* 2 lines (3.2rem) + toolbar (42px) + padding (24px) */
+  }
+  
+  .ql-container {
+    height: calc(3.2rem + 24px) !important; /* 2 lines + padding */
+  }
+  
   /* Landing page header styling */
   .tablet-menu-header {
     text-align: center !important;
@@ -1553,6 +1783,17 @@ textarea {
     margin-bottom: 1.5rem !important;
   }
   
+  /* Metadata filters: 3 per row on tablet */
+  #metadataFiltersRow {
+    flex-wrap: wrap !important;
+    gap: 0.75rem !important;
+  }
+  
+  .metadata-filter-item {
+    flex: 0 0 calc(33.333% - 0.5rem) !important;
+    min-width: calc(33.333% - 0.5rem) !important;
+  }
+  
   /* Latest Quotes section padding */
   .quotes-section {
     padding: 0 !important;
@@ -1609,7 +1850,7 @@ textarea {
   input[type="text"],
   input[type="date"],
   select {
-    padding: 0.55rem 0.75rem !important;
+    padding: 0.45rem 0.6rem !important;
     font-size: 0.95rem !important;
   }
   
@@ -1641,6 +1882,13 @@ textarea {
   
   .tag-card {
     padding: 1rem 1.25rem !important;
+  }
+
+  /* Fix Quill h2 white box in tablet mode */
+  .quote-text h2 {
+    background: none !important;
+    padding: 0 !important;
+    margin: 0.5em 0 !important;
   }
 }
 
@@ -2457,9 +2705,6 @@ textarea {
   margin-bottom: 24px;
 }
 
-#tagOperationsContent {
-  display: none;
-}
 
 .operations-title {
   margin: 0 0 20px 0;
@@ -2822,21 +3067,20 @@ textarea {
     margin-left: 0 !important;
   }
   
-  .quote-main-content {
+  .quote-top-section {
     flex-direction: column !important;
     gap: 0.5rem !important;
   }
-  
-  .quote-text-column {
+
+  .quote-image-thumb {
     width: 100% !important;
+    max-width: 300px !important;
+    margin: 0.5rem auto !important;
   }
   
-  .quote-side-column {
-    width: 100% !important;
-    min-width: 0 !important;
-    flex-direction: row !important;
-    flex-wrap: wrap !important;
-    gap: 0.5rem !important;
+  .quote-note-title {
+    font-size: 0.8rem !important;
+    text-align: right !important;
   }
   
   .quotes-list {
@@ -3396,39 +3640,98 @@ textarea {
   line-height: 1.5;
 }
 
-/* Metadata Search Section */
-.metadata-search-section {
-  background: var(--surface);
-  border-radius: 12px;
-  padding: 1.25rem;
-  margin-bottom: 1.5rem;
-  box-shadow: var(--shadow);
+/* Close mobile media query */
+}
+
+/* Metadata filters row inside Search Quotes */
+.metadata-filters-row {
+  display: flex;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+}
+
+.metadata-filter-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.4rem 0.6rem;
+  flex: 0 1 auto;
+  white-space: nowrap;
+}
+
+.metadata-filter-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.metadata-filter-item select {
+  padding: 0.3rem 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
+  font-size: 0.85rem;
+  min-width: 115px;
+  width: auto;
+  flex-shrink: 0;
+}
+
+.metadata-filter-item span {
+  font-weight: 500;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+/* Metadata Search Section - OLD STANDALONE VERSION */
+#metadataSearchSection {
+  display: block !important;
+  background: #ffeb3b !important;
+  padding: 2rem !important;
+  border-radius: 12px !important;
+  margin-bottom: 2rem !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  border: 3px solid red !important;
+  position: relative !important;
+  z-index: 1000 !important;
+  min-height: 200px !important;
 }
 
 .metadata-search-section h2 {
-  font-size: 1.5rem;
-  margin-bottom: 1rem;
-  color: var(--text-primary);
-  font-weight: 600;
+  font-size: 1.5rem !important;
+  margin-bottom: 1.25rem !important;
+  color: #000 !important;
+  font-weight: 600 !important;
 }
 
 .metadata-search-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 1rem !important;
 }
 
 .metadata-search-item {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
   font-size: 1rem;
-  padding: 0.5rem 0;
-  border-bottom: 1px solid var(--border);
+  padding: 0.75rem;
+  background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%);
+  border: 1px solid #c8e6c9;
+  border-radius: 8px;
 }
 
 .metadata-search-item:last-child {
-  border-bottom: none;
+  border: 1px solid #c8e6c9;
 }
 
 .metadata-search-item input[type="checkbox"] {
@@ -3436,26 +3739,29 @@ textarea {
   height: 20px;
   cursor: pointer;
   flex-shrink: 0;
+  margin: 0;
 }
 
 .metadata-search-item label {
   cursor: pointer;
   font-weight: 500;
-  min-width: 50px;
   flex-shrink: 0;
+  margin: 0;
 }
 
 .metadata-search-item select {
-  padding: 0.5rem 0.75rem;
+  padding: 0.4rem 0.5rem;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: white;
   cursor: pointer;
-  font-size: 0.95rem;
-  min-width: 140px;
+  font-size: 0.9rem;
+  width: 120px;
+  flex-shrink: 0;
 }
 
 .metadata-search-item span {
   font-weight: 500;
   color: var(--text-primary);
+  margin-left: auto;
 }

@@ -727,8 +727,8 @@ app.get("/api/quotes/random", async (req, res) => {
     const result = await pool.query(
       `
       SELECT q.*, 
-             a.name as author, 
-             s.name as source
+             a.name as author_name, a.image as author_image,
+             s.name as source_name, s.image as source_image, q.type as source_type
       FROM quotes q
       LEFT JOIN authors a ON q.author_id = a.id
       LEFT JOIN sources s ON q.source_id = s.id

@@ -1,6 +1,31 @@
 // Auto-detect API URL based on current host
 const API_URL = `${window.location.protocol}//${window.location.hostname}:${window.location.port || '4000'}/api`;
 
+// Quill editor instance
+let quillEditor = null;
+
+// Initialize Quill editor after DOM is loaded
+function initializeQuillEditor() {
+  quillEditor = new Quill('#quoteEditor', {
+    theme: 'snow',
+    modules: {
+      toolbar: [
+        ['bold', 'italic', 'underline'],
+        [{ 'header': [1, 2, 3, false] }],
+        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+        ['clean']
+      ]
+    },
+    placeholder: 'Enter the quote text...'
+  });
+  
+  // Update hidden field when content changes
+  quillEditor.on('text-change', function() {
+    const html = quillEditor.root.innerHTML;
+    document.getElementById('quoteText').value = html;
+  });
+}
+
 // Pagination state
 let currentPage = 1;
 const quotesPerPage = 20;
@@ -63,6 +88,9 @@ let currentFocus = -1;
 
 // Initialize
 document.addEventListener("DOMContentLoaded", () => {
+  // Initialize Quill editor
+  initializeQuillEditor();
+  
   // Check if we're on a tablet (769px-1100px)
   const isTablet = window.matchMedia("(min-width: 769px) and (max-width: 1100px)").matches;
   
@@ -249,7 +277,7 @@ function setupEventListeners() {
   });
 
   // Type filter checkboxes
-  ["filterQuoteBook", "filterQuoteMovie", "filterQuoteAssorted"].forEach(
+  ["filterQuoteBook", "filterQuoteMovie", "filterQuotePoetry", "filterQuoteLyrics", "filterQuoteJokes", "filterQuoteAssorted"].forEach(
     (id) => {
       const checkbox = document.getElementById(id);
       if (checkbox) {
@@ -474,6 +502,11 @@ function openAddModal() {
   currentQuoteImageFull = "";
   clearImagePreview(quoteImagePreview, "quote");
   
+  // Clear Quill editor
+  if (quillEditor) {
+    quillEditor.setText('');
+  }
+  
   // Set default values for new quotes
   authorInput.value = "Unknown Author";
   const sourceTypeSelect = document.getElementById("sourceType");
@@ -492,6 +525,15 @@ function openAddModal() {
   if (deleteQuoteBtn) {
     deleteQuoteBtn.style.display = "none";
   }
+  
+  // Reset image section
+  const imageSection = document.getElementById('imageSection');
+  const toggleIcon = document.getElementById('imageToggleIcon');
+  if (imageSection) imageSection.style.display = 'none';
+  if (toggleIcon) toggleIcon.textContent = '▶';
+  
+  // Update image indicator
+  updateImageIndicator();
   
   quoteModal.style.display = "block";
 }
@@ -528,7 +570,21 @@ function openEditModal(quote) {
     metadataEl.style.display = "block";
   }
 
+  // Set quote text in Quill editor (HTML content)
+  if (quillEditor) {
+    if (quote.quote) {
+      // If quote contains HTML tags, use it as HTML, otherwise as plain text
+      if (quote.quote.includes('<')) {
+        quillEditor.root.innerHTML = quote.quote;
+      } else {
+        quillEditor.setText(quote.quote);
+      }
+    } else {
+      quillEditor.setText('');
+    }
+  }
   document.getElementById("quoteText").value = quote.quote;
+  
   document.getElementById("author").value = quote.author_name || "";
   document.getElementById("source").value = quote.source_name || "";
   document.getElementById("sourceType").value = quote.source_type || "BOOK";
@@ -550,6 +606,15 @@ function openEditModal(quote) {
   } else {
     clearImagePreview(quoteImagePreview, "quote");
   }
+  
+  // Reset image section (always collapsed by default)
+  const imageSection = document.getElementById('imageSection');
+  const toggleIcon = document.getElementById('imageToggleIcon');
+  if (imageSection) imageSection.style.display = 'none';
+  if (toggleIcon) toggleIcon.textContent = '▶';
+  
+  // Update image indicator
+  updateImageIndicator();
   
   // Show delete button for editing
   const deleteQuoteBtn = document.getElementById("deleteQuoteBtn");
@@ -613,9 +678,15 @@ async function loadQuotes() {
       selectedTypes.push("BOOK");
     if (document.getElementById("filterQuoteMovie")?.checked)
       selectedTypes.push("MOVIE-TV");
+    if (document.getElementById("filterQuotePoetry")?.checked)
+      selectedTypes.push("POETRY");
+    if (document.getElementById("filterQuoteLyrics")?.checked)
+      selectedTypes.push("LYRICS");
+    if (document.getElementById("filterQuoteJokes")?.checked)
+      selectedTypes.push("JOKES");
     if (document.getElementById("filterQuoteAssorted")?.checked)
       selectedTypes.push("ASSORTED");
-    if (selectedTypes.length > 0 && selectedTypes.length < 3) {
+    if (selectedTypes.length > 0 && selectedTypes.length < 6) {
       params.append("types", selectedTypes.join(","));
     }
 
@@ -926,38 +997,51 @@ function createQuoteCard(quote) {
   const source = quote.source_name || "";
   const sourceType = quote.source_type || "BOOK";
   const sourceIcon =
-    sourceType === "MOVIE-TV" ? "🎬" : sourceType === "ASSORTED" ? "📝" : "📖";
+    sourceType === "MOVIE-TV" ? "🎬" : 
+    sourceType === "ASSORTED" ? "📝" : 
+    sourceType === "POETRY" ? "📜" :
+    sourceType === "LYRICS" ? "🎵" :
+    sourceType === "JOKES" ? "😂" :
+    "📖";
 
-  // Check if quote is long (more than 10 lines)
-  const lines = quote.quote.split("\n");
-  const isLongQuote = lines.length > 10;
-  const shortQuote = isLongQuote
-    ? lines.slice(0, 10).join("\n") + "\n..."
-    : quote.quote;
+  // Check if quote is long (more than 10 lines or 600 characters)
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = quote.quote;
+  const textContent = tempDiv.textContent || tempDiv.innerText || '';
+  
+  // Count block-level elements as "lines" (p, h1, h2, h3, div, br, li)
+  const blockElements = tempDiv.querySelectorAll('p, h1, h2, h3, div, br, li');
+  const lineCount = Math.max(blockElements.length, textContent.split("\n").length);
+  const charCount = textContent.length;
+  const isLongQuote = lineCount > 10 || charCount > 600;
+  
   const quoteId = `quote-${quote.id}`;
   const expandBtnId = `expand-${quote.id}`;
 
   return `
         <div class="quote-card ${quote.image ? 'has-image' : ''}" data-quote-id="${quote.id}" style="cursor: pointer;">
             <div class="quote-card-content">
-                ${quote.note ? `<div class="quote-note-title">${escapeHtml(quote.note)}</div>` : ''}
-                <div class="quote-main-content">
-                    <div class="quote-text-column">
-                        <div class="quote-text ${isLongQuote ? "collapsible" : ""}" id="${quoteId}" data-expanded="false">${escapeHtml(isLongQuote ? shortQuote : quote.quote)}</div>
-                        ${isLongQuote ? `<button class="expand-btn" id="${expandBtnId}" onclick="event.stopPropagation(); toggleQuoteExpand('${quote.id}')">▼ Show more</button>` : ""}
-                    </div>
-                    <div class="quote-side-column">
-                        <div class="quote-metadata-left">
-                            ${author && source ? `<div class="meta-item-combined"><span class="meta-value clickable author-link" data-id="${quote.author_id}" data-name="${escapeHtml(author)}">${escapeHtml(author)}</span> <span class="meta-from">from</span> <span class="meta-value clickable source-link" data-id="${quote.source_id}" data-name="${escapeHtml(source)}" data-type="${sourceType}">${sourceIcon} ${escapeHtml(source)}</span></div>` : 
-                            author ? `<div class="meta-item"><span class="meta-value clickable author-link" data-id="${quote.author_id}" data-name="${escapeHtml(author)}">${escapeHtml(author)}</span></div>` :
-                            source ? `<div class="meta-item"><span class="meta-value clickable source-link" data-id="${quote.source_id}" data-name="${escapeHtml(source)}" data-type="${sourceType}">${sourceIcon} ${escapeHtml(source)}</span></div>` : ""
-                            }
+                <div class="quote-top-section">
+                    <div class="quote-left-column">
+                        ${quote.note ? `<div class="quote-note-title">${escapeHtml(quote.note)}</div>` : ''}
+                        <div class="quote-text-wrapper">
+                            <div class="quote-text ${isLongQuote ? "collapsible" : ""}" id="${quoteId}" data-expanded="false">${quote.quote}</div>
+                            ${isLongQuote ? `<button class="expand-btn" id="${expandBtnId}" onclick="event.stopPropagation(); toggleQuoteExpand('${quote.id}')">▼ Show more</button>` : ""}
                         </div>
-                        ${tags ? `<div class="quote-tags-inline">${tags}</div>` : ''}
                     </div>
+                    ${quote.image ? `<div class="quote-image-thumb" onclick="event.stopPropagation(); showFullImage('${quote.image_full || quote.image}')"><img src="${quote.image}" alt="Quote image"></div>` : ""}
+                </div>
+                <div class="quote-separator"></div>
+                <div class="quote-metadata-row">
+                    <div class="quote-metadata-left">
+                        ${author && source ? `<div class="meta-item-combined">${sourceIcon} <span class="meta-value clickable author-link" data-id="${quote.author_id}" data-name="${escapeHtml(author)}">${escapeHtml(author)}</span> <span class="meta-from">from</span> <span class="meta-value clickable source-link" data-id="${quote.source_id}" data-name="${escapeHtml(source)}" data-type="${sourceType}">📚 ${escapeHtml(source)}</span></div>` : 
+                        author ? `<div class="meta-item">${sourceIcon} <span class="meta-value clickable author-link" data-id="${quote.author_id}" data-name="${escapeHtml(author)}">${escapeHtml(author)}</span></div>` :
+                        source ? `<div class="meta-item"><span class="meta-value clickable source-link" data-id="${quote.source_id}" data-name="${escapeHtml(source)}" data-type="${sourceType}">📚 ${escapeHtml(source)}</span></div>` : ""
+                        }
+                    </div>
+                    ${tags ? `<div class="quote-tags-inline">${tags}</div>` : ''}
                 </div>
             </div>
-            ${quote.image ? `<div class="quote-image-thumb" onclick="event.stopPropagation(); showFullImage('${quote.image_full || quote.image}')"><img src="${quote.image}" alt="Quote image"></div>` : ""}
         </div>
     `;
 }
@@ -989,14 +1073,13 @@ function toggleQuoteExpand(quoteId) {
 
   function doToggle() {
     if (isExpanded) {
-      // Collapse
-      const shortText = window.fullQuotes[quoteId].substring(0, 400) + "...";
-      quoteEl.innerHTML = escapeHtml(shortText);
+      // Collapse - use CSS to hide overflow
+      quoteEl.classList.add('collapsible');
       quoteEl.dataset.expanded = "false";
       btnEl.innerHTML = "▼ Show more";
     } else {
-      // Expand
-      quoteEl.innerHTML = escapeHtml(window.fullQuotes[quoteId]);
+      // Expand - remove height restriction
+      quoteEl.classList.remove('collapsible');
       quoteEl.dataset.expanded = "true";
       btnEl.innerHTML = "▲ Show less";
     }
@@ -1362,6 +1445,7 @@ function readImageFile(file, type) {
         const thumbnail = resizeImage(img, 240);
         currentQuoteImage = thumbnail;
         displayImage(quoteImagePreview, thumbnail);
+        updateImageIndicator();
       } else {
         // For author/source, just thumbnail
         const resizedBase64 = resizeImage(img, 300);
@@ -1699,6 +1783,7 @@ clearQuoteImageBtn.addEventListener("click", (e) => {
   currentQuoteImageFull = "";
   clearImagePreview(quoteImagePreview, "quote");
   quoteImageFile.value = "";
+  updateImageIndicator();
 });
 
 // ============= TAG AUTOCOMPLETE =============
@@ -1881,6 +1966,9 @@ function switchView(view) {
     const filterBook = document.getElementById("filterBook");
     const filterMovie = document.getElementById("filterMovie");
     const filterAssorted = document.getElementById("filterAssorted");
+    const filterPoetry = document.getElementById("filterPoetry");
+    const filterLyrics = document.getElementById("filterLyrics");
+    const filterJokes = document.getElementById("filterJokes");
 
     if (filterBook && !filterBook.hasAttribute("data-listener")) {
       filterBook.addEventListener("change", loadSources);
@@ -1893,6 +1981,18 @@ function switchView(view) {
     if (filterAssorted && !filterAssorted.hasAttribute("data-listener")) {
       filterAssorted.addEventListener("change", loadSources);
       filterAssorted.setAttribute("data-listener", "true");
+    }
+    if (filterPoetry && !filterPoetry.hasAttribute("data-listener")) {
+      filterPoetry.addEventListener("change", loadSources);
+      filterPoetry.setAttribute("data-listener", "true");
+    }
+    if (filterLyrics && !filterLyrics.hasAttribute("data-listener")) {
+      filterLyrics.addEventListener("change", loadSources);
+      filterLyrics.setAttribute("data-listener", "true");
+    }
+    if (filterJokes && !filterJokes.hasAttribute("data-listener")) {
+      filterJokes.addEventListener("change", loadSources);
+      filterJokes.setAttribute("data-listener", "true");
     }
   } else if (view === "tags" && tagsView) {
     tagsView.style.display = "block";
@@ -2020,8 +2120,10 @@ async function loadSources() {
   try {
     // Get checked source types
     const filterBook = document.getElementById("filterBook")?.checked !== false;
-    const filterMovie =
-      document.getElementById("filterMovie")?.checked !== false;
+    const filterMovie = document.getElementById("filterMovie")?.checked !== false;
+    const filterPoetry = document.getElementById("filterPoetry")?.checked !== false;
+    const filterLyrics = document.getElementById("filterLyrics")?.checked !== false;
+    const filterJokes = document.getElementById("filterJokes")?.checked !== false;
 
     const response = await fetch(`${API_URL}/sources`);
     let sources = await response.json();
@@ -2031,12 +2133,15 @@ async function loadSources() {
 
     // Filter by type if filters exist AND at least one is unchecked
     if (document.getElementById("filterBook")) {
-      // Only apply filter if not both are checked (i.e., user is actually filtering)
-      if (!filterBook || !filterMovie) {
+      // Only apply filter if not all are checked (i.e., user is actually filtering)
+      if (!filterBook || !filterMovie || !filterPoetry || !filterLyrics || !filterJokes) {
         sources = sources.filter((source) => {
           if (!source.type) return filterBook; // Default to BOOK if no type
           if (source.type === "BOOK") return filterBook;
           if (source.type === "MOVIE-TV") return filterMovie;
+          if (source.type === "POETRY") return filterPoetry;
+          if (source.type === "LYRICS") return filterLyrics;
+          if (source.type === "JOKES") return filterJokes;
           if (source.type === "ASSORTED") return true; // Always show ASSORTED
           return false;
         });
@@ -2102,11 +2207,12 @@ function displaySources(sources) {
   sourcesList.innerHTML = sources
     .map((source) => {
       const typeIcon =
-        source.type === "MOVIE-TV"
-          ? "🎬"
-          : source.type === "ASSORTED"
-            ? "📝"
-            : "📖";
+        source.type === "MOVIE-TV" ? "🎬" :
+        source.type === "ASSORTED" ? "📝" :
+        source.type === "POETRY" ? "📜" :
+        source.type === "LYRICS" ? "🎵" :
+        source.type === "JOKES" ? "😂" :
+        "📖";
       return `
         <div class="card source-card" onclick="openSourceModal(${source.id}, '${escapeHtml(source.name)}', '${source.type}', ${parseInt(source.quote_count) || 0})">
             <div class="card-image">
@@ -3011,63 +3117,23 @@ async function showWelcomeQuote(force = false) {
     
     // Get overlay elements
     const overlay = document.getElementById("welcomeQuoteOverlay");
-    const textEl = overlay.querySelector(".welcome-quote-text");
-    const authorEl = overlay.querySelector(".welcome-quote-author");
-    const sourceEl = overlay.querySelector(".welcome-quote-source");
-    const tagsEl = overlay.querySelector(".welcome-quote-tags");
-    const noteEl = overlay.querySelector(".welcome-quote-note");
+    const container = overlay.querySelector(".welcome-quote-container");
     
-    // Populate quote data
-    textEl.textContent = quote.quoteText || quote.quote || "";
+    // Clear container and create quote card HTML
+    container.innerHTML = "";
+    const cardHTML = createQuoteCard(quote);
+    container.innerHTML = cardHTML;
     
-    // Determine icon based on source type
-    let sourceIcon = "📖"; // Default for BOOK
-    if (quote.type === "MOVIE-TV" || quote.source_type === "MOVIE-TV") {
-      sourceIcon = "🎬";
-    } else if (quote.type === "ASSORTED" || quote.source_type === "ASSORTED") {
-      sourceIcon = "📝";
-    }
+    // Get the card element and style it
+    const card = container.querySelector(".quote-card");
+    card.style.maxWidth = "800px";
+    card.style.margin = "0 auto";
     
-    // Format: "Author from 📖 Source"
-    let metaHTML = "";
-    if (quote.author && quote.source) {
-      metaHTML = `<span class="meta-value">${escapeHtml(quote.author)}</span> <span class="meta-from">from</span> <span class="meta-value">${sourceIcon} ${escapeHtml(quote.source)}</span>`;
-    } else if (quote.author) {
-      metaHTML = `<span class="meta-value">${escapeHtml(quote.author)}</span>`;
-    } else if (quote.source) {
-      metaHTML = `<span class="meta-value">${sourceIcon} ${escapeHtml(quote.source)}</span>`;
-    }
-    
-    // Create metadata wrapper with tags
-    const metaWrapper = overlay.querySelector(".welcome-quote-meta");
-    metaWrapper.innerHTML = "";
-    
-    if (metaHTML) {
-      const metaLeft = document.createElement("div");
-      metaLeft.className = "welcome-meta-left";
-      metaLeft.innerHTML = metaHTML;
-      metaWrapper.appendChild(metaLeft);
-    }
-    
-    // Tags display on same line
-    if (quote.tags && quote.tags.trim()) {
-      const tags = quote.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
-      if (tags.length > 0) {
-        const tagsRight = document.createElement("div");
-        tagsRight.className = "welcome-meta-tags";
-        tagsRight.innerHTML = tags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('');
-        metaWrapper.appendChild(tagsRight);
-      }
-    }
-    
-    // Note display
-    if (quote.note && quote.note.trim()) {
-      noteEl.textContent = quote.note;
-      noteEl.style.display = "block";
-    } else {
-      noteEl.textContent = "";
-      noteEl.style.display = "none";
-    }
+    // Add click handler to edit the quote
+    card.addEventListener("click", () => {
+      overlay.style.display = "none";
+      openEditModal(quote);
+    });
     
     // Show overlay
     overlay.style.display = "flex";
@@ -3078,22 +3144,28 @@ async function showWelcomeQuote(force = false) {
     }
     
     // Function to close overlay
-    function closeOverlay() {
-      overlay.style.display = "none";
-      overlay.removeEventListener("click", closeOverlay);
-      document.removeEventListener("keydown", handleKeyPress);
+    function closeOverlay(e) {
+      // Don't close if clicking on the card itself
+      if (e.target === overlay) {
+        overlay.style.display = "none";
+        overlay.removeEventListener("click", closeOverlay);
+        document.removeEventListener("keydown", handleKeyPress);
+      }
     }
     
     // Handle keyboard events
     function handleKeyPress(e) {
-      if (e.key === "Escape" || e.key === "Enter" || e.key === " ") {
+      if (e.key === "Escape") {
         e.preventDefault();
-        closeOverlay();
+        overlay.style.display = "none";
+        overlay.removeEventListener("click", closeOverlay);
+        document.removeEventListener("keydown", handleKeyPress);
       }
     }
     
-    // Close on click
+    // Close on click outside
     overlay.addEventListener("click", closeOverlay);
+    document.addEventListener("keydown", handleKeyPress);
     
     // Close on Escape/Enter/Space
     document.addEventListener("keydown", handleKeyPress);
@@ -3116,39 +3188,6 @@ window.addEventListener("DOMContentLoaded", () => {
 });
 
 
-// Toggle Tag Operations panel
-function toggleTagOperations() {
-  const content = document.getElementById("tagOperationsContent");
-  const toggle = document.getElementById("tagOperationsToggle");
-  
-  if (content.style.display === "none" || !content.style.display) {
-    content.style.display = "block";
-    toggle.textContent = "▼";
-    localStorage.setItem("tagOperationsExpanded", "true");
-  } else {
-    content.style.display = "none";
-    toggle.textContent = "▶";
-    localStorage.setItem("tagOperationsExpanded", "false");
-  }
-}
-
-// Restore Tag Operations state on load
-function restoreTagOperationsState() {
-  const isExpanded = localStorage.getItem("tagOperationsExpanded") === "true";
-  const content = document.getElementById("tagOperationsContent");
-  const toggle = document.getElementById("tagOperationsToggle");
-  
-  if (content && toggle) {
-    if (isExpanded) {
-      content.style.display = "block";
-      toggle.textContent = "▼";
-    } else {
-      content.style.display = "none";
-      toggle.textContent = "▶";
-    }
-  }
-}
-
 // Search tags functionality
 let allTags = [];
 let currentSortBy = "name";
@@ -3157,9 +3196,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const searchInput = document.getElementById("searchSourcesInput");
   const sortByName = document.getElementById("sortTagsByName");
   const sortByCount = document.getElementById("sortTagsByCount");
-  
-  // Restore Tag Operations collapsed/expanded state
-  restoreTagOperationsState();
   
   if (searchInput) {
     searchInput.addEventListener("input", filterTags);
@@ -3404,9 +3440,18 @@ function initializeSettings() {
 }
 
 function toggleMetadataSearchSection(show) {
+  // New: Show metadata container with label and filters
+  const metadataContainer = document.getElementById('metadataFiltersContainer');
+  console.log('toggleMetadataSearchSection called:', show, 'metadataContainer found:', !!metadataContainer);
+  if (metadataContainer) {
+    metadataContainer.style.display = show ? 'block' : 'none';
+    console.log('Set metadataContainer display to:', metadataContainer.style.display);
+  }
+  
+  // Old: Hide the standalone metadata section
   const metadataSection = document.getElementById('metadataSearchSection');
   if (metadataSection) {
-    metadataSection.style.display = show ? 'block' : 'none';
+    metadataSection.style.display = 'none';
   }
 }
 
@@ -3414,6 +3459,36 @@ function toggleTagOperationsPanel(show) {
   const tagOpsPanel = document.querySelector('.tag-operations-panel');
   if (tagOpsPanel) {
     tagOpsPanel.style.display = show ? 'block' : 'none';
+  }
+}
+
+// Toggle image section in quote modal
+function toggleImageSection() {
+  const imageSection = document.getElementById('imageSection');
+  const toggleIcon = document.getElementById('imageToggleIcon');
+  
+  if (imageSection.style.display === 'none' || !imageSection.style.display) {
+    imageSection.style.display = 'block';
+    toggleIcon.textContent = '▼';
+  } else {
+    imageSection.style.display = 'none';
+    toggleIcon.textContent = '▶';
+  }
+}
+
+// Update image indicator in modal
+function updateImageIndicator() {
+  const indicator = document.getElementById('imageIndicator');
+  const hasImage = currentQuoteImage || currentQuoteImageFull;
+  
+  if (indicator) {
+    if (hasImage) {
+      indicator.textContent = '(has image)';
+      indicator.style.color = '#059669'; // green
+    } else {
+      indicator.textContent = '(no image)';
+      indicator.style.color = 'var(--text-secondary)';
+    }
   }
 }
 
