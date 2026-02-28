@@ -113,10 +113,17 @@ function setupEventListeners() {
   const refreshTagsBtn = document.getElementById("refreshTagsBtn");
 
   if (refreshQuotesBtn) {
-    refreshQuotesBtn.addEventListener("click", () => {
+    refreshQuotesBtn.addEventListener("click", async () => {
+      refreshQuotesBtn.classList.add('refreshing');
       currentPage = 1;
-      loadQuotes();
-      loadTotalCount();
+      try {
+        await loadQuotes();
+        await loadTotalCount();
+      } finally {
+        setTimeout(() => {
+          refreshQuotesBtn.classList.remove('refreshing');
+        }, 500);
+      }
     });
   }
 
@@ -169,15 +176,42 @@ function setupEventListeners() {
   }
 
   if (refreshAuthorsBtn) {
-    refreshAuthorsBtn.addEventListener("click", loadAuthors);
+    refreshAuthorsBtn.addEventListener("click", async () => {
+      refreshAuthorsBtn.classList.add('refreshing');
+      try {
+        await loadAuthors();
+      } finally {
+        setTimeout(() => {
+          refreshAuthorsBtn.classList.remove('refreshing');
+        }, 500);
+      }
+    });
   }
 
   if (refreshSourcesBtn) {
-    refreshSourcesBtn.addEventListener("click", loadSources);
+    refreshSourcesBtn.addEventListener("click", async () => {
+      refreshSourcesBtn.classList.add('refreshing');
+      try {
+        await loadSources();
+      } finally {
+        setTimeout(() => {
+          refreshSourcesBtn.classList.remove('refreshing');
+        }, 500);
+      }
+    });
   }
 
   if (refreshTagsBtn) {
-    refreshTagsBtn.addEventListener("click", loadTags);
+    refreshTagsBtn.addEventListener("click", async () => {
+      refreshTagsBtn.classList.add('refreshing');
+      try {
+        await loadTags();
+      } finally {
+        setTimeout(() => {
+          refreshTagsBtn.classList.remove('refreshing');
+        }, 500);
+      }
+    });
   }
 
   // Bulk import listeners
@@ -471,8 +505,24 @@ function openEditModal(quote) {
 
   // Display metadata (created/updated dates)
   const metadataEl = document.getElementById("quoteMetadata");
-  const createdDate = quote.created_at ? new Date(quote.created_at).toLocaleString() : "";
-  const updatedDate = quote.updated_at ? new Date(quote.updated_at).toLocaleString() : "";
+  const createdDate = quote.created_at ? new Date(quote.created_at).toLocaleString('en-US', { 
+    year: 'numeric', 
+    month: 'numeric', 
+    day: 'numeric',
+    hour: '2-digit', 
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false 
+  }) : "";
+  const updatedDate = quote.updated_at ? new Date(quote.updated_at).toLocaleString('en-US', { 
+    year: 'numeric', 
+    month: 'numeric', 
+    day: 'numeric',
+    hour: '2-digit', 
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false 
+  }) : "";
   if (createdDate || updatedDate) {
     metadataEl.innerHTML = `${createdDate ? `Created: ${createdDate}` : ''} ${createdDate && updatedDate ? ' | ' : ''} ${updatedDate ? `Updated: ${updatedDate}` : ''}`;
     metadataEl.style.display = "block";
@@ -528,6 +578,26 @@ function clearFilters() {
 }
 
 // API Functions
+// Helper function to add refresh animation
+function addRefreshAnimation(buttonId, asyncFunction) {
+  return async function() {
+    const button = document.getElementById(buttonId);
+    if (button) {
+      button.classList.add('refreshing');
+    }
+    
+    try {
+      await asyncFunction();
+    } finally {
+      if (button) {
+        setTimeout(() => {
+          button.classList.remove('refreshing');
+        }, 500); // Keep green for 500ms after completion
+      }
+    }
+  };
+}
+
 async function loadQuotes() {
   try {
     const params = new URLSearchParams();
@@ -759,7 +829,47 @@ function displayQuotes(quotes) {
 
   // Add click handlers to quote cards (open edit modal)
   document.querySelectorAll(".quote-card").forEach((card) => {
+    let longPressTimer;
+    let longPressTriggered = false;
+    let clickTimer;
+    let clickCount = 0;
+    
+    // Desktop: double-click to expand card
+    card.addEventListener("dblclick", (e) => {
+      e.preventDefault();
+      clearTimeout(clickTimer);
+      clickCount = 0;
+      toggleCardExpand(card);
+    });
+    
+    // Tablet/Mobile: long press to expand card
+    card.addEventListener("touchstart", (e) => {
+      longPressTriggered = false;
+      longPressTimer = setTimeout(() => {
+        longPressTriggered = true;
+        toggleCardExpand(card);
+        // Haptic feedback if available
+        if (navigator.vibrate) {
+          navigator.vibrate(50);
+        }
+      }, 700); // 700ms long press
+    }, { passive: true });
+    
+    card.addEventListener("touchend", () => {
+      clearTimeout(longPressTimer);
+    });
+    
+    card.addEventListener("touchmove", () => {
+      clearTimeout(longPressTimer);
+    });
+    
     card.addEventListener("click", (e) => {
+      // Don't open modal if long press was triggered (tablet)
+      if (longPressTriggered) {
+        longPressTriggered = false;
+        return;
+      }
+      
       // Don't open modal if clicking on interactive elements
       if (e.target.closest('.author-link') || 
           e.target.closest('.source-link') || 
@@ -768,10 +878,18 @@ function displayQuotes(quotes) {
         return;
       }
       
-      const quoteId = card.dataset.quoteId;
-      const quote = quotes.find((q) => q.id == quoteId);
-      if (quote) {
-        openEditModal(quote);
+      // Detect double-click on desktop - delay single click
+      clickCount++;
+      if (clickCount === 1) {
+        clickTimer = setTimeout(() => {
+          // Single click - open modal
+          clickCount = 0;
+          const quoteId = card.dataset.quoteId;
+          const quote = quotes.find((q) => q.id == quoteId);
+          if (quote) {
+            openEditModal(quote);
+          }
+        }, 250); // Wait 250ms to see if double-click happens
       }
     });
   });
@@ -846,6 +964,11 @@ function createQuoteCard(quote) {
 
 // Store full quotes for expand/collapse
 window.fullQuotes = {};
+
+// Toggle card expand to full width
+function toggleCardExpand(card) {
+  card.classList.toggle('expanded-card');
+}
 
 function toggleQuoteExpand(quoteId) {
   const quoteEl = document.getElementById(`quote-${quoteId}`);

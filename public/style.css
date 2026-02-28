@@ -468,9 +468,42 @@ h2 {
 .btn-refresh {
   background: #3b82f6;
   color: white;
+  position: relative;
+  transition: all 0.3s ease;
 }
 
 .btn-refresh:hover {
+  background: #2563eb;
+}
+
+/* Refreshing animation */
+.btn-refresh.refreshing {
+  background: #10b981;
+  pointer-events: none;
+}
+
+.btn-refresh.refreshing::after {
+  content: "⟳";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.2rem;
+  animation: spin 0.8s linear infinite;
+}
+
+.btn-refresh.refreshing {
+  color: transparent;
+}
+
+@keyframes spin {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
   background: #2563eb;
 }
 
@@ -827,8 +860,30 @@ textarea {
   padding: 1.25rem;
   border-radius: 10px;
   border: 2px solid var(--border);
-  transition: all 0.2s;
+  transition: all 0.3s ease;
   position: relative;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Allow text selection when card is expanded */
+.quote-card.expanded-card {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
+/* Expanded card - takes full width */
+.quote-card.expanded-card {
+  grid-column: 1 / -1;
+  background: #fffef5;
+  border-color: #667eea;
+  box-shadow: 0 8px 30px rgba(102, 126, 234, 0.3);
+  transform: scale(1.02);
 }
 
 .quote-card.has-image {
@@ -1571,6 +1626,21 @@ textarea {
   .welcome-quote-author,
   .welcome-quote-source {
     font-size: 1rem !important;
+  }
+  
+  /* Tag cards - smaller font */
+  .tag-card-name {
+    font-size: 1rem !important;
+    font-weight: 600;
+  }
+  
+  .tag-card-count {
+    font-size: 0.9rem !important;
+    padding: 0.4rem 0.8rem !important;
+  }
+  
+  .tag-card {
+    padding: 1rem 1.25rem !important;
   }
 }
 
