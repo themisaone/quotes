@@ -488,6 +488,20 @@ h2 {
   color: white;
 }
 
+/* Default: hide tablet buttons, show desktop buttons */
+.tablet-text {
+  display: none;
+}
+
+.desktop-text {
+  display: inline-block;
+}
+
+/* Default: hide tablet-only elements (menu view, back buttons) */
+.tablet-only {
+  display: none;
+}
+
 .btn-add:hover {
   background: #1e3a8a;
 }
@@ -1284,6 +1298,286 @@ textarea {
   line-height: 1.6;
 }
 
+/* ============================================
+   TABLET STYLES (769px - 1023px)
+   iPad and similar medium-sized devices
+   ============================================ */
+@media (min-width: 769px) and (max-width: 1100px) {
+  /* TABLET MODE: Hide side menu, show landing menu page instead */
+  
+  /* Hide the side menu completely */
+  .side-menu {
+    display: none !important;
+  }
+  
+  /* Main content takes full width */
+  .main-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+    padding: 1rem;
+  }
+  
+  /* Show tablet menu view and back buttons */
+  .tablet-only {
+    display: block !important;
+  }
+  
+  /* Landing page header styling */
+  .tablet-menu-header {
+    text-align: center !important;
+    margin-bottom: 3rem !important;
+    padding-bottom: 2rem !important;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+  }
+  
+  .tablet-menu-header h1 {
+    font-size: 2.2rem !important;
+    color: #667eea !important;
+    margin: 0 !important;
+  }
+  
+  /* Landing menu page styles */
+  .tablet-menu-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+    margin-top: 3rem;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  
+  .tablet-menu-separator {
+    height: 1px;
+    background: rgba(0, 0, 0, 0.1);
+    margin: 2rem auto;
+    max-width: 600px;
+  }
+  
+  .tablet-menu-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 1rem;
+  }
+  
+  .tablet-menu-btn:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+  }
+  
+  .tablet-menu-btn:active {
+    transform: translateY(-2px);
+  }
+  
+  .menu-btn-icon {
+    font-size: 2rem;
+    flex-shrink: 0;
+  }
+  
+  .menu-btn-text {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: white;
+    text-align: left;
+  }
+  
+  /* Back to Menu button */
+  .btn-back-menu {
+    background: #6b7280;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0.5rem 0.9rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 0.5rem;
+    display: inline-block;
+  }
+  
+  .btn-back-menu:hover {
+    background: #4b5563;
+  }
+  
+  /* Header adjustments for tablet */
+  header {
+    margin-bottom: 1.5rem !important;
+    padding-bottom: 1rem !important;
+  }
+  
+  /* Show only tablet-specific button text */
+  .desktop-text {
+    display: none !important;
+  }
+  
+  .tablet-text {
+    display: inline-block !important;
+  }
+  
+  .container {
+    padding: 1rem;
+  }
+  
+  .side-menu-title {
+    font-size: 1.1rem;
+    margin-bottom: 1.25rem;
+  }
+  
+  .menu-list {
+    padding-left: 0.25rem;
+  }
+  
+  .menu-item {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.9rem;
+    line-height: 1.2;
+  }
+  
+  .menu-divider {
+    margin: 0.8rem 0;
+  }
+  
+  /* Header and title adjustments */
+  .main-content {
+    padding-top: 1rem;
+  }
+  
+  h1 {
+    font-size: 1.8rem;
+  }
+  
+  /* Counter badges */
+  .quote-counts {
+    font-size: 0.9rem;
+  }
+  
+  .quote-counts #filteredQuotesCount,
+  .quote-counts #totalQuotesCount,
+  .quote-counts #filteredAuthorsCount,
+  .quote-counts #totalAuthorsCount,
+  .quote-counts #filteredSourcesCount,
+  .quote-counts #totalSourcesCount,
+  .quote-counts #filteredTagsCount,
+  .quote-counts #totalTagsCount {
+    font-size: 0.95rem;
+    padding: 0.3rem 0.65rem;
+  }
+  
+  /* Buttons in header */
+  .btn,
+  .btn-primary,
+  .btn-secondary,
+  .btn-refresh {
+    font-size: 0.9rem;
+    padding: 0.5rem 0.9rem;
+  }
+  
+  .btn-icon {
+    padding: 0.4rem;
+    font-size: 1.1rem;
+  }
+  
+  /* Section title consistency */
+  h2 {
+    font-size: 1.5rem !important;
+    margin-bottom: 1rem !important;
+  }
+  
+  /* Reduce padding in sections */
+  .search-section {
+    padding: 1.25rem !important;
+    margin-bottom: 1.5rem !important;
+  }
+  
+  /* Latest Quotes section padding */
+  .quotes-section {
+    padding: 0 !important;
+  }
+  
+  .quotes-section h2 {
+    background: var(--surface) !important;
+    padding: 0.9rem 1.25rem !important;
+    margin: 0 0 1rem 0 !important;
+    border-radius: 8px !important;
+    box-shadow: var(--shadow) !important;
+  }
+  
+  /* Equal width for quote cards in 2-column grid */
+  .quotes-list {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0.75rem !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  .quote-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+  }
+  
+  /* Header alignment - keep back button and title on same line with consistent spacing */
+  header {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 0.75rem !important;
+  }
+  
+  header h1 {
+    margin: 0 !important;
+    flex-grow: 0 !important;
+    flex-shrink: 0 !important;
+  }
+  
+  header .header-actions {
+    display: flex !important;
+    gap: 0.5rem !important;
+    margin-left: auto !important;
+    flex-shrink: 0 !important;
+  }
+  
+  /* Reduce input field height */
+  input[type="text"],
+  input[type="date"],
+  select {
+    padding: 0.55rem 0.75rem !important;
+    font-size: 0.95rem !important;
+  }
+  
+  /* Random Quote / Welcome Quote card */
+  .welcome-quote-card {
+    max-width: 90% !important;
+    padding: 2rem 1.5rem !important;
+  }
+  
+  .welcome-quote-text {
+    font-size: 1.1rem !important;
+  }
+  
+  .welcome-quote-author,
+  .welcome-quote-source {
+    font-size: 1rem !important;
+  }
+}
+
+/* ============================================
+   MOBILE STYLES (≤768px)
+   Phones and narrow screens
+   ============================================ */
 /* Responsive */
 @media (max-width: 768px) {
   .container {

@@ -97,10 +97,61 @@
 
       <!-- Main Content -->
       <div class="main-content">
+        <!-- Tablet Menu View (landing page for tablets) -->
+        <div id="menuView" class="view-container tablet-menu-view" style="display: none;">
+          <div class="container">
+            <header class="tablet-menu-header">
+              <h1>Misa's Quote Collection</h1>
+            </header>
+            
+            <div class="tablet-menu-grid">
+              <!-- Main 4 buttons in 2x2 grid -->
+              <button class="tablet-menu-btn" onclick="switchView('quotes')">
+                <span class="menu-btn-icon">💬</span>
+                <span class="menu-btn-text">Quotes</span>
+              </button>
+              
+              <button class="tablet-menu-btn" onclick="switchView('authors')">
+                <span class="menu-btn-icon">✍️</span>
+                <span class="menu-btn-text">Authors</span>
+              </button>
+              
+              <button class="tablet-menu-btn" onclick="switchView('sources')">
+                <span class="menu-btn-icon">📚</span>
+                <span class="menu-btn-text">Sources</span>
+              </button>
+              
+              <button class="tablet-menu-btn" onclick="switchView('tags')">
+                <span class="menu-btn-icon">🏷️</span>
+                <span class="menu-btn-text">Tags</span>
+              </button>
+            </div>
+            
+            <!-- Separator -->
+            <div class="tablet-menu-separator"></div>
+            
+            <div class="tablet-menu-grid">
+              <!-- Second row: Random Quote and Settings -->
+              <button class="tablet-menu-btn" onclick="switchView('quotes'); setTimeout(() => showWelcomeQuote(true), 150)">
+                <span class="menu-btn-icon">🎲</span>
+                <span class="menu-btn-text">Random Quote</span>
+              </button>
+              
+              <button class="tablet-menu-btn" onclick="switchView('settings')">
+                <span class="menu-btn-icon">⚙️</span>
+                <span class="menu-btn-text">Settings</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        
         <!-- Quotes View (default) -->
         <div id="quotesView" class="view-container">
           <div class="container">
             <header>
+              <button class="btn-back-menu tablet-only" onclick="switchView('menu')">
+                ← Menu
+              </button>
               <h1>
                 💬 Quotes Collection
                 <span class="quote-counts">
@@ -116,11 +167,19 @@
                 >
                   Refresh
                 </button>
-                <button id="addBulkBtn" class="btn btn-bulk">
+                <!-- Desktop buttons (long text) -->
+                <button id="addBulkBtn" class="btn btn-bulk desktop-text">
                   + Add Multiple Quotes
                 </button>
-                <button id="addQuoteBtn" class="btn btn-add">
+                <button id="addQuoteBtn" class="btn btn-add desktop-text">
                   + Add New Quote
+                </button>
+                <!-- Tablet buttons (short text) -->
+                <button id="addBulkBtnTablet" class="btn btn-bulk tablet-text">
+                  + Add Multiple
+                </button>
+                <button id="addQuoteBtnTablet" class="btn btn-add tablet-text">
+                  + Add Quote
                 </button>
               </div>
             </header>
@@ -287,6 +346,9 @@
         <div id="authorsView" class="view-container" style="display: none">
           <div class="container">
             <header>
+              <button class="btn-back-menu tablet-only" onclick="switchView('menu')">
+                ← Menu
+              </button>
               <h1>
                 ✍️ Authors
                 <span class="quote-counts">
@@ -340,6 +402,9 @@
         <div id="sourcesView" class="view-container" style="display: none">
           <div class="container">
             <header>
+              <button class="btn-back-menu tablet-only" onclick="switchView('menu')">
+                ← Menu
+              </button>
               <h1>
                 📚 Sources
                 <span class="quote-counts">
@@ -417,6 +482,9 @@
         <div id="tagsView" class="view-container" style="display: none">
           <div class="container">
             <header>
+              <button class="btn-back-menu tablet-only" onclick="switchView('menu')">
+                ← Menu
+              </button>
               <h1>
                 🏷️ Tags
                 <span class="quote-counts">
@@ -531,6 +599,9 @@
         <div id="settingsView" class="view-container" style="display: none">
           <div class="container">
             <header>
+              <button class="btn-back-menu tablet-only" onclick="switchView('menu')">
+                ← Menu
+              </button>
               <h1>⚙️ Settings</h1>
             </header>
             

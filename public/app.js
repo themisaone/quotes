@@ -63,8 +63,18 @@ let currentFocus = -1;
 
 // Initialize
 document.addEventListener("DOMContentLoaded", () => {
-  loadQuotes();
-  loadTotalCount();
+  // Check if we're on a tablet (769px-1100px)
+  const isTablet = window.matchMedia("(min-width: 769px) and (max-width: 1100px)").matches;
+  
+  if (isTablet) {
+    // Show menu view on tablets
+    switchView("menu");
+  } else {
+    // Show quotes view on desktop/mobile
+    loadQuotes();
+    loadTotalCount();
+  }
+  
   setupEventListeners();
   setupMenuNavigation();
 });
@@ -72,6 +82,13 @@ document.addEventListener("DOMContentLoaded", () => {
 // Event Listeners
 function setupEventListeners() {
   addQuoteBtn.addEventListener("click", openAddModal);
+  
+  // Tablet-specific button (same functionality)
+  const addQuoteBtnTablet = document.getElementById("addQuoteBtnTablet");
+  if (addQuoteBtnTablet) {
+    addQuoteBtnTablet.addEventListener("click", openAddModal);
+  }
+  
   closeModal.addEventListener("click", closeQuoteModal);
   cancelBtn.addEventListener("click", closeQuoteModal);
   quoteForm.addEventListener("submit", handleSubmit);
@@ -165,6 +182,13 @@ function setupEventListeners() {
 
   // Bulk import listeners
   addBulkBtn.addEventListener("click", openBulkModal);
+  
+  // Tablet-specific bulk button (same functionality)
+  const addBulkBtnTablet = document.getElementById("addBulkBtnTablet");
+  if (addBulkBtnTablet) {
+    addBulkBtnTablet.addEventListener("click", openBulkModal);
+  }
+  
   closeBulkModal.addEventListener("click", closeBulkImportModal);
   cancelBulkBtn.addEventListener("click", closeBulkImportModal);
   previewBulkBtn.addEventListener("click", previewBulkQuotes);
@@ -1698,6 +1722,7 @@ function setupMenuNavigation() {
 
 function switchView(view) {
   // Get all view elements
+  const menuView = document.getElementById("menuView");
   const quotesView = document.getElementById("quotesView");
   const authorsView = document.getElementById("authorsView");
   const sourcesView = document.getElementById("sourcesView");
@@ -1705,6 +1730,7 @@ function switchView(view) {
   const settingsView = document.getElementById("settingsView");
 
   // Hide all views
+  if (menuView) menuView.style.display = "none";
   if (quotesView) quotesView.style.display = "none";
   if (authorsView) authorsView.style.display = "none";
   if (sourcesView) sourcesView.style.display = "none";
@@ -1712,7 +1738,9 @@ function switchView(view) {
   if (settingsView) settingsView.style.display = "none";
 
   // Show selected view and load data
-  if (view === "quotes" && quotesView) {
+  if (view === "menu" && menuView) {
+    menuView.style.display = "block";
+  } else if (view === "quotes" && quotesView) {
     quotesView.style.display = "block";
     loadQuotes();
     loadTotalCount();
