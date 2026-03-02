@@ -1137,7 +1137,7 @@ textarea {
 }
 
 .meta-item-combined {
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   display: flex;
   align-items: center;
   gap: 0.4rem;
@@ -1148,6 +1148,15 @@ textarea {
   color: var(--text-secondary);
   font-style: italic;
   font-size: 0.7rem;
+}
+
+.type-icon-badge {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  border-radius: 12px;
+  background: #6c757d;
+  color: white;
+  font-size: 0.8rem;
 }
 
 /* Quill formatted content in quote cards */

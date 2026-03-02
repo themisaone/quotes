@@ -1034,8 +1034,8 @@ function createQuoteCard(quote) {
                 <div class="quote-separator"></div>
                 <div class="quote-metadata-row">
                     <div class="quote-metadata-left">
-                        ${author && source ? `<div class="meta-item-combined">${sourceIcon} <span class="meta-value clickable author-link" data-id="${quote.author_id}" data-name="${escapeHtml(author)}">${escapeHtml(author)}</span> <span class="meta-from">from</span> <span class="meta-value clickable source-link" data-id="${quote.source_id}" data-name="${escapeHtml(source)}" data-type="${sourceType}">📚 ${escapeHtml(source)}</span></div>` : 
-                        author ? `<div class="meta-item">${sourceIcon} <span class="meta-value clickable author-link" data-id="${quote.author_id}" data-name="${escapeHtml(author)}">${escapeHtml(author)}</span></div>` :
+                        ${author && source ? `<div class="meta-item-combined"><span class="type-icon-badge">${sourceIcon}</span> <span class="meta-value clickable author-link" data-id="${quote.author_id}" data-name="${escapeHtml(author)}">${escapeHtml(author)}</span> <span class="meta-from">from</span> <span class="meta-value clickable source-link" data-id="${quote.source_id}" data-name="${escapeHtml(source)}" data-type="${sourceType}">📚 ${escapeHtml(source)}</span></div>` : 
+                        author ? `<div class="meta-item"><span class="type-icon-badge">${sourceIcon}</span> <span class="meta-value clickable author-link" data-id="${quote.author_id}" data-name="${escapeHtml(author)}">${escapeHtml(author)}</span></div>` :
                         source ? `<div class="meta-item"><span class="meta-value clickable source-link" data-id="${quote.source_id}" data-name="${escapeHtml(source)}" data-type="${sourceType}">📚 ${escapeHtml(source)}</span></div>` : ""
                         }
                     </div>
