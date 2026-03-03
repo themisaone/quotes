@@ -899,6 +899,37 @@ function displayQuotes(quotes) {
 
   quotesList.innerHTML = quotes.map((quote) => createQuoteCard(quote)).join("");
 
+  // Apply sizing mode setting
+  const realSizeEnabled = localStorage.getItem('displayQuotesByRealSize') === 'true';
+  applyQuoteSizingMode(realSizeEnabled);
+
+  // Apply image quotes long setting
+  const imageLongEnabled = localStorage.getItem('displayImageQuotesLong') === 'true';
+  if (imageLongEnabled) {
+    document.querySelectorAll('.quote-card.has-image').forEach((card) => {
+      card.classList.add('expanded-card');
+    });
+  }
+
+  // Apply show long quotes expanded setting
+  const expandLongEnabled = localStorage.getItem('showLongQuotesExpanded') === 'true';
+  if (expandLongEnabled) {
+    document.querySelectorAll('.quote-text.collapsible').forEach((quoteText) => {
+      // quoteText.id is like "quote-123"
+      // We need to get just the numeric ID to match the button id "expand-123"
+      const numericId = quoteText.id.replace('quote-', '');
+      const btnId = `expand-${numericId}`;
+      const btnEl = document.getElementById(btnId);
+      
+      if (btnEl) {
+        // Remove collapsible class to show full text
+        quoteText.classList.remove('collapsible');
+        quoteText.dataset.expanded = "true";
+        btnEl.innerHTML = "▲ Show less";
+      }
+    });
+  }
+
   // Add click handlers to quote cards (open edit modal)
   document.querySelectorAll(".quote-card").forEach((card) => {
     let longPressTimer;
@@ -3361,6 +3392,9 @@ function populateTagsForEdit(tagsString) {
 function initializeSettings() {
   const enableTagOpsCheckbox = document.getElementById('enableTagOperations');
   const enableQuoteMetaSearchesCheckbox = document.getElementById('enableQuoteMetaSearches');
+  const displayQuotesByRealSizeCheckbox = document.getElementById('displayQuotesByRealSize');
+  const displayImageQuotesLongCheckbox = document.getElementById('displayImageQuotesLong');
+  const showLongQuotesExpandedCheckbox = document.getElementById('showLongQuotesExpanded');
   
   // Tag Operations setting
   if (enableTagOpsCheckbox) {
@@ -3395,6 +3429,53 @@ function initializeSettings() {
       toggleMetadataSearchSection(isEnabled);
     });
   }
+  
+  // Display Quotes by Real Size setting
+  if (displayQuotesByRealSizeCheckbox) {
+    // Load saved setting from localStorage
+    const realSizeEnabled = localStorage.getItem('displayQuotesByRealSize') === 'true'; // Default false
+    displayQuotesByRealSizeCheckbox.checked = realSizeEnabled;
+    
+    // Apply initial state
+    applyQuoteSizingMode(realSizeEnabled);
+    
+    // Listen for changes
+    displayQuotesByRealSizeCheckbox.addEventListener('change', (e) => {
+      const isEnabled = e.target.checked;
+      localStorage.setItem('displayQuotesByRealSize', isEnabled);
+      applyQuoteSizingMode(isEnabled);
+    });
+  }
+  
+  // Display Image Quotes Long setting
+  if (displayImageQuotesLongCheckbox) {
+    // Load saved setting from localStorage
+    const imageLongEnabled = localStorage.getItem('displayImageQuotesLong') === 'true'; // Default false
+    displayImageQuotesLongCheckbox.checked = imageLongEnabled;
+    
+    // Listen for changes
+    displayImageQuotesLongCheckbox.addEventListener('change', (e) => {
+      const isEnabled = e.target.checked;
+      localStorage.setItem('displayImageQuotesLong', isEnabled);
+      // Reload quotes to apply the setting
+      loadQuotes();
+    });
+  }
+  
+  // Show Long Quotes Expanded setting
+  if (showLongQuotesExpandedCheckbox) {
+    // Load saved setting from localStorage
+    const expandLongEnabled = localStorage.getItem('showLongQuotesExpanded') === 'true'; // Default false
+    showLongQuotesExpandedCheckbox.checked = expandLongEnabled;
+    
+    // Listen for changes
+    showLongQuotesExpandedCheckbox.addEventListener('change', (e) => {
+      const isEnabled = e.target.checked;
+      localStorage.setItem('showLongQuotesExpanded', isEnabled);
+      // Reload quotes to apply the setting
+      loadQuotes();
+    });
+  }
 }
 
 function toggleMetadataSearchSection(show) {
@@ -3410,6 +3491,18 @@ function toggleMetadataSearchSection(show) {
   const metadataSection = document.getElementById('metadataSearchSection');
   if (metadataSection) {
     metadataSection.style.display = 'none';
+  }
+}
+
+// Apply quote sizing mode
+function applyQuoteSizingMode(useRealSize) {
+  const quotesList = document.getElementById('quotesList');
+  if (!quotesList) return;
+  
+  if (useRealSize) {
+    quotesList.classList.add('natural-sizing');
+  } else {
+    quotesList.classList.remove('natural-sizing');
   }
 }
 

@@ -81,7 +81,7 @@
         <h3 class="menu-section-title desktop-only">Settings</h3>
         <ul class="menu-list desktop-only">
           <li>
-            <button class="menu-item" data-view="settings"><span class="menu-icon">⚙️</span><span class="menu-text"> Application Settings</span></button>
+            <button class="menu-item" data-view="settings"><span class="menu-icon">⚙️</span><span class="menu-text"> Options</span></button>
           </li>
         </ul>
       </nav>
@@ -130,7 +130,7 @@
               
               <button class="tablet-menu-btn" onclick="switchView('settings')">
                 <span class="menu-btn-icon">⚙️</span>
-                <span class="menu-btn-text">Settings</span>
+                <span class="menu-btn-text">Options</span>
               </button>
             </div>
           </div>
@@ -651,7 +651,7 @@
               <button class="btn-back-menu tablet-only" onclick="switchView('menu')">
                 ← Menu
               </button>
-              <h1>⚙️ Settings</h1>
+              <h1>⚙️ Options</h1>
             </header>
             
             <div class="settings-section">
@@ -673,6 +673,31 @@
                   <span>Quote Meta Searches</span>
                 </label>
                 <p class="setting-description">Enable advanced metadata search capabilities for quotes.</p>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <h2>Quote Display Options</h2>
+              <div class="setting-item">
+                <label class="setting-label">
+                  <input type="checkbox" id="displayQuotesByRealSize" />
+                  <span>Display Quotes by Natural Height</span>
+                </label>
+                <p class="setting-description">Show each quote with its natural height using masonry column layout. Quotes stack naturally to fill space.</p>
+              </div>
+              <div class="setting-item">
+                <label class="setting-label">
+                  <input type="checkbox" id="displayImageQuotesLong" />
+                  <span>Display Image Quotes Full Width</span>
+                </label>
+                <p class="setting-description">Always show quotes with images in expanded/full width mode.</p>
+              </div>
+              <div class="setting-item">
+                <label class="setting-label">
+                  <input type="checkbox" id="showLongQuotesExpanded" />
+                  <span>Display Long Quotes Expanded</span>
+                </label>
+                <p class="setting-description">Automatically expand all long quotes to show their full text (with "Show less" button to collapse).</p>
               </div>
             </div>
           </div>

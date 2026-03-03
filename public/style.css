@@ -902,6 +902,28 @@ textarea {
   gap: 1rem;
 }
 
+/* Natural sizing mode - true masonry layout with columns */
+.quotes-list.natural-sizing {
+  display: block;
+  column-count: 2;
+  column-gap: 1rem;
+}
+
+.quotes-list.natural-sizing .quote-card {
+  display: inline-block;
+  width: 100%;
+  margin-bottom: 1rem;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+/* Expanded cards in natural sizing mode should span both columns */
+.quotes-list.natural-sizing .quote-card.expanded-card {
+  column-span: all;
+  display: block;
+  margin-bottom: 1rem;
+}
+
 .quote-card {
   background: var(--surface);
   padding: 1.25rem;
