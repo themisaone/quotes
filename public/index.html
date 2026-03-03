@@ -280,9 +280,17 @@
                   ></div>
                 </div>
                 <div class="search-item">
+                  <label>⭐ Score</label>
+                  <input
+                    type="text"
+                    id="searchScore"
+                    placeholder="Search by score..."
+                  />
+                </div>
+                <div class="search-item" style="flex: 0 0 auto; min-width: auto;">
                   <label>&nbsp;</label>
                   <button id="clearBtn" class="btn btn-primary">
-                    Clear Filters
+                    Clear
                   </button>
                 </div>
               </div>
@@ -754,6 +762,15 @@
                 <option value="JOKES">😂 Jokes</option>
               </select>
             </div>
+
+            <div class="form-group" style="flex: 0.7;">
+              <label for="quoteScore">⭐ Score</label>
+              <input
+                type="text"
+                id="quoteScore"
+                placeholder="Score"
+              />
+            </div>
           </div>
 
           <div class="form-group form-group-with-separator" style="margin-top: 1.5rem;">
@@ -830,6 +847,15 @@
               required
               placeholder="Author name"
             />
+          </div>
+
+          <div class="form-group">
+            <label for="authorDescription">📝 Description</label>
+            <textarea
+              id="authorDescription"
+              rows="3"
+              placeholder="Optional description or notes about this author"
+            ></textarea>
           </div>
 
           <div class="form-group">
@@ -1044,17 +1070,7 @@ Quote number three..."
             >
           </div>
 
-          <div id="bulkPreview" class="bulk-preview" style="display: none">
-            <h3>
-              Preview: <span id="quoteCount">0</span> quotes will be added
-            </h3>
-            <div id="previewList"></div>
-          </div>
-
           <div class="form-actions">
-            <button type="button" id="previewBulkBtn" class="btn btn-secondary">
-              Preview Quotes
-            </button>
             <button type="submit" class="btn btn-primary">
               Add All Quotes
             </button>

@@ -108,7 +108,7 @@ app.put("/api/authors/:id", async (req, res) => {
     await client.query("BEGIN");
     
     const { id } = req.params;
-    let { name, image } = req.body;
+    let { name, description, image } = req.body;
 
     // Image is already resized on client-side, no need to process again
     // Just validate it's a data URL if provided
@@ -163,14 +163,15 @@ app.put("/api/authors/:id", async (req, res) => {
       }
     }
     
-    // Simple update (rename and/or image update)
+    // Simple update (rename and/or image update and/or description update)
     const result = await client.query(
       `UPDATE authors 
        SET name = COALESCE($1, name),
-           image = COALESCE($2, image)
-       WHERE id = $3
+           description = COALESCE($2, description),
+           image = COALESCE($3, image)
+       WHERE id = $4
        RETURNING *`,
-      [name?.trim(), image, id]
+      [name?.trim(), description?.trim() || '', image, id]
     );
 
     await client.query("COMMIT");
@@ -567,6 +568,7 @@ app.get("/api/quotes", async (req, res) => {
       author,
       source,
       tags,
+      score,
       date,
       types,
       hasAuthor,
@@ -640,6 +642,12 @@ app.get("/api/quotes", async (req, res) => {
     if (date) {
       query += ` AND q.date = $${paramCounter}`;
       params.push(date);
+      paramCounter++;
+    }
+
+    if (score) {
+      query += ` AND q.score ILIKE $${paramCounter}`;
+      params.push(`%${score}%`);
       paramCounter++;
     }
 
@@ -818,6 +826,7 @@ app.post("/api/quotes", async (req, res) => {
       image = "",
       image_full = "",
       note = "",
+      score = null,
     } = req.body;
 
     if (!quote) {
@@ -854,10 +863,10 @@ app.post("/api/quotes", async (req, res) => {
     // Create the quote - still store tags column for backward compatibility
     // Insert the quote
     const result = await client.query(
-      `INSERT INTO quotes (quote, author_id, source_id, image, image_full, note, type) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7) 
+      `INSERT INTO quotes (quote, author_id, source_id, image, image_full, note, type, score) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
        RETURNING *`,
-      [quote, authorId, sourceId, image, image_full, note, sourceType],
+      [quote, authorId, sourceId, image, image_full, note, sourceType, score],
     );
 
     const quoteId = result.rows[0].id;
@@ -922,6 +931,7 @@ app.put("/api/quotes/:id", async (req, res) => {
       image,
       image_full,
       note,
+      score,
     } = req.body;
 
     console.log("UPDATE QUOTE - Received data:", {
@@ -1013,6 +1023,12 @@ app.put("/api/quotes/:id", async (req, res) => {
     if (note !== undefined) {
       updateFields.push(`note = $${paramCounter}`);
       params.push(note);
+      paramCounter++;
+    }
+
+    if (score !== undefined) {
+      updateFields.push(`score = $${paramCounter}`);
+      params.push(score);
       paramCounter++;
     }
 

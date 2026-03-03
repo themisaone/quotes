@@ -49,14 +49,13 @@ const bulkForm = document.getElementById("bulkForm");
 const addBulkBtn = document.getElementById("addBulkBtn");
 const closeBulkModal = document.querySelector(".close-bulk");
 const cancelBulkBtn = document.getElementById("cancelBulkBtn");
-const previewBulkBtn = document.getElementById("previewBulkBtn");
+// Preview button removed - no longer needed
 const bulkAuthorInput = document.getElementById("bulkAuthor");
 const bulkSourceInput = document.getElementById("bulkSource");
 const bulkQuotesInput = document.getElementById("bulkQuotes");
 const bulkAuthorSuggestions = document.getElementById("bulkAuthorSuggestions");
 const bulkSourceSuggestions = document.getElementById("bulkSourceSuggestions");
-const bulkPreview = document.getElementById("bulkPreview");
-const previewList = document.getElementById("previewList");
+// Preview elements removed - no longer needed
 
 // Form inputs
 const authorInput = document.getElementById("author");
@@ -78,6 +77,7 @@ const searchQuote = document.getElementById("searchQuote");
 const searchAuthor = document.getElementById("searchAuthor");
 const searchSource = document.getElementById("searchSource");
 const searchTags = document.getElementById("searchTags");
+const searchScore = document.getElementById("searchScore");
 const clearBtn = document.getElementById("clearBtn");
 
 // State
@@ -253,7 +253,7 @@ function setupEventListeners() {
   
   closeBulkModal.addEventListener("click", closeBulkImportModal);
   cancelBulkBtn.addEventListener("click", closeBulkImportModal);
-  previewBulkBtn.addEventListener("click", previewBulkQuotes);
+  // Preview button removed - direct import works great!
   bulkForm.addEventListener("submit", handleBulkSubmit);
 
   // Autocomplete for bulk import
@@ -272,7 +272,7 @@ function setupEventListeners() {
   });
 
   // Search with debounce
-  [searchQuote, searchAuthor, searchSource, searchTags].forEach((input) => {
+  [searchQuote, searchAuthor, searchSource, searchTags, searchScore].forEach((input) => {
     input.addEventListener("input", debounceSearch);
   });
 
@@ -393,12 +393,8 @@ function setupEventListeners() {
     }
   });
 
-  // Close modal on outside click
-  window.addEventListener("click", (e) => {
-    if (e.target === quoteModal) {
-      closeQuoteModal();
-    }
-  });
+  // Note: Modal can only be closed via Cancel button, X button, or Save button
+  // This prevents accidental data loss from clicking outside the modal
 }
 
 // Autocomplete Functions
@@ -588,6 +584,7 @@ function openEditModal(quote) {
   document.getElementById("author").value = quote.author_name || "";
   document.getElementById("source").value = quote.source_name || "";
   document.getElementById("sourceType").value = quote.source_type || "BOOK";
+  document.getElementById("quoteScore").value = quote.score || "";
   
   // Populate tags using new system
   populateTagsForEdit(quote.tags || "");
@@ -638,6 +635,7 @@ function clearFilters() {
   searchAuthor.value = "";
   searchSource.value = "";
   searchTags.value = "";
+  searchScore.value = "";
   currentPage = 1;
   loadQuotes();
 }
@@ -671,6 +669,7 @@ async function loadQuotes() {
     if (searchAuthor.value) params.append("author", searchAuthor.value);
     if (searchSource.value) params.append("source", searchSource.value);
     if (searchTags.value) params.append("tags", searchTags.value);
+    if (searchScore.value) params.append("score", searchScore.value);
 
     // Add type filter
     const selectedTypes = [];
@@ -747,6 +746,7 @@ async function loadTotalCount() {
     if (searchAuthor.value) params.append("author", searchAuthor.value);
     if (searchSource.value) params.append("source", searchSource.value);
     if (searchTags.value) params.append("tags", searchTags.value);
+    if (searchScore.value) params.append("score", searchScore.value);
 
     // Add type filter
     const selectedTypes = [];
@@ -826,6 +826,7 @@ async function handleSubmit(e) {
     sourceId: window.currentSourceId || null,
     tags: document.getElementById("tags").value,
     note: noteInput.value,
+    score: document.getElementById("quoteScore").value || null,
     image: currentQuoteImage,
     image_full: currentQuoteImageFull,
   };
@@ -1171,18 +1172,9 @@ document.addEventListener("paste", (e) => {
   }
 });
 
-// Close modals on outside click
-window.addEventListener("click", (e) => {
-  if (e.target === authorModal) {
-    closeAuthorEditModal();
-  }
-  if (e.target === sourceModal) {
-    closeSourceEditModal();
-  }
-  if (e.target === bulkModal) {
-    closeBulkImportModal();
-  }
-});
+// Note: Modals can only be closed via their Cancel/X/Save buttons
+// This prevents accidental data loss from clicking outside the modals
+// (Rename modal still allows click-outside-to-close as it's a quick action)
 
 // Open Author Modal
 async function openAuthorModal(authorId, authorName, quoteCount = null) {
@@ -1192,6 +1184,7 @@ async function openAuthorModal(authorId, authorName, quoteCount = null) {
 
     authorIdInput.value = author.id;
     authorNameInput.value = author.name;
+    document.getElementById('authorDescription').value = author.description || '';
     currentAuthorImage = author.image;
 
     if (author.image) {
@@ -1289,6 +1282,7 @@ async function handleAuthorSubmit(e) {
   const authorId = authorIdInput.value;
   const authorData = {
     name: authorNameInput.value,
+    description: document.getElementById('authorDescription').value || '',
     image: currentAuthorImage || "",
   };
 
@@ -1560,8 +1554,7 @@ function clearSourceImage() {
 
 function openBulkModal() {
   bulkForm.reset();
-  bulkPreview.style.display = "none";
-  previewList.innerHTML = "";
+  // Preview section removed - no longer needed
   
   // Clear autocomplete suggestions
   if (bulkAuthorSuggestions) {
@@ -1580,44 +1573,7 @@ function closeBulkImportModal() {
   bulkModal.style.display = "none";
 }
 
-function previewBulkQuotes() {
-  const quotesText = bulkQuotesInput.value.trim();
-
-  if (!quotesText) {
-    alert("Please paste some quotes first!");
-    return;
-  }
-
-  // Split by --- separator
-  const quotes = quotesText
-    .split(/\n---\n/)
-    .map((q) => q.trim())
-    .filter((q) => q.length > 0);
-
-  if (quotes.length === 0) {
-    alert(
-      "No quotes found. Make sure to separate quotes with --- on its own line.",
-    );
-    return;
-  }
-
-  // Update count
-  document.getElementById("quoteCount").textContent = quotes.length;
-
-  // Show preview
-  previewList.innerHTML = quotes
-    .map(
-      (quote, index) => `
-        <div class="preview-quote">
-            <span class="preview-quote-number">${index + 1}.</span>
-            ${escapeHtml(quote)}
-        </div>
-    `,
-    )
-    .join("");
-
-  bulkPreview.style.display = "block";
-}
+// Preview function removed - no longer needed as direct import works great!
 
 async function handleBulkSubmit(e) {
   e.preventDefault();
@@ -2870,6 +2826,7 @@ async function exportToPdf() {
     if (searchAuthor.value) params.append("author", searchAuthor.value);
     if (searchSource.value) params.append("source", searchSource.value);
     if (searchTags.value) params.append("tags", searchTags.value);
+    if (searchScore.value) params.append("score", searchScore.value);
 
     // Add type filter
     const selectedTypes = [];
@@ -2904,6 +2861,7 @@ async function exportToPdf() {
     if (searchAuthor.value) filters.author = searchAuthor.value;
     if (searchSource.value) filters.source = searchSource.value;
     if (searchTags.value) filters.tags = searchTags.value;
+    if (searchScore.value) filters.score = searchScore.value;
 
     // Send to server for PDF generation
     const pdfResponse = await fetch(`${API_URL}/export/pdf`, {

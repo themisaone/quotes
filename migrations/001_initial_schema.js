@@ -125,16 +125,22 @@ async function migrate() {
     await client.query("ROLLBACK");
     console.error("❌ Migration failed:", error.message);
     console.error(error);
-    process.exit(1);
+    throw error; // Don't process.exit here - let runner handle it
   } finally {
     client.release();
-    await pool.end();
+    // Don't end pool here - let the migration runner handle it
   }
 }
 
 // Run migration if called directly
 if (require.main === module) {
-  migrate();
+  migrate().then(() => {
+    pool.end();
+    process.exit(0);
+  }).catch((error) => {
+    pool.end();
+    process.exit(1);
+  });
 }
 
 module.exports = { migrate };

@@ -44,8 +44,19 @@ async function migrate() {
     throw error;
   } finally {
     client.release();
-    await pool.end();
+    // Don't end pool here - let the migration runner handle it
   }
 }
 
-migrate();
+// Only call migrate() if run directly (not via migration runner)
+if (require.main === module) {
+  migrate().then(() => {
+    pool.end();
+    process.exit(0);
+  }).catch((error) => {
+    pool.end();
+    process.exit(1);
+  });
+}
+
+module.exports = { migrate };

@@ -83,16 +83,20 @@ async function migrate() {
     throw error;
   } finally {
     client.release();
-    await pool.end();
+    // Don't end pool here - let the migration runner handle it
   }
 }
 
 // Run migration if called directly
 if (require.main === module) {
   migrate()
-    .then(() => process.exit(0))
+    .then(() => {
+      pool.end();
+      process.exit(0);
+    })
     .catch((error) => {
       console.error("Failed:", error);
+      pool.end();
       process.exit(1);
     });
 }

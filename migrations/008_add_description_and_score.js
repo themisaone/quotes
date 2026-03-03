@@ -13,20 +13,28 @@ async function migrate() {
   const client = await pool.connect();
 
   try {
-    console.log("Starting migration 006: Drop old tags column...");
+    console.log("Starting migration 008: Adding description to authors and score to quotes...");
     await client.query("BEGIN");
 
-    // Drop the old tags column from quotes table
-    console.log("Dropping old 'tags' column from quotes table...");
+    // Add description field to authors table
+    console.log("  - Adding description field to authors table...");
     await client.query(`
-      ALTER TABLE quotes DROP COLUMN IF EXISTS tags;
+      ALTER TABLE authors 
+      ADD COLUMN IF NOT EXISTS description TEXT DEFAULT ''
+    `);
+    
+    // Add score field to quotes table as TEXT
+    console.log("  - Adding score field to quotes table...");
+    await client.query(`
+      ALTER TABLE quotes 
+      ADD COLUMN IF NOT EXISTS score TEXT DEFAULT NULL
     `);
 
-    console.log("Migration 006 completed successfully!");
+    console.log("✅ Migration 008 completed: Added description (authors) and score (quotes) fields!");
     await client.query("COMMIT");
   } catch (error) {
     await client.query("ROLLBACK");
-    console.error("Migration 006 failed:", error);
+    console.error("❌ Migration 008 failed:", error);
     throw error;
   } finally {
     client.release();
@@ -34,7 +42,7 @@ async function migrate() {
   }
 }
 
-// Run if called directly
+// Only call migrate() if run directly (not via migration runner)
 if (require.main === module) {
   migrate().then(() => {
     pool.end();
