@@ -24,29 +24,29 @@ app.use(express.static(path.join(__dirname, "../public")));
 
 // Get all authors (with optional search)
 app.get("/api/authors", async (req, res) => {
-  try {
-    const { search } = req.query;
-    let query = `
+    try {
+        const { search } = req.query;
+        let query = `
             SELECT a.*, 
                    COUNT(q.id) as quote_count
             FROM authors a
             LEFT JOIN quotes q ON a.id = q.author_id
         `;
-    const params = [];
+        const params = [];
 
-    if (search) {
+        if (search) {
       query += " WHERE a.name ILIKE $1";
-      params.push(`%${search}%`);
-    }
+            params.push(`%${search}%`);
+        }
 
     query += " GROUP BY a.id ORDER BY a.name ASC";
 
-    const result = await pool.query(query, params);
-    res.json(result.rows);
-  } catch (error) {
+        const result = await pool.query(query, params);
+        res.json(result.rows);
+    } catch (error) {
     console.error("Error fetching authors:", error);
     res.status(500).json({ error: "Failed to fetch authors" });
-  }
+    }
 });
 
 // Get single author
@@ -63,11 +63,11 @@ app.get("/api/authors/:id", async (req, res) => {
     `,
       [id],
     );
-
+    
     if (result.rows.length === 0) {
       return res.status(404).json({ error: "Author not found" });
     }
-
+    
     res.json(result.rows[0]);
   } catch (error) {
     console.error("Error fetching author:", error);
@@ -79,7 +79,7 @@ app.get("/api/authors/:id", async (req, res) => {
 app.post("/api/authors", async (req, res) => {
   try {
     const { name, image = "" } = req.body;
-
+    
     if (!name) {
       return res.status(400).json({ error: "Author name is required" });
     }
@@ -196,28 +196,28 @@ app.put("/api/authors/:id", async (req, res) => {
 app.delete("/api/authors/:id", async (req, res) => {
   try {
     const { id } = req.params;
-
+    
     // Check if author has any quotes
     const quoteCheck = await pool.query(
       "SELECT COUNT(*) as count FROM quotes WHERE author_id = $1",
       [id],
     );
-
+    
     if (parseInt(quoteCheck.rows[0].count) > 0) {
       return res
         .status(400)
         .json({ error: "Cannot delete author with existing quotes" });
     }
-
+    
     const result = await pool.query(
       "DELETE FROM authors WHERE id = $1 RETURNING *",
       [id],
     );
-
+    
     if (result.rows.length === 0) {
       return res.status(404).json({ error: "Author not found" });
     }
-
+    
     res.json({ message: "Author deleted successfully" });
   } catch (error) {
     console.error("Error deleting author:", error);
@@ -229,9 +229,9 @@ app.delete("/api/authors/:id", async (req, res) => {
 
 // Get all sources (with optional search and type filter)
 app.get("/api/sources", async (req, res) => {
-  try {
-    const { search, type } = req.query;
-    let query = `
+    try {
+        const { search, type } = req.query;
+        let query = `
             SELECT s.*, 
                    COUNT(q.id) as quote_count,
                    (
@@ -256,29 +256,29 @@ app.get("/api/sources", async (req, res) => {
             LEFT JOIN quotes q ON s.id = q.source_id
             WHERE 1=1
         `;
-    const params = [];
-    let paramCounter = 1;
+        const params = [];
+        let paramCounter = 1;
 
-    if (search) {
-      query += ` AND s.name ILIKE $${paramCounter}`;
-      params.push(`%${search}%`);
-      paramCounter++;
-    }
-
-    if (type) {
-      query += ` AND s.type = $${paramCounter}`;
-      params.push(type);
-      paramCounter++;
-    }
+        if (search) {
+            query += ` AND s.name ILIKE $${paramCounter}`;
+            params.push(`%${search}%`);
+            paramCounter++;
+        }
+        
+        if (type) {
+            query += ` AND s.type = $${paramCounter}`;
+            params.push(type);
+            paramCounter++;
+        }
 
     query += " GROUP BY s.id ORDER BY s.name ASC";
 
-    const result = await pool.query(query, params);
-    res.json(result.rows);
-  } catch (error) {
+        const result = await pool.query(query, params);
+        res.json(result.rows);
+    } catch (error) {
     console.error("Error fetching sources:", error);
     res.status(500).json({ error: "Failed to fetch sources" });
-  }
+    }
 });
 
 // Get single source
@@ -295,11 +295,11 @@ app.get("/api/sources/:id", async (req, res) => {
     `,
       [id],
     );
-
+    
     if (result.rows.length === 0) {
       return res.status(404).json({ error: "Source not found" });
     }
-
+    
     res.json(result.rows[0]);
   } catch (error) {
     console.error("Error fetching source:", error);
@@ -311,7 +311,7 @@ app.get("/api/sources/:id", async (req, res) => {
 app.post("/api/sources", async (req, res) => {
   try {
     const { name, image = "", type = "BOOK" } = req.body;
-
+    
     if (!name) {
       return res.status(400).json({ error: "Source name is required" });
     }
@@ -428,28 +428,28 @@ app.put("/api/sources/:id", async (req, res) => {
 app.delete("/api/sources/:id", async (req, res) => {
   try {
     const { id } = req.params;
-
+    
     // Check if source has any quotes
     const quoteCheck = await pool.query(
       "SELECT COUNT(*) as count FROM quotes WHERE source_id = $1",
       [id],
     );
-
+    
     if (parseInt(quoteCheck.rows[0].count) > 0) {
       return res
         .status(400)
         .json({ error: "Cannot delete source with existing quotes" });
     }
-
+    
     const result = await pool.query(
       "DELETE FROM sources WHERE id = $1 RETURNING *",
       [id],
     );
-
+    
     if (result.rows.length === 0) {
       return res.status(404).json({ error: "Source not found" });
     }
-
+    
     res.json({ message: "Source deleted successfully" });
   } catch (error) {
     console.error("Error deleting source:", error);
@@ -462,8 +462,8 @@ app.delete("/api/sources/:id", async (req, res) => {
 // Get total quote count
 app.get("/api/quotes/count", async (req, res) => {
   try {
-    const { quote, author, source, tags, types, hasAuthor, hasSource, hasNote, hasTags, hasImage } = req.query;
-
+    const { quote, author, source, tags, score, types, hasAuthor, hasSource, hasNote, hasTags, hasImage } = req.query;
+    
     let query = `
       SELECT COUNT(*) as count
       FROM quotes q
@@ -509,14 +509,46 @@ app.get("/api/quotes/count", async (req, res) => {
         paramCounter++;
       });
     }
-
+    
     // Filter by types if provided
     if (types) {
       const typeArray = types.split(",").filter((t) => t);
-      if (typeArray.length > 0 && typeArray.length < 3) {
+      const totalTypes = 6; // BOOK, MOVIE-TV, POETRY, LYRICS, JOKES, ASSORTED
+      if (typeArray.length > 0 && typeArray.length < totalTypes) {
         // Only filter if not all selected
         query += ` AND q.type = ANY($${paramCounter})`;
         params.push(typeArray);
+        paramCounter++;
+      }
+    }
+
+    // Score filter with enhanced syntax
+    if (score) {
+      // Enhanced score search syntax:
+      // "5" = exact match (5)
+      // "5+" = 5 and higher (5, 6)
+      // "3-5" = range (3, 4, 5)
+      
+      if (score.includes('-')) {
+        // Range: "3-5"
+        const [min, max] = score.split('-').map(s => s.trim());
+        if (min && max && !isNaN(min) && !isNaN(max)) {
+          query += ` AND q.score >= $${paramCounter} AND q.score <= $${paramCounter + 1}`;
+          params.push(min, max);
+          paramCounter += 2;
+        }
+      } else if (score.endsWith('+')) {
+        // Minimum: "5+"
+        const min = score.replace('+', '').trim();
+        if (min && !isNaN(min)) {
+          query += ` AND q.score >= $${paramCounter}`;
+          params.push(min);
+          paramCounter++;
+        }
+      } else {
+        // Exact match: "5"
+        query += ` AND q.score = $${paramCounter}`;
+        params.push(score.trim());
         paramCounter++;
       }
     }
@@ -579,7 +611,7 @@ app.get("/api/quotes", async (req, res) => {
       limit = 20,
       offset = 0,
     } = req.query;
-
+    
     let query = `
       SELECT DISTINCT q.*, 
              a.name as author_name, a.image as author_image,
@@ -633,9 +665,9 @@ app.get("/api/quotes", async (req, res) => {
             INNER JOIN tags t2 ON qt2.tag_id = t2.id
             WHERE qt2.quote_id = q.id AND t2.name ILIKE $${paramCounter}
           )`;
-          params.push(`%${tag}%`);
-          paramCounter++;
-        });
+        params.push(`%${tag}%`);
+        paramCounter++;
+      });
       }
     }
 
@@ -646,15 +678,40 @@ app.get("/api/quotes", async (req, res) => {
     }
 
     if (score) {
-      query += ` AND q.score ILIKE $${paramCounter}`;
-      params.push(`%${score}%`);
-      paramCounter++;
+      // Enhanced score search syntax:
+      // "5" = exact match (5)
+      // "5+" = 5 and higher (5, 6)
+      // "3-5" = range (3, 4, 5)
+      
+      if (score.includes('-')) {
+        // Range: "3-5"
+        const [min, max] = score.split('-').map(s => s.trim());
+        if (min && max && !isNaN(min) && !isNaN(max)) {
+          query += ` AND q.score >= $${paramCounter} AND q.score <= $${paramCounter + 1}`;
+          params.push(min, max);
+          paramCounter += 2;
+        }
+      } else if (score.endsWith('+')) {
+        // Minimum: "5+"
+        const min = score.replace('+', '').trim();
+        if (min && !isNaN(min)) {
+          query += ` AND q.score >= $${paramCounter}`;
+          params.push(min);
+          paramCounter++;
+        }
+      } else {
+        // Exact match: "5"
+        query += ` AND q.score = $${paramCounter}`;
+        params.push(score.trim());
+        paramCounter++;
+      }
     }
-
+    
     // Filter by types if provided
     if (types) {
       const typeArray = types.split(",").filter((t) => t);
-      if (typeArray.length > 0 && typeArray.length < 3) {
+      const totalTypes = 6; // BOOK, MOVIE-TV, POETRY, LYRICS, JOKES, ASSORTED
+      if (typeArray.length > 0 && typeArray.length < totalTypes) {
         // Only filter if not all selected
         query += ` AND q.type = ANY($${paramCounter})`;
         params.push(typeArray);
@@ -718,7 +775,7 @@ app.get("/api/quotes", async (req, res) => {
         res.json(quotesWithTags);
       } else {
         // Fallback: tags already in quote.tags from old column
-        res.json(result.rows);
+    res.json(result.rows);
       }
     } else {
       res.json([]);
@@ -785,7 +842,7 @@ app.get("/api/quotes/:id", async (req, res) => {
     `,
       [id],
     );
-
+    
     if (result.rows.length === 0) {
       return res.status(404).json({ error: "Quote not found" });
     }
@@ -802,7 +859,7 @@ app.get("/api/quotes/:id", async (req, res) => {
       res.json(quoteWithTags);
     } else {
       // Fallback: use tags from old column
-      res.json(result.rows[0]);
+    res.json(result.rows[0]);
     }
   } catch (error) {
     console.error("Error fetching quote:", error);
@@ -813,7 +870,7 @@ app.get("/api/quotes/:id", async (req, res) => {
 // Create new quote
 app.post("/api/quotes", async (req, res) => {
   const client = await pool.connect();
-
+  
   try {
     await client.query("BEGIN");
 
@@ -828,7 +885,7 @@ app.post("/api/quotes", async (req, res) => {
       note = "",
       score = null,
     } = req.body;
-
+    
     if (!quote) {
       return res.status(400).json({ error: "Quote text is required" });
     }
@@ -916,10 +973,10 @@ app.post("/api/quotes", async (req, res) => {
 // Update quote
 app.put("/api/quotes/:id", async (req, res) => {
   const client = await pool.connect();
-
+  
   try {
     await client.query("BEGIN");
-
+    
     const { id } = req.params;
     const {
       quote,
@@ -1031,7 +1088,7 @@ app.put("/api/quotes/:id", async (req, res) => {
       params.push(score);
       paramCounter++;
     }
-
+    
     if (sourceType !== undefined) {
       updateFields.push(`type = $${paramCounter}`);
       params.push(sourceType);
@@ -1105,7 +1162,7 @@ app.put("/api/quotes/:id", async (req, res) => {
       res.json(quoteWithTags);
     } else {
       // Fallback: use tags from old column
-      res.json(completeQuote.rows[0]);
+    res.json(completeQuote.rows[0]);
     }
   } catch (error) {
     await client.query("ROLLBACK");

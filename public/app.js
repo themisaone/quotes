@@ -276,19 +276,8 @@ function setupEventListeners() {
     input.addEventListener("input", debounceSearch);
   });
 
-  // Type filter checkboxes
-  ["filterQuoteBook", "filterQuoteMovie", "filterQuotePoetry", "filterQuoteLyrics", "filterQuoteJokes", "filterQuoteAssorted"].forEach(
-    (id) => {
-      const checkbox = document.getElementById(id);
-      if (checkbox) {
-        checkbox.addEventListener("change", () => {
-          currentPage = 1; // Reset to first page
-          loadQuotes();
-          loadTotalCount(); // Update counts
-        });
-      }
-    },
-  );
+  // NOTE: Type filter checkboxes are now handled by the dropdown logic below (line ~396)
+  // The old individual listeners have been removed to avoid conflicts
 
   // Sources view: Type filter checkboxes
   ["filterBook", "filterMovie"].forEach((id) => {
@@ -392,6 +381,102 @@ function setupEventListeners() {
       bulkSourceSuggestions.classList.remove("show");
     }
   });
+
+  // Type filter dropdown
+  const typeFilterToggle = document.getElementById("typeFilterToggle");
+  const typeFilterDropdown = document.getElementById("typeFilterDropdown");
+  const typeSelectAllBtn = document.getElementById("typeSelectAllBtn");
+  const typeCheckboxes = document.querySelectorAll('.type-filter-option input[type="checkbox"]');
+  let typeFilterChanged = false;
+
+  if (typeFilterToggle && typeFilterDropdown) {
+    // Toggle dropdown
+    typeFilterToggle.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const wasOpen = typeFilterDropdown.classList.contains("show");
+      
+      typeFilterDropdown.classList.toggle("show");
+      typeFilterToggle.classList.toggle("open");
+      
+      // If closing and changes were made, reload quotes
+      if (wasOpen && typeFilterChanged) {
+        // Log current checkbox states
+        const checkedTypes = Array.from(typeCheckboxes)
+          .filter(cb => cb.checked)
+          .map(cb => cb.id);
+        console.log("Reloading with types:", checkedTypes);
+        
+        currentPage = 1;
+        loadQuotes();
+        loadTotalCount();
+        typeFilterChanged = false;
+      }
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest(".type-filter-dropdown-container")) {
+        const wasOpen = typeFilterDropdown.classList.contains("show");
+        
+        if (wasOpen) {
+          console.log("=== CLOSING DROPDOWN ===");
+          // Log current checkbox states BEFORE closing
+          const states = {};
+          typeCheckboxes.forEach(cb => {
+            states[cb.id] = cb.checked;
+          });
+          console.log("Checkbox states:", states);
+        }
+        
+        typeFilterDropdown.classList.remove("show");
+        typeFilterToggle.classList.remove("open");
+        
+        // If closing and changes were made, reload quotes
+        if (wasOpen && typeFilterChanged) {
+          // Log current checkbox states
+          const checkedTypes = Array.from(typeCheckboxes)
+            .filter(cb => cb.checked)
+            .map(cb => cb.id);
+          console.log("Reloading with types:", checkedTypes);
+          
+          currentPage = 1;
+          loadQuotes();
+          loadTotalCount();
+          typeFilterChanged = false;
+        }
+      }
+    });
+
+    // Select All button functionality
+    if (typeSelectAllBtn) {
+      typeSelectAllBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        typeCheckboxes.forEach(checkbox => {
+          checkbox.checked = true;
+        });
+        typeFilterChanged = true;
+      });
+    }
+
+    // Deselect All button functionality
+    const typeDeselectAllBtn = document.getElementById("typeDeselectAllBtn");
+    if (typeDeselectAllBtn) {
+      typeDeselectAllBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        typeCheckboxes.forEach(checkbox => {
+          checkbox.checked = false;
+        });
+        typeFilterChanged = true;
+      });
+    }
+
+    // Update when individual checkboxes change
+    typeCheckboxes.forEach(checkbox => {
+      checkbox.addEventListener("change", () => {
+        typeFilterChanged = true;
+      });
+    });
+  }
 
   // Note: Modal can only be closed via Cancel button, X button, or Save button
   // This prevents accidental data loss from clicking outside the modal
@@ -691,9 +776,21 @@ async function loadQuotes() {
       selectedTypes.push("JOKES");
     if (document.getElementById("filterQuoteAssorted")?.checked)
       selectedTypes.push("ASSORTED");
-    if (selectedTypes.length > 0 && selectedTypes.length < 6) {
+    
+    console.log("loadQuotes - selectedTypes:", selectedTypes, "length:", selectedTypes.length);
+    
+    // Only add types filter if not all types are selected (optimization)
+    const totalTypes = 6; // BOOK, MOVIE-TV, POETRY, LYRICS, JOKES, ASSORTED
+    if (selectedTypes.length > 0 && selectedTypes.length < totalTypes) {
       params.append("types", selectedTypes.join(","));
+      console.log("Adding types to query:", selectedTypes.join(","));
+    } else if (selectedTypes.length === 0) {
+      console.log("NO types selected - will show nothing");
+    } else {
+      console.log("All types selected - no filter needed, showing all");
     }
+    
+    console.log("Final API URL:", `${API_URL}/quotes?${params.toString()}`);
 
     // Add metadata search filters
     if (document.getElementById("searchHasAuthor")?.checked) {
@@ -760,9 +857,18 @@ async function loadTotalCount() {
       selectedTypes.push("BOOK");
     if (document.getElementById("filterQuoteMovie")?.checked)
       selectedTypes.push("MOVIE-TV");
+    if (document.getElementById("filterQuotePoetry")?.checked)
+      selectedTypes.push("POETRY");
+    if (document.getElementById("filterQuoteLyrics")?.checked)
+      selectedTypes.push("LYRICS");
+    if (document.getElementById("filterQuoteJokes")?.checked)
+      selectedTypes.push("JOKES");
     if (document.getElementById("filterQuoteAssorted")?.checked)
       selectedTypes.push("ASSORTED");
-    if (selectedTypes.length > 0 && selectedTypes.length < 3) {
+    
+    // Only add types filter if not all types are selected (optimization)
+    const totalTypes = 6; // BOOK, MOVIE-TV, POETRY, LYRICS, JOKES, ASSORTED
+    if (selectedTypes.length > 0 && selectedTypes.length < totalTypes) {
       params.append("types", selectedTypes.join(","));
     }
 
@@ -2887,9 +2993,18 @@ async function exportToPdf() {
       selectedTypes.push("BOOK");
     if (document.getElementById("filterQuoteMovie")?.checked)
       selectedTypes.push("MOVIE-TV");
+    if (document.getElementById("filterQuotePoetry")?.checked)
+      selectedTypes.push("POETRY");
+    if (document.getElementById("filterQuoteLyrics")?.checked)
+      selectedTypes.push("LYRICS");
+    if (document.getElementById("filterQuoteJokes")?.checked)
+      selectedTypes.push("JOKES");
     if (document.getElementById("filterQuoteAssorted")?.checked)
       selectedTypes.push("ASSORTED");
-    if (selectedTypes.length > 0 && selectedTypes.length < 3) {
+    
+    // Only add types filter if not all types are selected (optimization)
+    const totalTypes = 6; // BOOK, MOVIE-TV, POETRY, LYRICS, JOKES, ASSORTED
+    if (selectedTypes.length > 0 && selectedTypes.length < totalTypes) {
       params.append("types", selectedTypes.join(","));
     }
 

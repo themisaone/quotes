@@ -97,6 +97,13 @@
               <h1>Misa's Quote Collection</h1>
             </header>
             
+            <p class="tablet-menu-description">
+              Misa's private collection of various texts, quotes and jokes, <br>compiled from books, movies, poems, lyrics and other sources.<br>
+              Some are meant to be funny, some serious, some are just nice formulations...
+            </p>
+
+            <div class="tablet-menu-separator"></div>
+
             <div class="tablet-menu-grid">
               <!-- Main 4 buttons in 2x2 grid -->
               <button class="tablet-menu-btn" onclick="switchView('quotes')">
@@ -132,7 +139,7 @@
               
               <button class="tablet-menu-btn" onclick="switchView('settings')">
                 <span class="menu-btn-icon">⚙️</span>
-                <span class="menu-btn-text">Options</span>
+                <span class="menu-btn-text">Settings</span>
               </button>
             </div>
           </div>
@@ -183,69 +190,60 @@
                 <div class="search-title-row">
                   <h2>🔍 Search Quotes</h2>
                   
-                  <!-- Source Type Filter -->
-                  <div class="quote-type-filter">
-                    <label
-                      ><input
-                        type="checkbox"
-                        id="filterQuoteBook"
-                        value="BOOK"
-                        checked
-                      />
-                      📖 Books</label
-                    >
-                    <label
-                      ><input
-                        type="checkbox"
-                        id="filterQuoteMovie"
-                        value="MOVIE-TV"
-                        checked
-                      />
-                      🎬 Movies & TV</label
-                    >
-                    <label
-                      ><input
-                        type="checkbox"
-                        id="filterQuotePoetry"
-                        value="POETRY"
-                        checked
-                      />
-                      📜 Poetry</label
-                    >
-                    <label
-                      ><input
-                        type="checkbox"
-                        id="filterQuoteLyrics"
-                        value="LYRICS"
-                        checked
-                      />
-                      🎵 Lyrics</label
-                    >
-                    <label
-                      ><input
-                        type="checkbox"
-                        id="filterQuoteJokes"
-                        value="JOKES"
-                        checked
-                      />
-                      😂 Jokes</label
-                    >
-                    <label
-                      ><input
-                        type="checkbox"
-                        id="filterQuoteAssorted"
-                        value="ASSORTED"
-                        checked
-                      />
-                      📝 Assorted</label
-                    >
+                  <!-- Type Filter Dropdown -->
+                  <div class="type-filter-dropdown-container">
+                    <button type="button" id="typeFilterToggle" class="type-filter-toggle">
+                      <span>📋 Quote sources</span>
+                      <span class="dropdown-arrow">▼</span>
+                    </button>
+                    <div id="typeFilterDropdown" class="type-filter-dropdown">
+                      <button type="button" id="typeSelectAllBtn" class="type-select-all-btn">
+                        <span class="type-icon">✓</span>
+                        <span>Select All</span>
+                      </button>
+                      <button type="button" id="typeDeselectAllBtn" class="type-select-all-btn">
+                        <span class="type-icon">✗</span>
+                        <span>Deselect All</span>
+                      </button>
+                      <div class="type-filter-separator"></div>
+                      <label class="type-filter-option">
+                        <input type="checkbox" id="filterQuoteBook" value="BOOK" checked />
+                        <span class="type-icon">📖</span>
+                        <span>Books</span>
+                      </label>
+                      <label class="type-filter-option">
+                        <input type="checkbox" id="filterQuoteMovie" value="MOVIE-TV" checked />
+                        <span class="type-icon">🎬</span>
+                        <span>Movies & TV</span>
+                      </label>
+                      <label class="type-filter-option">
+                        <input type="checkbox" id="filterQuotePoetry" value="POETRY" checked />
+                        <span class="type-icon">📜</span>
+                        <span>Poetry</span>
+                      </label>
+                      <label class="type-filter-option">
+                        <input type="checkbox" id="filterQuoteLyrics" value="LYRICS" checked />
+                        <span class="type-icon">🎵</span>
+                        <span>Lyrics</span>
+                      </label>
+                      <label class="type-filter-option">
+                        <input type="checkbox" id="filterQuoteJokes" value="JOKES" checked />
+                        <span class="type-icon">😂</span>
+                        <span>Jokes</span>
+                      </label>
+                      <label class="type-filter-option">
+                        <input type="checkbox" id="filterQuoteAssorted" value="ASSORTED" checked />
+                        <span class="type-icon">📝</span>
+                        <span>Assorted</span>
+                      </label>
+                    </div>
                   </div>
                 </div>
               </div>
 
               <div class="search-grid">
                 <div class="search-item">
-                  <label>💬 Quote</label>
+                  <label>💬 Quote text</label>
                   <input
                     type="text"
                     id="searchQuote"
@@ -286,7 +284,7 @@
                   <input
                     type="text"
                     id="searchScore"
-                    placeholder="Search by score..."
+                    placeholder="5, 5+, or 3-5..."
                   />
                 </div>
                 <div class="search-item" style="flex: 0 0 auto; min-width: auto;">
