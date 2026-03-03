@@ -584,7 +584,13 @@ function openEditModal(quote) {
   document.getElementById("author").value = quote.author_name || "";
   document.getElementById("source").value = quote.source_name || "";
   document.getElementById("sourceType").value = quote.source_type || "BOOK";
-  document.getElementById("quoteScore").value = quote.score || "";
+  
+  // Set score radio button
+  const scoreValue = quote.score || "0";
+  const scoreRadio = document.querySelector(`input[name="quoteScore"][value="${scoreValue}"]`);
+  if (scoreRadio) {
+    scoreRadio.checked = true;
+  }
   
   // Populate tags using new system
   populateTagsForEdit(quote.tags || "");
@@ -826,7 +832,7 @@ async function handleSubmit(e) {
     sourceId: window.currentSourceId || null,
     tags: document.getElementById("tags").value,
     note: noteInput.value,
-    score: document.getElementById("quoteScore").value || null,
+    score: document.querySelector('input[name="quoteScore"]:checked')?.value || "0",
     image: currentQuoteImage,
     image_full: currentQuoteImageFull,
   };
@@ -1050,12 +1056,28 @@ function createQuoteCard(quote) {
   const quoteId = `quote-${quote.id}`;
   const expandBtnId = `expand-${quote.id}`;
 
+  // Check if score should be displayed
+  const displayScore = localStorage.getItem('displayScoreInCards') === 'true';
+  const score = quote.score;
+  const hasScore = score && parseInt(score) > 0 && displayScore;
+  const scoreIcon = hasScore ? `<i class="fa-solid fa-dice-${['one', 'two', 'three', 'four', 'five', 'six'][parseInt(score) - 1]}"></i>` : '';
+  
+  // Combine score and note on same line if both exist
+  let noteScoreLine = '';
+  if (hasScore && quote.note) {
+    noteScoreLine = `<div class="quote-note-title"><span>${scoreIcon}</span><span>${escapeHtml(quote.note)}</span></div>`;
+  } else if (hasScore) {
+    noteScoreLine = `<div class="quote-score-line">${scoreIcon}</div>`;
+  } else if (quote.note) {
+    noteScoreLine = `<div class="quote-note-title"><span></span><span>${escapeHtml(quote.note)}</span></div>`;
+  }
+
   return `
         <div class="quote-card ${quote.image ? 'has-image' : ''}" data-quote-id="${quote.id}" style="cursor: pointer;">
             <div class="quote-card-content">
                 <div class="quote-top-section">
                     <div class="quote-left-column">
-                        ${quote.note ? `<div class="quote-note-title">${escapeHtml(quote.note)}</div>` : ''}
+                        ${noteScoreLine}
                         <div class="quote-text-wrapper">
                             <div class="quote-text ${isLongQuote ? "collapsible" : ""}" id="${quoteId}" data-expanded="false">${quote.quote}</div>
                             ${isLongQuote ? `<button class="expand-btn" id="${expandBtnId}" onclick="event.stopPropagation(); toggleQuoteExpand('${quote.id}')">▼ Show more</button>` : ""}
@@ -1066,8 +1088,8 @@ function createQuoteCard(quote) {
                 <div class="quote-separator"></div>
                 <div class="quote-metadata-row">
                     <div class="quote-metadata-left">
-                        ${author && source ? `<div class="meta-item-combined"><span class="type-icon-badge">${sourceIcon}</span> <span class="meta-value clickable author-link" data-id="${quote.author_id}" data-name="${escapeHtml(author)}">${escapeHtml(author)}</span> <span class="meta-from">from</span> <span class="meta-value clickable source-link" data-id="${quote.source_id}" data-name="${escapeHtml(source)}" data-type="${sourceType}">📚 ${escapeHtml(source)}</span></div>` : 
-                        author ? `<div class="meta-item"><span class="type-icon-badge">${sourceIcon}</span> <span class="meta-value clickable author-link" data-id="${quote.author_id}" data-name="${escapeHtml(author)}">${escapeHtml(author)}</span></div>` :
+                        ${author && source ? `<div class="meta-item-combined"><span class="type-icon-badge">${sourceIcon}</span> <span class="meta-by">by</span> <span class="meta-value clickable author-link" data-id="${quote.author_id}" data-name="${escapeHtml(author)}">${escapeHtml(author)}</span> <span class="meta-from">from</span> <span class="meta-value clickable source-link" data-id="${quote.source_id}" data-name="${escapeHtml(source)}" data-type="${sourceType}">📚 ${escapeHtml(source)}</span></div>` : 
+                        author ? `<div class="meta-item"><span class="type-icon-badge">${sourceIcon}</span> <span class="meta-by">by</span> <span class="meta-value clickable author-link" data-id="${quote.author_id}" data-name="${escapeHtml(author)}">${escapeHtml(author)}</span></div>` :
                         source ? `<div class="meta-item"><span class="meta-value clickable source-link" data-id="${quote.source_id}" data-name="${escapeHtml(source)}" data-type="${sourceType}">📚 ${escapeHtml(source)}</span></div>` : ""
                         }
                     </div>
@@ -3357,7 +3379,7 @@ function updateSelectedTagsDisplay() {
   }
   
   container.innerHTML = selectedTagsArray.map(tag => `
-    <span class="tag-removable" style="background: #2d6a4f; color: white; padding: 0.35rem 0.6rem; border-radius: 12px; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+    <span class="tag-removable" style="background: var(--tag-color); color: white; padding: 0.35rem 0.6rem; border-radius: 12px; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer;">
       ${escapeHtml(tag)}
       <span onclick="removeTag('${escapeHtml(tag).replace(/'/g, "\\'")}')" style="font-weight: bold; cursor: pointer;">&times;</span>
     </span>
@@ -3395,6 +3417,7 @@ function initializeSettings() {
   const displayQuotesByRealSizeCheckbox = document.getElementById('displayQuotesByRealSize');
   const displayImageQuotesLongCheckbox = document.getElementById('displayImageQuotesLong');
   const showLongQuotesExpandedCheckbox = document.getElementById('showLongQuotesExpanded');
+  const displayScoreInCardsCheckbox = document.getElementById('displayScoreInCards');
   
   // Tag Operations setting
   if (enableTagOpsCheckbox) {
@@ -3476,6 +3499,540 @@ function initializeSettings() {
       loadQuotes();
     });
   }
+  
+  // Display Score in Cards setting
+  if (displayScoreInCardsCheckbox) {
+    // Load saved setting from localStorage
+    const scoreInCardsEnabled = localStorage.getItem('displayScoreInCards') === 'true'; // Default false
+    displayScoreInCardsCheckbox.checked = scoreInCardsEnabled;
+    
+    // Listen for changes
+    displayScoreInCardsCheckbox.addEventListener('change', (e) => {
+      const isEnabled = e.target.checked;
+      localStorage.setItem('displayScoreInCards', isEnabled);
+      // Reload quotes to apply the setting
+      loadQuotes();
+    });
+  }
+  
+  // Color Customization
+  const buttonColorPicker = document.getElementById('buttonColor');
+  const buttonColorText = document.getElementById('buttonColorText');
+  const resetButtonColorBtn = document.getElementById('resetButtonColor');
+  const headerColorPicker = document.getElementById('headerColor');
+  const headerColorText = document.getElementById('headerColorText');
+  const resetHeaderColorBtn = document.getElementById('resetHeaderColor');
+  const tagColorPicker = document.getElementById('tagColor');
+  const tagColorText = document.getElementById('tagColorText');
+  const resetTagColorBtn = document.getElementById('resetTagColor');
+  const deleteColorPicker = document.getElementById('deleteColor');
+  const deleteColorText = document.getElementById('deleteColorText');
+  const resetDeleteColorBtn = document.getElementById('resetDeleteColor');
+  const cancelColorPicker = document.getElementById('cancelColor');
+  const cancelColorText = document.getElementById('cancelColorText');
+  const resetCancelColorBtn = document.getElementById('resetCancelColor');
+  const activeCounterColorPicker = document.getElementById('activeCounterColor');
+  const activeCounterColorText = document.getElementById('activeCounterColorText');
+  const resetActiveCounterColorBtn = document.getElementById('resetActiveCounterColor');
+  const totalCounterColorPicker = document.getElementById('totalCounterColor');
+  const totalCounterColorText = document.getElementById('totalCounterColorText');
+  const resetTotalCounterColorBtn = document.getElementById('resetTotalCounterColor');
+  const menuColorPicker = document.getElementById('menuColor');
+  const menuColorText = document.getElementById('menuColorText');
+  const resetMenuColorBtn = document.getElementById('resetMenuColor');
+  const appBgColorPicker = document.getElementById('appBgColor');
+  const appBgColorText = document.getElementById('appBgColorText');
+  const resetAppBgColorBtn = document.getElementById('resetAppBgColor');
+  
+  // Default colors
+  const defaultButtonColor = '#1e40af';
+  const defaultHeaderColor = '#166534';
+  const defaultTagColor = '#2d6a4f';
+  const defaultDeleteColor = '#ef4444';
+  const defaultCancelColor = '#6b7280';
+  const defaultActiveCounterColor = '#dc2626';
+  const defaultTotalCounterColor = '#047857';
+  const defaultMenuColor = '#2c3e50';
+  const defaultAppBgColor = '#f8fafc';
+  
+  // Load saved colors
+  const savedButtonColor = localStorage.getItem('buttonColor') || defaultButtonColor;
+  const savedHeaderColor = localStorage.getItem('headerColor') || defaultHeaderColor;
+  const savedTagColor = localStorage.getItem('tagColor') || defaultTagColor;
+  const savedDeleteColor = localStorage.getItem('deleteColor') || defaultDeleteColor;
+  const savedCancelColor = localStorage.getItem('cancelColor') || defaultCancelColor;
+  const savedActiveCounterColor = localStorage.getItem('activeCounterColor') || defaultActiveCounterColor;
+  const savedTotalCounterColor = localStorage.getItem('totalCounterColor') || defaultTotalCounterColor;
+  const savedMenuColor = localStorage.getItem('menuColor') || defaultMenuColor;
+  const savedAppBgColor = localStorage.getItem('appBgColor') || defaultAppBgColor;
+  
+  // Apply saved colors
+  applyButtonColor(savedButtonColor);
+  applyHeaderColor(savedHeaderColor);
+  applyTagColor(savedTagColor);
+  applyDeleteColor(savedDeleteColor);
+  applyCancelColor(savedCancelColor);
+  applyActiveCounterColor(savedActiveCounterColor);
+  applyTotalCounterColor(savedTotalCounterColor);
+  applyMenuColor(savedMenuColor);
+  applyAppBgColor(savedAppBgColor);
+  
+  // Update UI
+  if (buttonColorPicker) buttonColorPicker.value = savedButtonColor;
+  if (buttonColorText) buttonColorText.value = savedButtonColor;
+  if (headerColorPicker) headerColorPicker.value = savedHeaderColor;
+  if (headerColorText) headerColorText.value = savedHeaderColor;
+  if (tagColorPicker) tagColorPicker.value = savedTagColor;
+  if (tagColorText) tagColorText.value = savedTagColor;
+  if (deleteColorPicker) deleteColorPicker.value = savedDeleteColor;
+  if (deleteColorText) deleteColorText.value = savedDeleteColor;
+  if (activeCounterColorPicker) activeCounterColorPicker.value = savedActiveCounterColor;
+  if (activeCounterColorText) activeCounterColorText.value = savedActiveCounterColor;
+  if (totalCounterColorPicker) totalCounterColorPicker.value = savedTotalCounterColor;
+  if (totalCounterColorText) totalCounterColorText.value = savedTotalCounterColor;
+  if (menuColorPicker) menuColorPicker.value = savedMenuColor;
+  if (menuColorText) menuColorText.value = savedMenuColor;
+  if (appBgColorPicker) appBgColorPicker.value = savedAppBgColor;
+  if (appBgColorText) appBgColorText.value = savedAppBgColor;
+  
+  // Button color picker
+  if (buttonColorPicker) {
+    buttonColorPicker.addEventListener('input', (e) => {
+      const color = e.target.value;
+      buttonColorText.value = color;
+      localStorage.setItem('buttonColor', color);
+      applyButtonColor(color);
+    });
+  }
+  
+  // Header color picker
+  if (headerColorPicker) {
+    headerColorPicker.addEventListener('input', (e) => {
+      const color = e.target.value;
+      headerColorText.value = color;
+      localStorage.setItem('headerColor', color);
+      applyHeaderColor(color);
+    });
+  }
+  
+  // Tag color picker
+  if (tagColorPicker) {
+    tagColorPicker.addEventListener('input', (e) => {
+      const color = e.target.value;
+      tagColorText.value = color;
+      localStorage.setItem('tagColor', color);
+      applyTagColor(color);
+    });
+  }
+  
+  // Delete color picker
+  if (deleteColorPicker) {
+    deleteColorPicker.addEventListener('input', (e) => {
+      const color = e.target.value;
+      deleteColorText.value = color;
+      localStorage.setItem('deleteColor', color);
+      applyDeleteColor(color);
+    });
+  }
+  
+  // Cancel color picker
+  if (cancelColorPicker) {
+    cancelColorPicker.addEventListener('input', (e) => {
+      const color = e.target.value;
+      cancelColorText.value = color;
+      localStorage.setItem('cancelColor', color);
+      applyCancelColor(color);
+    });
+  }
+  
+  // Active counter color picker
+  if (activeCounterColorPicker) {
+    activeCounterColorPicker.addEventListener('input', (e) => {
+      const color = e.target.value;
+      activeCounterColorText.value = color;
+      localStorage.setItem('activeCounterColor', color);
+      applyActiveCounterColor(color);
+    });
+  }
+  
+  // Total counter color picker
+  if (totalCounterColorPicker) {
+    totalCounterColorPicker.addEventListener('input', (e) => {
+      const color = e.target.value;
+      totalCounterColorText.value = color;
+      localStorage.setItem('totalCounterColor', color);
+      applyTotalCounterColor(color);
+    });
+  }
+  
+  // Menu color picker
+  if (menuColorPicker) {
+    menuColorPicker.addEventListener('input', (e) => {
+      const color = e.target.value;
+      menuColorText.value = color;
+      localStorage.setItem('menuColor', color);
+      applyMenuColor(color);
+    });
+  }
+  
+  // App background color picker
+  if (appBgColorPicker) {
+    appBgColorPicker.addEventListener('input', (e) => {
+      const color = e.target.value;
+      appBgColorText.value = color;
+      localStorage.setItem('appBgColor', color);
+      applyAppBgColor(color);
+    });
+  }
+  
+  // Reset button color
+  if (resetButtonColorBtn) {
+    resetButtonColorBtn.addEventListener('click', () => {
+      buttonColorPicker.value = defaultButtonColor;
+      buttonColorText.value = defaultButtonColor;
+      localStorage.setItem('buttonColor', defaultButtonColor);
+      applyButtonColor(defaultButtonColor);
+    });
+  }
+  
+  // Reset header color
+  if (resetHeaderColorBtn) {
+    resetHeaderColorBtn.addEventListener('click', () => {
+      headerColorPicker.value = defaultHeaderColor;
+      headerColorText.value = defaultHeaderColor;
+      localStorage.setItem('headerColor', defaultHeaderColor);
+      applyHeaderColor(defaultHeaderColor);
+    });
+  }
+  
+  // Reset tag color
+  if (resetTagColorBtn) {
+    resetTagColorBtn.addEventListener('click', () => {
+      tagColorPicker.value = defaultTagColor;
+      tagColorText.value = defaultTagColor;
+      localStorage.setItem('tagColor', defaultTagColor);
+      applyTagColor(defaultTagColor);
+    });
+  }
+  
+  // Reset delete color
+  if (resetDeleteColorBtn) {
+    resetDeleteColorBtn.addEventListener('click', () => {
+      deleteColorPicker.value = defaultDeleteColor;
+      deleteColorText.value = defaultDeleteColor;
+      localStorage.setItem('deleteColor', defaultDeleteColor);
+      applyDeleteColor(defaultDeleteColor);
+    });
+  }
+  
+  // Reset cancel color button
+  if (resetCancelColorBtn) {
+    resetCancelColorBtn.addEventListener('click', () => {
+      cancelColorPicker.value = defaultCancelColor;
+      cancelColorText.value = defaultCancelColor;
+      localStorage.setItem('cancelColor', defaultCancelColor);
+      applyCancelColor(defaultCancelColor);
+    });
+  }
+  
+  // Reset active counter color
+  if (resetActiveCounterColorBtn) {
+    resetActiveCounterColorBtn.addEventListener('click', () => {
+      activeCounterColorPicker.value = defaultActiveCounterColor;
+      activeCounterColorText.value = defaultActiveCounterColor;
+      localStorage.setItem('activeCounterColor', defaultActiveCounterColor);
+      applyActiveCounterColor(defaultActiveCounterColor);
+    });
+  }
+  
+  // Reset total counter color
+  if (resetTotalCounterColorBtn) {
+    resetTotalCounterColorBtn.addEventListener('click', () => {
+      totalCounterColorPicker.value = defaultTotalCounterColor;
+      totalCounterColorText.value = defaultTotalCounterColor;
+      localStorage.setItem('totalCounterColor', defaultTotalCounterColor);
+      applyTotalCounterColor(defaultTotalCounterColor);
+    });
+  }
+  
+  // Reset menu color
+  if (resetMenuColorBtn) {
+    resetMenuColorBtn.addEventListener('click', () => {
+      menuColorPicker.value = defaultMenuColor;
+      menuColorText.value = defaultMenuColor;
+      localStorage.setItem('menuColor', defaultMenuColor);
+      applyMenuColor(defaultMenuColor);
+    });
+  }
+  
+  // Reset app background color
+  if (resetAppBgColorBtn) {
+    resetAppBgColorBtn.addEventListener('click', () => {
+      appBgColorPicker.value = defaultAppBgColor;
+      appBgColorText.value = defaultAppBgColor;
+      localStorage.setItem('appBgColor', defaultAppBgColor);
+      applyAppBgColor(defaultAppBgColor);
+    });
+  }
+  
+  // Save Palette button
+  const savePaletteBtn = document.getElementById('savePaletteBtn');
+  if (savePaletteBtn) {
+    savePaletteBtn.addEventListener('click', () => {
+      const palette = {
+        buttonColor: localStorage.getItem('buttonColor') || defaultButtonColor,
+        headerColor: localStorage.getItem('headerColor') || defaultHeaderColor,
+        tagColor: localStorage.getItem('tagColor') || defaultTagColor,
+        deleteColor: localStorage.getItem('deleteColor') || defaultDeleteColor,
+        cancelColor: localStorage.getItem('cancelColor') || defaultCancelColor,
+        activeCounterColor: localStorage.getItem('activeCounterColor') || defaultActiveCounterColor,
+        totalCounterColor: localStorage.getItem('totalCounterColor') || defaultTotalCounterColor,
+        menuColor: localStorage.getItem('menuColor') || defaultMenuColor,
+        appBgColor: localStorage.getItem('appBgColor') || defaultAppBgColor
+      };
+      
+      const json = JSON.stringify(palette, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `quote-palette-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+  }
+  
+  // Load Palette button
+  const loadPaletteBtn = document.getElementById('loadPaletteBtn');
+  const paletteFileInput = document.getElementById('paletteFileInput');
+  
+  if (loadPaletteBtn && paletteFileInput) {
+    loadPaletteBtn.addEventListener('click', () => {
+      paletteFileInput.click();
+    });
+    
+    paletteFileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const palette = JSON.parse(event.target.result);
+          
+          // Apply all colors
+          if (palette.buttonColor) {
+            buttonColorPicker.value = palette.buttonColor;
+            buttonColorText.value = palette.buttonColor;
+            localStorage.setItem('buttonColor', palette.buttonColor);
+            applyButtonColor(palette.buttonColor);
+          }
+          
+          if (palette.headerColor) {
+            headerColorPicker.value = palette.headerColor;
+            headerColorText.value = palette.headerColor;
+            localStorage.setItem('headerColor', palette.headerColor);
+            applyHeaderColor(palette.headerColor);
+          }
+          
+          if (palette.tagColor) {
+            tagColorPicker.value = palette.tagColor;
+            tagColorText.value = palette.tagColor;
+            localStorage.setItem('tagColor', palette.tagColor);
+            applyTagColor(palette.tagColor);
+          }
+          
+          if (palette.deleteColor) {
+            deleteColorPicker.value = palette.deleteColor;
+            deleteColorText.value = palette.deleteColor;
+            localStorage.setItem('deleteColor', palette.deleteColor);
+            applyDeleteColor(palette.deleteColor);
+          }
+          
+          if (palette.cancelColor) {
+            cancelColorPicker.value = palette.cancelColor;
+            cancelColorText.value = palette.cancelColor;
+            localStorage.setItem('cancelColor', palette.cancelColor);
+            applyCancelColor(palette.cancelColor);
+          }
+          
+          if (palette.activeCounterColor) {
+            activeCounterColorPicker.value = palette.activeCounterColor;
+            activeCounterColorText.value = palette.activeCounterColor;
+            localStorage.setItem('activeCounterColor', palette.activeCounterColor);
+            applyActiveCounterColor(palette.activeCounterColor);
+          }
+          
+          if (palette.totalCounterColor) {
+            totalCounterColorPicker.value = palette.totalCounterColor;
+            totalCounterColorText.value = palette.totalCounterColor;
+            localStorage.setItem('totalCounterColor', palette.totalCounterColor);
+            applyTotalCounterColor(palette.totalCounterColor);
+          }
+          
+          if (palette.menuColor) {
+            menuColorPicker.value = palette.menuColor;
+            menuColorText.value = palette.menuColor;
+            localStorage.setItem('menuColor', palette.menuColor);
+            applyMenuColor(palette.menuColor);
+          }
+          
+          if (palette.appBgColor) {
+            appBgColorPicker.value = palette.appBgColor;
+            appBgColorText.value = palette.appBgColor;
+            localStorage.setItem('appBgColor', palette.appBgColor);
+            applyAppBgColor(palette.appBgColor);
+          }
+          
+          alert('Color palette loaded successfully! ✓');
+        } catch (error) {
+          alert('Error loading palette: Invalid JSON file');
+          console.error('Error loading palette:', error);
+        }
+      };
+      
+      reader.readAsText(file);
+      // Reset input so same file can be loaded again
+      paletteFileInput.value = '';
+    });
+  }
+}
+
+// Apply button color to CSS variables
+function applyButtonColor(color) {
+  document.documentElement.style.setProperty('--primary-color', color);
+  // Calculate hover color (darker)
+  const hoverColor = darkenColor(color, 15);
+  document.documentElement.style.setProperty('--primary-hover', hoverColor);
+}
+
+// Apply header color to CSS variables
+function applyHeaderColor(color) {
+  const modalHeaders = document.querySelectorAll('.modal-header');
+  modalHeaders.forEach(header => {
+    header.style.backgroundColor = color;
+  });
+}
+
+// Apply tag color
+// Apply tag color to CSS variable
+function applyTagColor(color) {
+  document.documentElement.style.setProperty('--tag-color', color);
+}
+
+// Apply delete button color
+function applyDeleteColor(color) {
+  const deleteButtons = document.querySelectorAll('.btn-danger');
+  deleteButtons.forEach(btn => {
+    btn.style.backgroundColor = color;
+    // Calculate darker hover color
+    const hoverColor = darkenColor(color, 10);
+    btn.addEventListener('mouseenter', () => {
+      btn.style.backgroundColor = hoverColor;
+    });
+    btn.addEventListener('mouseleave', () => {
+      btn.style.backgroundColor = color;
+    });
+  });
+}
+
+// Apply cancel button color
+// Apply cancel button color to CSS variables
+function applyCancelColor(color) {
+  document.documentElement.style.setProperty('--cancel-color', color);
+  // Calculate hover color (darker)
+  const hoverColor = darkenColor(color, 15);
+  document.documentElement.style.setProperty('--cancel-hover', hoverColor);
+}
+
+// Apply active counter color
+function applyActiveCounterColor(color) {
+  const counters = document.querySelectorAll(
+    '#filteredQuotesCount, #filteredAuthorsCount, #filteredSourcesCount, #filteredTagsCount'
+  );
+  counters.forEach(counter => {
+    counter.style.backgroundColor = color;
+  });
+}
+
+// Apply total counter color
+function applyTotalCounterColor(color) {
+  const counters = document.querySelectorAll(
+    '#totalQuotesCount, #totalAuthorsCount, #totalSourcesCount, #totalTagsCount'
+  );
+  counters.forEach(counter => {
+    counter.style.backgroundColor = color;
+  });
+}
+
+// Apply menu color
+function applyMenuColor(color) {
+  const sideMenu = document.querySelector('.side-menu');
+  if (sideMenu) {
+    // Calculate gradient colors
+    const midColor = lightenColor(color, 5);
+    const endColor = lightenColor(color, 15);
+    sideMenu.style.background = `linear-gradient(135deg, ${color} 0%, ${midColor} 50%, ${endColor} 100%)`;
+  }
+}
+
+// Apply app background color
+function applyAppBgColor(color) {
+  document.documentElement.style.setProperty('--background', color);
+  // Create a subtle gradient from the base color
+  const lighterColor = lightenColor(color, 3);
+  const darkerColor = darkenColor(color, 2);
+  document.body.style.background = `linear-gradient(135deg, ${darkerColor} 0%, ${color} 50%, ${lighterColor} 100%)`;
+}
+
+// Lighten a hex color by percentage
+function lightenColor(hex, percent) {
+  // Remove # if present
+  hex = hex.replace('#', '');
+  
+  // Convert to RGB
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  
+  // Lighten
+  const newR = Math.min(255, Math.floor(r + (255 - r) * (percent / 100)));
+  const newG = Math.min(255, Math.floor(g + (255 - g) * (percent / 100)));
+  const newB = Math.min(255, Math.floor(b + (255 - b) * (percent / 100)));
+  
+  // Convert back to hex
+  const toHex = (n) => {
+    const hex = n.toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  };
+  
+  return `#${toHex(newR)}${toHex(newG)}${toHex(newB)}`;
+}
+
+// Darken a hex color by percentage
+function darkenColor(hex, percent) {
+  // Remove # if present
+  hex = hex.replace('#', '');
+  
+  // Convert to RGB
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  
+  // Darken
+  const newR = Math.max(0, Math.floor(r * (1 - percent / 100)));
+  const newG = Math.max(0, Math.floor(g * (1 - percent / 100)));
+  const newB = Math.max(0, Math.floor(b * (1 - percent / 100)));
+  
+  // Convert back to hex
+  const toHex = (n) => {
+    const hex = n.toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  };
+  
+  return `#${toHex(newR)}${toHex(newG)}${toHex(newB)}`;
 }
 
 function toggleMetadataSearchSection(show) {

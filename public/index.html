@@ -6,6 +6,8 @@
     <title>Quotes Collection</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <link rel="stylesheet" href="style.css" />
+    <!-- Font Awesome for dice icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <!-- Quill Editor -->
     <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet" />
   </head>
@@ -25,7 +27,7 @@
           <span id="renameWarningText"></span>
         </div>
         <div class="rename-modal-actions">
-          <button id="renameCancelBtn" class="btn-secondary">Cancel</button>
+          <button id="renameCancelBtn" class="btn-secondary btn-cancel">Cancel</button>
           <button id="renameConfirmBtn" class="btn-primary">Rename</button>
         </div>
       </div>
@@ -666,6 +668,85 @@
             </div>
             
             <div class="settings-section">
+              <h2>🎨 Color Customization</h2>
+              <div style="display: flex; gap: 1rem; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 2px solid var(--border);">
+                <button type="button" id="savePaletteBtn" class="btn btn-primary" style="padding: 0.5rem 1rem;">
+                  💾 Save Palette
+                </button>
+                <button type="button" id="loadPaletteBtn" class="btn btn-primary" style="padding: 0.5rem 1rem;">
+                  📂 Load Palette
+                </button>
+                <input type="file" id="paletteFileInput" accept=".json" style="display: none;" />
+                <span style="color: var(--text-secondary); font-size: 0.85rem; display: flex; align-items: center; margin-left: auto;">
+                  Save your color palette as JSON and load it anytime to switch themes
+                </span>
+              </div>
+              <div style="display: grid; grid-template-columns: 140px 50px 90px 70px 1fr; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem;">
+                <span style="font-weight: 600;">App Background</span>
+                <input type="color" id="appBgColor" value="#f8fafc" style="width: 50px; height: 32px; cursor: pointer; border: 2px solid var(--border); border-radius: 6px;" />
+                <input type="text" id="appBgColorText" value="#f8fafc" readonly style="width: 90px; font-family: monospace; font-size: 0.85rem; background: var(--bg-secondary); padding: 0.35rem; border: 1px solid var(--border); border-radius: 4px; text-align: center;" />
+                <button type="button" id="resetAppBgColor" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;">Reset</button>
+                <span style="color: var(--text-secondary); font-size: 0.85rem;">Main application background color</span>
+              </div>
+              <div style="display: grid; grid-template-columns: 140px 50px 90px 70px 1fr; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem;">
+                <span style="font-weight: 600;">Side Menu</span>
+                <input type="color" id="menuColor" value="#2c3e50" style="width: 50px; height: 32px; cursor: pointer; border: 2px solid var(--border); border-radius: 6px;" />
+                <input type="text" id="menuColorText" value="#2c3e50" readonly style="width: 90px; font-family: monospace; font-size: 0.85rem; background: var(--bg-secondary); padding: 0.35rem; border: 1px solid var(--border); border-radius: 4px; text-align: center;" />
+                <button type="button" id="resetMenuColor" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;">Reset</button>
+                <span style="color: var(--text-secondary); font-size: 0.85rem;">Side/navigation menu background</span>
+              </div>
+              <div style="display: grid; grid-template-columns: 140px 50px 90px 70px 1fr; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem;">
+                <span style="font-weight: 600;">Modal Header</span>
+                <input type="color" id="headerColor" value="#166534" style="width: 50px; height: 32px; cursor: pointer; border: 2px solid var(--border); border-radius: 6px;" />
+                <input type="text" id="headerColorText" value="#166534" readonly style="width: 90px; font-family: monospace; font-size: 0.85rem; background: var(--bg-secondary); padding: 0.35rem; border: 1px solid var(--border); border-radius: 4px; text-align: center;" />
+                <button type="button" id="resetHeaderColor" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;">Reset</button>
+                <span style="color: var(--text-secondary); font-size: 0.85rem;">Background color for modal dialog headers</span>
+              </div>
+              <div style="display: grid; grid-template-columns: 140px 50px 90px 70px 1fr; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem;">
+                <span style="font-weight: 600;">Default Button</span>
+                <input type="color" id="buttonColor" value="#1e40af" style="width: 50px; height: 32px; cursor: pointer; border: 2px solid var(--border); border-radius: 6px;" />
+                <input type="text" id="buttonColorText" value="#1e40af" readonly style="width: 90px; font-family: monospace; font-size: 0.85rem; background: var(--bg-secondary); padding: 0.35rem; border: 1px solid var(--border); border-radius: 4px; text-align: center;" />
+                <button type="button" id="resetButtonColor" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;">Reset</button>
+                <span style="color: var(--text-secondary); font-size: 0.85rem;">All action buttons (Refresh, Add, Save, etc.)</span>
+              </div>
+              <div style="display: grid; grid-template-columns: 140px 50px 90px 70px 1fr; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem;">
+                <span style="font-weight: 600;">Delete Button</span>
+                <input type="color" id="deleteColor" value="#ef4444" style="width: 50px; height: 32px; cursor: pointer; border: 2px solid var(--border); border-radius: 6px;" />
+                <input type="text" id="deleteColorText" value="#ef4444" readonly style="width: 90px; font-family: monospace; font-size: 0.85rem; background: var(--bg-secondary); padding: 0.35rem; border: 1px solid var(--border); border-radius: 4px; text-align: center;" />
+                <button type="button" id="resetDeleteColor" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;">Reset</button>
+                <span style="color: var(--text-secondary); font-size: 0.85rem;">Delete button (modal)</span>
+              </div>
+              <div style="display: grid; grid-template-columns: 140px 50px 90px 70px 1fr; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem;">
+                <span style="font-weight: 600;">Cancel Button</span>
+                <input type="color" id="cancelColor" value="#6b7280" style="width: 50px; height: 32px; cursor: pointer; border: 2px solid var(--border); border-radius: 6px;" />
+                <input type="text" id="cancelColorText" value="#6b7280" readonly style="width: 90px; font-family: monospace; font-size: 0.85rem; background: var(--bg-secondary); padding: 0.35rem; border: 1px solid var(--border); border-radius: 4px; text-align: center;" />
+                <button type="button" id="resetCancelColor" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;">Reset</button>
+                <span style="color: var(--text-secondary); font-size: 0.85rem;">Cancel button (modal)</span>
+              </div>
+              <div style="display: grid; grid-template-columns: 140px 50px 90px 70px 1fr; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem;">
+                <span style="font-weight: 600;">Tags</span>
+                <input type="color" id="tagColor" value="#2d6a4f" style="width: 50px; height: 32px; cursor: pointer; border: 2px solid var(--border); border-radius: 6px;" />
+                <input type="text" id="tagColorText" value="#2d6a4f" readonly style="width: 90px; font-family: monospace; font-size: 0.85rem; background: var(--bg-secondary); padding: 0.35rem; border: 1px solid var(--border); border-radius: 4px; text-align: center;" />
+                <button type="button" id="resetTagColor" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;">Reset</button>
+                <span style="color: var(--text-secondary); font-size: 0.85rem;">Tag badges in quote cards</span>
+              </div>
+              <div style="display: grid; grid-template-columns: 140px 50px 90px 70px 1fr; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem;">
+                <span style="font-weight: 600;">Active Counter</span>
+                <input type="color" id="activeCounterColor" value="#dc2626" style="width: 50px; height: 32px; cursor: pointer; border: 2px solid var(--border); border-radius: 6px;" />
+                <input type="text" id="activeCounterColorText" value="#dc2626" readonly style="width: 90px; font-family: monospace; font-size: 0.85rem; background: var(--bg-secondary); padding: 0.35rem; border: 1px solid var(--border); border-radius: 4px; text-align: center;" />
+                <button type="button" id="resetActiveCounterColor" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;">Reset</button>
+                <span style="color: var(--text-secondary); font-size: 0.85rem;">Filtered/active count badges (left number)</span>
+              </div>
+              <div style="display: grid; grid-template-columns: 140px 50px 90px 70px 1fr; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem;">
+                <span style="font-weight: 600;">Total Counter</span>
+                <input type="color" id="totalCounterColor" value="#047857" style="width: 50px; height: 32px; cursor: pointer; border: 2px solid var(--border); border-radius: 6px;" />
+                <input type="text" id="totalCounterColorText" value="#047857" readonly style="width: 90px; font-family: monospace; font-size: 0.85rem; background: var(--bg-secondary); padding: 0.35rem; border: 1px solid var(--border); border-radius: 4px; text-align: center;" />
+                <button type="button" id="resetTotalCounterColor" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;">Reset</button>
+                <span style="color: var(--text-secondary); font-size: 0.85rem;">Total count badges (right number)</span>
+              </div>
+            </div>
+            
+            <div class="settings-section">
               <h2>Search Features</h2>
               <div class="setting-item">
                 <label class="setting-label">
@@ -699,6 +780,13 @@
                 </label>
                 <p class="setting-description">Automatically expand all long quotes to show their full text (with "Show less" button to collapse).</p>
               </div>
+              <div class="setting-item">
+                <label class="setting-label">
+                  <input type="checkbox" id="displayScoreInCards" />
+                  <span>Display Score in Quote Cards</span>
+                </label>
+                <p class="setting-description">Show dice score icon in the top-left corner of quote cards (only for quotes with scores).</p>
+              </div>
             </div>
           </div>
         </div>
@@ -709,16 +797,52 @@
     <!-- Add/Edit Quote Modal -->
     <div id="quoteModal" class="modal">
       <div class="modal-content modal-wide">
-        <span class="close">&times;</span>
-        <div class="modal-header-row">
-          <h2 id="modalTitle">Add New Quote</h2>
-          <div id="quoteMetadata" class="quote-metadata" style="display: none;"></div>
+        <div class="modal-header">
+          <div class="modal-header-left">
+            <span class="modal-header-icon">💬</span>
+            <h2 id="modalTitle">Add New Quote</h2>
+          </div>
+          <div id="quoteMetadata" class="quote-metadata-header" style="display: none;"></div>
+          <span class="close">&times;</span>
         </div>
-        <form id="quoteForm">
+        <div class="modal-body">
+          <form id="quoteForm">
           <input type="hidden" id="quoteId" />
 
           <div class="form-group quote-editor-group">
-            <label for="quoteText">💬 Quote *</label>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <label for="quoteText" style="margin-bottom: 0;">💬 Quote *</label>
+              <div class="score-radio-group">
+                <label class="score-radio-label">
+                  <input type="radio" name="quoteScore" value="0" checked />
+                  <span>-</span>
+                </label>
+                <label class="score-radio-label">
+                  <input type="radio" name="quoteScore" value="1" />
+                  <span><i class="fa-solid fa-dice-one"></i></span>
+                </label>
+                <label class="score-radio-label">
+                  <input type="radio" name="quoteScore" value="2" />
+                  <span><i class="fa-solid fa-dice-two"></i></span>
+                </label>
+                <label class="score-radio-label">
+                  <input type="radio" name="quoteScore" value="3" />
+                  <span><i class="fa-solid fa-dice-three"></i></span>
+                </label>
+                <label class="score-radio-label">
+                  <input type="radio" name="quoteScore" value="4" />
+                  <span><i class="fa-solid fa-dice-four"></i></span>
+                </label>
+                <label class="score-radio-label">
+                  <input type="radio" name="quoteScore" value="5" />
+                  <span><i class="fa-solid fa-dice-five"></i></span>
+                </label>
+                <label class="score-radio-label">
+                  <input type="radio" name="quoteScore" value="6" />
+                  <span><i class="fa-solid fa-dice-six"></i></span>
+                </label>
+              </div>
+            </div>
             <!-- Quill editor container -->
             <div id="quoteEditor"></div>
             <!-- Hidden field to store the HTML content -->
@@ -787,15 +911,6 @@
                 <option value="JOKES">😂 Jokes</option>
               </select>
             </div>
-
-            <div class="form-group" style="flex: 0.7;">
-              <label for="quoteScore">⭐ Score</label>
-              <input
-                type="text"
-                id="quoteScore"
-                placeholder="Score"
-              />
-            </div>
           </div>
 
           <div class="form-group form-group-with-separator" style="margin-top: 1.5rem;">
@@ -853,14 +968,21 @@
             </button>
           </div>
         </form>
+        </div>
       </div>
     </div>
 
     <!-- Edit Author Modal -->
     <div id="authorModal" class="modal">
       <div class="modal-content">
-        <span class="close close-author">&times;</span>
-        <h2>Edit Author</h2>
+        <div class="modal-header">
+          <div class="modal-header-left">
+            <span class="modal-header-icon">👤</span>
+            <h2>Edit Author</h2>
+          </div>
+          <span class="close close-author">&times;</span>
+        </div>
+        <div class="modal-body">
         <form id="authorForm">
           <input type="hidden" id="authorId" />
 
@@ -939,14 +1061,21 @@
             </button>
           </div>
         </form>
+        </div>
       </div>
     </div>
 
     <!-- Edit Source Modal -->
     <div id="sourceModal" class="modal">
       <div class="modal-content">
-        <span class="close close-source">&times;</span>
-        <h2>Edit Source</h2>
+        <div class="modal-header">
+          <div class="modal-header-left">
+            <span class="modal-header-icon">📚</span>
+            <h2>Edit Source</h2>
+          </div>
+          <span class="close close-source">&times;</span>
+        </div>
+        <div class="modal-body">
         <form id="sourceForm">
           <input type="hidden" id="sourceId" />
 
@@ -1028,14 +1157,21 @@
             </button>
           </div>
         </form>
+        </div>
       </div>
     </div>
 
     <!-- Bulk Import Modal -->
     <div id="bulkModal" class="modal">
       <div class="modal-content modal-large">
-        <span class="close close-bulk">&times;</span>
-        <h2>Add Multiple Quotes</h2>
+        <div class="modal-header">
+          <div class="modal-header-left">
+            <span class="modal-header-icon">📝</span>
+            <h2>Add Multiple Quotes</h2>
+          </div>
+          <span class="close close-bulk">&times;</span>
+        </div>
+        <div class="modal-body">
         <form id="bulkForm">
           <div class="form-row">
             <div class="form-group">
@@ -1104,14 +1240,21 @@ Quote number three..."
             </button>
           </div>
         </form>
+        </div>
       </div>
     </div>
 
     <!-- Import JSON Modal -->
     <div id="importModal" class="modal">
       <div class="modal-content">
-        <span class="close" id="closeImportModal">&times;</span>
-        <h2>Restore Data from Backup</h2>
+        <div class="modal-header">
+          <div class="modal-header-left">
+            <span class="modal-header-icon">📥</span>
+            <h2>Restore Data from Backup</h2>
+          </div>
+          <span class="close" id="closeImportModal">&times;</span>
+        </div>
+        <div class="modal-body">
         <p>
           Choose a backup file (JSON format) to restore your quotes, authors,
           and sources.
@@ -1146,6 +1289,7 @@ Quote number three..."
         <div id="importProgress" style="display: none; margin-top: 20px">
           <h3>Import Progress</h3>
           <div id="importStatus"></div>
+        </div>
         </div>
       </div>
     </div>

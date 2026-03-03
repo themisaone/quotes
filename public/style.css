@@ -5,8 +5,8 @@
 }
 
 :root {
-  --primary-color: #6366f1;
-  --primary-hover: #4f46e5;
+  --primary-color: #1e40af;
+  --primary-hover: #1e3a8a;
   --secondary-color: #64748b;
   --background: #f8fafc;
   --surface: #ffffff;
@@ -16,6 +16,9 @@
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.1);
   --side-menu-width: 240px;
+  --tag-color: #2d6a4f;
+  --cancel-color: #6b7280;
+  --cancel-hover: #4b5563;
 }
 
 body {
@@ -456,24 +459,34 @@ h2 {
 }
 
 .btn-secondary {
-  background: var(--secondary-color);
+  background: var(--primary-color);
   color: white;
 }
 
 .btn-secondary:hover {
-  background: #475569;
+  background: var(--primary-hover);
 }
 
-/* Three different blue shades for the header buttons */
+/* Cancel button styling */
+.btn-cancel {
+  background: var(--cancel-color);
+  color: white;
+}
+
+.btn-cancel:hover {
+  background: var(--cancel-hover);
+}
+
+/* All header buttons use same dark blue */
 .btn-refresh {
-  background: #3b82f6;
+  background: var(--primary-color);
   color: white;
   position: relative;
   transition: all 0.3s ease;
 }
 
 .btn-refresh:hover {
-  background: #2563eb;
+  background: var(--primary-hover);
 }
 
 /* Refreshing animation */
@@ -504,20 +517,18 @@ h2 {
     transform: translate(-50%, -50%) rotate(360deg);
   }
 }
-  background: #2563eb;
-}
 
 .btn-bulk {
-  background: #60a5fa;
+  background: var(--primary-color);
   color: white;
 }
 
 .btn-bulk:hover {
-  background: #3b82f6;
+  background: var(--primary-hover);
 }
 
 .btn-add {
-  background: #1e40af;
+  background: var(--primary-color);
   color: white;
 }
 
@@ -536,7 +547,7 @@ h2 {
 }
 
 .btn-add:hover {
-  background: #1e3a8a;
+  background: var(--primary-hover);
 }
 
 .btn-icon {
@@ -611,17 +622,104 @@ h2 {
 }
 
 .modal-content {
-  background-color: var(--surface);
+  background-color: transparent;
   margin: 0;
-  padding: 2rem;
+  padding: 0;
   border-radius: 12px;
-  width: fit-content;
-  min-width: min(calc(80ch + 4rem), 90vw);
-  max-width: min(calc(80ch + 4rem), 90vw);
+  width: min(calc(80ch + 4rem), 90vw);
   max-height: 90vh;
-  overflow-y: auto;
+  overflow: hidden; /* Clip children to border-radius */
+  display: flex;
+  flex-direction: column;
   box-shadow: var(--shadow-lg);
   animation: slideDown 0.3s;
+}
+
+/* Dark green modal header */
+.modal-header {
+  background: #166534;
+  color: white;
+  padding: 1rem 1.5rem;
+  border-radius: 12px 12px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0;
+  position: relative;
+}
+
+.modal-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.modal-header-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  line-height: 1 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0;
+  margin: 0;
+  vertical-align: middle;
+}
+
+.modal-header h2 {
+  color: white;
+  margin: 0 !important;
+  font-size: 1.3rem;
+  font-weight: 600;
+  line-height: 1 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 0;
+  vertical-align: middle;
+}
+
+/* Quote metadata in header (for edit mode) */
+.quote-metadata-header {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.8rem;
+  margin-left: auto;
+  padding-right: 1rem;
+  white-space: nowrap;
+}
+
+.modal-header .close {
+  color: white;
+  opacity: 0.9;
+  font-size: 2rem;
+  position: relative;
+  top: auto;
+  right: auto;
+  margin: 0;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+  float: none;
+  flex-shrink: 0;
+}
+
+.modal-header .close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  opacity: 1;
+}
+
+/* Modal body padding */
+.modal-body {
+  padding: 2rem;
+  background-color: var(--surface);
+  border-radius: 0 0 12px 12px; /* Round bottom corners */
+  overflow-y: auto; /* Allow scrolling within modal body */
+  flex: 1; /* Take remaining space */
 }
 
 .modal-content .form-group {
@@ -797,6 +895,132 @@ label {
   font-weight: 500;
   color: var(--text-primary);
 }
+
+/* Score radio buttons in modal */
+.score-radio-group {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.score-radio-label {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.3rem 0.5rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  border: 2px solid transparent;
+  box-sizing: border-box;
+}
+
+.score-radio-label:hover {
+  background: #f3f4f6;
+}
+
+.score-radio-label input[type="radio"] {
+  display: none;
+}
+
+.score-radio-label span {
+  font-size: 1.3rem;
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.score-radio-label input[type="radio"]:checked + span {
+  color: #dc2626;
+}
+
+.score-radio-label input[type="radio"]:checked + span i {
+  color: #dc2626;
+}
+
+.score-radio-label:has(input[type="radio"]:checked) {
+  background: #fee2e2;
+  border-color: #dc2626;
+  padding: 0.3rem 0.3rem 0.3rem 0.3rem;
+}
+
+/* Dice score dropdown styling (legacy, may not be needed) */
+#quoteScore,
+.score-dropdown {
+  font-size: 1.3rem;
+  font-family: 'Segoe UI Symbol', 'DejaVu Sans', Arial, sans-serif;
+}
+
+#quoteScore option,
+.score-dropdown option {
+  font-size: 1.3rem;
+  padding: 0.5rem;
+}
+
+/* Red dice icons */
+.fa-dice-one,
+.fa-dice-two,
+.fa-dice-three,
+.fa-dice-four,
+.fa-dice-five,
+.fa-dice-six {
+  color: #dc2626;
+  margin-right: 0.3rem;
+}
+
+/* Score display line (on its own line, like note) */
+.quote-score-line {
+  font-size: 1.3rem;
+  color: #dc2626;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+}
+
+.quote-score-line i {
+  color: #dc2626;
+  font-size: 1.3rem;
+}
+
+/* Score icon inside note title (when both exist) */
+.quote-note-title i {
+  color: #dc2626;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+/* Legacy: Score Badge (top-left corner) - no longer used */
+.score-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(220, 38, 38, 0.95);
+  color: white;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 1.3rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.score-badge i {
+  color: white;
+}
+
+/* Legacy score-dice class (kept for compatibility) */
+.score-dice {
+  color: #dc2626;
+  font-size: 1.5rem;
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 10;
+}
+
 
 label:has(.btn-icon) {
   display: flex;
@@ -1047,6 +1271,10 @@ textarea {
   margin-bottom: 0.5rem;
   line-height: 1;
   padding: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
 }
 
 /* Top section with note, text, and image */
@@ -1166,19 +1394,19 @@ textarea {
   flex-wrap: wrap;
 }
 
-.meta-from {
+.meta-from, .meta-by {
   color: var(--text-secondary);
   font-style: italic;
-  font-size: 0.7rem;
+  font-size: 0.8rem;
 }
 
 .type-icon-badge {
   display: inline-block;
-  padding: 0.25rem 0.6rem;
+  padding: 0rem 0.8rem 0rem 0rem;
   border-radius: 12px;
-  background: #6c757d;
+  background: transparent;
   color: white;
-  font-size: 0.8rem;
+  font-size: 1.5rem; /* Increased from 0.8rem */
 }
 
 /* Quill formatted content in quote cards */
@@ -1512,7 +1740,7 @@ textarea {
 
 .tag {
   display: inline-block;
-  background: #2d6a4f;
+  background: var(--tag-color);
   color: white;
   padding: 0.25rem 0.75rem;
   border-radius: 12px;
@@ -1611,6 +1839,10 @@ textarea {
   
   /* Modal adjustments for tablet */
   .modal-content {
+    padding: 0 !important;
+  }
+  
+  .modal-body {
     padding: 1.25rem !important;
   }
   
@@ -1762,6 +1994,30 @@ textarea {
     margin: 0.8rem 0;
   }
   
+  /* Modal header tablet adjustments */
+  .modal-header {
+    padding: 0.85rem 1.25rem;
+  }
+  
+  .modal-header h2 {
+    font-size: 1.1rem !important;
+    line-height: 1 !important;
+  }
+  
+  .modal-header-icon {
+    font-size: 1.3rem !important;
+    line-height: 1 !important;
+  }
+  
+  .quote-metadata-header {
+    font-size: 0.7rem;
+    padding-right: 0.5rem;
+  }
+  
+  .modal-body {
+    padding: 1.5rem;
+  }
+  
   /* Header and title adjustments */
   .main-content {
     padding-top: 1rem;
@@ -1845,6 +2101,13 @@ textarea {
     gap: 0.75rem !important;
     margin: 0 !important;
     padding: 0 !important;
+  }
+  
+  /* Natural sizing still works on tablet - override grid */
+  .quotes-list.natural-sizing {
+    display: block !important;
+    column-count: 2 !important;
+    column-gap: 0.75rem !important;
   }
   
   .quote-card {
@@ -2379,7 +2642,7 @@ textarea {
   font-weight: 500;
 }
 
-.welcome-meta-left .meta-from {
+.welcome-meta-left .meta-from, .welcome-meta-left .meta-by {
   color: var(--text-secondary);
   font-style: italic;
   font-size: 0.75rem;
@@ -2952,6 +3215,11 @@ textarea {
     display: none !important;
   }
   
+  /* Natural sizing: single column on tablet/mobile */
+  .quotes-list.natural-sizing {
+    column-count: 1;
+  }
+  
   /* Move side menu to bottom as navigation bar */
   .app-layout {
     flex-direction: column !important;
@@ -3117,6 +3385,13 @@ textarea {
   .quotes-list {
     grid-template-columns: 1fr !important;
     gap: 0.5rem !important;
+  }
+  
+  /* Natural sizing still works on tablet */
+  .quotes-list.natural-sizing {
+    display: block !important;
+    column-count: 1 !important;
+    column-gap: 0.5rem !important;
   }
   
   .quote-text {
@@ -3365,9 +3640,13 @@ textarea {
   
   /* Compact modals */
   .modal-content {
-    padding: 1.5rem !important;
+    padding: 0 !important;
     margin: 1rem !important;
     max-width: calc(100% - 2rem) !important;
+  }
+  
+  .modal-body {
+    padding: 1.5rem !important;
   }
   
   /* Compact form elements */
