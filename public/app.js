@@ -588,6 +588,16 @@ function openAddModal() {
     quillEditor.setText('');
   }
   
+  // Clear selected tags
+  selectedTagsArray = [];
+  updateSelectedTagsDisplay();
+  
+  // Reset score to 0 (no score)
+  const defaultScoreRadio = document.querySelector('input[name="quoteScore"][value="0"]');
+  if (defaultScoreRadio) {
+    defaultScoreRadio.checked = true;
+  }
+  
   // Set default values for new quotes
   authorInput.value = "Unknown Author";
   const sourceTypeSelect = document.getElementById("sourceType");

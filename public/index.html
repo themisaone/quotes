@@ -193,18 +193,21 @@
                   <!-- Type Filter Dropdown -->
                   <div class="type-filter-dropdown-container">
                     <button type="button" id="typeFilterToggle" class="type-filter-toggle">
-                      <span>📋 Quote sources</span>
+                      <span>📋 Select Quote Sources</span>
                       <span class="dropdown-arrow">▼</span>
                     </button>
                     <div id="typeFilterDropdown" class="type-filter-dropdown">
-                      <button type="button" id="typeSelectAllBtn" class="type-select-all-btn">
-                        <span class="type-icon">✓</span>
-                        <span>Select All</span>
-                      </button>
-                      <button type="button" id="typeDeselectAllBtn" class="type-select-all-btn">
-                        <span class="type-icon">✗</span>
-                        <span>Deselect All</span>
-                      </button>
+                      <div class="type-action-buttons">
+                        <button type="button" id="typeSelectAllBtn" class="type-action-btn">
+                          <span class="type-icon">✓</span>
+                          <span>Select All</span>
+                        </button>
+                        <div class="type-action-separator"></div>
+                        <button type="button" id="typeDeselectAllBtn" class="type-action-btn">
+                          <span class="type-icon">✗</span>
+                          <span>Clear All</span>
+                        </button>
+                      </div>
                       <div class="type-filter-separator"></div>
                       <label class="type-filter-option">
                         <input type="checkbox" id="filterQuoteBook" value="BOOK" checked />

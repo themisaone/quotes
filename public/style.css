@@ -344,7 +344,7 @@ header h1 {
   border-radius: 8px;
   box-shadow: var(--shadow-lg);
   z-index: 100;
-  min-width: 220px;
+  min-width: 260px;
   padding: 0.5rem 0;
 }
 
@@ -352,28 +352,44 @@ header h1 {
   display: block;
 }
 
-.type-select-all-btn {
+/* Type action buttons container (Select All / Clear All) */
+.type-action-buttons {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.5rem 1rem;
   width: 100%;
+  background: none;
+  border: none;
+}
+
+.type-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  flex: 1;
   background: none;
   border: none;
   cursor: pointer;
   transition: background 0.2s;
   font-size: 1rem;
-  text-align: left;
+  font-weight: 500;
   color: var(--primary-color);
-  font-weight: 600;
 }
 
-.type-select-all-btn:hover {
+.type-action-btn:hover {
   background: #e0f2fe;
 }
 
-.type-select-all-btn .type-icon {
+.type-action-btn .type-icon {
   font-size: 1.1rem;
+}
+
+.type-action-separator {
+  width: 1px;
+  height: 24px;
+  background: var(--border);
+  flex-shrink: 0;
 }
 
 .type-filter-option {
