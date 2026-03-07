@@ -1,0 +1,54 @@
+{
+  "quoteTypes": [
+    {
+      "value": "BOOK",
+      "label": "Book",
+      "icon": "📖"
+    },
+    {
+      "value": "MOVIE-TV",
+      "label": "Movies & TV",
+      "icon": "🎬"
+    },
+    {
+      "value": "POETRY",
+      "label": "Poetry",
+      "icon": "📜"
+    },
+    {
+      "value": "LYRICS",
+      "label": "Lyrics",
+      "icon": "🎵"
+    },
+    {
+      "value": "JOKES",
+      "label": "Jokes",
+      "icon": "😂"
+    },
+    {
+      "value": "ASSORTED",
+      "label": "Assorted",
+      "icon": "📝"
+    }
+  ],
+  "downscaleQuoteImages": false,
+  "externalStorageThreshold": 1,
+  "compactMode": false,
+  "enableTagOperations": true,
+  "enableQuoteMetaSearches": false,
+  "displayQuotesByRealSize": true,
+  "displayImageQuotesLong": false,
+  "showLongQuotesExpanded": false,
+  "displayScoreInCards": true,
+  "colors": {
+    "button": "#1e40af",
+    "header": "#166534",
+    "tag": "#2d6a4f",
+    "delete": "#ef4444",
+    "cancel": "#6b7280",
+    "activeCounter": "#dc2626",
+    "totalCounter": "#047857",
+    "menu": "#2c3e50",
+    "appBg": "#f8fafc"
+  }
+}

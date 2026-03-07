@@ -209,36 +209,10 @@
                         </button>
                       </div>
                       <div class="type-filter-separator"></div>
-                      <label class="type-filter-option">
-                        <input type="checkbox" id="filterQuoteBook" value="BOOK" checked />
-                        <span class="type-icon">📖</span>
-                        <span>Books</span>
-                      </label>
-                      <label class="type-filter-option">
-                        <input type="checkbox" id="filterQuoteMovie" value="MOVIE-TV" checked />
-                        <span class="type-icon">🎬</span>
-                        <span>Movies & TV</span>
-                      </label>
-                      <label class="type-filter-option">
-                        <input type="checkbox" id="filterQuotePoetry" value="POETRY" checked />
-                        <span class="type-icon">📜</span>
-                        <span>Poetry</span>
-                      </label>
-                      <label class="type-filter-option">
-                        <input type="checkbox" id="filterQuoteLyrics" value="LYRICS" checked />
-                        <span class="type-icon">🎵</span>
-                        <span>Lyrics</span>
-                      </label>
-                      <label class="type-filter-option">
-                        <input type="checkbox" id="filterQuoteJokes" value="JOKES" checked />
-                        <span class="type-icon">😂</span>
-                        <span>Jokes</span>
-                      </label>
-                      <label class="type-filter-option">
-                        <input type="checkbox" id="filterQuoteAssorted" value="ASSORTED" checked />
-                        <span class="type-icon">📝</span>
-                        <span>Assorted</span>
-                      </label>
+                      <!-- Type checkboxes will be dynamically populated by populateTypeFilterCheckboxes() -->
+                      <div class="type-filter-options">
+                        <!-- Populated by JavaScript -->
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -821,6 +795,21 @@
                 </p>
               </div>
             </div>
+            
+            <div class="settings-section">
+              <h2>📑 Quote Types</h2>
+              <p class="setting-description" style="margin-bottom: 1rem;">
+                Manage the types of quotes available in your system. These types appear in dropdowns and filters throughout the app.
+              </p>
+              <div class="setting-item">
+                <div id="quoteTypesList" class="quote-types-list">
+                  <!-- Populated by JavaScript -->
+                </div>
+                <button type="button" id="addQuoteTypeBtn" class="btn btn-secondary" style="margin-top: 0.5rem;">
+                  ➕ Add New Type
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -954,7 +943,7 @@
           <div class="form-group form-group-with-separator" style="margin-top: 1.5rem;">
             <label onclick="toggleImageSection()" style="cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
               <span id="imageToggleIcon">▶</span>
-              <span>🏞️ Quote Image</span>
+              <span>📎 Quote Attachment</span>
               <span id="imageIndicator" style="font-size: 0.85rem; color: var(--text-secondary); margin-left: 0.5rem;"></span>
             </label>
             <div id="imageSection" style="display: none; margin-top: 1rem;">
@@ -963,15 +952,15 @@
                   <div class="image-upload-area-horizontal" style="flex: 1;">
                     <div id="quoteImagePreview" class="image-preview">
                       <div class="image-placeholder">
-                        <span>🏞️</span>
-                        <p>Paste image (Ctrl+V) or click to upload</p>
+                        <span>📎</span>
+                        <p>Paste image (Ctrl+V) or click to upload file</p>
                       </div>
                     </div>
                     <div class="image-controls">
                       <input
                         type="file"
                         id="quoteImageFile"
-                        accept="image/*"
+                        accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,video/*,audio/*"
                         style="display: none"
                       />
                       <button
@@ -986,10 +975,10 @@
                         id="clearQuoteImage"
                         class="btn btn-secondary"
                       >
-                        Clear Image
+                        Clear Attachment
                       </button>
                       <small
-                        >Full resolution image saved. Preview shows scaled version.</small
+                        >Supports: Images, PDFs, Documents, Videos. Files >1MB stored externally.</small
                       >
                     </div>
                   </div>

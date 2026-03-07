@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
+const fs = require("fs");
 const pool = require("./db");
 const fileStorage = require("./fileStorage");
 const {
@@ -16,6 +17,15 @@ require("dotenv").config();
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+// Settings file path
+const SETTINGS_FILE = path.join(__dirname, '../config/settings.json');
+
+// Ensure config directory exists
+const configDir = path.dirname(SETTINGS_FILE);
+if (!fs.existsSync(configDir)) {
+  fs.mkdirSync(configDir, { recursive: true });
+}
+
 // Middleware
 app.use(cors());
 app.use(express.json({ limit: "10mb" })); // Increased limit for image uploads
@@ -28,6 +38,78 @@ app.get('/api/config/storage', (req, res) => {
   res.json({
     defaultMaxDbSizeMB: fileStorage.DEFAULT_MAX_SIZE_MB
   });
+});
+
+// Get all settings
+app.get('/api/settings', (req, res) => {
+  try {
+    // Default settings
+    const defaultSettings = {
+      quoteTypes: [
+        { value: 'BOOK', label: 'Book', icon: '📖' },
+        { value: 'MOVIE-TV', label: 'Movies & TV', icon: '🎬' },
+        { value: 'POETRY', label: 'Poetry', icon: '📜' },
+        { value: 'LYRICS', label: 'Lyrics', icon: '🎵' },
+        { value: 'JOKES', label: 'Jokes', icon: '😂' },
+        { value: 'ASSORTED', label: 'Assorted', icon: '📝' }
+      ],
+      downscaleQuoteImages: true,
+      externalStorageThreshold: 1,
+      compactMode: false,
+      enableTagOperations: true,
+      enableQuoteMetaSearches: false,
+      displayQuotesByRealSize: false,
+      displayImageQuotesLong: false,
+      showLongQuotesExpanded: false,
+      displayScoreInCards: false,
+      colors: {
+        button: '#1e40af',
+        header: '#166534',
+        tag: '#2d6a4f',
+        delete: '#ef4444',
+        cancel: '#6b7280',
+        activeCounter: '#dc2626',
+        totalCounter: '#047857',
+        menu: '#2c3e50',
+        appBg: '#f8fafc'
+      }
+    };
+    
+    // Read from file if exists
+    if (fs.existsSync(SETTINGS_FILE)) {
+      const fileContent = fs.readFileSync(SETTINGS_FILE, 'utf8');
+      const settings = JSON.parse(fileContent);
+      res.json(settings);
+    } else {
+      // Create file with defaults
+      fs.writeFileSync(SETTINGS_FILE, JSON.stringify(defaultSettings, null, 2));
+      res.json(defaultSettings);
+    }
+  } catch (error) {
+    console.error('Error reading settings:', error);
+    res.status(500).json({ error: 'Failed to read settings' });
+  }
+});
+
+// Save settings
+app.put('/api/settings', (req, res) => {
+  try {
+    const settings = req.body;
+    
+    // Validate settings structure
+    if (!settings.quoteTypes || !Array.isArray(settings.quoteTypes)) {
+      return res.status(400).json({ error: 'Invalid settings structure' });
+    }
+    
+    // Write to file
+    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2));
+    
+    console.log('✅ Settings saved to file');
+    res.json({ success: true, settings });
+  } catch (error) {
+    console.error('Error saving settings:', error);
+    res.status(500).json({ error: 'Failed to save settings' });
+  }
 });
 
 // Helper function to retrieve images from hybrid storage
@@ -914,6 +996,7 @@ app.post("/api/quotes", async (req, res) => {
       tags = "",
       image = "",
       image_full = "",
+      attachment_type = "image",
       note = "",
       score = null,
       storageThresholdMB = 1, // From frontend settings
@@ -961,18 +1044,18 @@ app.post("/api/quotes", async (req, res) => {
 
     const quoteId = result.rows[0].id;
 
-    // Process images with hybrid storage using user's threshold
+    // Process attachments with hybrid storage using user's threshold
     const processedImage = fileStorage.processForStorage(image, 'quotes', quoteId, '', storageThresholdMB);
     const processedImageFull = fileStorage.processForStorage(image_full, 'quotes', quoteId, '_full', storageThresholdMB);
 
-    console.log(`📦 Quote ${quoteId} image processing (threshold: ${storageThresholdMB} MB):`);
+    console.log(`📦 Quote ${quoteId} attachment processing (type: ${attachment_type}, threshold: ${storageThresholdMB} MB):`);
     console.log(`   Thumbnail: ${image ? `${(image.length/1024).toFixed(0)}KB` : 'none'} → ${processedImage ? (processedImage.startsWith('file:') ? processedImage : `${(processedImage.length/1024).toFixed(0)}KB base64`) : 'none'}`);
     console.log(`   Full: ${image_full ? `${(image_full.length/1024/1024).toFixed(2)}MB` : 'none'} → ${processedImageFull ? (processedImageFull.startsWith('file:') ? processedImageFull : `${(processedImageFull.length/1024).toFixed(0)}KB base64`) : 'none'}`);
 
-    // Update quote with processed images
+    // Update quote with processed attachments and attachment type
     await client.query(
-      `UPDATE quotes SET image = $1, image_full = $2 WHERE id = $3`,
-      [processedImage, processedImageFull, quoteId]
+      `UPDATE quotes SET image = $1, image_full = $2, attachment_type = $3 WHERE id = $4`,
+      [processedImage, processedImageFull, attachment_type, quoteId]
     );
 
     // Handle tags using new tag system (if tables exist)
@@ -1036,6 +1119,7 @@ app.put("/api/quotes/:id", async (req, res) => {
       tags,
       image,
       image_full,
+      attachment_type,
       note,
       score,
       storageThresholdMB = 1, // From frontend settings
@@ -1155,6 +1239,12 @@ app.put("/api/quotes/:id", async (req, res) => {
     if (sourceType !== undefined) {
       updateFields.push(`type = $${paramCounter}`);
       params.push(sourceType);
+      paramCounter++;
+    }
+    
+    if (attachment_type !== undefined) {
+      updateFields.push(`attachment_type = $${paramCounter}`);
+      params.push(attachment_type);
       paramCounter++;
     }
 

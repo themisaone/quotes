@@ -66,6 +66,412 @@ function setupFullscreenEditor() {
   });
 }
 
+// Quote types configuration (can be extended by user)
+const DEFAULT_QUOTE_TYPES = [
+  { value: 'BOOK', label: 'Book', icon: '📖' },
+  { value: 'MOVIE-TV', label: 'Movies & TV', icon: '🎬' },
+  { value: 'POETRY', label: 'Poetry', icon: '📜' },
+  { value: 'LYRICS', label: 'Lyrics', icon: '🎵' },
+  { value: 'JOKES', label: 'Jokes', icon: '😂' },
+  { value: 'ASSORTED', label: 'Assorted', icon: '📝' }
+];
+
+// Global settings cache
+let globalSettings = null;
+
+// Load settings from server
+async function loadSettings() {
+  try {
+    const response = await fetch(`${API_URL}/settings`);
+    if (response.ok) {
+      globalSettings = await response.json();
+      console.log('✅ Settings loaded from file:', globalSettings);
+      
+      // Migrate localStorage to file if needed
+      await migrateLocalStorageToFile();
+      
+      // Apply settings to UI
+      applySettingsToUI();
+      
+      return globalSettings;
+    }
+  } catch (error) {
+    console.error('Error loading settings:', error);
+  }
+  
+  // Fallback to localStorage if server fails
+  console.warn('⚠️  Using localStorage fallback');
+  return null;
+}
+
+// Save settings to server
+async function saveSettings(settings) {
+  try {
+    const response = await fetch(`${API_URL}/settings`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settings)
+    });
+    
+    if (response.ok) {
+      globalSettings = settings;
+      console.log('✅ Settings saved to file');
+      return true;
+    }
+  } catch (error) {
+    console.error('Error saving settings:', error);
+  }
+  return false;
+}
+
+// Get quote types (from global settings or localStorage fallback)
+function getQuoteTypes() {
+  // Try global settings first
+  if (globalSettings && globalSettings.quoteTypes) {
+    return globalSettings.quoteTypes;
+  }
+  
+  // Fallback to localStorage
+  const stored = localStorage.getItem('quoteTypes');
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch (e) {
+      console.error('Error parsing quote types:', e);
+    }
+  }
+  
+  // Final fallback to defaults
+  return DEFAULT_QUOTE_TYPES;
+}
+
+// Save quote types (deprecated - use saveSettings instead)
+function saveQuoteTypes(types) {
+  // Update global settings
+  if (globalSettings) {
+    globalSettings.quoteTypes = types;
+    saveSettings(globalSettings);
+  } else {
+    // Fallback to localStorage
+    localStorage.setItem('quoteTypes', JSON.stringify(types));
+  }
+}
+
+// Migrate localStorage settings to file (one-time)
+async function migrateLocalStorageToFile() {
+  // Check if localStorage has any settings
+  const hasLocalSettings = 
+    localStorage.getItem('downscaleQuoteImages') !== null ||
+    localStorage.getItem('externalStorageThreshold') !== null ||
+    localStorage.getItem('compactMode') !== null ||
+    localStorage.getItem('quoteTypes') !== null ||
+    localStorage.getItem('enableTagOperations') !== null ||
+    localStorage.getItem('enableQuoteMetaSearches') !== null ||
+    localStorage.getItem('displayQuotesByRealSize') !== null ||
+    localStorage.getItem('displayImageQuotesLong') !== null ||
+    localStorage.getItem('showLongQuotesExpanded') !== null ||
+    localStorage.getItem('displayScoreInCards') !== null ||
+    localStorage.getItem('buttonColor') !== null;
+  
+  if (!hasLocalSettings) return;
+  
+  console.log('🔄 Migrating localStorage settings to file...');
+  
+  // Merge localStorage into global settings
+  const migratedSettings = { ...globalSettings };
+  
+  // Quote types
+  if (localStorage.getItem('quoteTypes')) {
+    try {
+      migratedSettings.quoteTypes = JSON.parse(localStorage.getItem('quoteTypes'));
+    } catch (e) {}
+  }
+  
+  // Boolean settings
+  if (localStorage.getItem('downscaleQuoteImages') !== null) {
+    migratedSettings.downscaleQuoteImages = localStorage.getItem('downscaleQuoteImages') !== 'false';
+  }
+  
+  if (localStorage.getItem('compactMode') !== null) {
+    migratedSettings.compactMode = localStorage.getItem('compactMode') === 'true';
+  }
+  
+  if (localStorage.getItem('enableTagOperations') !== null) {
+    migratedSettings.enableTagOperations = localStorage.getItem('enableTagOperations') !== 'false';
+  }
+  
+  if (localStorage.getItem('enableQuoteMetaSearches') !== null) {
+    migratedSettings.enableQuoteMetaSearches = localStorage.getItem('enableQuoteMetaSearches') === 'true';
+  }
+  
+  if (localStorage.getItem('displayQuotesByRealSize') !== null) {
+    migratedSettings.displayQuotesByRealSize = localStorage.getItem('displayQuotesByRealSize') === 'true';
+  }
+  
+  if (localStorage.getItem('displayImageQuotesLong') !== null) {
+    migratedSettings.displayImageQuotesLong = localStorage.getItem('displayImageQuotesLong') === 'true';
+  }
+  
+  if (localStorage.getItem('showLongQuotesExpanded') !== null) {
+    migratedSettings.showLongQuotesExpanded = localStorage.getItem('showLongQuotesExpanded') === 'true';
+  }
+  
+  if (localStorage.getItem('displayScoreInCards') !== null) {
+    migratedSettings.displayScoreInCards = localStorage.getItem('displayScoreInCards') === 'true';
+  }
+  
+  // Numeric settings
+  if (localStorage.getItem('externalStorageThreshold')) {
+    migratedSettings.externalStorageThreshold = parseFloat(localStorage.getItem('externalStorageThreshold'));
+  }
+  
+  // Colors
+  if (!migratedSettings.colors) {
+    migratedSettings.colors = {};
+  }
+  
+  const colorKeys = ['button', 'header', 'tag', 'delete', 'cancel', 'activeCounter', 'totalCounter', 'menu', 'appBg'];
+  colorKeys.forEach(key => {
+    const localKey = key + 'Color';
+    if (localStorage.getItem(localKey)) {
+      migratedSettings.colors[key] = localStorage.getItem(localKey);
+    }
+  });
+  
+  // Save to file
+  const success = await saveSettings(migratedSettings);
+  
+  if (success) {
+    console.log('✅ Migration complete - settings saved to file');
+    // Keep localStorage for now (don't break if offline)
+  }
+}
+
+// Apply settings to UI
+function applySettingsToUI() {
+  if (!globalSettings) return;
+  
+  // Apply compact mode
+  if (globalSettings.compactMode) {
+    document.body.classList.add('compact-mode');
+    const toggle = document.getElementById('compactModeToggle');
+    if (toggle) toggle.checked = true;
+  }
+  
+  // Apply downscale setting
+  const downscaleToggle = document.getElementById('downscaleQuoteImages');
+  if (downscaleToggle) {
+    downscaleToggle.checked = globalSettings.downscaleQuoteImages !== false;
+  }
+  
+  // Apply storage threshold
+  const thresholdSelect = document.getElementById('externalStorageThreshold');
+  if (thresholdSelect) {
+    thresholdSelect.value = globalSettings.externalStorageThreshold || 1;
+  }
+  
+  // Apply all boolean settings
+  const boolSettings = [
+    'enableTagOperations',
+    'enableQuoteMetaSearches',
+    'displayQuotesByRealSize',
+    'displayImageQuotesLong',
+    'showLongQuotesExpanded',
+    'displayScoreInCards'
+  ];
+  
+  boolSettings.forEach(setting => {
+    const element = document.getElementById(setting);
+    if (element && globalSettings[setting] !== undefined) {
+      element.checked = globalSettings[setting];
+    }
+  });
+  
+  // Apply colors
+  if (globalSettings.colors) {
+    const colorMap = {
+      button: 'buttonColor',
+      header: 'headerColor',
+      tag: 'tagColor',
+      delete: 'deleteColor',
+      cancel: 'cancelColor',
+      activeCounter: 'activeCounterColor',
+      totalCounter: 'totalCounterColor',
+      menu: 'menuColor',
+      appBg: 'appBgColor'
+    };
+    
+    Object.keys(colorMap).forEach(key => {
+      const color = globalSettings.colors[key];
+      if (color) {
+        const elementId = colorMap[key];
+        const picker = document.getElementById(elementId);
+        const text = document.getElementById(elementId + 'Text');
+        
+        if (picker) picker.value = color;
+        if (text) text.value = color;
+        
+        // Apply color to CSS variables
+        applyColorToCSS(key, color);
+      }
+    });
+  }
+}
+
+// Helper to apply color to CSS
+function applyColorToCSS(colorType, colorValue) {
+  const root = document.documentElement;
+  
+  switch(colorType) {
+    case 'button':
+      root.style.setProperty('--primary-color', colorValue);
+      root.style.setProperty('--primary-hover', adjustBrightness(colorValue, -10));
+      break;
+    case 'header':
+      root.style.setProperty('--header-color', colorValue);
+      break;
+    case 'tag':
+      root.style.setProperty('--tag-color', colorValue);
+      break;
+    case 'delete':
+      root.style.setProperty('--delete-color', colorValue);
+      break;
+    case 'cancel':
+      root.style.setProperty('--cancel-color', colorValue);
+      break;
+    case 'activeCounter':
+      root.style.setProperty('--active-counter-color', colorValue);
+      break;
+    case 'totalCounter':
+      root.style.setProperty('--total-counter-color', colorValue);
+      break;
+    case 'menu':
+      root.style.setProperty('--menu-color', colorValue);
+      break;
+    case 'appBg':
+      root.style.setProperty('--background', colorValue);
+      break;
+  }
+}
+
+// Helper function to adjust brightness
+function adjustBrightness(hex, percent) {
+  const num = parseInt(hex.replace('#', ''), 16);
+  const amt = Math.round(2.55 * percent);
+  const R = (num >> 16) + amt;
+  const G = (num >> 8 & 0x00FF) + amt;
+  const B = (num & 0x0000FF) + amt;
+  return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+    (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
+    (B < 255 ? B < 1 ? 0 : B : 255))
+    .toString(16).slice(1);
+}
+
+// Update a setting (writes to both file and localStorage for backup)
+async function updateSetting(key, value) {
+  // Update localStorage (backup)
+  localStorage.setItem(key, value);
+  
+  // Update global settings
+  if (!globalSettings) return;
+  
+  // Handle nested keys (e.g., "colors.button")
+  if (key.includes('.')) {
+    const parts = key.split('.');
+    let obj = globalSettings;
+    for (let i = 0; i < parts.length - 1; i++) {
+      if (!obj[parts[i]]) obj[parts[i]] = {};
+      obj = obj[parts[i]];
+    }
+    obj[parts[parts.length - 1]] = value;
+  } else {
+    globalSettings[key] = value;
+  }
+  
+  // Save to file
+  await saveSettings(globalSettings);
+}
+
+// Populate type dropdowns dynamically
+function populateTypeDropdowns() {
+  const types = getQuoteTypes();
+  
+  // Find all type dropdowns
+  const dropdowns = [
+    document.getElementById('sourceType'),      // Quote modal
+    document.getElementById('sourceTypeEdit'), // Source edit modal  
+    document.getElementById('authorTypeFilter') // Author filter (if exists)
+  ].filter(Boolean); // Remove nulls
+  
+  dropdowns.forEach(dropdown => {
+    const currentValue = dropdown.value;
+    
+    // Clear existing options except "Clear Type" if it exists
+    dropdown.innerHTML = '';
+    
+    // Add "Clear Type" option for quote modal (to go back to Assorted/null)
+    if (dropdown.id === 'sourceType') {
+      const clearOption = document.createElement('option');
+      clearOption.value = '';
+      clearOption.textContent = '✖️ Clear Type (Assorted)';
+      dropdown.appendChild(clearOption);
+    }
+    
+    // Add all type options
+    types.forEach(type => {
+      const option = document.createElement('option');
+      option.value = type.value;
+      option.textContent = `${type.icon} ${type.label}`;
+      dropdown.appendChild(option);
+    });
+    
+    // Restore previous selection if it still exists
+    if (currentValue && Array.from(dropdown.options).some(opt => opt.value === currentValue)) {
+      dropdown.value = currentValue;
+    } else if (dropdown.id === 'sourceType') {
+      // Default to BOOK for quote modal if no previous value
+      dropdown.value = types.find(t => t.value === 'BOOK')?.value || types[0]?.value || '';
+    }
+  });
+  
+  // Also update type filter checkboxes
+  populateTypeFilterCheckboxes();
+}
+
+// Populate type filter checkboxes in search area
+function populateTypeFilterCheckboxes() {
+  const types = getQuoteTypes();
+  const container = document.querySelector('.type-filter-options');
+  
+  if (!container) return;
+  
+  // Store current checked states
+  const checkedStates = {};
+  container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    checkedStates[cb.id] = cb.checked;
+  });
+  
+  // Clear and rebuild
+  container.innerHTML = '';
+  
+  types.forEach(type => {
+    const checkboxId = `filterQuote${type.value.replace(/-/g, '')}`;
+    const label = document.createElement('label');
+    label.className = 'type-filter-option';
+    label.innerHTML = `
+      <input type="checkbox" id="${checkboxId}" data-type="${type.value}" ${checkedStates[checkboxId] !== false ? 'checked' : ''}>
+      <span>${type.icon} ${type.label}</span>
+    `;
+    container.appendChild(label);
+    
+    // Re-attach event listener
+    const checkbox = label.querySelector('input');
+    checkbox.addEventListener('change', () => {
+      typeFilterChanged = true;
+    });
+  });
+}
+
 // Pagination state
 let currentPage = 1;
 const quotesPerPage = 20;
@@ -111,6 +517,9 @@ const clearQuoteImageBtn = document.getElementById("clearQuoteImage");
 // State for quote image
 let currentQuoteImage = "";
 let currentQuoteImageFull = ""; // Store original size
+let currentAttachmentType = "image"; // Track: image, pdf, document, video, audio
+let currentAttachmentFileName = ""; // Track filename for non-image files
+let typeFilterChanged = false; // Track if type filter has changed
 
 // Search inputs
 const searchQuote = document.getElementById("searchQuote");
@@ -127,7 +536,13 @@ let autocompleteTimeout = null;
 let currentFocus = -1;
 
 // Initialize
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+  // Load settings from file first
+  await loadSettings();
+  
+  // Initialize quote types in dropdowns
+  populateTypeDropdowns();
+  
   // Initialize Quill editor
   initializeQuillEditor();
   
@@ -427,7 +842,6 @@ function setupEventListeners() {
   const typeFilterDropdown = document.getElementById("typeFilterDropdown");
   const typeSelectAllBtn = document.getElementById("typeSelectAllBtn");
   const typeCheckboxes = document.querySelectorAll('.type-filter-option input[type="checkbox"]');
-  let typeFilterChanged = false;
 
   if (typeFilterToggle && typeFilterDropdown) {
     // Toggle dropdown
@@ -491,7 +905,9 @@ function setupEventListeners() {
     if (typeSelectAllBtn) {
       typeSelectAllBtn.addEventListener("click", (e) => {
         e.stopPropagation();
-        typeCheckboxes.forEach(checkbox => {
+        // Query checkboxes dynamically (they're populated after page load)
+        const checkboxes = document.querySelectorAll('.type-filter-option input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
           checkbox.checked = true;
         });
         typeFilterChanged = true;
@@ -503,19 +919,16 @@ function setupEventListeners() {
     if (typeDeselectAllBtn) {
       typeDeselectAllBtn.addEventListener("click", (e) => {
         e.stopPropagation();
-        typeCheckboxes.forEach(checkbox => {
+        // Query checkboxes dynamically (they're populated after page load)
+        const checkboxes = document.querySelectorAll('.type-filter-option input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
           checkbox.checked = false;
         });
         typeFilterChanged = true;
       });
     }
 
-    // Update when individual checkboxes change
-    typeCheckboxes.forEach(checkbox => {
-      checkbox.addEventListener("change", () => {
-        typeFilterChanged = true;
-      });
-    });
+    // Update when individual checkboxes change (handled in populateTypeFilterCheckboxes)
   }
 
   // Note: Modal can only be closed via Cancel button, X button, or Save button
@@ -738,9 +1151,17 @@ function openEditModal(quote) {
   // Set quote images if exist
   currentQuoteImage = quote.image || "";
   currentQuoteImageFull = quote.image_full || "";
+  currentAttachmentType = quote.attachment_type || "image";
 
   if (currentQuoteImage) {
-    displayImage(quoteImagePreview, currentQuoteImage);
+    // Check if it's an icon thumbnail (non-image attachment)
+    if (currentAttachmentType !== 'image') {
+      // Show icon preview for PDFs, docs, etc.
+      const icon = getAttachmentIcon(currentAttachmentType);
+      displayAttachmentPreview(quoteImagePreview, icon, "Attachment", "");
+    } else {
+      displayImage(quoteImagePreview, currentQuoteImage);
+    }
   } else {
     clearImagePreview(quoteImagePreview, "quote");
   }
@@ -767,6 +1188,11 @@ function closeQuoteModal() {
   quoteModal.style.display = "none";
   quoteForm.reset();
   editingQuoteId = null;
+  currentQuoteImage = "";
+  currentQuoteImageFull = "";
+  currentAttachmentType = "image";
+  currentAttachmentFileName = "";
+  clearImagePreview(quoteImagePreview, "quote");
   authorSuggestions.classList.remove("show");
   sourceSuggestions.classList.remove("show");
 }
@@ -812,25 +1238,20 @@ async function loadQuotes() {
     if (searchTags.value) params.append("tags", searchTags.value);
     if (searchScore.value) params.append("score", searchScore.value);
 
-    // Add type filter
+    // Add type filter - dynamically based on configured types
     const selectedTypes = [];
-    if (document.getElementById("filterQuoteBook")?.checked)
-      selectedTypes.push("BOOK");
-    if (document.getElementById("filterQuoteMovie")?.checked)
-      selectedTypes.push("MOVIE-TV");
-    if (document.getElementById("filterQuotePoetry")?.checked)
-      selectedTypes.push("POETRY");
-    if (document.getElementById("filterQuoteLyrics")?.checked)
-      selectedTypes.push("LYRICS");
-    if (document.getElementById("filterQuoteJokes")?.checked)
-      selectedTypes.push("JOKES");
-    if (document.getElementById("filterQuoteAssorted")?.checked)
-      selectedTypes.push("ASSORTED");
+    const typeCheckboxes = document.querySelectorAll('.type-filter-option input[type="checkbox"]');
+    typeCheckboxes.forEach(checkbox => {
+      if (checkbox.checked) {
+        selectedTypes.push(checkbox.dataset.type);
+      }
+    });
     
     console.log("loadQuotes - selectedTypes:", selectedTypes, "length:", selectedTypes.length);
     
     // Only add types filter if not all types are selected (optimization)
-    const totalTypes = 6; // BOOK, MOVIE-TV, POETRY, LYRICS, JOKES, ASSORTED
+    const quoteTypes = getQuoteTypes();
+    const totalTypes = quoteTypes.length;
     if (selectedTypes.length > 0 && selectedTypes.length < totalTypes) {
       params.append("types", selectedTypes.join(","));
       console.log("Adding types to query:", selectedTypes.join(","));
@@ -901,23 +1322,18 @@ async function loadTotalCount() {
     if (searchTags.value) params.append("tags", searchTags.value);
     if (searchScore.value) params.append("score", searchScore.value);
 
-    // Add type filter
+    // Add type filter - dynamically based on configured types
     const selectedTypes = [];
-    if (document.getElementById("filterQuoteBook")?.checked)
-      selectedTypes.push("BOOK");
-    if (document.getElementById("filterQuoteMovie")?.checked)
-      selectedTypes.push("MOVIE-TV");
-    if (document.getElementById("filterQuotePoetry")?.checked)
-      selectedTypes.push("POETRY");
-    if (document.getElementById("filterQuoteLyrics")?.checked)
-      selectedTypes.push("LYRICS");
-    if (document.getElementById("filterQuoteJokes")?.checked)
-      selectedTypes.push("JOKES");
-    if (document.getElementById("filterQuoteAssorted")?.checked)
-      selectedTypes.push("ASSORTED");
+    const typeCheckboxes = document.querySelectorAll('.type-filter-option input[type="checkbox"]');
+    typeCheckboxes.forEach(checkbox => {
+      if (checkbox.checked) {
+        selectedTypes.push(checkbox.dataset.type);
+      }
+    });
     
     // Only add types filter if not all types are selected (optimization)
-    const totalTypes = 6; // BOOK, MOVIE-TV, POETRY, LYRICS, JOKES, ASSORTED
+    const quoteTypes = getQuoteTypes();
+    const totalTypes = quoteTypes.length;
     if (selectedTypes.length > 0 && selectedTypes.length < totalTypes) {
       params.append("types", selectedTypes.join(","));
     }
@@ -984,13 +1400,14 @@ async function handleSubmit(e) {
     quote: document.getElementById("quoteText").value,
     author: document.getElementById("author").value,
     source: document.getElementById("source").value,
-    sourceType: document.getElementById("sourceType").value,
+    sourceType: document.getElementById("sourceType").value || "ASSORTED", // Empty means Assorted
     sourceId: window.currentSourceId || null,
     tags: document.getElementById("tags").value,
     note: noteInput.value,
     score: document.querySelector('input[name="quoteScore"]:checked')?.value || "0",
     image: currentQuoteImage,
     image_full: currentQuoteImageFull,
+    attachment_type: currentAttachmentType,
     storageThresholdMB: parseFloat(localStorage.getItem('externalStorageThreshold') || '1'),
   };
 
@@ -1240,7 +1657,7 @@ function createQuoteCard(quote) {
                             ${isLongQuote ? `<button class="expand-btn" id="${expandBtnId}" onclick="event.stopPropagation(); toggleQuoteExpand('${quote.id}')">▼ Show more</button>` : ""}
                         </div>
                     </div>
-                    ${quote.image ? `<div class="quote-image-thumb" onclick="event.stopPropagation(); showFullImage('${quote.image_full || quote.image}', ${quote.id})"><img src="${quote.image}" alt="Quote image"></div>` : ""}
+                    ${quote.image ? `<div class="quote-image-thumb" onclick="event.stopPropagation(); showFullImage('${quote.image_full || quote.image}', ${quote.id}, '${quote.attachment_type || 'image'}')"><img src="${quote.image}" alt="Quote attachment"></div>` : ""}
                 </div>
                 <div class="quote-separator"></div>
                 <div class="quote-metadata-row">
@@ -1298,25 +1715,46 @@ function toggleQuoteExpand(quoteId) {
 }
 
 // Show full-size image in modal (make it global for onclick)
-window.showFullImage = function (imageSrc, quoteId = null) {
+window.showFullImage = function (imageSrc, quoteId = null, attachmentType = 'image') {
   // Handle file references from external storage
   let actualSrc = imageSrc;
   let isExternalFile = false;
   let filePath = null;
+  let mimeType = 'image/jpeg';
   
   if (imageSrc && imageSrc.startsWith('file:')) {
     isExternalFile = true;
     // Parse: "file:quotes/123.jpg:image/jpeg" -> "/attachments/quotes/123.jpg"
     const parts = imageSrc.split(':');
     filePath = parts[1]; // "quotes/123_full.jpg"
+    mimeType = parts[2] || 'image/jpeg';
     actualSrc = `/attachments/${filePath}`;
   }
   
+  // For PDFs and other documents, show PDF viewer
+  if (attachmentType === 'pdf' || mimeType === 'application/pdf') {
+    showPDFViewer(actualSrc, filePath);
+    return;
+  }
+  
+  // For videos, show video player
+  if (attachmentType === 'video' || mimeType.startsWith('video/')) {
+    showVideoPlayer(actualSrc, filePath);
+    return;
+  }
+  
+  // For audio, show audio player
+  if (attachmentType === 'audio' || mimeType.startsWith('audio/')) {
+    showAudioPlayer(actualSrc, filePath);
+    return;
+  }
+  
+  // Default: Image viewer
   const modal = document.createElement("div");
   modal.className = "image-modal";
   
-  // Add downscale button if it's an external file
-  const downscaleButton = isExternalFile && quoteId ? `
+  // Add downscale button if it's an external image file
+  const downscaleButton = isExternalFile && quoteId && attachmentType === 'image' ? `
     <button id="downscaleImageBtn" class="btn btn-primary" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 10001; padding: 0.75rem 1.5rem; font-size: 1rem;">
       📦 Downscale to 1024px & Move to DB
     </button>
@@ -1335,7 +1773,7 @@ window.showFullImage = function (imageSrc, quoteId = null) {
   document.body.appendChild(modal);
   
   // Setup downscale button handler
-  if (isExternalFile && quoteId) {
+  if (isExternalFile && quoteId && attachmentType === 'image') {
     const btn = document.getElementById('downscaleImageBtn');
     if (btn) {
       btn.onclick = async (e) => {
@@ -1345,6 +1783,88 @@ window.showFullImage = function (imageSrc, quoteId = null) {
     }
   }
 };
+
+// Show PDF viewer
+function showPDFViewer(pdfSrc, filePath) {
+  const modal = document.createElement("div");
+  modal.className = "image-modal";
+  
+  const filename = filePath ? filePath.split('/').pop() : 'document.pdf';
+  
+  modal.innerHTML = `
+    <div class="image-modal-content" style="max-width: 90vw; max-height: 90vh; width: auto; height: auto;">
+      <div style="background: #333; padding: 1rem; display: flex; justify-content: space-between; align-items: center; border-radius: 8px 8px 0 0;">
+        <span style="color: white; font-weight: 500;">📄 ${escapeHtml(filename)}</span>
+        <span class="image-modal-close" onclick="this.parentElement.parentElement.parentElement.remove()" style="position: static; color: white; font-size: 2rem; cursor: pointer;">&times;</span>
+      </div>
+      <div style="background: white; padding: 0; height: 80vh; border-radius: 0 0 8px 8px;">
+        <embed src="${pdfSrc}" type="application/pdf" width="100%" height="100%" style="border: none; border-radius: 0 0 8px 8px;" />
+      </div>
+    </div>
+  `;
+  
+  modal.onclick = (e) => {
+    if (e.target === modal) modal.remove();
+  };
+  
+  document.body.appendChild(modal);
+}
+
+// Show video player
+function showVideoPlayer(videoSrc, filePath) {
+  const modal = document.createElement("div");
+  modal.className = "image-modal";
+  
+  const filename = filePath ? filePath.split('/').pop() : 'video';
+  
+  modal.innerHTML = `
+    <div class="image-modal-content">
+      <div style="background: #333; padding: 1rem; display: flex; justify-content: space-between; align-items: center; border-radius: 8px 8px 0 0;">
+        <span style="color: white; font-weight: 500;">🎬 ${escapeHtml(filename)}</span>
+        <span class="image-modal-close" onclick="this.parentElement.parentElement.parentElement.remove()" style="position: static; color: white; font-size: 2rem; cursor: pointer;">&times;</span>
+      </div>
+      <video controls style="max-width: 90vw; max-height: 80vh; border-radius: 0 0 8px 8px;">
+        <source src="${videoSrc}">
+        Your browser does not support the video tag.
+      </video>
+    </div>
+  `;
+  
+  modal.onclick = (e) => {
+    if (e.target === modal) modal.remove();
+  };
+  
+  document.body.appendChild(modal);
+}
+
+// Show audio player
+function showAudioPlayer(audioSrc, filePath) {
+  const modal = document.createElement("div");
+  modal.className = "image-modal";
+  
+  const filename = filePath ? filePath.split('/').pop() : 'audio';
+  
+  modal.innerHTML = `
+    <div class="image-modal-content" style="max-width: 500px;">
+      <div style="background: #333; padding: 1rem; display: flex; justify-content: space-between; align-items: center; border-radius: 8px 8px 0 0;">
+        <span style="color: white; font-weight: 500;">🎵 ${escapeHtml(filename)}</span>
+        <span class="image-modal-close" onclick="this.parentElement.parentElement.parentElement.remove()" style="position: static; color: white; font-size: 2rem; cursor: pointer;">&times;</span>
+      </div>
+      <div style="background: #f9f9f9; padding: 2rem; border-radius: 0 0 8px 8px;">
+        <audio controls style="width: 100%;">
+          <source src="${audioSrc}">
+          Your browser does not support the audio tag.
+        </audio>
+      </div>
+    </div>
+  `;
+  
+  modal.onclick = (e) => {
+    if (e.target === modal) modal.remove();
+  };
+  
+  document.body.appendChild(modal);
+}
 
 async function downscaleAndMoveToDb(quoteId, imageUrl, filePath, modal) {
   const btn = document.getElementById('downscaleImageBtn');
@@ -1726,6 +2246,127 @@ function handleSourceFileSelect(e) {
 }
 
 // Read Image File
+// Read attachment file (images, PDFs, documents, etc.)
+function readAttachmentFile(file, type) {
+  if (type !== "quote") {
+    // For author/source, only images allowed
+    readImageFile(file, type);
+    return;
+  }
+  
+  // Determine attachment type
+  const mimeType = file.type;
+  let attachmentType = "document"; // default
+  
+  if (mimeType.startsWith("image/")) {
+    attachmentType = "image";
+  } else if (mimeType === "application/pdf") {
+    attachmentType = "pdf";
+  } else if (mimeType.startsWith("video/")) {
+    attachmentType = "video";
+  } else if (mimeType.startsWith("audio/")) {
+    attachmentType = "audio";
+  }
+  
+  currentAttachmentType = attachmentType;
+  currentAttachmentFileName = file.name;
+  
+  console.log(`📎 Reading ${attachmentType} file: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+  
+  // Handle images differently - downscale if needed
+  if (attachmentType === "image") {
+    readImageFile(file, type);
+    return;
+  }
+  
+  // For non-images (PDF, docs, videos), read as-is
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const base64Data = e.target.result;
+    
+    // Store full file
+    currentQuoteImageFull = base64Data;
+    
+    // Create icon/preview for thumbnail
+    const icon = getAttachmentIcon(attachmentType);
+    const sizeText = formatFileSize(base64Data.length);
+    
+    currentQuoteImage = createIconThumbnail(icon, file.name, sizeText);
+    
+    // Display preview
+    displayAttachmentPreview(quoteImagePreview, icon, file.name, sizeText);
+    updateImageIndicator();
+    
+    console.log(`✅ Loaded ${attachmentType}: ${file.name}, Size: ${sizeText}`);
+  };
+  
+  reader.readAsDataURL(file);
+}
+
+// Get icon for attachment type
+function getAttachmentIcon(type) {
+  const icons = {
+    pdf: "📄",
+    document: "📝",
+    video: "🎬",
+    audio: "🎵",
+    image: "🖼️"
+  };
+  return icons[type] || "📎";
+}
+
+// Format file size
+function formatFileSize(bytes) {
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+  return (bytes / 1024 / 1024).toFixed(1) + " MB";
+}
+
+// Create icon thumbnail (base64 icon for cards)
+function createIconThumbnail(icon, filename, size) {
+  // Create a small canvas with icon
+  const canvas = document.createElement("canvas");
+  canvas.width = 240;
+  canvas.height = 240;
+  const ctx = canvas.getContext("2d");
+  
+  // Background
+  ctx.fillStyle = "#f0f0f0";
+  ctx.fillRect(0, 0, 240, 240);
+  
+  // Icon
+  ctx.font = "80px Arial";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(icon, 120, 100);
+  
+  // Filename (truncated)
+  ctx.font = "14px Arial";
+  ctx.fillStyle = "#333";
+  const truncated = filename.length > 20 ? filename.substring(0, 17) + "..." : filename;
+  ctx.fillText(truncated, 120, 160);
+  
+  // Size
+  ctx.font = "12px Arial";
+  ctx.fillStyle = "#666";
+  ctx.fillText(size, 120, 180);
+  
+  return canvas.toDataURL("image/png");
+}
+
+// Display attachment preview
+function displayAttachmentPreview(container, icon, filename, size) {
+  const truncated = filename.length > 30 ? filename.substring(0, 27) + "..." : filename;
+  container.innerHTML = `
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 1rem; background: #f9f9f9;">
+      <div style="font-size: 60px; margin-bottom: 0.5rem;">${icon}</div>
+      <div style="font-size: 14px; font-weight: 500; text-align: center; margin-bottom: 0.25rem;">${escapeHtml(truncated)}</div>
+      <div style="font-size: 12px; color: #666;">${size}</div>
+    </div>
+  `;
+  container.classList.add("has-image");
+}
+
 function readImageFile(file, type) {
   if (!file.type.match("image.*")) {
     alert("Please select an image file");
@@ -1835,7 +2476,8 @@ function displayImage(container, base64Image) {
 
 // Clear Image Preview
 function clearImagePreview(container, type) {
-  const icon = type === "author" ? "📷" : type === "source" ? "📚" : "🖼️";
+  const icon = type === "author" ? "📷" : type === "source" ? "📚" : "📎";
+  const placeholder = type === "quote" ? "Paste image (Ctrl+V) or click to upload file" : "Paste image (Ctrl+V) or click to upload";
 
   // Clear the image data
   if (type === "quote") {
@@ -1857,7 +2499,7 @@ function clearImagePreview(container, type) {
     container.innerHTML = `
             <div class="image-placeholder">
                 <span>${icon}</span>
-                <p>Paste image (Ctrl+V) or click to upload</p>
+                <p>${placeholder}</p>
             </div>
         `;
   }
@@ -2049,7 +2691,7 @@ function debounceAutocomplete(value, type) {
 quoteImageFile.addEventListener("change", (e) => {
   const file = e.target.files[0];
   if (file) {
-    readImageFile(file, "quote");
+    readAttachmentFile(file, "quote");
   }
 });
 
@@ -2063,6 +2705,8 @@ clearQuoteImageBtn.addEventListener("click", (e) => {
   e.stopPropagation();
   currentQuoteImage = "";
   currentQuoteImageFull = "";
+  currentAttachmentType = "image";
+  currentAttachmentFileName = "";
   clearImagePreview(quoteImagePreview, "quote");
   quoteImageFile.value = "";
   updateImageIndicator();
@@ -3154,23 +3798,18 @@ async function exportToPdf() {
     if (searchTags.value) params.append("tags", searchTags.value);
     if (searchScore.value) params.append("score", searchScore.value);
 
-    // Add type filter
+    // Add type filter - dynamically based on configured types
     const selectedTypes = [];
-    if (document.getElementById("filterQuoteBook")?.checked)
-      selectedTypes.push("BOOK");
-    if (document.getElementById("filterQuoteMovie")?.checked)
-      selectedTypes.push("MOVIE-TV");
-    if (document.getElementById("filterQuotePoetry")?.checked)
-      selectedTypes.push("POETRY");
-    if (document.getElementById("filterQuoteLyrics")?.checked)
-      selectedTypes.push("LYRICS");
-    if (document.getElementById("filterQuoteJokes")?.checked)
-      selectedTypes.push("JOKES");
-    if (document.getElementById("filterQuoteAssorted")?.checked)
-      selectedTypes.push("ASSORTED");
+    const typeCheckboxes = document.querySelectorAll('.type-filter-option input[type="checkbox"]');
+    typeCheckboxes.forEach(checkbox => {
+      if (checkbox.checked) {
+        selectedTypes.push(checkbox.dataset.type);
+      }
+    });
     
     // Only add types filter if not all types are selected (optimization)
-    const totalTypes = 6; // BOOK, MOVIE-TV, POETRY, LYRICS, JOKES, ASSORTED
+    const quoteTypes = getQuoteTypes();
+    const totalTypes = quoteTypes.length;
     if (selectedTypes.length > 0 && selectedTypes.length < totalTypes) {
       params.append("types", selectedTypes.join(","));
     }
@@ -3719,7 +4358,7 @@ function initializeSettings() {
     // Listen for changes
     enableTagOpsCheckbox.addEventListener('change', (e) => {
       const isEnabled = e.target.checked;
-      localStorage.setItem('enableTagOperations', isEnabled);
+      updateSetting('enableTagOperations', isEnabled);
       toggleTagOperationsPanel(isEnabled);
     });
   }
@@ -3733,7 +4372,7 @@ function initializeSettings() {
     // Listen for changes
     downscaleQuoteImagesCheckbox.addEventListener('change', (e) => {
       const isEnabled = e.target.checked;
-      localStorage.setItem('downscaleQuoteImages', isEnabled);
+      updateSetting('downscaleQuoteImages', isEnabled);
       console.log(`Image downscaling ${isEnabled ? 'ENABLED' : 'DISABLED'} - ${isEnabled ? 'images will be resized to 1024px' : 'RAW images will be stored (may use external storage)'}`);
     });
   }
@@ -3747,8 +4386,8 @@ function initializeSettings() {
     
     // Listen for changes
     externalStorageThresholdSelect.addEventListener('change', (e) => {
-      const thresholdMB = e.target.value;
-      localStorage.setItem('externalStorageThreshold', thresholdMB);
+      const thresholdMB = parseFloat(e.target.value);
+      updateSetting('externalStorageThreshold', thresholdMB);
       console.log(`📦 External storage threshold set to ${thresholdMB} MB`);
       console.log(`   Files ≥ ${thresholdMB} MB will be stored in attachments/ folder`);
     });
@@ -3926,7 +4565,7 @@ function initializeSettings() {
     buttonColorPicker.addEventListener('input', (e) => {
       const color = e.target.value;
       buttonColorText.value = color;
-      localStorage.setItem('buttonColor', color);
+      updateSetting('colors.button', color);
       applyButtonColor(color);
     });
   }
@@ -3936,7 +4575,7 @@ function initializeSettings() {
     headerColorPicker.addEventListener('input', (e) => {
       const color = e.target.value;
       headerColorText.value = color;
-      localStorage.setItem('headerColor', color);
+      updateSetting('colors.header', color);
       applyHeaderColor(color);
     });
   }
@@ -3946,7 +4585,7 @@ function initializeSettings() {
     tagColorPicker.addEventListener('input', (e) => {
       const color = e.target.value;
       tagColorText.value = color;
-      localStorage.setItem('tagColor', color);
+      updateSetting('colors.tag', color);
       applyTagColor(color);
     });
   }
@@ -3956,7 +4595,7 @@ function initializeSettings() {
     deleteColorPicker.addEventListener('input', (e) => {
       const color = e.target.value;
       deleteColorText.value = color;
-      localStorage.setItem('deleteColor', color);
+      updateSetting('colors.delete', color);
       applyDeleteColor(color);
     });
   }
@@ -3966,7 +4605,7 @@ function initializeSettings() {
     cancelColorPicker.addEventListener('input', (e) => {
       const color = e.target.value;
       cancelColorText.value = color;
-      localStorage.setItem('cancelColor', color);
+      updateSetting('colors.cancel', color);
       applyCancelColor(color);
     });
   }
@@ -3976,7 +4615,7 @@ function initializeSettings() {
     activeCounterColorPicker.addEventListener('input', (e) => {
       const color = e.target.value;
       activeCounterColorText.value = color;
-      localStorage.setItem('activeCounterColor', color);
+      updateSetting('colors.activeCounter', color);
       applyActiveCounterColor(color);
     });
   }
@@ -3986,7 +4625,7 @@ function initializeSettings() {
     totalCounterColorPicker.addEventListener('input', (e) => {
       const color = e.target.value;
       totalCounterColorText.value = color;
-      localStorage.setItem('totalCounterColor', color);
+      updateSetting('colors.totalCounter', color);
       applyTotalCounterColor(color);
     });
   }
@@ -3996,7 +4635,7 @@ function initializeSettings() {
     menuColorPicker.addEventListener('input', (e) => {
       const color = e.target.value;
       menuColorText.value = color;
-      localStorage.setItem('menuColor', color);
+      updateSetting('colors.menu', color);
       applyMenuColor(color);
     });
   }
@@ -4006,7 +4645,7 @@ function initializeSettings() {
     appBgColorPicker.addEventListener('input', (e) => {
       const color = e.target.value;
       appBgColorText.value = color;
-      localStorage.setItem('appBgColor', color);
+      updateSetting('colors.appBg', color);
       applyAppBgColor(color);
     });
   }
@@ -4413,22 +5052,112 @@ function toggleImageSection() {
 // Update image indicator in modal
 function updateImageIndicator() {
   const indicator = document.getElementById('imageIndicator');
-  const hasImage = currentQuoteImage || currentQuoteImageFull;
+  const hasAttachment = currentQuoteImage || currentQuoteImageFull;
   
   if (indicator) {
-    if (hasImage) {
-      indicator.textContent = '(has image)';
+    if (hasAttachment) {
+      // Show attachment type
+      const typeLabel = currentAttachmentType === 'image' ? 'image' : currentAttachmentType.toUpperCase();
+      indicator.textContent = `(has ${typeLabel})`;
       indicator.style.color = '#059669'; // green
     } else {
-      indicator.textContent = '(no image)';
+      indicator.textContent = '(no attachment)';
       indicator.style.color = 'var(--text-secondary)';
     }
+  }
+}
+
+// ============= QUOTE TYPES MANAGEMENT =============
+
+function renderQuoteTypesList() {
+  const container = document.getElementById('quoteTypesList');
+  if (!container) return;
+  
+  const types = getQuoteTypes();
+  
+  container.innerHTML = types.map((type, index) => `
+    <div class="quote-type-item" data-index="${index}">
+      <input type="text" class="quote-type-icon-input" value="${type.icon}" placeholder="📖" maxlength="2" />
+      <input type="text" class="quote-type-value-input" value="${type.value}" placeholder="BOOK" />
+      <input type="text" class="quote-type-label-input" value="${type.label}" placeholder="Book" />
+      <div class="quote-type-actions">
+        ${types.length > 1 ? '<button class="btn-icon-small btn-delete-type" title="Delete Type">🗑️</button>' : ''}
+      </div>
+    </div>
+  `).join('');
+  
+  // Add event listeners
+  container.querySelectorAll('.quote-type-item').forEach((item, index) => {
+    const iconInput = item.querySelector('.quote-type-icon-input');
+    const valueInput = item.querySelector('.quote-type-value-input');
+    const labelInput = item.querySelector('.quote-type-label-input');
+    const deleteBtn = item.querySelector('.btn-delete-type');
+    
+    // Update on change
+    const updateType = () => {
+      const types = getQuoteTypes();
+      types[index] = {
+        icon: iconInput.value || '📖',
+        value: valueInput.value.toUpperCase().replace(/[^A-Z0-9-]/g, '') || 'CUSTOM',
+        label: labelInput.value || 'Custom'
+      };
+      saveQuoteTypesAndRefresh(types);
+    };
+    
+    iconInput.addEventListener('change', updateType);
+    valueInput.addEventListener('change', updateType);
+    labelInput.addEventListener('change', updateType);
+    
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', () => {
+        if (confirm(`Delete type "${types[index].label}"? This cannot be undone.`)) {
+          const types = getQuoteTypes();
+          types.splice(index, 1);
+          saveQuoteTypesAndRefresh(types);
+        }
+      });
+    }
+  });
+}
+
+function saveQuoteTypesAndRefresh(types) {
+  // Save to file via API
+  if (globalSettings) {
+    globalSettings.quoteTypes = types;
+    saveSettings(globalSettings).then(success => {
+      if (success) {
+        renderQuoteTypesList();
+        populateTypeDropdowns();
+        console.log('✅ Quote types updated');
+      }
+    });
+  } else {
+    // Fallback to localStorage
+    saveQuoteTypes(types);
+    renderQuoteTypesList();
+    populateTypeDropdowns();
   }
 }
 
 // Initialize settings on page load
 document.addEventListener('DOMContentLoaded', () => {
   initializeSettings();
+  
+  // Initialize quote types management UI
+  renderQuoteTypesList();
+  
+  const addTypeBtn = document.getElementById('addQuoteTypeBtn');
+  if (addTypeBtn) {
+    addTypeBtn.addEventListener('click', () => {
+      const types = getQuoteTypes();
+      types.push({
+        icon: '📝',
+        value: 'CUSTOM',
+        label: 'Custom Type'
+      });
+      saveQuoteTypesAndRefresh(types);
+    });
+  }
 });
 
 // Also check when switching to tags view
