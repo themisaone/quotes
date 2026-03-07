@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const path = require("path");
 const pool = require("./db");
+const fileStorage = require("./fileStorage");
 const {
   checkTagTablesExist,
   getOrCreateTagIds,
@@ -19,6 +20,27 @@ const PORT = process.env.PORT || 4000;
 app.use(cors());
 app.use(express.json({ limit: "10mb" })); // Increased limit for image uploads
 app.use(express.static(path.join(__dirname, "../public")));
+// Serve attachments folder for large files
+app.use('/attachments', express.static(path.join(__dirname, '../attachments')));
+
+// API to get storage configuration (returns default, actual value set by user in Settings)
+app.get('/api/config/storage', (req, res) => {
+  res.json({
+    defaultMaxDbSizeMB: fileStorage.DEFAULT_MAX_SIZE_MB
+  });
+});
+
+// Helper function to retrieve images from hybrid storage
+function retrieveQuoteImages(quote) {
+  // Convert thumbnail to base64 (for cards - always need it)
+  if (quote.image) {
+    quote.image = fileStorage.retrieveFromStorage(quote.image);
+  }
+  // Keep image_full as-is (file: reference or base64)
+  // Frontend will handle file: references by loading from /attachments/
+  // This avoids sending huge base64 strings for large files!
+  return quote;
+}
 
 // ============= AUTHORS API =============
 
@@ -765,8 +787,10 @@ app.get("/api/quotes", async (req, res) => {
         
         const quotesWithTags = result.rows.map(quote => {
           const quoteTags = tagsMap.get(quote.id) || [];
+          // Retrieve images from hybrid storage
+          const quoteWithImages = retrieveQuoteImages(quote);
           return {
-            ...quote,
+            ...quoteWithImages,
             tags: quoteTags.length > 0 ? quoteTags.map((t) => t.name).join(", ") : (quote.tags || ""),
             tag_objects: quoteTags,
           };
@@ -775,7 +799,9 @@ app.get("/api/quotes", async (req, res) => {
         res.json(quotesWithTags);
       } else {
         // Fallback: tags already in quote.tags from old column
-    res.json(result.rows);
+        // Still need to retrieve images
+        const quotesWithImages = result.rows.map(retrieveQuoteImages);
+        res.json(quotesWithImages);
       }
     } else {
       res.json([]);
@@ -810,15 +836,18 @@ app.get("/api/quotes/random", async (req, res) => {
     const hasNewTables = await checkTagTablesExist();
     if (hasNewTables) {
       const quoteTags = await getTagsForQuote(result.rows[0].id);
+      // Retrieve images from hybrid storage
+      const quoteWithImages = retrieveQuoteImages(result.rows[0]);
       const quoteWithTags = {
-        ...result.rows[0],
+        ...quoteWithImages,
         tags: quoteTags.length > 0 ? quoteTags.map((t) => t.name).join(", ") : (result.rows[0].tags || ""),
         tag_objects: quoteTags,
       };
       res.json(quoteWithTags);
     } else {
-      // Fallback: use tags from old column
-      res.json(result.rows[0]);
+      // Fallback: use tags from old column, but still retrieve images
+      const quoteWithImages = retrieveQuoteImages(result.rows[0]);
+      res.json(quoteWithImages);
     }
   } catch (error) {
     console.error("Error fetching random quote:", error);
@@ -851,15 +880,18 @@ app.get("/api/quotes/:id", async (req, res) => {
     const hasNewTables = await checkTagTablesExist();
     if (hasNewTables) {
       const quoteTags = await getTagsForQuote(id);
+      // Retrieve images from hybrid storage
+      const quoteWithImages = retrieveQuoteImages(result.rows[0]);
       const quoteWithTags = {
-        ...result.rows[0],
+        ...quoteWithImages,
         tags: quoteTags.length > 0 ? quoteTags.map((t) => t.name).join(", ") : (result.rows[0].tags || ""),
         tag_objects: quoteTags,
       };
       res.json(quoteWithTags);
     } else {
-      // Fallback: use tags from old column
-    res.json(result.rows[0]);
+      // Fallback: use tags from old column, but still retrieve images
+      const quoteWithImages = retrieveQuoteImages(result.rows[0]);
+      res.json(quoteWithImages);
     }
   } catch (error) {
     console.error("Error fetching quote:", error);
@@ -884,6 +916,7 @@ app.post("/api/quotes", async (req, res) => {
       image_full = "",
       note = "",
       score = null,
+      storageThresholdMB = 1, // From frontend settings
     } = req.body;
     
     if (!quote) {
@@ -918,15 +951,29 @@ app.post("/api/quotes", async (req, res) => {
     }
 
     // Create the quote - still store tags column for backward compatibility
-    // Insert the quote
+    // Insert the quote first to get ID
     const result = await client.query(
-      `INSERT INTO quotes (quote, author_id, source_id, image, image_full, note, type, score) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+      `INSERT INTO quotes (quote, author_id, source_id, note, type, score) 
+       VALUES ($1, $2, $3, $4, $5, $6) 
        RETURNING *`,
-      [quote, authorId, sourceId, image, image_full, note, sourceType, score],
+      [quote, authorId, sourceId, note, sourceType, score],
     );
 
     const quoteId = result.rows[0].id;
+
+    // Process images with hybrid storage using user's threshold
+    const processedImage = fileStorage.processForStorage(image, 'quotes', quoteId, '', storageThresholdMB);
+    const processedImageFull = fileStorage.processForStorage(image_full, 'quotes', quoteId, '_full', storageThresholdMB);
+
+    console.log(`📦 Quote ${quoteId} image processing (threshold: ${storageThresholdMB} MB):`);
+    console.log(`   Thumbnail: ${image ? `${(image.length/1024).toFixed(0)}KB` : 'none'} → ${processedImage ? (processedImage.startsWith('file:') ? processedImage : `${(processedImage.length/1024).toFixed(0)}KB base64`) : 'none'}`);
+    console.log(`   Full: ${image_full ? `${(image_full.length/1024/1024).toFixed(2)}MB` : 'none'} → ${processedImageFull ? (processedImageFull.startsWith('file:') ? processedImageFull : `${(processedImageFull.length/1024).toFixed(0)}KB base64`) : 'none'}`);
+
+    // Update quote with processed images
+    await client.query(
+      `UPDATE quotes SET image = $1, image_full = $2 WHERE id = $3`,
+      [processedImage, processedImageFull, quoteId]
+    );
 
     // Handle tags using new tag system (if tables exist)
     const tagNames = parseTagInput(tags);
@@ -955,8 +1002,10 @@ app.post("/api/quotes", async (req, res) => {
 
     // Add tags to response
     const quoteTags = await getTagsForQuote(quoteId);
+    // Retrieve images from hybrid storage
+    const quoteWithImages = retrieveQuoteImages(completeQuote.rows[0]);
     const quoteWithTags = {
-      ...completeQuote.rows[0],
+      ...quoteWithImages,
       tags: quoteTags.length > 0 ? quoteTags.map((t) => t.name).join(", ") : "",
       tag_objects: quoteTags,
     };
@@ -989,6 +1038,7 @@ app.put("/api/quotes/:id", async (req, res) => {
       image_full,
       note,
       score,
+      storageThresholdMB = 1, // From frontend settings
     } = req.body;
 
     console.log("UPDATE QUOTE - Received data:", {
@@ -1065,13 +1115,26 @@ app.put("/api/quotes/:id", async (req, res) => {
       tagsToUpdate = tags;
     }
 
-    if (image !== undefined) {
+    // Process images through hybrid storage if provided
+    if (image !== undefined && image) {
+      const processedImage = fileStorage.processForStorage(image, 'quotes', id, '', storageThresholdMB);
+      updateFields.push(`image = $${paramCounter}`);
+      params.push(processedImage);
+      paramCounter++;
+    } else if (image !== undefined) {
+      // Empty string means clear the image
       updateFields.push(`image = $${paramCounter}`);
       params.push(image);
       paramCounter++;
     }
 
-    if (image_full !== undefined) {
+    if (image_full !== undefined && image_full) {
+      const processedImageFull = fileStorage.processForStorage(image_full, 'quotes', id, '_full', storageThresholdMB);
+      updateFields.push(`image_full = $${paramCounter}`);
+      params.push(processedImageFull);
+      paramCounter++;
+    } else if (image_full !== undefined) {
+      // Empty string means clear the image
       updateFields.push(`image_full = $${paramCounter}`);
       params.push(image_full);
       paramCounter++;
@@ -1154,15 +1217,18 @@ app.put("/api/quotes/:id", async (req, res) => {
     const hasNewTables = await checkTagTablesExist();
     if (hasNewTables) {
       const quoteTags = await getTagsForQuote(id);
+      // Retrieve images from hybrid storage
+      const quoteWithImages = retrieveQuoteImages(completeQuote.rows[0]);
       const quoteWithTags = {
-        ...completeQuote.rows[0],
+        ...quoteWithImages,
         tags: quoteTags.length > 0 ? quoteTags.map((t) => t.name).join(", ") : (completeQuote.rows[0].tags || ""),
         tag_objects: quoteTags,
       };
       res.json(quoteWithTags);
     } else {
-      // Fallback: use tags from old column
-    res.json(completeQuote.rows[0]);
+      // Fallback: use tags from old column, but still retrieve images
+      const quoteWithImages = retrieveQuoteImages(completeQuote.rows[0]);
+      res.json(quoteWithImages);
     }
   } catch (error) {
     await client.query("ROLLBACK");
@@ -1173,18 +1239,60 @@ app.put("/api/quotes/:id", async (req, res) => {
   }
 });
 
+// Downscale and move image from external storage to DB
+app.post("/api/quotes/:id/downscale-image", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { image, image_full, oldFilePath } = req.body;
+    
+    console.log(`📦 Downscaling and moving external image to DB for quote ${id}`);
+    console.log(`   Old file: ${oldFilePath}`);
+    console.log(`   New size: ${(image_full.length / 1024).toFixed(0)} KB`);
+    
+    // Update quote with new base64 images (no need to process, already downscaled)
+    await pool.query(
+      `UPDATE quotes SET image = $1, image_full = $2 WHERE id = $3`,
+      [image, image_full, id]
+    );
+    
+    // Delete old files from attachments
+    if (oldFilePath) {
+      // Delete the full-size image
+      fileStorage.deleteFromFilesystem(oldFilePath);
+      
+      // Also delete the thumbnail if it exists
+      const thumbPath = oldFilePath.replace('_full.jpg', '.jpg');
+      fileStorage.deleteFromFilesystem(thumbPath);
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error downscaling image:", error);
+    res.status(500).json({ error: "Failed to downscale image" });
+  }
+});
+
 // Delete quote
 app.delete("/api/quotes/:id", async (req, res) => {
   try {
     const { id } = req.params;
+    
+    // First, fetch the quote to get image references
+    const quote = await pool.query("SELECT image, image_full FROM quotes WHERE id = $1", [id]);
+    
+    if (quote.rows.length === 0) {
+      return res.status(404).json({ error: "Quote not found" });
+    }
+    
+    // Delete external files if they exist (no-op if base64)
+    fileStorage.deleteAttachment(quote.rows[0].image);
+    fileStorage.deleteAttachment(quote.rows[0].image_full);
+    
+    // Delete the quote from database
     const result = await pool.query(
       "DELETE FROM quotes WHERE id = $1 RETURNING *",
       [id],
     );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Quote not found" });
-    }
 
     res.json({ message: "Quote deleted successfully", quote: result.rows[0] });
   } catch (error) {

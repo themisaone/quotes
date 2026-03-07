@@ -24,6 +24,46 @@ function initializeQuillEditor() {
     const html = quillEditor.root.innerHTML;
     document.getElementById('quoteText').value = html;
   });
+  
+  // Setup fullscreen editor toggle
+  setupFullscreenEditor();
+}
+
+function setupFullscreenEditor() {
+  const toggleBtn = document.getElementById('toggleFullscreenEditor');
+  const editorGroup = document.querySelector('.quote-editor-group');
+  
+  if (!toggleBtn || !editorGroup) return;
+  
+  let isFullscreen = false;
+  
+  toggleBtn.addEventListener('click', () => {
+    isFullscreen = !isFullscreen;
+    
+    if (isFullscreen) {
+      // Enter fullscreen
+      editorGroup.classList.add('fullscreen');
+      toggleBtn.textContent = '✕';
+      toggleBtn.title = 'Exit Fullscreen (Esc)';
+      
+      // Focus editor
+      if (quillEditor) {
+        quillEditor.focus();
+      }
+    } else {
+      // Exit fullscreen
+      editorGroup.classList.remove('fullscreen');
+      toggleBtn.textContent = '⛶';
+      toggleBtn.title = 'Fullscreen Editor';
+    }
+  });
+  
+  // Exit fullscreen with Esc key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && isFullscreen) {
+      toggleBtn.click();
+    }
+  });
 }
 
 // Pagination state
@@ -951,6 +991,7 @@ async function handleSubmit(e) {
     score: document.querySelector('input[name="quoteScore"]:checked')?.value || "0",
     image: currentQuoteImage,
     image_full: currentQuoteImageFull,
+    storageThresholdMB: parseFloat(localStorage.getItem('externalStorageThreshold') || '1'),
   };
 
   console.log("Submitting quote data:", quoteData);
@@ -1199,7 +1240,7 @@ function createQuoteCard(quote) {
                             ${isLongQuote ? `<button class="expand-btn" id="${expandBtnId}" onclick="event.stopPropagation(); toggleQuoteExpand('${quote.id}')">▼ Show more</button>` : ""}
                         </div>
                     </div>
-                    ${quote.image ? `<div class="quote-image-thumb" onclick="event.stopPropagation(); showFullImage('${quote.image_full || quote.image}')"><img src="${quote.image}" alt="Quote image"></div>` : ""}
+                    ${quote.image ? `<div class="quote-image-thumb" onclick="event.stopPropagation(); showFullImage('${quote.image_full || quote.image}', ${quote.id})"><img src="${quote.image}" alt="Quote image"></div>` : ""}
                 </div>
                 <div class="quote-separator"></div>
                 <div class="quote-metadata-row">
@@ -1257,20 +1298,116 @@ function toggleQuoteExpand(quoteId) {
 }
 
 // Show full-size image in modal (make it global for onclick)
-window.showFullImage = function (imageSrc) {
+window.showFullImage = function (imageSrc, quoteId = null) {
+  // Handle file references from external storage
+  let actualSrc = imageSrc;
+  let isExternalFile = false;
+  let filePath = null;
+  
+  if (imageSrc && imageSrc.startsWith('file:')) {
+    isExternalFile = true;
+    // Parse: "file:quotes/123.jpg:image/jpeg" -> "/attachments/quotes/123.jpg"
+    const parts = imageSrc.split(':');
+    filePath = parts[1]; // "quotes/123_full.jpg"
+    actualSrc = `/attachments/${filePath}`;
+  }
+  
   const modal = document.createElement("div");
   modal.className = "image-modal";
+  
+  // Add downscale button if it's an external file
+  const downscaleButton = isExternalFile && quoteId ? `
+    <button id="downscaleImageBtn" class="btn btn-primary" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 10001; padding: 0.75rem 1.5rem; font-size: 1rem;">
+      📦 Downscale to 1024px & Move to DB
+    </button>
+  ` : '';
+  
   modal.innerHTML = `
         <div class="image-modal-content">
             <span class="image-modal-close" onclick="this.parentElement.parentElement.remove()">&times;</span>
-            <img src="${imageSrc}" alt="Full size image">
+            <img src="${actualSrc}" alt="Full size image">
+            ${downscaleButton}
         </div>
     `;
   modal.onclick = (e) => {
     if (e.target === modal) modal.remove();
   };
   document.body.appendChild(modal);
+  
+  // Setup downscale button handler
+  if (isExternalFile && quoteId) {
+    const btn = document.getElementById('downscaleImageBtn');
+    if (btn) {
+      btn.onclick = async (e) => {
+        e.stopPropagation();
+        await downscaleAndMoveToDb(quoteId, actualSrc, filePath, modal);
+      };
+    }
+  }
 };
+
+async function downscaleAndMoveToDb(quoteId, imageUrl, filePath, modal) {
+  const btn = document.getElementById('downscaleImageBtn');
+  if (!btn) return;
+  
+  try {
+    // Update button state
+    btn.disabled = true;
+    btn.textContent = '⏳ Processing...';
+    
+    // Load the image
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+      img.src = imageUrl;
+    });
+    
+    // Resize to 1024px (longest side)
+    const resized1024 = resizeImage(img, 1024);
+    const thumbnail240 = resizeImage(img, 240);
+    
+    console.log(`📦 Downscaling external image: ${filePath}`);
+    console.log(`   Original: ${img.width}x${img.height}`);
+    console.log(`   New: max 1024px, size: ${(resized1024.length / 1024).toFixed(0)} KB`);
+    
+    // Send to server
+    const response = await fetch(`${API_URL}/quotes/${quoteId}/downscale-image`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        image: thumbnail240,
+        image_full: resized1024,
+        oldFilePath: filePath
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to downscale image');
+    }
+    
+    // Success!
+    btn.textContent = '✅ Moved to DB!';
+    btn.style.background = '#10b981';
+    
+    // Close modal after 1 second
+    setTimeout(() => {
+      modal.remove();
+      // Reload quotes to show updated image
+      if (typeof loadQuotes === 'function') {
+        loadQuotes();
+      }
+    }, 1000);
+    
+  } catch (error) {
+    console.error('Error downscaling image:', error);
+    btn.disabled = false;
+    btn.textContent = '❌ Error - Try Again';
+    btn.style.background = '#ef4444';
+  }
+}
 
 function escapeHtml(text) {
   const div = document.createElement("div");
@@ -1599,18 +1736,38 @@ function readImageFile(file, type) {
   reader.onload = (e) => {
     const img = new Image();
     img.onload = () => {
-      // For quote images, store ORIGINAL as full-size and create thumbnail
+      // For quote images, check if downscaling is enabled
       if (type === "quote") {
-        // Store original full-size WITHOUT downscaling
-        currentQuoteImageFull = e.target.result; // Original base64
+        // Check setting (default: true/checked = downscale)
+        const shouldDownscale = localStorage.getItem('downscaleQuoteImages') !== 'false';
+        
+        if (shouldDownscale) {
+          // DOWNSCALING ON: Resize to save space
+          // Store full-size limited to 1024px (saves DB space!)
+          const fullSize = resizeImage(img, 1024);
+          currentQuoteImageFull = fullSize;
 
-        // Create thumbnail for display (240px)
-        const thumbnail = resizeImage(img, 240);
-        currentQuoteImage = thumbnail;
-        displayImage(quoteImagePreview, thumbnail);
+          // Create thumbnail for display (240px)
+          const thumbnail = resizeImage(img, 240);
+          currentQuoteImage = thumbnail;
+          
+          console.log(`✅ DOWNSCALING ON: Full=${(fullSize.length/1024).toFixed(0)}KB, Thumb=${(thumbnail.length/1024).toFixed(0)}KB`);
+        } else {
+          // DOWNSCALING OFF: Store raw images at full size
+          // Store original/raw image (may trigger external storage if > 2 MB)
+          currentQuoteImageFull = e.target.result;
+          
+          // Still create thumbnail for cards (240px) - keeps cards small!
+          const thumbnail = resizeImage(img, 240);
+          currentQuoteImage = thumbnail;
+          
+          console.log(`✅ DOWNSCALING OFF: Full=${(e.target.result.length/1024/1024).toFixed(2)}MB, Thumb=${(thumbnail.length/1024).toFixed(0)}KB`);
+        }
+        
+        displayImage(quoteImagePreview, currentQuoteImage);
         updateImageIndicator();
       } else {
-        // For author/source, just thumbnail
+        // For author/source, always resize to 300px
         const resizedBase64 = resizeImage(img, 300);
 
         if (type === "author") {
@@ -3500,6 +3657,8 @@ function updateSelectedTagsDisplay() {
   
   if (selectedTagsArray.length === 0) {
     container.innerHTML = '';
+    // IMPORTANT: Also clear the hidden input field!
+    document.getElementById('tags').value = '';
     return;
   }
   
@@ -3509,6 +3668,9 @@ function updateSelectedTagsDisplay() {
       <span onclick="removeTag('${escapeHtml(tag).replace(/'/g, "\\'")}')" style="font-weight: bold; cursor: pointer;">&times;</span>
     </span>
   `).join('');
+  
+  // Update hidden input with current tags
+  document.getElementById('tags').value = selectedTagsArray.join(',');
 }
 
 // Initialize tag input when DOM is ready
@@ -3543,6 +3705,7 @@ function initializeSettings() {
   const displayImageQuotesLongCheckbox = document.getElementById('displayImageQuotesLong');
   const showLongQuotesExpandedCheckbox = document.getElementById('showLongQuotesExpanded');
   const displayScoreInCardsCheckbox = document.getElementById('displayScoreInCards');
+  const downscaleQuoteImagesCheckbox = document.getElementById('downscaleQuoteImages');
   
   // Tag Operations setting
   if (enableTagOpsCheckbox) {
@@ -3559,6 +3722,44 @@ function initializeSettings() {
       localStorage.setItem('enableTagOperations', isEnabled);
       toggleTagOperationsPanel(isEnabled);
     });
+  }
+  
+  // Downscale Quote Images setting
+  if (downscaleQuoteImagesCheckbox) {
+    // Load saved setting from localStorage (default: true/checked)
+    const downscaleEnabled = localStorage.getItem('downscaleQuoteImages') !== 'false';
+    downscaleQuoteImagesCheckbox.checked = downscaleEnabled;
+    
+    // Listen for changes
+    downscaleQuoteImagesCheckbox.addEventListener('change', (e) => {
+      const isEnabled = e.target.checked;
+      localStorage.setItem('downscaleQuoteImages', isEnabled);
+      console.log(`Image downscaling ${isEnabled ? 'ENABLED' : 'DISABLED'} - ${isEnabled ? 'images will be resized to 1024px' : 'RAW images will be stored (may use external storage)'}`);
+    });
+  }
+  
+  // External Storage Threshold setting
+  const externalStorageThresholdSelect = document.getElementById('externalStorageThreshold');
+  if (externalStorageThresholdSelect) {
+    // Load saved setting from localStorage (default: 1 MB)
+    const savedThreshold = localStorage.getItem('externalStorageThreshold') || '1';
+    externalStorageThresholdSelect.value = savedThreshold;
+    
+    // Listen for changes
+    externalStorageThresholdSelect.addEventListener('change', (e) => {
+      const thresholdMB = e.target.value;
+      localStorage.setItem('externalStorageThreshold', thresholdMB);
+      console.log(`📦 External storage threshold set to ${thresholdMB} MB`);
+      console.log(`   Files ≥ ${thresholdMB} MB will be stored in attachments/ folder`);
+    });
+    
+    // Fetch default from server for display
+    fetch(`${API_URL}/config/storage`)
+      .then(res => res.json())
+      .then(config => {
+        console.log(`ℹ️ Server default threshold: ${config.defaultMaxDbSizeMB} MB (can be changed in Settings)`);
+      })
+      .catch(err => console.log('Could not fetch storage config:', err));
   }
   
   // Quote Meta Searches setting

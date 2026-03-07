@@ -789,6 +789,38 @@
                 <p class="setting-description">Show dice score icon in the top-left corner of quote cards (only for quotes with scores).</p>
               </div>
             </div>
+            
+            <div class="settings-section">
+              <h2>📦 Storage & Performance</h2>
+              <div class="setting-item">
+                <label class="setting-label">
+                  <input type="checkbox" id="downscaleQuoteImages" checked />
+                  <span>Downscale Quote Images (Recommended)</span>
+                </label>
+                <p class="setting-description">
+                  <strong>Recommended: ON</strong> - Resize images to max 1024px before storing (~100-200 KB each). 
+                  <br><strong>OFF:</strong> Store raw images - large files go to external attachments folder based on threshold below.
+                  <br><em>⚠️ Turn OFF only for testing or if you need full-resolution images.</em>
+                </p>
+              </div>
+              <div class="setting-item">
+                <label class="setting-label">
+                  <span>External Storage Threshold (MB)</span>
+                  <select id="externalStorageThreshold" style="margin-left: 1rem; padding: 0.5rem; border: 1px solid var(--border); border-radius: 4px;">
+                    <option value="0.5">0.5 MB</option>
+                    <option value="1" selected>1 MB (Recommended)</option>
+                    <option value="2">2 MB</option>
+                    <option value="5">5 MB</option>
+                  </select>
+                </label>
+                <p class="setting-description">
+                  Files larger than this will be stored in the <code>attachments/</code> folder instead of database.
+                  <br><strong>1 MB (recommended)</strong> - Best balance: smaller DB, manageable exports, only very large files external.
+                  <br><strong>Lower (0.5 MB)</strong> - More files external, tiny JSON exports.
+                  <br><strong>Higher (2-5 MB)</strong> - More files in database, larger JSON exports.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -812,7 +844,12 @@
 
           <div class="form-group quote-editor-group">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-              <label for="quoteText" style="margin-bottom: 0;">💬 Quote *</label>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <label for="quoteText" style="margin-bottom: 0;">💬 Quote *</label>
+                <button type="button" id="toggleFullscreenEditor" class="btn-icon" title="Fullscreen Editor" style="padding: 0.25rem 0.5rem; font-size: 0.9rem;">
+                  ⛶
+                </button>
+              </div>
               <div class="score-radio-group">
                 <label class="score-radio-label">
                   <input type="radio" name="quoteScore" value="0" checked />

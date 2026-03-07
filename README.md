@@ -29,12 +29,23 @@ npm install
 ```
 
 2. Configure database connection:
-   - Create a `.env` file in the root directory
+   - Create a `.env` file in the root directory (or copy `.env.example`)
    - Add your database credentials:
 
 ```
-DATABASE_URL=postgresql://username:password@localhost:5432/quotes
+# Database
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=quotes_db
+DB_USER=your_username
+DB_PASSWORD=your_password
+
+# Server
 PORT=4000
+
+# File Storage (optional)
+# Files larger than this will be stored in attachments/ folder
+MAX_DB_SIZE_MB=1
 ```
 
 3. Create the database:
