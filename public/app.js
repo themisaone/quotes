@@ -1152,6 +1152,9 @@ function openEditModal(quote) {
   currentQuoteImage = quote.image || "";
   currentQuoteImageFull = quote.image_full || "";
   currentAttachmentType = quote.attachment_type || "image";
+  
+  // Set translation group
+  document.getElementById("translationGroup").value = quote.translation_group || "";
 
   if (currentQuoteImage) {
     // Check if it's an icon thumbnail (non-image attachment)
@@ -1408,6 +1411,7 @@ async function handleSubmit(e) {
     image: currentQuoteImage,
     image_full: currentQuoteImageFull,
     attachment_type: currentAttachmentType,
+    translation_group: document.getElementById("translationGroup").value.trim() || null,
     storageThresholdMB: parseFloat(localStorage.getItem('externalStorageThreshold') || '1'),
   };
 
@@ -1464,6 +1468,34 @@ async function deleteQuote(id) {
   } catch (error) {
     console.error("Error deleting quote:", error);
     alert("Failed to delete quote. Please try again.");
+  }
+}
+
+// ============================================
+// Translation Functions
+// ============================================
+
+// ============================================
+// Translation Group Functions
+// ============================================
+
+async function showTranslationGroup(groupName) {
+  // Filter quotes to show only those in this translation group
+  try {
+    const response = await fetch(`${API_URL}/quotes?translation_group=${encodeURIComponent(groupName)}&limit=100`);
+    const quotes = await response.json();
+    
+    // Display the quotes
+    displayQuotes(quotes);
+    
+    // Show info message
+    quoteCount.textContent = `(${quotes.length} in group "${groupName}")`;
+    
+    // Optionally scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } catch (error) {
+    console.error('Error loading translation group:', error);
+    alert('Failed to load translation group');
   }
 }
 
@@ -1645,6 +1677,11 @@ function createQuoteCard(quote) {
   } else if (quote.note) {
     noteScoreLine = `<div class="quote-note-title"><span></span><span>${escapeHtml(quote.note)}</span></div>`;
   }
+  
+  // Translation group badge
+  const translationBadge = quote.translation_group 
+    ? `<span class="translation-badge" title="Translation group: ${escapeHtml(quote.translation_group)}" onclick="event.stopPropagation(); showTranslationGroup('${escapeHtml(quote.translation_group)}')">T</span>` 
+    : '';
 
   return `
         <div class="quote-card ${quote.image ? 'has-image' : ''}" data-quote-id="${quote.id}" style="cursor: pointer;">
@@ -1662,6 +1699,7 @@ function createQuoteCard(quote) {
                 <div class="quote-separator"></div>
                 <div class="quote-metadata-row">
                     <div class="quote-metadata-left">
+                        ${translationBadge}
                         ${author && source ? `<div class="meta-item-combined"><span class="type-icon-badge">${sourceIcon}</span> <span class="meta-by">by</span> <span class="meta-value clickable author-link" data-id="${quote.author_id}" data-name="${escapeHtml(author)}">${escapeHtml(author)}</span> <span class="meta-from">from</span> <span class="meta-value clickable source-link" data-id="${quote.source_id}" data-name="${escapeHtml(source)}" data-type="${sourceType}">📚 ${escapeHtml(source)}</span></div>` : 
                         author ? `<div class="meta-item"><span class="type-icon-badge">${sourceIcon}</span> <span class="meta-by">by</span> <span class="meta-value clickable author-link" data-id="${quote.author_id}" data-name="${escapeHtml(author)}">${escapeHtml(author)}</span></div>` :
                         source ? `<div class="meta-item"><span class="meta-value clickable source-link" data-id="${quote.source_id}" data-name="${escapeHtml(source)}" data-type="${sourceType}">📚 ${escapeHtml(source)}</span></div>` : ""

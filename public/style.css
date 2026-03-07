@@ -4319,3 +4319,52 @@ textarea {
 .btn-delete-type:hover {
   background: #fee2e2;
 }
+
+/* Translation section */
+#translationSection {
+  background: var(--background);
+  border: 1px dashed var(--border);
+}
+
+.translation-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  margin-bottom: 0.4rem;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.translation-item:hover {
+  background: var(--hover-color);
+  border-color: var(--accent);
+}
+
+.translation-item .language-flag {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.translation-item .translation-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+}
+
+.translation-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.15rem 0.4rem;
+  background: #3b82f6;
+  color: white;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}

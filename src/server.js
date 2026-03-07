@@ -707,6 +707,7 @@ app.get("/api/quotes", async (req, res) => {
       score,
       date,
       types,
+      translation_group,
       hasAuthor,
       hasSource,
       hasNote,
@@ -852,6 +853,13 @@ app.get("/api/quotes", async (req, res) => {
       query += ` AND q.image IS NOT NULL AND q.image != ''`;
     } else if (hasImage === 'false') {
       query += ` AND (q.image IS NULL OR q.image = '')`;
+    }
+    
+    // Translation group filter
+    if (translation_group) {
+      query += ` AND q.translation_group = $${paramCounter}`;
+      params.push(translation_group);
+      paramCounter++;
     }
 
     query += ` ORDER BY q.updated_at DESC LIMIT $${paramCounter} OFFSET $${paramCounter + 1}`;
@@ -999,6 +1007,8 @@ app.post("/api/quotes", async (req, res) => {
       attachment_type = "image",
       note = "",
       score = null,
+      language = null,
+      translation_group = null,
       storageThresholdMB = 1, // From frontend settings
     } = req.body;
     
@@ -1036,10 +1046,10 @@ app.post("/api/quotes", async (req, res) => {
     // Create the quote - still store tags column for backward compatibility
     // Insert the quote first to get ID
     const result = await client.query(
-      `INSERT INTO quotes (quote, author_id, source_id, note, type, score) 
-       VALUES ($1, $2, $3, $4, $5, $6) 
+      `INSERT INTO quotes (quote, author_id, source_id, note, type, score, language, translation_group) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
        RETURNING *`,
-      [quote, authorId, sourceId, note, sourceType, score],
+      [quote, authorId, sourceId, note, sourceType, score, language, translation_group],
     );
 
     const quoteId = result.rows[0].id;
@@ -1122,6 +1132,8 @@ app.put("/api/quotes/:id", async (req, res) => {
       attachment_type,
       note,
       score,
+      language,
+      translation_group,
       storageThresholdMB = 1, // From frontend settings
     } = req.body;
 
@@ -1247,6 +1259,41 @@ app.put("/api/quotes/:id", async (req, res) => {
       params.push(attachment_type);
       paramCounter++;
     }
+    
+    if (language !== undefined) {
+      updateFields.push(`language = $${paramCounter}`);
+      params.push(language);
+      paramCounter++;
+    }
+    
+    // Handle translation_group with rename propagation
+    let oldTranslationGroup = null;
+    if (translation_group !== undefined) {
+      // First, get the current translation_group value
+      const currentQuote = await client.query(
+        'SELECT translation_group FROM quotes WHERE id = $1',
+        [id]
+      );
+      
+      if (currentQuote.rows.length > 0) {
+        oldTranslationGroup = currentQuote.rows[0].translation_group;
+        
+        // If translation_group is changing (and old one exists), update all quotes in the old group
+        if (oldTranslationGroup && oldTranslationGroup !== translation_group) {
+          console.log(`Renaming translation group "${oldTranslationGroup}" to "${translation_group}" for all quotes in group`);
+          await client.query(
+            `UPDATE quotes 
+             SET translation_group = $1 
+             WHERE translation_group = $2`,
+            [translation_group, oldTranslationGroup]
+          );
+        }
+      }
+      
+      updateFields.push(`translation_group = $${paramCounter}`);
+      params.push(translation_group);
+      paramCounter++;
+    }
 
     // Always update updated_at timestamp
     updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
@@ -1359,6 +1406,48 @@ app.post("/api/quotes/:id/downscale-image", async (req, res) => {
   } catch (error) {
     console.error("Error downscaling image:", error);
     res.status(500).json({ error: "Failed to downscale image" });
+  }
+});
+
+// Get translations for a quote (by translation_group)
+app.get("/api/quotes/:id/translations", async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // First, get the translation_group of this quote
+    const quoteResult = await pool.query(
+      "SELECT translation_group, language FROM quotes WHERE id = $1",
+      [id]
+    );
+    
+    if (quoteResult.rows.length === 0) {
+      return res.status(404).json({ error: "Quote not found" });
+    }
+    
+    const { translation_group, language: currentLanguage } = quoteResult.rows[0];
+    
+    if (!translation_group) {
+      // No translation group - return empty array
+      return res.json([]);
+    }
+    
+    // Get all quotes in the same translation group (except this one)
+    const result = await pool.query(
+      `SELECT q.id, q.quote, q.language, q.type,
+              a.name as author_name,
+              s.name as source_name
+       FROM quotes q
+       LEFT JOIN authors a ON q.author_id = a.id
+       LEFT JOIN sources s ON q.source_id = s.id
+       WHERE q.translation_group = $1 AND q.id != $2
+       ORDER BY q.language`,
+      [translation_group, id]
+    );
+    
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error fetching translations:", error);
+    res.status(500).json({ error: "Failed to fetch translations" });
   }
 });
 
@@ -2095,8 +2184,24 @@ function escapeHtml(text) {
 }
 
 // Start server
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server is running on port ${PORT}`);
-  console.log(`Local: http://localhost:${PORT}`);
-  console.log(`Network: http://0.0.0.0:${PORT}`);
-});
+async function startServer() {
+  try {
+    // Run migrations on startup
+    console.log('🔄 Running database migrations...');
+    const { runMigrations } = require('../migrations/run-migrations');
+    await runMigrations();
+    console.log('✅ Migrations completed\n');
+    
+    // Start the server
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server is running on port ${PORT}`);
+      console.log(`Local: http://localhost:${PORT}`);
+      console.log(`Network: http://0.0.0.0:${PORT}`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+startServer();
