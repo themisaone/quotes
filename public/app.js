@@ -541,6 +541,121 @@ let currentNoteTypeFilter = null; // null = show all types
 const quotesPerPage = 20;
 let totalQuotes = 0;
 let filteredQuotes = 0; // Track filtered count for pagination
+
+// ============= VIEW STATE MANAGEMENT =============
+
+// Save current view to localStorage
+function saveCurrentView() {
+  try {
+    localStorage.setItem('lastNoteTypeFilter', currentNoteTypeFilter || 'all');
+    console.log('✅ Saved view:', currentNoteTypeFilter || 'all');
+  } catch (error) {
+    console.error('Error saving view:', error);
+  }
+}
+
+// Restore last view from localStorage
+function restoreLastView() {
+  try {
+    const savedView = localStorage.getItem('lastNoteTypeFilter');
+    if (savedView && savedView !== 'all') {
+      currentNoteTypeFilter = savedView;
+      console.log('✅ Restored view:', currentNoteTypeFilter);
+      return true;
+    }
+  } catch (error) {
+    console.error('Error restoring view:', error);
+  }
+  return false;
+}
+
+// Handle URL hash navigation
+function handleHashNavigation() {
+  const hash = window.location.hash;
+  console.log('🔗 Hash navigation:', hash);
+  
+  if (!hash || hash === '#/' || hash === '#') {
+    currentNoteTypeFilter = null;
+    return;
+  }
+  
+  // Parse hash: #/quotes, #/training, #/notes, #/puzzle
+  const view = hash.replace('#/', '').toLowerCase();
+  
+  if (view === 'all' || view === 'all-notes') {
+    currentNoteTypeFilter = null;
+  } else if (view === 'quotes' || view === 'quote') {
+    currentNoteTypeFilter = 'quote';
+  } else if (view === 'notes' || view === 'note') {
+    currentNoteTypeFilter = 'note';
+  } else if (view === 'training') {
+    currentNoteTypeFilter = 'training';
+  } else if (view === 'puzzles' || view === 'puzzle') {
+    currentNoteTypeFilter = 'puzzle';
+  }
+  
+  console.log('✅ Set view from hash:', currentNoteTypeFilter || 'all');
+}
+
+// Update URL hash when view changes
+function updateUrlHash() {
+  const hash = currentNoteTypeFilter ? `#/${currentNoteTypeFilter}` : '#/all';
+  if (window.location.hash !== hash) {
+    window.history.pushState(null, '', hash);
+  }
+}
+
+// Update active state in the menu
+function updateActiveMenuState() {
+  // Remove active from all menu items
+  document.querySelectorAll('.menu-item, .note-type-filter').forEach(item => {
+    item.classList.remove('active');
+  });
+  
+  // Set active based on currentNoteTypeFilter
+  if (currentNoteTypeFilter === null) {
+    // All Notes is active
+    const allNotesBtn = document.querySelector('.menu-item[data-view="quotes"]');
+    if (allNotesBtn) allNotesBtn.classList.add('active');
+  } else {
+    // Specific note type is active
+    const typeBtn = document.querySelector(`.note-type-filter[data-note-type="${currentNoteTypeFilter}"]`);
+    if (typeBtn) typeBtn.classList.add('active');
+  }
+}
+
+// Update main title based on current view
+function updateMainTitle() {
+  const titleIcon = document.getElementById('mainTitleIcon');
+  const titleText = document.getElementById('mainTitleText');
+  
+  if (!titleIcon || !titleText) return;
+  
+  const titles = {
+    null: { icon: '💬', text: "All Misa's Notes" },
+    'quote': { icon: '💬', text: "Misa's Quote Collection" },
+    'note': { icon: '📝', text: "Misa's Notes" },
+    'training': { icon: '💪', text: "Misa's Trainings" },
+    'puzzle': { icon: '🧩', text: "Misa's Puzzle Collection" }
+  };
+  
+  const title = titles[currentNoteTypeFilter] || titles[null];
+  titleIcon.textContent = title.icon;
+  titleText.textContent = title.text;
+}
+
+// Listen for hash changes (browser back/forward)
+window.addEventListener('hashchange', () => {
+  console.log('🔄 Hash changed:', window.location.hash);
+  handleHashNavigation();
+  updateActiveMenuState();
+  updateAddButtonText();
+  updateMainTitle();
+  updateSourcesFilterVisibility();
+  currentPage = 1;
+  loadQuotes();
+  loadTotalCount();
+});
 let currentQuotesData = []; // Store current quotes for PDF export
 
 // DOM Elements
@@ -609,6 +724,20 @@ document.addEventListener("DOMContentLoaded", async () => {
   
   // Initialize training type filter checkboxes
   populateTrainingTypeFilterCheckboxes();
+  
+  // Handle URL hash navigation (takes priority over saved view)
+  if (window.location.hash) {
+    handleHashNavigation();
+  } else {
+    // Restore last view if no hash is present
+    restoreLastView();
+  }
+  
+  // Update UI based on restored/navigated view
+  updateActiveMenuState();
+  updateAddButtonText();
+  updateMainTitle();
+  updateSourcesFilterVisibility();
   
   // Initialize sources filter visibility
   updateSourcesFilterVisibility();
@@ -689,6 +818,10 @@ function setupEventListeners() {
       currentNoteTypeFilter = noteType;
       currentPage = 1;
       
+      // Save view and update URL
+      saveCurrentView();
+      updateUrlHash();
+      
       // Update active state
       document.querySelectorAll('.note-type-filter').forEach(btn => btn.classList.remove('active'));
       button.classList.add('active');
@@ -696,8 +829,14 @@ function setupEventListeners() {
       // Update button text
       updateAddButtonText();
       
+      // Update UI
+      updateAddButtonText();
+      updateMainTitle();
+      updateSourcesFilterVisibility();
+      
       // Load filtered quotes
       loadQuotes();
+      loadTotalCount();
     });
   });
   
@@ -1613,9 +1752,9 @@ async function loadQuotes() {
       params.append("note_type", currentNoteTypeFilter);
     }
 
-    // Add type filter - dynamically based on configured types
-    // Only apply quote source types when on Quote view or All Notes view
-    if (currentNoteTypeFilter !== 'training') {
+    // Add type filter - ONLY for Quote view or All Notes view
+    // For other note types (note, puzzle, training), don't add quote source type filters
+    if (currentNoteTypeFilter === null || currentNoteTypeFilter === 'quote') {
       const selectedTypes = [];
       const typeCheckboxes = document.querySelectorAll('.type-filter-options input[type="checkbox"]');
       typeCheckboxes.forEach(checkbox => {
@@ -1700,36 +1839,52 @@ async function loadQuotes() {
 
 async function loadTotalCount() {
   try {
-    // Get total count (no filters)
-    const totalResponse = await fetchWithRetry(`${API_URL}/quotes/count`);
-    if (!totalResponse.ok) {
-      throw new Error(`HTTP error! status: ${totalResponse.status}`);
-    }
-    const totalData = await totalResponse.json();
-    totalQuotes = totalData.count;
-
-    // Get filtered count (with current search filters)
+    // Build params with current filters including note_type
     const params = new URLSearchParams();
+    
+    // Add note type filter
+    if (currentNoteTypeFilter) {
+      params.append("note_type", currentNoteTypeFilter);
+    }
+    
     if (searchQuote.value) params.append("quote", searchQuote.value);
     if (searchAuthor.value) params.append("author", searchAuthor.value);
     if (searchSource.value) params.append("source", searchSource.value);
     if (searchTags.value) params.append("tags", searchTags.value);
     if (searchScore.value) params.append("score", searchScore.value);
 
-    // Add type filter - dynamically based on configured types
-    const selectedTypes = [];
-    const typeCheckboxes = document.querySelectorAll('.type-filter-option input[type="checkbox"]');
-    typeCheckboxes.forEach(checkbox => {
-      if (checkbox.checked) {
-        selectedTypes.push(checkbox.dataset.type);
+    // Add type filter - ONLY for Quote view or All Notes view
+    // For other note types (note, puzzle), don't add type filters
+    if (currentNoteTypeFilter === null || currentNoteTypeFilter === 'quote') {
+      const selectedTypes = [];
+      const typeCheckboxes = document.querySelectorAll('.type-filter-options input[type="checkbox"]');
+      typeCheckboxes.forEach(checkbox => {
+        if (checkbox.checked) {
+          selectedTypes.push(checkbox.dataset.type);
+        }
+      });
+      
+      // Only add types filter if not all types are selected (optimization)
+      const quoteTypes = getQuoteTypes();
+      const totalTypes = quoteTypes.length;
+      if (selectedTypes.length > 0 && selectedTypes.length < totalTypes) {
+        params.append("types", selectedTypes.join(","));
       }
-    });
+    }
     
-    // Only add types filter if not all types are selected (optimization)
-    const quoteTypes = getQuoteTypes();
-    const totalTypes = quoteTypes.length;
-    if (selectedTypes.length > 0 && selectedTypes.length < totalTypes) {
-      params.append("types", selectedTypes.join(","));
+    // Add training types filter (for training notes)
+    if (currentNoteTypeFilter === 'training') {
+      const selectedTrainingTypes = [];
+      const trainingTypeCheckboxes = document.querySelectorAll('.training-type-filter-options input[type="checkbox"]');
+      trainingTypeCheckboxes.forEach(checkbox => {
+        if (checkbox.checked) {
+          selectedTrainingTypes.push(checkbox.dataset.type);
+        }
+      });
+      
+      if (selectedTrainingTypes.length > 0) {
+        params.append("training_types", selectedTrainingTypes.join(","));
+      }
     }
 
     // Add metadata search parameters
@@ -1756,30 +1911,55 @@ async function loadTotalCount() {
       }
     }
 
-    const filteredResponse = await fetch(
+    const filteredResponse = await fetchWithRetry(
       `${API_URL}/quotes/count?${params.toString()}`,
     );
+    
+    console.log('📊 API URL:', `${API_URL}/quotes/count?${params.toString()}`);
+    console.log('📊 Response status:', filteredResponse.status);
+    
     const filteredData = await filteredResponse.json();
+    console.log('📊 Count response:', filteredData, 'for note_type:', currentNoteTypeFilter);
     filteredQuotes = filteredData.count; // Store globally for pagination
+    totalQuotes = filteredData.grandTotal; // Store globally for reference
 
-    // Update both counts
+    // Update all three counts
     const totalCountElement = document.getElementById("totalQuotesCount");
+    const typeCountElement = document.getElementById("typeQuotesCount");
     const filteredCountElement = document.getElementById("filteredQuotesCount");
+    
+    console.log('📊 Elements found:', {
+      totalCountElement: !!totalCountElement,
+      typeCountElement: !!typeCountElement,
+      filteredCountElement: !!filteredCountElement
+    });
+    console.log('📊 Setting counts - filtered:', filteredQuotes, 'type:', filteredData.typeTotal, 'grand:', filteredData.grandTotal);
 
     if (totalCountElement) {
-      totalCountElement.textContent = totalQuotes;
+      totalCountElement.textContent = filteredData.grandTotal;
+      console.log('📊 Set grandTotal to:', totalCountElement.textContent);
+    }
+    if (typeCountElement) {
+      // If we have a type-specific total, show it; otherwise show same as grand total
+      typeCountElement.textContent = filteredData.typeTotal !== null ? filteredData.typeTotal : filteredData.grandTotal;
+      console.log('📊 Set typeTotal to:', typeCountElement.textContent);
     }
     if (filteredCountElement) {
       filteredCountElement.textContent = filteredQuotes;
+      console.log('📊 Set filteredCount to:', filteredCountElement.textContent);
     }
 
     updatePaginationControls(); // Update pagination with filtered count
   } catch (error) {
     console.error("Error loading total count:", error);
     const totalCountElement = document.getElementById("totalQuotesCount");
+    const typeCountElement = document.getElementById("typeQuotesCount");
     const filteredCountElement = document.getElementById("filteredQuotesCount");
     if (totalCountElement) {
       totalCountElement.textContent = "?";
+    }
+    if (typeCountElement) {
+      typeCountElement.textContent = "?";
     }
     if (filteredCountElement) {
       filteredCountElement.textContent = "?";
@@ -3332,6 +3512,15 @@ function setupMenuNavigation() {
         document.querySelectorAll('.note-type-filter').forEach(btn => btn.classList.remove('active'));
         // Update button text
         updateAddButtonText();
+        
+        // Save view and update URL
+        saveCurrentView();
+        updateUrlHash();
+        
+        // Update UI
+        updateAddButtonText();
+        updateMainTitle();
+        updateSourcesFilterVisibility();
       }
       
       switchView(view);
@@ -4273,6 +4462,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function exportToPdf() {
   try {
+    const typeLabel = currentNoteTypeFilter ? NOTE_TYPES[currentNoteTypeFilter]?.label || 'Notes' : 'All Notes';
+    
     const exportBtn = document.getElementById("exportPdfBtn");
     const originalText = exportBtn.textContent;
     exportBtn.textContent = "⏳ Generating PDF...";
@@ -4287,20 +4478,43 @@ async function exportToPdf() {
     if (searchTags.value) params.append("tags", searchTags.value);
     if (searchScore.value) params.append("score", searchScore.value);
 
+    // Add note type filter (export only current view)
+    if (currentNoteTypeFilter) {
+      params.append("note_type", currentNoteTypeFilter);
+    }
+
     // Add type filter - dynamically based on configured types
-    const selectedTypes = [];
-    const typeCheckboxes = document.querySelectorAll('.type-filter-option input[type="checkbox"]');
-    typeCheckboxes.forEach(checkbox => {
-      if (checkbox.checked) {
-        selectedTypes.push(checkbox.dataset.type);
+    // Only apply quote source types when on Quote view or All Notes view
+    if (currentNoteTypeFilter !== 'training') {
+      const selectedTypes = [];
+      const typeCheckboxes = document.querySelectorAll('.type-filter-option input[type="checkbox"]');
+      typeCheckboxes.forEach(checkbox => {
+        if (checkbox.checked) {
+          selectedTypes.push(checkbox.dataset.type);
+        }
+      });
+      
+      // Only add types filter if not all types are selected (optimization)
+      const quoteTypes = getQuoteTypes();
+      const totalTypes = quoteTypes.length;
+      if (selectedTypes.length > 0 && selectedTypes.length < totalTypes) {
+        params.append("types", selectedTypes.join(","));
       }
-    });
+    }
     
-    // Only add types filter if not all types are selected (optimization)
-    const quoteTypes = getQuoteTypes();
-    const totalTypes = quoteTypes.length;
-    if (selectedTypes.length > 0 && selectedTypes.length < totalTypes) {
-      params.append("types", selectedTypes.join(","));
+    // Add training types filter (for training notes)
+    if (currentNoteTypeFilter === 'training') {
+      const selectedTrainingTypes = [];
+      const trainingTypeCheckboxes = document.querySelectorAll('.training-type-filter-options input[type="checkbox"]');
+      trainingTypeCheckboxes.forEach(checkbox => {
+        if (checkbox.checked) {
+          selectedTrainingTypes.push(checkbox.dataset.type);
+        }
+      });
+      
+      if (selectedTrainingTypes.length > 0) {
+        params.append("training_types", selectedTrainingTypes.join(","));
+      }
     }
 
     // Request ALL quotes (set very high limit)
@@ -4308,11 +4522,11 @@ async function exportToPdf() {
 
     const response = await fetch(`${API_URL}/quotes?${params.toString()}`);
     const allQuotes = await response.json();
-
-    console.log(`Exporting ${allQuotes.length} quotes to PDF...`);
+    
+    console.log(`Exporting ${allQuotes.length} ${typeLabel.toLowerCase()} to PDF...`);
 
     if (allQuotes.length === 0) {
-      alert("No quotes to export!");
+      alert(`No ${typeLabel.toLowerCase()} to export!`);
       exportBtn.textContent = originalText;
       exportBtn.disabled = false;
       return;
@@ -4320,6 +4534,7 @@ async function exportToPdf() {
 
     // Prepare filters object for display in PDF
     const filters = {};
+    if (currentNoteTypeFilter) filters.noteType = typeLabel;
     if (searchQuote.value) filters.quote = searchQuote.value;
     if (searchAuthor.value) filters.author = searchAuthor.value;
     if (searchSource.value) filters.source = searchSource.value;
@@ -4351,7 +4566,8 @@ async function exportToPdf() {
     const url = window.URL.createObjectURL(pdfBlob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `quotes_${new Date().toISOString().split("T")[0]}.pdf`;
+    const filePrefix = currentNoteTypeFilter || 'all_notes';
+    a.download = `${filePrefix}_${new Date().toISOString().split("T")[0]}.pdf`;
     document.body.appendChild(a);
     a.click();
 
@@ -4376,34 +4592,52 @@ async function exportToPdf() {
 
 async function exportToJson() {
   try {
+    const typeLabel = currentNoteTypeFilter ? NOTE_TYPES[currentNoteTypeFilter]?.label || 'Notes' : 'All Notes';
+    
+    // Show confirmation dialog
+    const message = currentNoteTypeFilter 
+      ? `Create backup of ${typeLabel}?\n\nThis will export ALL ${typeLabel.toLowerCase()} (ignoring current search filters).\n\nTo export only filtered results, use "Export to PDF" instead.`
+      : `Create backup of All Notes?\n\nThis will export your entire database:\n• All note types\n• All authors and sources\n• All tags\n\nThis may create a large file if you have many notes with images.`;
+    
+    if (!confirm(message)) {
+      return;
+    }
+    
     const exportBtn = document.getElementById("exportJsonBtn");
     const originalText = exportBtn.textContent;
     exportBtn.textContent = "⏳ Exporting...";
     exportBtn.disabled = true;
 
-    const response = await fetch(`${API_URL}/export/json`);
+    // Build URL with note type filter
+    let url = `${API_URL}/export/json`;
+    if (currentNoteTypeFilter) {
+      url += `?note_type=${currentNoteTypeFilter}`;
+    }
+
+    const response = await fetch(url);
 
     if (!response.ok) {
       throw new Error("Failed to export data");
     }
 
     const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
+    const urlBlob = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url;
-    a.download = `quotes_backup_${new Date().toISOString().split("T")[0]}.json`;
+    a.href = urlBlob;
+    const filePrefix = currentNoteTypeFilter || 'all_notes';
+    a.download = `${filePrefix}_backup_${new Date().toISOString().split("T")[0]}.json`;
     document.body.appendChild(a);
     a.click();
 
     setTimeout(() => {
-      window.URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(urlBlob);
       document.body.removeChild(a);
     }, 100);
 
     exportBtn.textContent = originalText;
     exportBtn.disabled = false;
 
-    alert("✅ Backup created successfully!");
+    alert(`✅ ${typeLabel} backup created successfully!`);
   } catch (error) {
     console.error("Error exporting JSON:", error);
     alert("Failed to create backup. Please try again.");

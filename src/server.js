@@ -566,8 +566,9 @@ app.delete("/api/sources/:id", async (req, res) => {
 // Get total quote count
 app.get("/api/quotes/count", async (req, res) => {
   try {
-    const { quote, author, source, tags, score, types, hasAuthor, hasSource, hasNote, hasTags, hasImage } = req.query;
+    const { quote, author, source, tags, score, types, note_type, training_types, hasAuthor, hasSource, hasNote, hasTags, hasImage } = req.query;
     
+    // Build filtered count query (with all filters)
     let query = `
       SELECT COUNT(*) as count
       FROM quotes q
@@ -577,6 +578,13 @@ app.get("/api/quotes/count", async (req, res) => {
     `;
     const params = [];
     let paramCounter = 1;
+
+    // Note type filter
+    if (note_type) {
+      query += ` AND q.note_type = $${paramCounter}`;
+      params.push(note_type);
+      paramCounter++;
+    }
 
     if (quote) {
       query += ` AND q.quote ILIKE $${paramCounter}`;
@@ -614,14 +622,24 @@ app.get("/api/quotes/count", async (req, res) => {
       });
     }
     
-    // Filter by types if provided
-    if (types) {
+    // Filter by types if provided (quote source types)
+    if (types && note_type !== 'training') {
       const typeArray = types.split(",").filter((t) => t);
       const totalTypes = 6; // BOOK, MOVIE-TV, POETRY, LYRICS, JOKES, ASSORTED
       if (typeArray.length > 0 && typeArray.length < totalTypes) {
         // Only filter if not all selected
         query += ` AND q.type = ANY($${paramCounter})`;
         params.push(typeArray);
+        paramCounter++;
+      }
+    }
+    
+    // Training types filter (for training notes)
+    if (training_types && note_type === 'training') {
+      const trainingTypeArray = training_types.split(",").filter((t) => t);
+      if (trainingTypeArray.length > 0) {
+        query += ` AND q.type = ANY($${paramCounter})`;
+        params.push(trainingTypeArray);
         paramCounter++;
       }
     }
@@ -688,8 +706,28 @@ app.get("/api/quotes/count", async (req, res) => {
       query += ` AND (q.image IS NULL OR q.image = '')`;
     }
 
-    const result = await pool.query(query, params);
-    res.json({ count: parseInt(result.rows[0].count) });
+    // Get filtered count
+    const filteredResult = await pool.query(query, params);
+    const filteredCount = parseInt(filteredResult.rows[0].count);
+    
+    // Get type-specific total (only note_type filter, no other filters)
+    let typeTotal = null;
+    if (note_type) {
+      const typeQuery = `SELECT COUNT(*) as count FROM quotes WHERE note_type = $1`;
+      const typeResult = await pool.query(typeQuery, [note_type]);
+      typeTotal = parseInt(typeResult.rows[0].count);
+    }
+    
+    // Get grand total (no filters)
+    const totalQuery = `SELECT COUNT(*) as count FROM quotes`;
+    const totalResult = await pool.query(totalQuery);
+    const grandTotal = parseInt(totalResult.rows[0].count);
+    
+    res.json({ 
+      count: filteredCount,
+      typeTotal: typeTotal,
+      grandTotal: grandTotal
+    });
   } catch (error) {
     console.error("Error fetching quote count:", error);
     res.status(500).json({ error: "Failed to fetch quote count" });
@@ -1750,28 +1788,54 @@ app.post("/api/tags/bulk-add", async (req, res) => {
 // Export all data as JSON
 app.get("/api/export/json", async (req, res) => {
   try {
-    console.log("JSON export requested...");
+    const { note_type } = req.query;
+    const noteTypeFilter = note_type ? `WHERE q.note_type = $1` : '';
+    const queryParams = note_type ? [note_type] : [];
+    
+    console.log(`JSON export requested... (note_type: ${note_type || 'all'})`);
 
-    // Fetch all authors
-    const authorsResult = await pool.query("SELECT * FROM authors ORDER BY id");
-
-    // Fetch all sources
-    const sourcesResult = await pool.query("SELECT * FROM sources ORDER BY id");
-
-    // Fetch all quotes with full details
-    const quotesResult = await pool.query(`
+    // Fetch all quotes with full details (filtered by note_type if provided)
+    const quotesQuery = `
       SELECT q.*, 
              a.name as author_name, 
              s.name as source_name
       FROM quotes q
       LEFT JOIN authors a ON q.author_id = a.id
       LEFT JOIN sources s ON q.source_id = s.id
+      ${noteTypeFilter}
       ORDER BY q.id
-    `);
+    `;
+    
+    const quotesResult = note_type 
+      ? await pool.query(quotesQuery, queryParams)
+      : await pool.query(quotesQuery);
+
+    // Get unique author and source IDs from the filtered quotes
+    const authorIds = [...new Set(quotesResult.rows.map(q => q.author_id).filter(id => id !== null))];
+    const sourceIds = [...new Set(quotesResult.rows.map(q => q.source_id).filter(id => id !== null))];
+    
+    // Fetch only the authors and sources used by these quotes
+    let authorsResult = { rows: [] };
+    let sourcesResult = { rows: [] };
+    
+    if (authorIds.length > 0) {
+      authorsResult = await pool.query(
+        "SELECT * FROM authors WHERE id = ANY($1) ORDER BY id",
+        [authorIds]
+      );
+    }
+    
+    if (sourceIds.length > 0) {
+      sourcesResult = await pool.query(
+        "SELECT * FROM sources WHERE id = ANY($1) ORDER BY id",
+        [sourceIds]
+      );
+    }
 
     const exportData = {
       version: "1.0",
       exportedAt: new Date().toISOString(),
+      noteTypeFilter: note_type || 'all',
       counts: {
         authors: authorsResult.rows.length,
         sources: sourcesResult.rows.length,
@@ -1785,7 +1849,7 @@ app.get("/api/export/json", async (req, res) => {
     };
 
     console.log(
-      `Exported ${exportData.counts.authors} authors, ${exportData.counts.sources} sources, ${exportData.counts.quotes} quotes`,
+      `Exported ${exportData.counts.authors} authors, ${exportData.counts.sources} sources, ${exportData.counts.quotes} quotes (note_type: ${note_type || 'all'})`,
     );
 
     res.setHeader("Content-Type", "application/json");

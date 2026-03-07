@@ -438,6 +438,15 @@ header h1 {
   font-size: 1.1rem;
 }
 
+.quote-counts #typeQuotesCount {
+  background: #60a5fa;
+  color: white;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
 .quote-counts #totalQuotesCount {
   background: #047857;
   color: white;
@@ -2166,6 +2175,7 @@ textarea {
   }
   
   .quote-counts #filteredQuotesCount,
+  .quote-counts #typeQuotesCount,
   .quote-counts #totalQuotesCount,
   .quote-counts #filteredAuthorsCount,
   .quote-counts #totalAuthorsCount,
@@ -3779,6 +3789,7 @@ textarea {
   }
   
   .quote-counts #filteredQuotesCount,
+  .quote-counts #typeQuotesCount,
   .quote-counts #totalQuotesCount {
     padding: 0.2rem 0.4rem !important;
     font-size: 0.75rem !important;
