@@ -707,6 +707,8 @@ app.get("/api/quotes", async (req, res) => {
       score,
       date,
       types,
+      note_type,
+      training_types,
       translation_group,
       hasAuthor,
       hasSource,
@@ -861,6 +863,23 @@ app.get("/api/quotes", async (req, res) => {
       params.push(translation_group);
       paramCounter++;
     }
+    
+    // Note type filter
+    if (note_type) {
+      query += ` AND q.note_type = $${paramCounter}`;
+      params.push(note_type);
+      paramCounter++;
+    }
+    
+    // Training types filter (like source types but for training notes)
+    if (training_types) {
+      const trainingTypeArray = training_types.split(",").filter((t) => t);
+      if (trainingTypeArray.length > 0) {
+        query += ` AND q.type = ANY($${paramCounter})`;
+        params.push(trainingTypeArray);
+        paramCounter++;
+      }
+    }
 
     query += ` ORDER BY q.updated_at DESC LIMIT $${paramCounter} OFFSET $${paramCounter + 1}`;
     params.push(parseInt(limit), parseInt(offset));
@@ -1007,7 +1026,8 @@ app.post("/api/quotes", async (req, res) => {
       attachment_type = "image",
       note = "",
       score = null,
-      language = null,
+      note_type = "quote",
+      note_date = null,
       translation_group = null,
       storageThresholdMB = 1, // From frontend settings
     } = req.body;
@@ -1046,10 +1066,10 @@ app.post("/api/quotes", async (req, res) => {
     // Create the quote - still store tags column for backward compatibility
     // Insert the quote first to get ID
     const result = await client.query(
-      `INSERT INTO quotes (quote, author_id, source_id, note, type, score, language, translation_group) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+      `INSERT INTO quotes (quote, author_id, source_id, note, type, score, note_type, note_date, translation_group) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
        RETURNING *`,
-      [quote, authorId, sourceId, note, sourceType, score, language, translation_group],
+      [quote, authorId, sourceId, note, sourceType, score, note_type, note_date, translation_group],
     );
 
     const quoteId = result.rows[0].id;
@@ -1132,7 +1152,8 @@ app.put("/api/quotes/:id", async (req, res) => {
       attachment_type,
       note,
       score,
-      language,
+      note_type,
+      note_date,
       translation_group,
       storageThresholdMB = 1, // From frontend settings
     } = req.body;
@@ -1260,9 +1281,15 @@ app.put("/api/quotes/:id", async (req, res) => {
       paramCounter++;
     }
     
-    if (language !== undefined) {
-      updateFields.push(`language = $${paramCounter}`);
-      params.push(language);
+    if (note_type !== undefined) {
+      updateFields.push(`note_type = $${paramCounter}`);
+      params.push(note_type);
+      paramCounter++;
+    }
+    
+    if (note_date !== undefined) {
+      updateFields.push(`note_date = $${paramCounter}`);
+      params.push(note_date);
       paramCounter++;
     }
     

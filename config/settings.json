@@ -31,6 +31,18 @@
       "icon": "📝"
     }
   ],
+  "trainingTypes": [
+    {
+      "value": "WEIGHTS",
+      "label": "Weights",
+      "icon": "🏋️"
+    },
+    {
+      "value": "CARDIO",
+      "label": "Cardio",
+      "icon": "🏃"
+    }
+  ],
   "downscaleQuoteImages": false,
   "externalStorageThreshold": 1,
   "compactMode": false,

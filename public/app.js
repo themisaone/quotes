@@ -157,6 +157,22 @@ function saveQuoteTypes(types) {
   }
 }
 
+// Get training types from settings
+function getTrainingTypes() {
+  // Try global settings first
+  if (globalSettings && globalSettings.trainingTypes) {
+    return globalSettings.trainingTypes;
+  }
+  
+  // Fallback to default training types
+  return [
+    { value: 'WEIGHTS', label: 'Weights', icon: '🏋️' },
+    { value: 'CARDIO', label: 'Cardio', icon: '🏃' },
+    { value: 'FLEXIBILITY', label: 'Flexibility', icon: '🧘' },
+    { value: 'SPORTS', label: 'Sports', icon: '⚽' }
+  ];
+}
+
 // Migrate localStorage settings to file (one-time)
 async function migrateLocalStorageToFile() {
   // Check if localStorage has any settings
@@ -417,7 +433,7 @@ function populateTypeDropdowns() {
       dropdown.appendChild(clearOption);
     }
     
-    // Add all type options
+    // Add all types
     types.forEach(type => {
       const option = document.createElement('option');
       option.value = type.value;
@@ -425,17 +441,31 @@ function populateTypeDropdowns() {
       dropdown.appendChild(option);
     });
     
-    // Restore previous selection if it still exists
-    if (currentValue && Array.from(dropdown.options).some(opt => opt.value === currentValue)) {
+    // Restore previous value if it exists
+    if (currentValue) {
       dropdown.value = currentValue;
-    } else if (dropdown.id === 'sourceType') {
-      // Default to BOOK for quote modal if no previous value
-      dropdown.value = types.find(t => t.value === 'BOOK')?.value || types[0]?.value || '';
     }
   });
   
-  // Also update type filter checkboxes
-  populateTypeFilterCheckboxes();
+  // Populate training type dropdown
+  const trainingTypeDropdown = document.getElementById('trainingType');
+  if (trainingTypeDropdown) {
+    const trainingTypes = getTrainingTypes();
+    const currentValue = trainingTypeDropdown.value;
+    
+    trainingTypeDropdown.innerHTML = '<option value="">Select type...</option>';
+    
+    trainingTypes.forEach(type => {
+      const option = document.createElement('option');
+      option.value = type.value;
+      option.textContent = `${type.icon} ${type.label}`;
+      trainingTypeDropdown.appendChild(option);
+    });
+    
+    if (currentValue) {
+      trainingTypeDropdown.value = currentValue;
+    }
+  }
 }
 
 // Populate type filter checkboxes in search area
@@ -472,8 +502,42 @@ function populateTypeFilterCheckboxes() {
   });
 }
 
+function populateTrainingTypeFilterCheckboxes() {
+  const trainingTypes = getTrainingTypes();
+  const container = document.querySelector('.training-type-filter-options');
+  
+  if (!container) return;
+  
+  // Store current checked states
+  const checkedStates = {};
+  container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    checkedStates[cb.id] = cb.checked;
+  });
+  
+  // Clear and rebuild
+  container.innerHTML = '';
+  
+  trainingTypes.forEach(type => {
+    const checkboxId = `filterTraining${type.value}`;
+    const label = document.createElement('label');
+    label.className = 'type-filter-option';
+    label.innerHTML = `
+      <input type="checkbox" id="${checkboxId}" data-type="${type.value}" ${checkedStates[checkboxId] !== false ? 'checked' : ''}>
+      <span>${type.icon} ${type.label}</span>
+    `;
+    container.appendChild(label);
+    
+    // Re-attach event listener
+    const checkbox = label.querySelector('input');
+    checkbox.addEventListener('change', () => {
+      loadQuotes();
+    });
+  });
+}
+
 // Pagination state
 let currentPage = 1;
+let currentNoteTypeFilter = null; // null = show all types
 const quotesPerPage = 20;
 let totalQuotes = 0;
 let filteredQuotes = 0; // Track filtered count for pagination
@@ -543,6 +607,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Initialize quote types in dropdowns
   populateTypeDropdowns();
   
+  // Initialize training type filter checkboxes
+  populateTrainingTypeFilterCheckboxes();
+  
+  // Initialize sources filter visibility
+  updateSourcesFilterVisibility();
+  
   // Initialize Quill editor
   initializeQuillEditor();
   
@@ -564,13 +634,72 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 // Event Listeners
 function setupEventListeners() {
-  addQuoteBtn.addEventListener("click", openAddModal);
-  
-  // Tablet-specific button (same functionality)
+  // Add note button handlers with popup menu
   const addQuoteBtnTablet = document.getElementById("addQuoteBtnTablet");
-  if (addQuoteBtnTablet) {
-    addQuoteBtnTablet.addEventListener("click", openAddModal);
+  const noteTypePopup = document.getElementById("noteTypePopup");
+  
+  function handleAddNoteClick(e) {
+    e.stopPropagation();
+    
+    // If on "All Notes" view, show popup menu
+    if (currentNoteTypeFilter === null) {
+      noteTypePopup.style.display = noteTypePopup.style.display === 'block' ? 'none' : 'block';
+    } else {
+      // Direct open with current filter type
+      openAddModal();
+    }
   }
+  
+  addQuoteBtn.addEventListener("click", handleAddNoteClick);
+  if (addQuoteBtnTablet) {
+    addQuoteBtnTablet.addEventListener("click", handleAddNoteClick);
+  }
+  
+  // Close popup when clicking outside
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest('#addQuoteBtn') && !e.target.closest('#addQuoteBtnTablet') && !e.target.closest('#noteTypePopup')) {
+      noteTypePopup.style.display = 'none';
+    }
+  });
+  
+  // Handle popup menu item clicks
+  document.querySelectorAll('.note-type-menu-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const noteType = item.dataset.type;
+      currentNoteTypeFilter = noteType;
+      noteTypePopup.style.display = 'none';
+      openAddModal();
+      // Reset filter after opening modal so next click shows popup again
+      setTimeout(() => { currentNoteTypeFilter = null; }, 100);
+    });
+  });
+  
+  // Note type change handler (removed from modal, but keep for edit mode)
+  const noteTypeSelect = document.getElementById("noteType");
+  if (noteTypeSelect) {
+    noteTypeSelect.addEventListener("change", updateFieldVisibility);
+  }
+  
+  // Note type filter buttons in menu
+  const noteTypeFilters = document.querySelectorAll('.note-type-filter');
+  noteTypeFilters.forEach(button => {
+    button.addEventListener('click', () => {
+      const noteType = button.dataset.noteType;
+      currentNoteTypeFilter = noteType;
+      currentPage = 1;
+      
+      // Update active state
+      document.querySelectorAll('.note-type-filter').forEach(btn => btn.classList.remove('active'));
+      button.classList.add('active');
+      
+      // Update button text
+      updateAddButtonText();
+      
+      // Load filtered quotes
+      loadQuotes();
+    });
+  });
   
   closeModal.addEventListener("click", closeQuoteModal);
   cancelBtn.addEventListener("click", closeQuoteModal);
@@ -930,6 +1059,51 @@ function setupEventListeners() {
 
     // Update when individual checkboxes change (handled in populateTypeFilterCheckboxes)
   }
+  
+  // Training Type Filter Dropdown
+  const trainingTypeFilterToggle = document.getElementById("trainingTypeFilterToggle");
+  const trainingTypeFilterDropdown = document.getElementById("trainingTypeFilterDropdown");
+  if (trainingTypeFilterToggle && trainingTypeFilterDropdown) {
+    trainingTypeFilterToggle.addEventListener("click", (e) => {
+      e.stopPropagation();
+      trainingTypeFilterDropdown.classList.toggle("show");
+      trainingTypeFilterToggle.classList.toggle("open");
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest("#trainingTypesFilterContainer")) {
+        trainingTypeFilterDropdown.classList.remove("show");
+        trainingTypeFilterToggle.classList.remove("open");
+      }
+    });
+
+    // Select All button for training types
+    const trainingTypeSelectAllBtn = document.getElementById("trainingTypeSelectAllBtn");
+    if (trainingTypeSelectAllBtn) {
+      trainingTypeSelectAllBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const checkboxes = document.querySelectorAll('.training-type-filter-options input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+          checkbox.checked = true;
+        });
+        loadQuotes();
+      });
+    }
+
+    // Deselect All button for training types
+    const trainingTypeDeselectAllBtn = document.getElementById("trainingTypeDeselectAllBtn");
+    if (trainingTypeDeselectAllBtn) {
+      trainingTypeDeselectAllBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const checkboxes = document.querySelectorAll('.training-type-filter-options input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+          checkbox.checked = false;
+        });
+        loadQuotes();
+      });
+    }
+  }
 
   // Note: Modal can only be closed via Cancel button, X button, or Save button
   // This prevents accidental data loss from clicking outside the modal
@@ -1028,8 +1202,145 @@ function debounceSearch() {
   }, 300);
 }
 
+// ============================================
+// Note Type Functions
+// ============================================
+
+const NOTE_TYPES = {
+  quote: { icon: 'Q', label: 'Quote', color: '#3b82f6' },
+  note: { icon: 'N', label: 'Simple Note', color: '#10b981' },
+  training: { icon: 'T', label: 'Training', color: '#f59e0b' },
+  puzzle: { icon: 'P', label: 'Logical Puzzle', color: '#8b5cf6' }
+};
+
+function updateAddButtonText() {
+  const btnTextDesktop = document.getElementById('addNoteBtnText');
+  const btnTextTablet = document.getElementById('addNoteBtnTextTablet');
+  
+  if (currentNoteTypeFilter && NOTE_TYPES[currentNoteTypeFilter]) {
+    const typeInfo = NOTE_TYPES[currentNoteTypeFilter];
+    btnTextDesktop.textContent = `+ Add New ${typeInfo.label}`;
+    btnTextTablet.textContent = `+ Add ${typeInfo.label}`;
+  } else {
+    btnTextDesktop.textContent = '+ Add New Note';
+    btnTextTablet.textContent = '+ Add Note';
+  }
+  
+  // Show/hide "Select Quote Sources" based on note type
+  updateSourcesFilterVisibility();
+}
+
+function updateSourcesFilterVisibility() {
+  const quoteSourcesContainer = document.getElementById('quoteSourcesFilterContainer');
+  const trainingTypesContainer = document.getElementById('trainingTypesFilterContainer');
+  const searchHeaderTitle = document.getElementById('searchHeaderTitle');
+  const searchAuthorContainer = document.getElementById('searchAuthorContainer');
+  const searchSourceContainer = document.getElementById('searchSourceContainer');
+  
+  // Update search header title based on current filter
+  if (searchHeaderTitle) {
+    const titles = {
+      'quote': '🔍 Search Quotes',
+      'note': '🔍 Search Notes',
+      'training': '🔍 Search Training',
+      'puzzle': '🔍 Search Puzzles',
+      null: '🔍 Search All Notes'
+    };
+    searchHeaderTitle.textContent = titles[currentNoteTypeFilter] || '🔍 Search All Notes';
+  }
+  
+  // Show/hide Author and Source search fields (only for Quotes)
+  const isQuoteView = currentNoteTypeFilter === 'quote';
+  if (searchAuthorContainer) {
+    searchAuthorContainer.style.display = isQuoteView ? 'block' : 'none';
+  }
+  if (searchSourceContainer) {
+    searchSourceContainer.style.display = isQuoteView ? 'block' : 'none';
+  }
+  
+  // Show Quote Sources filter when on "Quotes" view only
+  if (quoteSourcesContainer) {
+    if (currentNoteTypeFilter === 'quote') {
+      quoteSourcesContainer.style.display = 'block';
+    } else {
+      quoteSourcesContainer.style.display = 'none';
+    }
+  }
+  
+  // Show Training Types filter when on "Training" only
+  if (trainingTypesContainer) {
+    if (currentNoteTypeFilter === 'training') {
+      trainingTypesContainer.style.display = 'block';
+    } else {
+      trainingTypesContainer.style.display = 'none';
+    }
+  }
+}
+
+function updateFieldVisibility() {
+  const noteType = document.getElementById('noteType').value;
+  const isQuote = noteType === 'quote';
+  const isTraining = noteType === 'training';
+  
+  // Show/hide quote-specific fields
+  const quoteSpecificFields = document.getElementById('quoteSpecificFields');
+  const translationGroupContainer = document.getElementById('translationGroupContainer');
+  const trainingSpecificFields = document.getElementById('trainingSpecificFields');
+  
+  if (quoteSpecificFields) {
+    quoteSpecificFields.style.display = isQuote ? 'flex' : 'none';
+  }
+  
+  if (translationGroupContainer) {
+    translationGroupContainer.style.display = isQuote ? 'block' : 'none';
+  }
+  
+  if (trainingSpecificFields) {
+    trainingSpecificFields.style.display = isTraining ? 'flex' : 'none';
+  }
+  
+  // Update labels based on note type
+  updateModalLabels(noteType);
+  
+  // Update modal title based on type
+  if (!editingQuoteId) {
+    const typeInfo = NOTE_TYPES[noteType];
+    modalTitle.textContent = `Add New ${typeInfo.label}`;
+  }
+}
+
+function updateModalLabels(noteType) {
+  const isQuote = noteType === 'quote';
+  const typeInfo = NOTE_TYPES[noteType] || NOTE_TYPES['quote'];
+  
+  // Update main text field label
+  const quoteTextLabel = document.getElementById('quoteTextLabel');
+  if (quoteTextLabel) {
+    quoteTextLabel.textContent = isQuote ? '💬 Quote *' : `${typeInfo.icon} Note *`;
+  }
+  
+  // Update comment field label (same for all types)
+  const noteLabel = document.getElementById('noteLabel');
+  if (noteLabel) {
+    noteLabel.textContent = '💬 Comment (Optional)';
+  }
+  
+  // Update attachment label
+  const attachmentLabel = document.getElementById('attachmentLabel');
+  if (attachmentLabel) {
+    attachmentLabel.textContent = `📎 ${typeInfo.label} Attachment`;
+  }
+}
+
 function openAddModal() {
-  modalTitle.textContent = "Add New Quote";
+  // Set modal title based on current note type filter
+  const noteType = currentNoteTypeFilter || 'quote';
+  const typeLabel = NOTE_TYPES[noteType]?.label || 'Note';
+  modalTitle.textContent = `Add New ${typeLabel}`;
+  
+  // Update field labels
+  updateModalLabels(noteType);
+  
   editingQuoteId = null;
   quoteForm.reset();
   currentQuoteImage = "";
@@ -1051,12 +1362,29 @@ function openAddModal() {
     defaultScoreRadio.checked = true;
   }
   
+  // Set note type based on current filter context
+  const noteTypeSelect = document.getElementById("noteType");
+  if (noteTypeSelect) {
+    // If we have a specific note type filter active, use it
+    // Otherwise default to 'quote'
+    noteTypeSelect.value = currentNoteTypeFilter || "quote";
+  }
+  
   // Set default values for new quotes
   authorInput.value = "Unknown Author";
   const sourceTypeSelect = document.getElementById("sourceType");
   if (sourceTypeSelect) {
     sourceTypeSelect.value = "ASSORTED";
   }
+  
+  // Clear training-specific fields
+  const noteDateInput = document.getElementById("noteDate");
+  const trainingTypeSelect = document.getElementById("trainingType");
+  if (noteDateInput) noteDateInput.value = "";
+  if (trainingTypeSelect) trainingTypeSelect.value = "";
+  
+  // Update field visibility based on note type
+  updateFieldVisibility();
   
   // Hide metadata for new quotes
   const metadataEl = document.getElementById("quoteMetadata");
@@ -1083,7 +1411,14 @@ function openAddModal() {
 }
 
 function openEditModal(quote) {
-  modalTitle.textContent = "Edit Quote";
+  // Set modal title based on note type
+  const noteType = quote.note_type || 'quote';
+  const typeLabel = NOTE_TYPES[noteType]?.label || 'Note';
+  modalTitle.textContent = `Edit ${typeLabel}`;
+  
+  // Update field labels
+  updateModalLabels(noteType);
+  
   editingQuoteId = quote.id;
   
   // Set the hidden quoteId input for delete button
@@ -1133,6 +1468,21 @@ function openEditModal(quote) {
   document.getElementById("source").value = quote.source_name || "";
   document.getElementById("sourceType").value = quote.source_type || "BOOK";
   
+  // Set training-specific fields if it's a training note
+  if (quote.note_type === 'training') {
+    document.getElementById("trainingType").value = quote.source_type || "";
+    if (quote.note_date) {
+      document.getElementById("noteDate").value = quote.note_date;
+    }
+  }
+  
+  // Set note type and update field visibility
+  const noteTypeSelect = document.getElementById("noteType");
+  if (noteTypeSelect) {
+    noteTypeSelect.value = quote.note_type || "quote";
+  }
+  updateFieldVisibility();
+  
   // Set score radio button
   const scoreValue = quote.score || "0";
   const scoreRadio = document.querySelector(`input[name="quoteScore"][value="${scoreValue}"]`);
@@ -1178,10 +1528,11 @@ function openEditModal(quote) {
   // Update image indicator
   updateImageIndicator();
   
-  // Show delete button for editing
+  // Show delete button for editing with appropriate label
   const deleteQuoteBtn = document.getElementById("deleteQuoteBtn");
   if (deleteQuoteBtn) {
     deleteQuoteBtn.style.display = "inline-block";
+    deleteQuoteBtn.textContent = `Delete ${typeLabel}`;
   }
 
   quoteModal.style.display = "block";
@@ -1211,6 +1562,22 @@ function clearFilters() {
 }
 
 // API Functions
+// Helper function to retry failed fetch requests (for server startup delays)
+async function fetchWithRetry(url, options = {}, maxRetries = 3, delayMs = 500) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, options);
+      return response;
+    } catch (error) {
+      if (attempt === maxRetries) {
+        throw error;
+      }
+      console.log(`Connection failed (attempt ${attempt}/${maxRetries}), retrying in ${delayMs}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+}
+
 // Helper function to add refresh animation
 function addRefreshAnimation(buttonId, asyncFunction) {
   return async function() {
@@ -1240,28 +1607,52 @@ async function loadQuotes() {
     if (searchSource.value) params.append("source", searchSource.value);
     if (searchTags.value) params.append("tags", searchTags.value);
     if (searchScore.value) params.append("score", searchScore.value);
+    
+    // Add note type filter
+    if (currentNoteTypeFilter) {
+      params.append("note_type", currentNoteTypeFilter);
+    }
 
     // Add type filter - dynamically based on configured types
-    const selectedTypes = [];
-    const typeCheckboxes = document.querySelectorAll('.type-filter-option input[type="checkbox"]');
-    typeCheckboxes.forEach(checkbox => {
-      if (checkbox.checked) {
-        selectedTypes.push(checkbox.dataset.type);
+    // Only apply quote source types when on Quote view or All Notes view
+    if (currentNoteTypeFilter !== 'training') {
+      const selectedTypes = [];
+      const typeCheckboxes = document.querySelectorAll('.type-filter-options input[type="checkbox"]');
+      typeCheckboxes.forEach(checkbox => {
+        if (checkbox.checked) {
+          selectedTypes.push(checkbox.dataset.type);
+        }
+      });
+      
+      console.log("loadQuotes - selectedTypes:", selectedTypes, "length:", selectedTypes.length);
+      
+      // Only add types filter if not all types are selected (optimization)
+      const quoteTypes = getQuoteTypes();
+      const totalTypes = quoteTypes.length;
+      if (selectedTypes.length > 0 && selectedTypes.length < totalTypes) {
+        params.append("types", selectedTypes.join(","));
+        console.log("Adding types to query:", selectedTypes.join(","));
+      } else if (selectedTypes.length === 0) {
+        console.log("NO types selected - will show nothing");
+      } else {
+        console.log("All types selected - no filter needed, showing all");
       }
-    });
+    }
     
-    console.log("loadQuotes - selectedTypes:", selectedTypes, "length:", selectedTypes.length);
-    
-    // Only add types filter if not all types are selected (optimization)
-    const quoteTypes = getQuoteTypes();
-    const totalTypes = quoteTypes.length;
-    if (selectedTypes.length > 0 && selectedTypes.length < totalTypes) {
-      params.append("types", selectedTypes.join(","));
-      console.log("Adding types to query:", selectedTypes.join(","));
-    } else if (selectedTypes.length === 0) {
-      console.log("NO types selected - will show nothing");
-    } else {
-      console.log("All types selected - no filter needed, showing all");
+    // Add training types filter (for training notes)
+    if (currentNoteTypeFilter === 'training') {
+      const selectedTrainingTypes = [];
+      const trainingTypeCheckboxes = document.querySelectorAll('.training-type-filter-options input[type="checkbox"]');
+      trainingTypeCheckboxes.forEach(checkbox => {
+        if (checkbox.checked) {
+          selectedTrainingTypes.push(checkbox.dataset.type);
+        }
+      });
+      
+      if (selectedTrainingTypes.length > 0) {
+        params.append("training_types", selectedTrainingTypes.join(","));
+        console.log("Adding training_types to query:", selectedTrainingTypes.join(","));
+      }
     }
     
     console.log("Final API URL:", `${API_URL}/quotes?${params.toString()}`);
@@ -1293,7 +1684,7 @@ async function loadQuotes() {
     params.append("limit", quotesPerPage);
     params.append("offset", offset);
 
-    const response = await fetch(`${API_URL}/quotes?${params.toString()}`);
+    const response = await fetchWithRetry(`${API_URL}/quotes?${params.toString()}`);
     const quotes = await response.json();
 
     currentQuotesData = quotes; // Store for PDF export
@@ -1310,7 +1701,7 @@ async function loadQuotes() {
 async function loadTotalCount() {
   try {
     // Get total count (no filters)
-    const totalResponse = await fetch(`${API_URL}/quotes/count`);
+    const totalResponse = await fetchWithRetry(`${API_URL}/quotes/count`);
     if (!totalResponse.ok) {
       throw new Error(`HTTP error! status: ${totalResponse.status}`);
     }
@@ -1399,11 +1790,12 @@ async function loadTotalCount() {
 async function handleSubmit(e) {
   e.preventDefault();
 
+  const noteType = document.getElementById("noteType").value;
   const quoteData = {
     quote: document.getElementById("quoteText").value,
     author: document.getElementById("author").value,
     source: document.getElementById("source").value,
-    sourceType: document.getElementById("sourceType").value || "ASSORTED", // Empty means Assorted
+    sourceType: noteType === 'training' ? document.getElementById("trainingType").value || "ASSORTED" : (document.getElementById("sourceType").value || "ASSORTED"),
     sourceId: window.currentSourceId || null,
     tags: document.getElementById("tags").value,
     note: noteInput.value,
@@ -1411,6 +1803,8 @@ async function handleSubmit(e) {
     image: currentQuoteImage,
     image_full: currentQuoteImageFull,
     attachment_type: currentAttachmentType,
+    note_type: noteType,
+    note_date: noteType === 'training' ? (document.getElementById("noteDate").value || null) : null,
     translation_group: document.getElementById("translationGroup").value.trim() || null,
     storageThresholdMB: parseFloat(localStorage.getItem('externalStorageThreshold') || '1'),
   };
@@ -1682,6 +2076,57 @@ function createQuoteCard(quote) {
   const translationBadge = quote.translation_group 
     ? `<span class="translation-badge" title="Translation group: ${escapeHtml(quote.translation_group)}" onclick="event.stopPropagation(); showTranslationGroup('${escapeHtml(quote.translation_group)}')">T</span>` 
     : '';
+  
+  // Note type badge - only show on "All Notes" view (when no specific filter is active)
+  const noteType = quote.note_type || 'quote';
+  const noteTypeInfo = NOTE_TYPES[noteType];
+  const showNoteTypeBadge = currentNoteTypeFilter === null; // Only on "All Notes"
+  const noteTypeBadge = showNoteTypeBadge && noteTypeInfo
+    ? `<span class="translation-badge" style="background: ${noteTypeInfo.color};" title="${noteTypeInfo.label}">${noteTypeInfo.icon}</span>`
+    : '';
+  
+  // Build metadata section based on note type
+  let metadataContent = '';
+  
+  if (noteType === 'quote') {
+    // Quotes: Show author and source
+    metadataContent = author && source 
+      ? `<div class="meta-item-combined">${noteTypeBadge}${translationBadge}<span class="type-icon-badge">${sourceIcon}</span> <span class="meta-by">by</span> <span class="meta-value clickable author-link" data-id="${quote.author_id}" data-name="${escapeHtml(author)}">${escapeHtml(author)}</span> <span class="meta-from">from</span> <span class="meta-value clickable source-link" data-id="${quote.source_id}" data-name="${escapeHtml(source)}" data-type="${sourceType}">📚 ${escapeHtml(source)}</span></div>` 
+      : author 
+        ? `<div class="meta-item">${noteTypeBadge}${translationBadge}<span class="type-icon-badge">${sourceIcon}</span> <span class="meta-by">by</span> <span class="meta-value clickable author-link" data-id="${quote.author_id}" data-name="${escapeHtml(author)}">${escapeHtml(author)}</span></div>` 
+        : source 
+          ? `<div class="meta-item">${noteTypeBadge}${translationBadge}<span class="meta-value clickable source-link" data-id="${quote.source_id}" data-name="${escapeHtml(source)}" data-type="${sourceType}">📚 ${escapeHtml(source)}</span></div>` 
+          : (noteTypeBadge || translationBadge) ? `<div class="meta-item">${noteTypeBadge}${translationBadge}</div>` : '';
+  } else if (noteType === 'training') {
+    // Training: Show date and training type
+    const trainingTypes = getTrainingTypes();
+    const trainingTypeInfo = trainingTypes.find(t => t.value === sourceType);
+    const trainingIcon = trainingTypeInfo ? trainingTypeInfo.icon : '🏋️';
+    const trainingLabel = trainingTypeInfo ? trainingTypeInfo.label : sourceType;
+    
+    const dateStr = quote.note_date 
+      ? (() => {
+          const date = new Date(quote.note_date);
+          const dayName = date.toLocaleDateString('nb-NO', { weekday: 'short' });
+          const dateFormatted = date.toLocaleDateString('nb-NO');
+          return `${dayName} ${dateFormatted}`;
+        })()
+      : '';
+    const trainingTypeStr = sourceType && sourceType !== 'ASSORTED' 
+      ? `<span class="type-icon-badge">${trainingIcon}</span> ${trainingLabel}` 
+      : '';
+    
+    metadataContent = dateStr && trainingTypeStr
+      ? `<div class="meta-item-combined">${noteTypeBadge}${trainingTypeStr} <span class="meta-from">•</span> <span class="meta-value">📅 ${dateStr}</span></div>`
+      : dateStr
+        ? `<div class="meta-item">${noteTypeBadge}<span class="meta-value">📅 ${dateStr}</span></div>`
+        : trainingTypeStr
+          ? `<div class="meta-item">${noteTypeBadge}${trainingTypeStr}</div>`
+          : `<div class="meta-item">${noteTypeBadge}</div>`;
+  } else {
+    // For other note types (note, puzzle), just show the badge
+    metadataContent = `<div class="meta-item">${noteTypeBadge}</div>`;
+  }
 
   return `
         <div class="quote-card ${quote.image ? 'has-image' : ''}" data-quote-id="${quote.id}" style="cursor: pointer;">
@@ -1699,11 +2144,7 @@ function createQuoteCard(quote) {
                 <div class="quote-separator"></div>
                 <div class="quote-metadata-row">
                     <div class="quote-metadata-left">
-                        ${translationBadge}
-                        ${author && source ? `<div class="meta-item-combined"><span class="type-icon-badge">${sourceIcon}</span> <span class="meta-by">by</span> <span class="meta-value clickable author-link" data-id="${quote.author_id}" data-name="${escapeHtml(author)}">${escapeHtml(author)}</span> <span class="meta-from">from</span> <span class="meta-value clickable source-link" data-id="${quote.source_id}" data-name="${escapeHtml(source)}" data-type="${sourceType}">📚 ${escapeHtml(source)}</span></div>` : 
-                        author ? `<div class="meta-item"><span class="type-icon-badge">${sourceIcon}</span> <span class="meta-by">by</span> <span class="meta-value clickable author-link" data-id="${quote.author_id}" data-name="${escapeHtml(author)}">${escapeHtml(author)}</span></div>` :
-                        source ? `<div class="meta-item"><span class="meta-value clickable source-link" data-id="${quote.source_id}" data-name="${escapeHtml(source)}" data-type="${sourceType}">📚 ${escapeHtml(source)}</span></div>` : ""
-                        }
+                        ${metadataContent}
                     </div>
                     ${tags ? `<div class="quote-tags-inline">${tags}</div>` : ''}
                 </div>
@@ -2883,6 +3324,16 @@ function setupMenuNavigation() {
     item.addEventListener("click", () => {
       const view = item.dataset.view;
       console.log("Switching to view:", view);
+      
+      // Reset note type filter when clicking "All Notes"
+      if (view === "quotes") {
+        currentNoteTypeFilter = null;
+        // Remove active state from all note type filters
+        document.querySelectorAll('.note-type-filter').forEach(btn => btn.classList.remove('active'));
+        // Update button text
+        updateAddButtonText();
+      }
+      
       switchView(view);
 
       // Update active state only for view navigation items

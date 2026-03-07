@@ -4360,11 +4360,54 @@ textarea {
 .translation-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.2rem;
-  padding: 0.15rem 0.4rem;
+  justify-content: center;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  padding: 0.2rem 0.35rem;
   background: #3b82f6;
   color: white;
   border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1;
+  margin-right: 0.35rem;
+  vertical-align: middle;
+}
+
+/* Note type popup menu */
+.header-actions {
+  position: relative; /* Make this the positioning parent for the popup */
+}
+
+.note-type-popup {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 200px;
+  overflow: hidden;
+}
+
+.note-type-menu-item {
+  display: block;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  background: white;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background 0.2s;
+}
+
+.note-type-menu-item:hover {
+  background: var(--hover-color);
+}
+
+.note-type-menu-item:not(:last-child) {
+  border-bottom: 1px solid var(--border);
 }

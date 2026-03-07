@@ -44,16 +44,38 @@
         <ul class="menu-list">
           <li>
             <button class="menu-item active" data-view="quotes">
-              <span class="menu-icon">💬</span><span class="menu-text"> Quotes</span>
+              <span class="menu-icon">💬</span><span class="menu-text"> All Notes</span>
+            </button>
+          </li>
+          <li style="padding-left: 1rem;">
+            <button class="menu-item note-type-filter" data-note-type="quote">
+              <span class="menu-icon">📖</span><span class="menu-text"> Quotes</span>
+            </button>
+          </li>
+          <li style="padding-left: 2rem;">
+            <button class="menu-item" data-view="authors"><span class="menu-icon">✍️</span><span class="menu-text"> Authors</span></button>
+          </li>
+          <li style="padding-left: 2rem;">
+            <button class="menu-item" data-view="sources"><span class="menu-icon">📚</span><span class="menu-text"> Sources</span></button>
+          </li>
+          <li style="padding-left: 1rem;">
+            <button class="menu-item note-type-filter" data-note-type="note">
+              <span class="menu-icon">📄</span><span class="menu-text"> Notes</span>
+            </button>
+          </li>
+          <li style="padding-left: 1rem;">
+            <button class="menu-item note-type-filter" data-note-type="training">
+              <span class="menu-icon">💪</span><span class="menu-text"> Training</span>
+            </button>
+          </li>
+          <li style="padding-left: 1rem;">
+            <button class="menu-item note-type-filter" data-note-type="puzzle">
+              <span class="menu-icon">🧩</span><span class="menu-text"> Puzzles</span>
             </button>
           </li>
           <li>
-            <button class="menu-item" data-view="authors"><span class="menu-icon">✍️</span><span class="menu-text"> Authors</span></button>
+            <button class="menu-item" data-view="tags"><span class="menu-icon">🏷️</span><span class="menu-text"> Tags</span></button>
           </li>
-          <li>
-            <button class="menu-item" data-view="sources"><span class="menu-icon">📚</span><span class="menu-text"> Sources</span></button>
-          </li>
-          <li><button class="menu-item" data-view="tags"><span class="menu-icon">🏷️</span><span class="menu-text"> Tags</span></button></li>
           <li>
             <button id="randomQuoteBtn" class="menu-item"><span class="menu-icon">🎲</span><span class="menu-text-desktop"> Random Quote</span><span class="menu-text-mobile"> Random</span></button>
           </li>
@@ -172,15 +194,23 @@
                   + Add Multiple Quotes
                 </button>
                 <button id="addQuoteBtn" class="btn btn-add desktop-text">
-                  + Add New Quote
+                  <span id="addNoteBtnText">+ Add New Note</span>
                 </button>
                 <!-- Tablet buttons (short text) -->
                 <button id="addBulkBtnTablet" class="btn btn-bulk tablet-text">
                   + Add Multiple
                 </button>
                 <button id="addQuoteBtnTablet" class="btn btn-add tablet-text">
-                  + Add Quote
+                  <span id="addNoteBtnTextTablet">+ Add Note</span>
                 </button>
+                
+                <!-- Popup menu for note type selection (only shown on "All Notes") -->
+                <div id="noteTypePopup" class="note-type-popup" style="display: none;">
+                  <button class="note-type-menu-item" data-type="quote">📖 Quote</button>
+                  <button class="note-type-menu-item" data-type="note">📄 Simple Note</button>
+                  <button class="note-type-menu-item" data-type="training">💪 Training</button>
+                  <button class="note-type-menu-item" data-type="puzzle">🧩 Logical Puzzle</button>
+                </div>
               </div>
             </header>
 
@@ -188,10 +218,10 @@
             <div class="search-section">
               <div class="search-header">
                 <div class="search-title-row">
-                  <h2>🔍 Search Quotes</h2>
+                  <h2 id="searchHeaderTitle">🔍 Search Quotes</h2>
                   
                   <!-- Type Filter Dropdown -->
-                  <div class="type-filter-dropdown-container">
+                  <div class="type-filter-dropdown-container" id="quoteSourcesFilterContainer">
                     <button type="button" id="typeFilterToggle" class="type-filter-toggle">
                       <span>📋 Select Quote Sources</span>
                       <span class="dropdown-arrow">▼</span>
@@ -215,19 +245,45 @@
                       </div>
                     </div>
                   </div>
+                  
+                  <!-- Training Types Filter Dropdown -->
+                  <div class="type-filter-dropdown-container" id="trainingTypesFilterContainer" style="display: none;">
+                    <button type="button" id="trainingTypeFilterToggle" class="type-filter-toggle">
+                      <span>🏋️ Select Training Types</span>
+                      <span class="dropdown-arrow">▼</span>
+                    </button>
+                    <div id="trainingTypeFilterDropdown" class="type-filter-dropdown">
+                      <div class="type-action-buttons">
+                        <button type="button" id="trainingTypeSelectAllBtn" class="type-action-btn">
+                          <span class="type-icon">✓</span>
+                          <span>Select All</span>
+                        </button>
+                        <div class="type-action-separator"></div>
+                        <button type="button" id="trainingTypeDeselectAllBtn" class="type-action-btn">
+                          <span class="type-icon">✗</span>
+                          <span>Clear All</span>
+                        </button>
+                      </div>
+                      <div class="type-filter-separator"></div>
+                      <!-- Training type checkboxes will be dynamically populated -->
+                      <div class="training-type-filter-options">
+                        <!-- Populated by JavaScript -->
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
               <div class="search-grid">
                 <div class="search-item">
-                  <label>💬 Quote text</label>
+                  <label>💬 Text</label>
                   <input
                     type="text"
                     id="searchQuote"
-                    placeholder="Search in quote text..."
+                    placeholder="Search in text..."
                   />
                 </div>
-                <div class="search-item">
+                <div class="search-item" id="searchAuthorContainer">
                   <label>✍️ Author</label>
                   <input
                     type="text"
@@ -235,7 +291,7 @@
                     placeholder="Search by author..."
                   />
                 </div>
-                <div class="search-item">
+                <div class="search-item" id="searchSourceContainer">
                   <label>📚 Source</label>
                   <input
                     type="text"
@@ -328,7 +384,7 @@
 
             <!-- Quotes List -->
             <div class="quotes-section">
-              <h2>⏳ Latest Quotes <span id="quoteCount"></span></h2>
+              <h2>⏳ Latest <span id="quoteCount"></span></h2>
               <div id="quotesList" class="quotes-list">
                 <div class="loading">Loading quotes...</div>
               </div>
@@ -830,11 +886,12 @@
         <div class="modal-body">
           <form id="quoteForm">
           <input type="hidden" id="quoteId" />
+          <input type="hidden" id="noteType" value="quote" />
 
           <div class="form-group quote-editor-group">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
               <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <label for="quoteText" style="margin-bottom: 0;">💬 Quote *</label>
+                <label for="quoteText" style="margin-bottom: 0;"><span id="quoteTextLabel">💬 Quote *</span></label>
                 <button type="button" id="toggleFullscreenEditor" class="btn-icon" title="Fullscreen Editor" style="padding: 0.25rem 0.5rem; font-size: 0.9rem;">
                   ⛶
                 </button>
@@ -878,7 +935,7 @@
 
           <div class="form-row form-row-with-separator">
             <div class="form-group" style="flex: 1;">
-              <label for="note">📝 Note (Optional)</label>
+              <label for="note"><span id="noteLabel">💬 Comment (Optional)</span></label>
               <textarea
                 id="note"
                 placeholder="Additional context..."
@@ -900,7 +957,7 @@
             </div>
           </div>
 
-          <div class="form-row form-row-with-separator" style="margin-top: 0.5rem;">
+          <div class="form-row form-row-with-separator" style="margin-top: 0.5rem;" id="quoteSpecificFields">
             <div class="form-group" style="flex: 2;">
               <label for="author">✍️ Author</label>
               <div class="autocomplete-wrapper">
@@ -940,11 +997,30 @@
             </div>
           </div>
 
+          <!-- Training-specific fields -->
+          <div class="form-row form-row-with-separator" style="margin-top: 0.5rem; display: none;" id="trainingSpecificFields">
+            <div class="form-group" style="flex: 1;">
+              <label for="noteDate">📅 Date</label>
+              <input
+                type="date"
+                id="noteDate"
+                placeholder="DD.MM.YYYY"
+              />
+            </div>
+
+            <div class="form-group" style="flex: 1;">
+              <label for="trainingType">🏋️ Training Type</label>
+              <select id="trainingType">
+                <option value="">Select type...</option>
+              </select>
+            </div>
+          </div>
+
           <div class="form-group form-group-with-separator" style="margin-top: 1.5rem; display: flex; align-items: flex-start; gap: 1rem;">
             <div style="flex: 1;">
               <label onclick="toggleImageSection()" style="cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
                 <span id="imageToggleIcon">▶</span>
-                <span>📎 Quote Attachment</span>
+                <span id="attachmentLabel">📎 Quote Attachment</span>
                 <span id="imageIndicator" style="font-size: 0.85rem; color: var(--text-secondary); margin-left: 0.5rem;"></span>
               </label>
               <div id="imageSection" style="display: none; margin-top: 1rem;">
@@ -988,7 +1064,7 @@
               </div>
             </div>
             
-            <div style="flex: 0.5;">
+            <div style="flex: 0.5;" id="translationGroupContainer">
               <label for="translationGroup">🔗 Translation Group</label>
               <input
                 type="text"
