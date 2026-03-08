@@ -919,7 +919,12 @@ app.get("/api/quotes", async (req, res) => {
       }
     }
 
-    query += ` ORDER BY q.updated_at DESC LIMIT $${paramCounter} OFFSET $${paramCounter + 1}`;
+    // Sort by note_date for training notes (newest first), otherwise by updated_at
+    if (note_type === 'training') {
+      query += ` ORDER BY q.note_date DESC, q.updated_at DESC LIMIT $${paramCounter} OFFSET $${paramCounter + 1}`;
+    } else {
+      query += ` ORDER BY q.updated_at DESC LIMIT $${paramCounter} OFFSET $${paramCounter + 1}`;
+    }
     params.push(parseInt(limit), parseInt(offset));
 
     const result = await pool.query(query, params);
@@ -2003,15 +2008,16 @@ app.post("/api/import/json", async (req, res) => {
           if (options?.replaceExisting) {
             await client.query(
               `UPDATE quotes 
-               SET source_id = $1, type = $2, tags = $3, image = $4, image_full = $5, note = $6, updated_at = CURRENT_TIMESTAMP
-               WHERE id = $7`,
+               SET source_id = $1, type = $2, image = $3, image_full = $4, note = $5, note_type = $6, note_date = $7, updated_at = CURRENT_TIMESTAMP
+               WHERE id = $8`,
               [
                 sourceId,
                 quote.type,
-                quote.tags,
                 quote.image,
                 quote.image_full,
                 quote.note,
+                quote.note_type || 'quote',
+                quote.note_date || null,
                 existing.rows[0].id,
               ],
             );
@@ -2021,17 +2027,18 @@ app.post("/api/import/json", async (req, res) => {
           }
         } else {
           await client.query(
-            `INSERT INTO quotes (quote, author_id, source_id, type, tags, image, image_full, note, created_at, updated_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+            `INSERT INTO quotes (quote, author_id, source_id, type, image, image_full, note, note_type, note_date, created_at, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
             [
               quote.quote,
               authorId,
               sourceId,
               quote.type,
-              quote.tags,
               quote.image,
               quote.image_full,
               quote.note,
+              quote.note_type || 'quote',
+              quote.note_date || null,
               quote.created_at || new Date(),
               quote.updated_at || new Date(),
             ],

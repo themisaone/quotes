@@ -157,6 +157,17 @@ function saveQuoteTypes(types) {
   }
 }
 
+function saveTrainingTypes(types) {
+  // Update global settings
+  if (globalSettings) {
+    globalSettings.trainingTypes = types;
+    saveSettings(globalSettings);
+  } else {
+    // Fallback to localStorage
+    localStorage.setItem('trainingTypes', JSON.stringify(types));
+  }
+}
+
 // Get training types from settings
 function getTrainingTypes() {
   // Try global settings first
@@ -722,6 +733,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Initialize quote types in dropdowns
   populateTypeDropdowns();
   
+  // Initialize quote source type filter checkboxes
+  populateTypeFilterCheckboxes();
+  
   // Initialize training type filter checkboxes
   populateTrainingTypeFilterCheckboxes();
   
@@ -1243,6 +1257,20 @@ function setupEventListeners() {
       });
     }
   }
+  
+  // Date picker sync - when date picker changes, update text input
+  const noteDatePicker = document.getElementById("noteDatePicker");
+  const noteDateText = document.getElementById("noteDate");
+  
+  if (noteDatePicker && noteDateText) {
+    noteDatePicker.addEventListener("change", () => {
+      const pickerValue = noteDatePicker.value; // YYYY-MM-DD
+      if (pickerValue) {
+        const [year, month, day] = pickerValue.split('-');
+        noteDateText.value = `${day}.${month}.${year}`; // Convert to dd.mm.yyyy
+      }
+    });
+  }
 
   // Note: Modal can only be closed via Cancel button, X button, or Save button
   // This prevents accidental data loss from clicking outside the modal
@@ -1611,7 +1639,20 @@ function openEditModal(quote) {
   if (quote.note_type === 'training') {
     document.getElementById("trainingType").value = quote.source_type || "";
     if (quote.note_date) {
-      document.getElementById("noteDate").value = quote.note_date;
+      // Parse the date in local timezone and format as dd.mm.yyyy
+      const date = new Date(quote.note_date);
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      const dateForDisplay = `${day}.${month}.${year}`;
+      const dateForPicker = `${year}-${month}-${day}`;
+      
+      console.log('🔍 Debug - note_date from DB:', quote.note_date);
+      console.log('🔍 Debug - date in local time:', date.toLocaleString('nb-NO'));
+      console.log('🔍 Debug - formatted for display (dd.mm.yyyy):', dateForDisplay);
+      
+      document.getElementById("noteDate").value = dateForDisplay;
+      document.getElementById("noteDatePicker").value = dateForPicker;
     }
   }
   
@@ -1971,6 +2012,21 @@ async function handleSubmit(e) {
   e.preventDefault();
 
   const noteType = document.getElementById("noteType").value;
+  
+  // Parse note_date from dd.mm.yyyy format to YYYY-MM-DD for training notes
+  let parsedNoteDate = null;
+  if (noteType === 'training') {
+    const noteDateInput = document.getElementById("noteDate").value;
+    if (noteDateInput) {
+      // Parse dd.mm.yyyy format
+      const match = noteDateInput.match(/(\d{2})\.(\d{2})\.(\d{4})/);
+      if (match) {
+        const [_, day, month, year] = match;
+        parsedNoteDate = `${year}-${month}-${day}`; // Convert to YYYY-MM-DD
+      }
+    }
+  }
+  
   const quoteData = {
     quote: document.getElementById("quoteText").value,
     author: document.getElementById("author").value,
@@ -1984,7 +2040,7 @@ async function handleSubmit(e) {
     image_full: currentQuoteImageFull,
     attachment_type: currentAttachmentType,
     note_type: noteType,
-    note_date: noteType === 'training' ? (document.getElementById("noteDate").value || null) : null,
+    note_date: parsedNoteDate,
     translation_group: document.getElementById("translationGroup").value.trim() || null,
     storageThresholdMB: parseFloat(localStorage.getItem('externalStorageThreshold') || '1'),
   };
@@ -2286,6 +2342,7 @@ function createQuoteCard(quote) {
     
     const dateStr = quote.note_date 
       ? (() => {
+          // Parse as Date to automatically convert UTC to local time
           const date = new Date(quote.note_date);
           const dayName = date.toLocaleDateString('nb-NO', { weekday: 'short' });
           const dateFormatted = date.toLocaleDateString('nb-NO');
@@ -5851,6 +5908,7 @@ function saveQuoteTypesAndRefresh(types) {
       if (success) {
         renderQuoteTypesList();
         populateTypeDropdowns();
+        populateTypeFilterCheckboxes();
         console.log('✅ Quote types updated');
       }
     });
@@ -5859,6 +5917,79 @@ function saveQuoteTypesAndRefresh(types) {
     saveQuoteTypes(types);
     renderQuoteTypesList();
     populateTypeDropdowns();
+    populateTypeFilterCheckboxes();
+  }
+}
+
+// ============ Training Types Management ============
+
+function renderTrainingTypesList() {
+  const container = document.getElementById('trainingTypesList');
+  if (!container) return;
+  
+  const types = getTrainingTypes();
+  
+  container.innerHTML = types.map((type, index) => `
+    <div class="quote-type-item" data-index="${index}">
+      <input type="text" class="quote-type-icon-input" value="${type.icon}" placeholder="🏋️" maxlength="2" />
+      <input type="text" class="quote-type-value-input" value="${type.value}" placeholder="WEIGHTS" />
+      <input type="text" class="quote-type-label-input" value="${type.label}" placeholder="Weights" />
+      <div class="quote-type-actions">
+        ${types.length > 1 ? '<button class="btn-icon-small btn-delete-type" title="Delete Type">🗑️</button>' : ''}
+      </div>
+    </div>
+  `).join('');
+  
+  // Add event listeners
+  container.querySelectorAll('.quote-type-item').forEach((item, index) => {
+    const iconInput = item.querySelector('.quote-type-icon-input');
+    const valueInput = item.querySelector('.quote-type-value-input');
+    const labelInput = item.querySelector('.quote-type-label-input');
+    const deleteBtn = item.querySelector('.btn-delete-type');
+    
+    // Update on change
+    const updateType = () => {
+      const types = getTrainingTypes();
+      types[index] = {
+        icon: iconInput.value || '🏋️',
+        value: valueInput.value.toUpperCase().replace(/[^A-Z0-9-]/g, '') || 'CUSTOM',
+        label: labelInput.value || 'Custom'
+      };
+      saveTrainingTypesAndRefresh(types);
+    };
+    
+    iconInput.addEventListener('change', updateType);
+    valueInput.addEventListener('change', updateType);
+    labelInput.addEventListener('change', updateType);
+    
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', () => {
+        if (confirm(`Delete training type "${types[index].label}"? This cannot be undone.`)) {
+          const types = getTrainingTypes();
+          types.splice(index, 1);
+          saveTrainingTypesAndRefresh(types);
+        }
+      });
+    }
+  });
+}
+
+function saveTrainingTypesAndRefresh(types) {
+  // Save to file via API
+  if (globalSettings) {
+    globalSettings.trainingTypes = types;
+    saveSettings(globalSettings).then(success => {
+      if (success) {
+        renderTrainingTypesList();
+        populateTrainingTypeFilterCheckboxes();
+        console.log('✅ Training types updated');
+      }
+    });
+  } else {
+    // Fallback to localStorage
+    saveTrainingTypes(types);
+    renderTrainingTypesList();
+    populateTrainingTypeFilterCheckboxes();
   }
 }
 
@@ -5879,6 +6010,22 @@ document.addEventListener('DOMContentLoaded', () => {
         label: 'Custom Type'
       });
       saveQuoteTypesAndRefresh(types);
+    });
+  }
+  
+  // Initialize training types management UI
+  renderTrainingTypesList();
+  
+  const addTrainingTypeBtn = document.getElementById('addTrainingTypeBtn');
+  if (addTrainingTypeBtn) {
+    addTrainingTypeBtn.addEventListener('click', () => {
+      const types = getTrainingTypes();
+      types.push({
+        icon: '💪',
+        value: 'CUSTOM',
+        label: 'Custom Training'
+      });
+      saveTrainingTypesAndRefresh(types);
     });
   }
 });

@@ -41,6 +41,11 @@
       "value": "CARDIO",
       "label": "Cardio",
       "icon": "🏃"
+    },
+    {
+      "icon": "💪",
+      "value": "MIX",
+      "label": "Mixed"
     }
   ],
   "downscaleQuoteImages": false,
