@@ -79,6 +79,17 @@ The import will:
 - **Title**: Original Evernote title → `note` field (appears as comment)
 - **Type**: Set to specified training type (default: WEIGHTS)
 - **Note Type**: Automatically set to `training`
+- **Attachments**: Resources (images, PDFs, Excel files, etc.) → `image` field as base64 data URL
+
+### Attachment Support
+
+The script automatically extracts and includes any attachments (resources) from Evernote notes:
+- **Supported formats**: Images (PNG, JPG, GIF), PDFs, Excel files (XLSX, XLS), Word documents (DOCX, DOC), and other file types
+- **Storage**: Attachments are converted to base64 data URLs and stored in the `image` field
+- **File info**: The original filename and MIME type are preserved
+- **Example**: An Excel file `Trying trening.xlsx` will be available for download after import
+
+When you import notes with attachments, they'll appear in the Notes app with a download button to retrieve the original file.
 
 ## Output Format
 
@@ -96,8 +107,9 @@ The script generates a JSON file compatible with the "Restore Data" feature:
         "note": "2026.01.29 Torsdag",
         "author_name": null,
         "source_name": null,
-        "image": null,
-        "image_full": null,
+        "image": "data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,UEsDBBQ...",
+        "image_full": "data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,UEsDBBQ...",
+        "storage_type": "base64",
         "created_at": "2026-01-29T00:00:00.000Z",
         "updated_at": "2026-03-08T13:45:00.000Z"
       }
@@ -114,6 +126,8 @@ The script generates a JSON file compatible with the "Restore Data" feature:
   }
 }
 ```
+
+Notes with attachments will have the `image` and `image_full` fields populated with base64-encoded data URLs.
 
 ## Troubleshooting
 

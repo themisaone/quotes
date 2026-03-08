@@ -24,51 +24,13 @@ async function migrate() {
   try {
     console.log('Starting migration 014: Updating type constraint...');
     
-    await client.query("BEGIN");
+    // This migration is obsolete - we now use dynamic types (migration 015)
+    // Skip this entirely to avoid conflicts with custom training types
+    console.log("⏭️  Skipping: Migration superseded by 015 (dynamic types system)");
+    console.log("   Types are now managed via settings.json without database constraints");
     
-    // Check if constraint already includes training types
-    const constraintCheck = await client.query(`
-      SELECT pg_get_constraintdef(oid) as definition
-      FROM pg_constraint 
-      WHERE conname = 'quotes_type_check' 
-      AND conrelid = 'quotes'::regclass
-    `);
-    
-    if (constraintCheck.rows.length > 0) {
-      const definition = constraintCheck.rows[0].definition;
-      
-      // Check if WEIGHTS is already in the constraint
-      if (definition.includes('WEIGHTS')) {
-        console.log('⏭️  Skipping: Type constraint already includes training types');
-        await client.query("COMMIT");
-        return;
-      }
-      
-      // Drop old constraint
-      await client.query(`
-        ALTER TABLE quotes 
-        DROP CONSTRAINT quotes_type_check
-      `);
-      console.log('  - Dropped old type constraint');
-    }
-    
-    // Add new constraint that includes training types
-    await client.query(`
-      ALTER TABLE quotes 
-      ADD CONSTRAINT quotes_type_check 
-      CHECK (type IN (
-        'BOOK', 'MOVIE-TV', 'POETRY', 'LYRICS', 'JOKES', 'ASSORTED',
-        'WEIGHTS', 'CARDIO', 'FLEXIBILITY', 'SPORTS'
-      ))
-    `);
-    console.log('  - Added updated type constraint with training types');
-    
-    await client.query("COMMIT");
-    
-    console.log('✅ Migration 014 completed: Type constraint updated!');
-    console.log('   Now supports: Quote types + Training types');
+    return;
   } catch (error) {
-    await client.query("ROLLBACK");
     throw error;
   } finally {
     client.release();

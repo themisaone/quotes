@@ -85,6 +85,53 @@ function getTextContent(xmlString, tagName) {
   return match ? match[1].trim() : null;
 }
 
+// Extract resource (attachment) from note
+function extractResource(noteXml) {
+  const resourceMatch = noteXml.match(/<resource>([\s\S]*?)<\/resource>/);
+  if (!resourceMatch) return null;
+  
+  const resourceXml = resourceMatch[1];
+  
+  // Extract base64 data
+  const dataMatch = resourceXml.match(/<data encoding="base64">([\s\S]*?)<\/data>/);
+  if (!dataMatch) return null;
+  
+  // Clean up the base64 data (remove newlines and whitespace)
+  const base64Data = dataMatch[1].replace(/\s+/g, '');
+  
+  // Extract MIME type
+  const mimeType = getTextContent(resourceXml, 'mime');
+  
+  // Extract filename (just for console logging)
+  const filename = getTextContent(resourceXml, 'file-name');
+  
+  if (!base64Data || !mimeType) return null;
+  
+  console.log(`   📎 Found attachment: ${filename || 'unnamed'} (${mimeType})`);
+  
+  // Determine attachment type based on MIME type
+  let attachmentType = 'other';
+  if (mimeType.startsWith('image/')) {
+    attachmentType = 'image';
+  } else if (mimeType === 'application/pdf') {
+    attachmentType = 'pdf';
+  } else if (mimeType.startsWith('video/')) {
+    attachmentType = 'video';
+  } else if (mimeType.includes('spreadsheet') || mimeType.includes('excel') || filename?.match(/\.(xlsx?|csv)$/i)) {
+    attachmentType = 'document';
+  } else if (mimeType.includes('word') || mimeType.includes('document') || filename?.match(/\.(docx?|txt|rtf)$/i)) {
+    attachmentType = 'document';
+  }
+  
+  // Format as data URL for the image field (compatible with the app's attachment system)
+  const dataUrl = `data:${mimeType};base64,${base64Data}`;
+  
+  return {
+    dataUrl,
+    attachmentType
+  };
+}
+
 // Parse the ENEX file
 function parseEnex(enexPath, trainingType = 'WEIGHTS') {
   console.log(`📖 Reading ENEX file: ${enexPath}`);
@@ -126,6 +173,9 @@ function parseEnex(enexPath, trainingType = 'WEIGHTS') {
       return;
     }
     
+    // Extract attachment/resource if present
+    const resourceData = extractResource(noteXml);
+    
     // Create note object compatible with the import system
     // IMPORTANT: This format must match what the server expects in /api/import/json
     const note = {
@@ -136,8 +186,10 @@ function parseEnex(enexPath, trainingType = 'WEIGHTS') {
       note: title,                     // Additional note/comment (original Evernote title)
       author_name: null,               // Not used for training notes
       source_name: null,               // Not used for training notes
-      image: null,                     // Base64 image data (if any)
-      image_full: null,                // Full-size image data (if any)
+      image: resourceData ? resourceData.dataUrl : null,           // Base64 data URL for attachment (if any)
+      image_full: resourceData ? resourceData.dataUrl : null,      // Same as image for attachments
+      storage_type: resourceData ? 'base64' : null,                // Indicate base64 storage
+      attachment_type: resourceData ? resourceData.attachmentType : null,  // Type: image, pdf, document, video, other
       created_at: new Date(noteDate).toISOString(),
       updated_at: new Date().toISOString()
     };

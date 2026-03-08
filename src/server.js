@@ -643,6 +643,20 @@ app.get("/api/quotes/count", async (req, res) => {
         paramCounter++;
       }
     }
+    
+    // Year filter for training notes
+    if (req.query.year) {
+      query += ` AND EXTRACT(YEAR FROM q.note_date) = $${paramCounter}`;
+      params.push(parseInt(req.query.year));
+      paramCounter++;
+    }
+    
+    // Month filter for training notes (only applies if year is also set)
+    if (req.query.month && req.query.year) {
+      query += ` AND EXTRACT(MONTH FROM q.note_date) = $${paramCounter}`;
+      params.push(parseInt(req.query.month));
+      paramCounter++;
+    }
 
     // Score filter with enhanced syntax
     if (score) {
@@ -731,6 +745,24 @@ app.get("/api/quotes/count", async (req, res) => {
   } catch (error) {
     console.error("Error fetching quote count:", error);
     res.status(500).json({ error: "Failed to fetch quote count" });
+  }
+});
+
+// Get available years from training notes (MUST come before /api/quotes general route)
+app.get("/api/quotes/training-years", async (req, res) => {
+  try {
+    const query = `
+      SELECT DISTINCT EXTRACT(YEAR FROM note_date) as year
+      FROM quotes
+      WHERE note_type = 'training' AND note_date IS NOT NULL
+      ORDER BY year DESC
+    `;
+    const result = await pool.query(query);
+    const years = result.rows.map(row => parseInt(row.year));
+    res.json({ years });
+  } catch (error) {
+    console.error("Error fetching training years:", error);
+    res.status(500).json({ error: "Failed to fetch training years" });
   }
 });
 
@@ -917,6 +949,20 @@ app.get("/api/quotes", async (req, res) => {
         params.push(trainingTypeArray);
         paramCounter++;
       }
+    }
+    
+    // Year filter for training notes
+    if (req.query.year) {
+      query += ` AND EXTRACT(YEAR FROM q.note_date) = $${paramCounter}`;
+      params.push(parseInt(req.query.year));
+      paramCounter++;
+    }
+    
+    // Month filter for training notes (only applies if year is also set)
+    if (req.query.month && req.query.year) {
+      query += ` AND EXTRACT(MONTH FROM q.note_date) = $${paramCounter}`;
+      params.push(parseInt(req.query.month));
+      paramCounter++;
     }
 
     // Sort by note_date for training notes (newest first), otherwise by updated_at
@@ -2008,8 +2054,9 @@ app.post("/api/import/json", async (req, res) => {
           if (options?.replaceExisting) {
             await client.query(
               `UPDATE quotes 
-               SET source_id = $1, type = $2, image = $3, image_full = $4, note = $5, note_type = $6, note_date = $7, updated_at = CURRENT_TIMESTAMP
-               WHERE id = $8`,
+               SET source_id = $1, type = $2, image = $3, image_full = $4, note = $5, note_type = $6, note_date = $7, 
+                   attachment_type = $8, updated_at = CURRENT_TIMESTAMP
+               WHERE id = $9`,
               [
                 sourceId,
                 quote.type,
@@ -2018,6 +2065,7 @@ app.post("/api/import/json", async (req, res) => {
                 quote.note,
                 quote.note_type || 'quote',
                 quote.note_date || null,
+                quote.attachment_type || null,
                 existing.rows[0].id,
               ],
             );
@@ -2027,8 +2075,9 @@ app.post("/api/import/json", async (req, res) => {
           }
         } else {
           await client.query(
-            `INSERT INTO quotes (quote, author_id, source_id, type, image, image_full, note, note_type, note_date, created_at, updated_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+            `INSERT INTO quotes (quote, author_id, source_id, type, image, image_full, note, note_type, note_date, 
+                                 attachment_type, created_at, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
             [
               quote.quote,
               authorId,
@@ -2039,6 +2088,7 @@ app.post("/api/import/json", async (req, res) => {
               quote.note,
               quote.note_type || 'quote',
               quote.note_date || null,
+              quote.attachment_type || null,
               quote.created_at || new Date(),
               quote.updated_at || new Date(),
             ],

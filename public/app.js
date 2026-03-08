@@ -546,6 +546,42 @@ function populateTrainingTypeFilterCheckboxes() {
   });
 }
 
+// Populate training years from database
+async function populateTrainingYears() {
+  try {
+    console.log("🗓️ Populating training years...");
+    const response = await fetchWithRetry(`${API_URL}/quotes/training-years`);
+    const data = await response.json();
+    console.log("🗓️ Training years data:", data);
+    
+    const yearSelect = document.getElementById('trainingYearFilter');
+    if (!yearSelect) {
+      console.log("⚠️ Year select element not found!");
+      return;
+    }
+    
+    if (!data.years || data.years.length === 0) {
+      console.log("⚠️ No years data received");
+      return;
+    }
+    
+    // Keep the "All Years" option
+    yearSelect.innerHTML = '<option value="">📅 All Years</option>';
+    
+    // Add years in descending order (newest first)
+    data.years.sort((a, b) => b - a).forEach(year => {
+      const option = document.createElement('option');
+      option.value = year;
+      option.textContent = year;
+      yearSelect.appendChild(option);
+    });
+    
+    console.log(`✅ Populated ${data.years.length} years`);
+  } catch (error) {
+    console.error("❌ Error loading training years:", error);
+  }
+}
+
 // Pagination state
 let currentPage = 1;
 let currentNoteTypeFilter = null; // null = show all types
@@ -1258,6 +1294,40 @@ function setupEventListeners() {
     }
   }
   
+  // Training date filters
+  const trainingYearFilter = document.getElementById('trainingYearFilter');
+  const trainingMonthFilter = document.getElementById('trainingMonthFilter');
+  
+  if (trainingYearFilter) {
+    // Populate years when switching to training view
+    trainingYearFilter.addEventListener('focus', async () => {
+      if (trainingYearFilter.options.length === 1) {
+        await populateTrainingYears();
+      }
+    });
+    
+    trainingYearFilter.addEventListener('change', () => {
+      // Enable/disable month filter based on year selection
+      if (trainingMonthFilter) {
+        if (trainingYearFilter.value) {
+          trainingMonthFilter.disabled = false;
+        } else {
+          trainingMonthFilter.disabled = true;
+          trainingMonthFilter.value = '';
+        }
+      }
+      loadQuotes();
+      loadTotalCount();
+    });
+  }
+  
+  if (trainingMonthFilter) {
+    trainingMonthFilter.addEventListener('change', () => {
+      loadQuotes();
+      loadTotalCount();
+    });
+  }
+  
   // Date picker sync - when date picker changes, update text input
   const noteDatePicker = document.getElementById("noteDatePicker");
   const noteDateText = document.getElementById("noteDate");
@@ -1400,6 +1470,8 @@ function updateAddButtonText() {
 function updateSourcesFilterVisibility() {
   const quoteSourcesContainer = document.getElementById('quoteSourcesFilterContainer');
   const trainingTypesContainer = document.getElementById('trainingTypesFilterContainer');
+  const trainingYearContainer = document.getElementById('trainingYearContainer');
+  const trainingMonthContainer = document.getElementById('trainingMonthContainer');
   const searchHeaderTitle = document.getElementById('searchHeaderTitle');
   const searchAuthorContainer = document.getElementById('searchAuthorContainer');
   const searchSourceContainer = document.getElementById('searchSourceContainer');
@@ -1441,6 +1513,20 @@ function updateSourcesFilterVisibility() {
     } else {
       trainingTypesContainer.style.display = 'none';
     }
+  }
+  
+  // Show Training Date filters when on "Training" only
+  const isTrainingView = currentNoteTypeFilter === 'training';
+  if (trainingYearContainer) {
+    trainingYearContainer.style.display = isTrainingView ? 'block' : 'none';
+  }
+  if (trainingMonthContainer) {
+    trainingMonthContainer.style.display = isTrainingView ? 'block' : 'none';
+  }
+  
+  if (isTrainingView) {
+    // Populate years when switching to training view
+    populateTrainingYears();
   }
 }
 
@@ -1737,6 +1823,18 @@ function clearFilters() {
   searchSource.value = "";
   searchTags.value = "";
   searchScore.value = "";
+  
+  // Reset training date filters
+  const trainingYearFilter = document.getElementById('trainingYearFilter');
+  const trainingMonthFilter = document.getElementById('trainingMonthFilter');
+  if (trainingYearFilter) {
+    trainingYearFilter.value = "";
+  }
+  if (trainingMonthFilter) {
+    trainingMonthFilter.value = "";
+    trainingMonthFilter.disabled = true;
+  }
+  
   currentPage = 1;
   loadQuotes();
 }
@@ -1833,6 +1931,19 @@ async function loadQuotes() {
         params.append("training_types", selectedTrainingTypes.join(","));
         console.log("Adding training_types to query:", selectedTrainingTypes.join(","));
       }
+      
+      // Add year and month filters for training
+      const yearFilter = document.getElementById('trainingYearFilter')?.value;
+      const monthFilter = document.getElementById('trainingMonthFilter')?.value;
+      
+      if (yearFilter) {
+        params.append("year", yearFilter);
+        console.log("Adding year filter:", yearFilter);
+      }
+      if (monthFilter && yearFilter) { // Month only works if year is selected
+        params.append("month", monthFilter);
+        console.log("Adding month filter:", monthFilter);
+      }
     }
     
     console.log("Final API URL:", `${API_URL}/quotes?${params.toString()}`);
@@ -1925,6 +2036,17 @@ async function loadTotalCount() {
       
       if (selectedTrainingTypes.length > 0) {
         params.append("training_types", selectedTrainingTypes.join(","));
+      }
+      
+      // Add year and month filters for training
+      const yearFilter = document.getElementById('trainingYearFilter')?.value;
+      const monthFilter = document.getElementById('trainingMonthFilter')?.value;
+      
+      if (yearFilter) {
+        params.append("year", yearFilter);
+      }
+      if (monthFilter && yearFilter) { // Month only works if year is selected
+        params.append("month", monthFilter);
       }
     }
 
@@ -2376,7 +2498,7 @@ function createQuoteCard(quote) {
                             ${isLongQuote ? `<button class="expand-btn" id="${expandBtnId}" onclick="event.stopPropagation(); toggleQuoteExpand('${quote.id}')">▼ Show more</button>` : ""}
                         </div>
                     </div>
-                    ${quote.image ? `<div class="quote-image-thumb" onclick="event.stopPropagation(); showFullImage('${quote.image_full || quote.image}', ${quote.id}, '${quote.attachment_type || 'image'}')"><img src="${quote.image}" alt="Quote attachment"></div>` : ""}
+                    ${quote.image ? (quote.attachment_type === 'image' ? `<div class="quote-image-thumb" onclick="event.stopPropagation(); showFullImage('${quote.image_full || quote.image}', ${quote.id}, '${quote.attachment_type || 'image'}')"><img src="${quote.image}" alt="Quote attachment"></div>` : `<div class="quote-file-attachment" onclick="event.stopPropagation(); downloadAttachment('${quote.image_full || quote.image}', 'attachment', ${quote.id})" title="Click to download attachment"><div class="file-icon">${quote.attachment_type === 'pdf' ? '📄' : quote.attachment_type === 'document' ? '📎' : '📁'}</div><div class="file-label">File</div></div>`) : ""}
                 </div>
                 <div class="quote-separator"></div>
                 <div class="quote-metadata-row">
@@ -2429,6 +2551,22 @@ function toggleQuoteExpand(quoteId) {
     }
   }
 }
+
+// Download attachment (for non-image files like Excel, Word, PDF, etc.)
+window.downloadAttachment = function(dataUrl, filename, quoteId = null) {
+  try {
+    // Create a temporary link and trigger download
+    const link = document.createElement('a');
+    link.href = dataUrl;
+    link.download = filename || 'attachment';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } catch (error) {
+    console.error('Error downloading attachment:', error);
+    alert('Failed to download attachment. Please try again.');
+  }
+};
 
 // Show full-size image in modal (make it global for onclick)
 window.showFullImage = function (imageSrc, quoteId = null, attachmentType = 'image') {

@@ -14,59 +14,18 @@ async function migrate() {
 
   try {
     console.log("Starting migration 007: Adding POETRY, LYRICS, and JOKES types...");
-    await client.query("BEGIN");
-
-    // Check if there are any training types in the database
-    const trainingCheck = await client.query(`
-      SELECT COUNT(*) as count 
-      FROM quotes 
-      WHERE type IN ('WEIGHTS', 'CARDIO', 'FLEXIBILITY', 'SPORTS')
-    `);
     
-    const hasTrainingTypes = trainingCheck.rows[0].count > 0;
+    // This migration is obsolete - we now use dynamic types (migration 015)
+    // Skip this entirely to avoid conflicts with custom training types
+    console.log("⏭️  Skipping: Migration superseded by 015 (dynamic types system)");
+    console.log("   Types are now managed via settings.json without database constraints");
     
-    // Drop old constraints
-    console.log("  - Dropping old type constraints...");
-    await client.query(`
-      ALTER TABLE sources DROP CONSTRAINT IF EXISTS sources_type_check;
-    `);
-    await client.query(`
-      ALTER TABLE quotes DROP CONSTRAINT IF EXISTS quotes_type_check;
-    `);
-
-    // Add new constraints - include training types if they exist in data
-    if (hasTrainingTypes) {
-      console.log("  - Adding new constraints with 6 quote types + 4 training types...");
-      await client.query(`
-        ALTER TABLE sources ADD CONSTRAINT sources_type_check 
-          CHECK (type IN ('BOOK', 'MOVIE-TV', 'ASSORTED', 'POETRY', 'LYRICS', 'JOKES'));
-      `);
-      await client.query(`
-        ALTER TABLE quotes ADD CONSTRAINT quotes_type_check 
-          CHECK (type IN ('BOOK', 'MOVIE-TV', 'ASSORTED', 'POETRY', 'LYRICS', 'JOKES', 'WEIGHTS', 'CARDIO', 'FLEXIBILITY', 'SPORTS'));
-      `);
-      console.log("✅ Migration 007 completed: Quote types + Training types added!");
-    } else {
-      console.log("  - Adding new constraints with 6 types...");
-      await client.query(`
-        ALTER TABLE sources ADD CONSTRAINT sources_type_check 
-          CHECK (type IN ('BOOK', 'MOVIE-TV', 'ASSORTED', 'POETRY', 'LYRICS', 'JOKES'));
-      `);
-      await client.query(`
-        ALTER TABLE quotes ADD CONSTRAINT quotes_type_check 
-          CHECK (type IN ('BOOK', 'MOVIE-TV', 'ASSORTED', 'POETRY', 'LYRICS', 'JOKES'));
-      `);
-      console.log("✅ Migration 007 completed: New types (POETRY 📜, LYRICS 🎵, JOKES 😂) added!");
-    }
-    
-    await client.query("COMMIT");
+    return;
   } catch (error) {
-    await client.query("ROLLBACK");
     console.error("❌ Migration 007 failed:", error);
     throw error;
   } finally {
     client.release();
-    // Don't end pool here - let the migration runner handle it
   }
 }
 

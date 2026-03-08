@@ -46,6 +46,16 @@
       "icon": "💪",
       "value": "MIX",
       "label": "Mixed"
+    },
+    {
+      "icon": "💪",
+      "value": "HOME",
+      "label": "Home"
+    },
+    {
+      "icon": "💪",
+      "value": "OVERVIEW/DOC",
+      "label": "Overview/DOC"
     }
   ],
   "downscaleQuoteImages": false,
