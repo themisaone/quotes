@@ -1,3 +1,38 @@
+/**
+ * ============================================================
+ * ONE-TIME MIGRATION SCRIPT - Tags Normalization
+ * ============================================================
+ * 
+ * PURPOSE:
+ * This is a BACKUP migration script used ONCE to migrate from
+ * the old tag system (comma-separated strings in quotes.tags)
+ * to the new normalized system (separate 'tags' and 'quote_tags' tables).
+ * 
+ * USAGE:
+ * This script was run once during the migration and is kept here
+ * for reference and rollback purposes only. It is NOT part of
+ * the normal migration flow in migrations/run-migrations.js.
+ * 
+ * To run manually (if needed for rollback/testing):
+ *   node src/migrate-tags.js
+ * 
+ * WHAT IT DOES:
+ * 1. Creates 'tags' table (id, name) if it doesn't exist
+ * 2. Creates 'quote_tags' junction table (quote_id, tag_id) if it doesn't exist
+ * 3. Parses all comma-separated tags from quotes.tags column
+ * 4. Inserts unique tags into 'tags' table
+ * 5. Creates relationships in 'quote_tags' table
+ * 6. Does NOT drop the old 'tags' column (preserved for safety)
+ * 
+ * SAFETY:
+ * - Uses transactions (rolls back on error)
+ * - Idempotent (can be run multiple times safely)
+ * - Preserves original data in quotes.tags column
+ * 
+ * STATUS: ✅ COMPLETED - No longer part of active codebase
+ * ============================================================
+ */
+
 const pool = require("./db");
 
 async function migrateTags() {

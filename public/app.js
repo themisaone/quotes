@@ -1,3 +1,69 @@
+// ============= IMPORTS =============
+import { 
+  parseUrlHash, 
+  updateUrlHash as updateUrlHashLib, 
+  updateActiveMenuState as updateActiveMenuStateLib,
+  updatePageTitle as updatePageTitleLib,
+  updateSearchHeader,
+  updateFilterVisibility,
+  initializeView
+  // Note: updateAddButtonText imported from noteTypes.js instead
+  // Note: switchView not imported - keeping local version for now
+  // Note: setupHashChangeListener not imported - keeping local version
+} from './js/lib/viewManager.js';
+
+import {
+  escapeHtml,
+  resolveAttachmentUrl,
+  getAttachmentIcon,
+  formatDateNorwegian,
+  parseNorwegianDate,
+  formatDateWithDayName
+} from './js/lib/utils.js';
+
+import {
+  NOTE_TYPES,
+  getNoteTypeConfig,
+  hasAuthorField,
+  hasSourceField,
+  hasDateField,
+  hasTrainingTypeField,
+  getModalTitle,
+  getMainTextLabel,
+  getCommentLabel,
+  getAttachmentLabel,
+  getDeleteButtonText,
+  updateModalFieldVisibility,
+  updateModalLabels,
+  updateAddButtonText as updateAddButtonTextLib,
+  updateSourcesFilterVisibility as updateSourcesFilterVisibilityLib,
+  getNoteTypeBadgeHtml
+} from './js/lib/noteTypes.js';
+
+import {
+  fetchWithRetry
+} from './js/lib/api.js';
+
+import {
+  createQuoteCard as createQuoteCardLib
+} from './js/lib/cardRenderer.js';
+
+import {
+  setupAddModal,
+  setupEditModal,
+  setDefaultQuoteFields,
+  setDefaultTrainingFields,
+  clearTypeSpecificFields,
+  displayMetadata,
+  hideMetadata,
+  configureDeleteButton
+} from './js/lib/modalRenderer.js';
+
+// Note: displayImage, clearImagePreview, displayAttachmentPreview NOT imported
+// They are kept as local functions due to tight coupling with app-specific state
+// Note: Export/Import functions kept local - too complex and app-specific for library
+
+// ============= CONSTANTS =============
 // Auto-detect API URL based on current host
 const API_URL = `${window.location.protocol}//${window.location.hostname}:${window.location.port || '4000'}/api`;
 
@@ -67,16 +133,7 @@ function setupFullscreenEditor() {
 }
 
 // Quote types configuration (can be extended by user)
-const DEFAULT_QUOTE_TYPES = [
-  { value: 'BOOK', label: 'Book', icon: '📖' },
-  { value: 'MOVIE-TV', label: 'Movies & TV', icon: '🎬' },
-  { value: 'POETRY', label: 'Poetry', icon: '📜' },
-  { value: 'LYRICS', label: 'Lyrics', icon: '🎵' },
-  { value: 'JOKES', label: 'Jokes', icon: '😂' },
-  { value: 'ASSORTED', label: 'Assorted', icon: '📝' }
-];
-
-// Global settings cache
+// Global settings cache (loaded from server on startup)
 let globalSettings = null;
 
 // Load settings from server
@@ -126,23 +183,18 @@ async function saveSettings(settings) {
 
 // Get quote types (from global settings or localStorage fallback)
 function getQuoteTypes() {
-  // Try global settings first
-  if (globalSettings && globalSettings.quoteTypes) {
-    return globalSettings.quoteTypes;
+  // Require global settings to be loaded
+  if (!globalSettings) {
+    console.error('❌ FATAL: globalSettings not loaded! Settings must be initialized before calling getQuoteTypes()');
+    throw new Error('Settings not loaded. Please refresh the page.');
   }
   
-  // Fallback to localStorage
-  const stored = localStorage.getItem('quoteTypes');
-  if (stored) {
-    try {
-      return JSON.parse(stored);
-    } catch (e) {
-      console.error('Error parsing quote types:', e);
-    }
+  if (!globalSettings.quoteTypes || !Array.isArray(globalSettings.quoteTypes)) {
+    console.error('❌ FATAL: quoteTypes missing or invalid in settings:', globalSettings);
+    throw new Error('Quote types configuration is missing or invalid in settings.json');
   }
   
-  // Final fallback to defaults
-  return DEFAULT_QUOTE_TYPES;
+  return globalSettings.quoteTypes;
 }
 
 // Save quote types (deprecated - use saveSettings instead)
@@ -170,18 +222,18 @@ function saveTrainingTypes(types) {
 
 // Get training types from settings
 function getTrainingTypes() {
-  // Try global settings first
-  if (globalSettings && globalSettings.trainingTypes) {
-    return globalSettings.trainingTypes;
+  // Require global settings to be loaded
+  if (!globalSettings) {
+    console.error('❌ FATAL: globalSettings not loaded! Settings must be initialized before calling getTrainingTypes()');
+    throw new Error('Settings not loaded. Please refresh the page.');
   }
   
-  // Fallback to default training types
-  return [
-    { value: 'WEIGHTS', label: 'Weights', icon: '🏋️' },
-    { value: 'CARDIO', label: 'Cardio', icon: '🏃' },
-    { value: 'FLEXIBILITY', label: 'Flexibility', icon: '🧘' },
-    { value: 'SPORTS', label: 'Sports', icon: '⚽' }
-  ];
+  if (!globalSettings.trainingTypes || !Array.isArray(globalSettings.trainingTypes)) {
+    console.error('❌ FATAL: trainingTypes missing or invalid in settings:', globalSettings);
+    throw new Error('Training types configuration is missing or invalid in settings.json');
+  }
+  
+  return globalSettings.trainingTypes;
 }
 
 // Migrate localStorage settings to file (one-time)
@@ -617,78 +669,27 @@ function restoreLastView() {
 }
 
 // Handle URL hash navigation
+// ============= NAVIGATION (Now using viewManager.js) =============
 function handleHashNavigation() {
-  const hash = window.location.hash;
-  console.log('🔗 Hash navigation:', hash);
-  
-  if (!hash || hash === '#/' || hash === '#') {
-    currentNoteTypeFilter = null;
-    return;
-  }
-  
-  // Parse hash: #/quotes, #/training, #/notes, #/puzzle
-  const view = hash.replace('#/', '').toLowerCase();
-  
-  if (view === 'all' || view === 'all-notes') {
-    currentNoteTypeFilter = null;
-  } else if (view === 'quotes' || view === 'quote') {
-    currentNoteTypeFilter = 'quote';
-  } else if (view === 'notes' || view === 'note') {
-    currentNoteTypeFilter = 'note';
-  } else if (view === 'training') {
-    currentNoteTypeFilter = 'training';
-  } else if (view === 'puzzles' || view === 'puzzle') {
-    currentNoteTypeFilter = 'puzzle';
-  }
-  
+  // MIGRATED: Now using parseUrlHash() from viewManager.js
+  currentNoteTypeFilter = parseUrlHash();
   console.log('✅ Set view from hash:', currentNoteTypeFilter || 'all');
 }
 
 // Update URL hash when view changes
+// MIGRATED: Using library function
 function updateUrlHash() {
-  const hash = currentNoteTypeFilter ? `#/${currentNoteTypeFilter}` : '#/all';
-  if (window.location.hash !== hash) {
-    window.history.pushState(null, '', hash);
-  }
+  updateUrlHashLib(currentNoteTypeFilter);
 }
 
-// Update active state in the menu
+// MIGRATED: Using library function  
 function updateActiveMenuState() {
-  // Remove active from all menu items
-  document.querySelectorAll('.menu-item, .note-type-filter').forEach(item => {
-    item.classList.remove('active');
-  });
-  
-  // Set active based on currentNoteTypeFilter
-  if (currentNoteTypeFilter === null) {
-    // All Notes is active
-    const allNotesBtn = document.querySelector('.menu-item[data-view="quotes"]');
-    if (allNotesBtn) allNotesBtn.classList.add('active');
-  } else {
-    // Specific note type is active
-    const typeBtn = document.querySelector(`.note-type-filter[data-note-type="${currentNoteTypeFilter}"]`);
-    if (typeBtn) typeBtn.classList.add('active');
-  }
+  updateActiveMenuStateLib(currentNoteTypeFilter);
 }
 
-// Update main title based on current view
+// MIGRATED: Using library function
 function updateMainTitle() {
-  const titleIcon = document.getElementById('mainTitleIcon');
-  const titleText = document.getElementById('mainTitleText');
-  
-  if (!titleIcon || !titleText) return;
-  
-  const titles = {
-    null: { icon: '💬', text: "All Misa's Notes" },
-    'quote': { icon: '💬', text: "Misa's Quote Collection" },
-    'note': { icon: '📝', text: "Misa's Notes" },
-    'training': { icon: '💪', text: "Misa's Trainings" },
-    'puzzle': { icon: '🧩', text: "Misa's Puzzle Collection" }
-  };
-  
-  const title = titles[currentNoteTypeFilter] || titles[null];
-  titleIcon.textContent = title.icon;
-  titleText.textContent = title.text;
+  updatePageTitleLib(currentNoteTypeFilter);
 }
 
 // Listen for hash changes (browser back/forward)
@@ -1443,102 +1444,35 @@ function debounceSearch() {
 // Note Type Functions
 // ============================================
 
-const NOTE_TYPES = {
-  quote: { icon: 'Q', label: 'Quote', color: '#3b82f6' },
-  note: { icon: 'N', label: 'Simple Note', color: '#10b981' },
-  training: { icon: 'T', label: 'Training', color: '#f59e0b' },
-  puzzle: { icon: 'P', label: 'Logical Puzzle', color: '#8b5cf6' }
-};
+// MIGRATED: Now imported from noteTypes.js
+// const NOTE_TYPES = {
+//   quote: { icon: 'Q', label: 'Quote', color: '#3b82f6' },
+//   note: { icon: 'N', label: 'Simple Note', color: '#10b981' },
+//   training: { icon: 'T', label: 'Training', color: '#f59e0b' },
+//   puzzle: { icon: 'P', label: 'Logical Puzzle', color: '#8b5cf6' }
+// };
 
+// MIGRATED: Wrapper using noteTypes.js
 function updateAddButtonText() {
-  const btnTextDesktop = document.getElementById('addNoteBtnText');
-  const btnTextTablet = document.getElementById('addNoteBtnTextTablet');
-  
-  if (currentNoteTypeFilter && NOTE_TYPES[currentNoteTypeFilter]) {
-    const typeInfo = NOTE_TYPES[currentNoteTypeFilter];
-    btnTextDesktop.textContent = `+ Add New ${typeInfo.label}`;
-    btnTextTablet.textContent = `+ Add ${typeInfo.label}`;
-  } else {
-    btnTextDesktop.textContent = '+ Add New Note';
-    btnTextTablet.textContent = '+ Add Note';
-  }
-  
-  // Show/hide "Select Quote Sources" based on note type
-  updateSourcesFilterVisibility();
+  updateAddButtonTextLib(currentNoteTypeFilter, updateSourcesFilterVisibility);
 }
 
+// MIGRATED: Wrapper using noteTypes.js
 function updateSourcesFilterVisibility() {
-  const quoteSourcesContainer = document.getElementById('quoteSourcesFilterContainer');
-  const trainingTypesContainer = document.getElementById('trainingTypesFilterContainer');
-  const trainingYearContainer = document.getElementById('trainingYearContainer');
-  const trainingMonthContainer = document.getElementById('trainingMonthContainer');
-  const searchHeaderTitle = document.getElementById('searchHeaderTitle');
-  const searchAuthorContainer = document.getElementById('searchAuthorContainer');
-  const searchSourceContainer = document.getElementById('searchSourceContainer');
-  
-  // Update search header title based on current filter
-  if (searchHeaderTitle) {
-    const titles = {
-      'quote': '🔍 Search Quotes',
-      'note': '🔍 Search Notes',
-      'training': '🔍 Search Training',
-      'puzzle': '🔍 Search Puzzles',
-      null: '🔍 Search All Notes'
-    };
-    searchHeaderTitle.textContent = titles[currentNoteTypeFilter] || '🔍 Search All Notes';
-  }
-  
-  // Show/hide Author and Source search fields (only for Quotes)
-  const isQuoteView = currentNoteTypeFilter === 'quote';
-  if (searchAuthorContainer) {
-    searchAuthorContainer.style.display = isQuoteView ? 'block' : 'none';
-  }
-  if (searchSourceContainer) {
-    searchSourceContainer.style.display = isQuoteView ? 'block' : 'none';
-  }
-  
-  // Show Quote Sources filter when on "Quotes" view only
-  if (quoteSourcesContainer) {
-    if (currentNoteTypeFilter === 'quote') {
-      quoteSourcesContainer.style.display = 'block';
-    } else {
-      quoteSourcesContainer.style.display = 'none';
-    }
-  }
-  
-  // Show Training Types filter when on "Training" only
-  if (trainingTypesContainer) {
-    if (currentNoteTypeFilter === 'training') {
-      trainingTypesContainer.style.display = 'block';
-    } else {
-      trainingTypesContainer.style.display = 'none';
-    }
-  }
-  
-  // Show Training Date filters when on "Training" only
-  const isTrainingView = currentNoteTypeFilter === 'training';
-  if (trainingYearContainer) {
-    trainingYearContainer.style.display = isTrainingView ? 'block' : 'none';
-  }
-  if (trainingMonthContainer) {
-    trainingMonthContainer.style.display = isTrainingView ? 'block' : 'none';
-  }
-  
-  if (isTrainingView) {
-    // Populate years when switching to training view
-    populateTrainingYears();
-  }
+  updateSourcesFilterVisibilityLib(currentNoteTypeFilter, populateTrainingYears);
 }
 
+// MIGRATED: Wrapper using noteTypes.js (with app-specific additions)
 function updateFieldVisibility() {
   const noteType = document.getElementById('noteType').value;
   const isQuote = noteType === 'quote';
-  const isTraining = noteType === 'training';
   
-  // Show/hide quote-specific fields
+  // Use library function for standard field visibility
+  updateModalFieldVisibility(noteType);
+  
+  // App-specific fields not in library
   const quoteSpecificFields = document.getElementById('quoteSpecificFields');
   const translationGroupContainer = document.getElementById('translationGroupContainer');
-  const trainingSpecificFields = document.getElementById('trainingSpecificFields');
   
   if (quoteSpecificFields) {
     quoteSpecificFields.style.display = isQuote ? 'flex' : 'none';
@@ -1548,231 +1482,122 @@ function updateFieldVisibility() {
     translationGroupContainer.style.display = isQuote ? 'block' : 'none';
   }
   
-  if (trainingSpecificFields) {
-    trainingSpecificFields.style.display = isTraining ? 'flex' : 'none';
-  }
-  
-  // Update labels based on note type
+  // Update labels using library
   updateModalLabels(noteType);
   
   // Update modal title based on type
   if (!editingQuoteId) {
-    const typeInfo = NOTE_TYPES[noteType];
+    const typeInfo = getNoteTypeConfig(noteType);
     modalTitle.textContent = `Add New ${typeInfo.label}`;
   }
 }
 
-function updateModalLabels(noteType) {
-  const isQuote = noteType === 'quote';
-  const typeInfo = NOTE_TYPES[noteType] || NOTE_TYPES['quote'];
-  
-  // Update main text field label
-  const quoteTextLabel = document.getElementById('quoteTextLabel');
-  if (quoteTextLabel) {
-    quoteTextLabel.textContent = isQuote ? '💬 Quote *' : `${typeInfo.icon} Note *`;
-  }
-  
-  // Update comment field label (same for all types)
-  const noteLabel = document.getElementById('noteLabel');
-  if (noteLabel) {
-    noteLabel.textContent = '💬 Comment (Optional)';
-  }
-  
-  // Update attachment label
-  const attachmentLabel = document.getElementById('attachmentLabel');
-  if (attachmentLabel) {
-    attachmentLabel.textContent = `📎 ${typeInfo.label} Attachment`;
-  }
-}
+// MIGRATED: Now using library function directly
+// function updateModalLabels is imported from noteTypes.js
 
 function openAddModal() {
-  // Set modal title based on current note type filter
+  // MIGRATED: Using library function
   const noteType = currentNoteTypeFilter || 'quote';
-  const typeLabel = NOTE_TYPES[noteType]?.label || 'Note';
-  modalTitle.textContent = `Add New ${typeLabel}`;
   
-  // Update field labels
-  updateModalLabels(noteType);
+  // Collect all DOM elements needed by the modal renderer
+  const elements = {
+    modalTitle: modalTitle,
+    form: quoteForm,
+    quoteTextInput: document.getElementById("quoteText"),
+    noteInput: noteInput,
+    noteTypeSelect: document.getElementById("noteType"),
+    authorInput: authorInput,
+    sourceInput: document.getElementById("source"),
+    sourceTypeSelect: document.getElementById("sourceType"),
+    noteDateInput: document.getElementById("noteDate"),
+    noteDatePicker: document.getElementById("noteDatePicker"),
+    trainingTypeSelect: document.getElementById("trainingType"),
+    translationGroupInput: document.getElementById("translationGroup"),
+    scoreRadios: true, // Flag to indicate score radios exist
+    metadataElement: document.getElementById("quoteMetadata"),
+    deleteBtn: document.getElementById("deleteQuoteBtn"),
+    quoteIdInput: document.getElementById("quoteId")
+  };
   
-  editingQuoteId = null;
-  quoteForm.reset();
-  currentQuoteImage = "";
-  currentQuoteImageFull = "";
+  // Setup modal using library
+  const state = setupAddModal(
+    noteType, 
+    currentNoteTypeFilter, 
+    elements, 
+    quillEditor,
+    updateFieldVisibility,
+    updateModalLabels
+  );
+  
+  // Update app state
+  editingQuoteId = state.editingQuoteId;
+  currentQuoteImage = state.currentQuoteImage;
+  currentQuoteImageFull = state.currentQuoteImageFull;
+  currentAttachmentType = state.currentAttachmentType || "image";
+  currentAttachmentFileName = state.currentAttachmentFileName || "";
+  
+  // Clear image preview (app-specific)
   clearImagePreview(quoteImagePreview, "quote");
   
-  // Clear Quill editor
-  if (quillEditor) {
-    quillEditor.setText('');
-  }
-  
-  // Clear selected tags
+  // Clear selected tags (app-specific)
   selectedTagsArray = [];
   updateSelectedTagsDisplay();
   
-  // Reset score to 0 (no score)
-  const defaultScoreRadio = document.querySelector('input[name="quoteScore"][value="0"]');
-  if (defaultScoreRadio) {
-    defaultScoreRadio.checked = true;
-  }
-  
-  // Set note type based on current filter context
-  const noteTypeSelect = document.getElementById("noteType");
-  if (noteTypeSelect) {
-    // If we have a specific note type filter active, use it
-    // Otherwise default to 'quote'
-    noteTypeSelect.value = currentNoteTypeFilter || "quote";
-  }
-  
-  // Set default values for new quotes
-  authorInput.value = "Unknown Author";
-  const sourceTypeSelect = document.getElementById("sourceType");
-  if (sourceTypeSelect) {
-    sourceTypeSelect.value = "ASSORTED";
-  }
-  
-  // Clear training-specific fields
-  const noteDateInput = document.getElementById("noteDate");
-  const trainingTypeSelect = document.getElementById("trainingType");
-  if (noteDateInput) noteDateInput.value = "";
-  if (trainingTypeSelect) trainingTypeSelect.value = "";
-  
-  // Update field visibility based on note type
-  updateFieldVisibility();
-  
-  // Hide metadata for new quotes
-  const metadataEl = document.getElementById("quoteMetadata");
-  if (metadataEl) {
-    metadataEl.style.display = "none";
-  }
-  
-  // Hide delete button for new quotes
-  const deleteQuoteBtn = document.getElementById("deleteQuoteBtn");
-  if (deleteQuoteBtn) {
-    deleteQuoteBtn.style.display = "none";
-  }
-  
-  // Reset image section
+  // Reset image section (app-specific)
   const imageSection = document.getElementById('imageSection');
   const toggleIcon = document.getElementById('imageToggleIcon');
   if (imageSection) imageSection.style.display = 'none';
   if (toggleIcon) toggleIcon.textContent = '▶';
   
-  // Update image indicator
+  // Update image indicator (app-specific)
   updateImageIndicator();
   
+  // Show modal
   quoteModal.style.display = "block";
 }
 
 function openEditModal(quote) {
-  // Set modal title based on note type
-  const noteType = quote.note_type || 'quote';
-  const typeLabel = NOTE_TYPES[noteType]?.label || 'Note';
-  modalTitle.textContent = `Edit ${typeLabel}`;
+  // MIGRATED: Using library function
   
-  // Update field labels
-  updateModalLabels(noteType);
+  // Collect all DOM elements needed by the modal renderer
+  const elements = {
+    modalTitle: modalTitle,
+    form: quoteForm,
+    quoteTextInput: document.getElementById("quoteText"),
+    noteInput: noteInput,
+    noteTypeSelect: document.getElementById("noteType"),
+    authorInput: authorInput,
+    sourceInput: document.getElementById("source"),
+    sourceTypeSelect: document.getElementById("sourceType"),
+    noteDateInput: document.getElementById("noteDate"),
+    noteDatePicker: document.getElementById("noteDatePicker"),
+    trainingTypeSelect: document.getElementById("trainingType"),
+    translationGroupInput: document.getElementById("translationGroup"),
+    scoreRadios: true, // Flag to indicate score radios exist
+    metadataElement: document.getElementById("quoteMetadata"),
+    deleteBtn: document.getElementById("deleteQuoteBtn"),
+    quoteIdInput: document.getElementById("quoteId")
+  };
   
-  editingQuoteId = quote.id;
+  // Setup modal using library
+  const state = setupEditModal(
+    quote,
+    elements,
+    quillEditor,
+    updateFieldVisibility,
+    updateModalLabels,
+    populateTagsForEdit
+  );
   
-  // Set the hidden quoteId input for delete button
-  document.getElementById("quoteId").value = quote.id;
-
-  // Display metadata (created/updated dates)
-  const metadataEl = document.getElementById("quoteMetadata");
-  const createdDate = quote.created_at ? new Date(quote.created_at).toLocaleString('en-US', { 
-    year: 'numeric', 
-    month: 'numeric', 
-    day: 'numeric',
-    hour: '2-digit', 
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false 
-  }) : "";
-  const updatedDate = quote.updated_at ? new Date(quote.updated_at).toLocaleString('en-US', { 
-    year: 'numeric', 
-    month: 'numeric', 
-    day: 'numeric',
-    hour: '2-digit', 
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false 
-  }) : "";
-  if (createdDate || updatedDate) {
-    metadataEl.innerHTML = `${createdDate ? `Created: ${createdDate}` : ''} ${createdDate && updatedDate ? ' | ' : ''} ${updatedDate ? `Updated: ${updatedDate}` : ''}`;
-    metadataEl.style.display = "block";
-  }
-
-  // Set quote text in Quill editor (HTML content)
-  if (quillEditor) {
-    if (quote.quote) {
-      // If quote contains HTML tags, use it as HTML, otherwise as plain text
-      if (quote.quote.includes('<')) {
-        quillEditor.root.innerHTML = quote.quote;
-      } else {
-        quillEditor.setText(quote.quote);
-      }
-    } else {
-      quillEditor.setText('');
-    }
-  }
-  document.getElementById("quoteText").value = quote.quote;
+  // Update app state
+  editingQuoteId = state.editingQuoteId;
+  currentQuoteImage = state.currentQuoteImage;
+  currentQuoteImageFull = state.currentQuoteImageFull;
+  currentAttachmentType = state.currentAttachmentType || "image";
+  currentAttachmentFileName = state.currentAttachmentFileName || "";
+  window.currentSourceId = state.currentSourceId;
   
-  document.getElementById("author").value = quote.author_name || "";
-  document.getElementById("source").value = quote.source_name || "";
-  document.getElementById("sourceType").value = quote.source_type || "BOOK";
-  
-  // Set training-specific fields if it's a training note
-  if (quote.note_type === 'training') {
-    document.getElementById("trainingType").value = quote.source_type || "";
-    if (quote.note_date) {
-      // Parse the date in local timezone and format as dd.mm.yyyy
-      const date = new Date(quote.note_date);
-      const day = String(date.getDate()).padStart(2, '0');
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const year = date.getFullYear();
-      const dateForDisplay = `${day}.${month}.${year}`;
-      const dateForPicker = `${year}-${month}-${day}`;
-      
-      console.log('🔍 Debug - note_date from DB:', quote.note_date);
-      console.log('🔍 Debug - date in local time:', date.toLocaleString('nb-NO'));
-      console.log('🔍 Debug - formatted for display (dd.mm.yyyy):', dateForDisplay);
-      
-      document.getElementById("noteDate").value = dateForDisplay;
-      document.getElementById("noteDatePicker").value = dateForPicker;
-    }
-  }
-  
-  // Set note type and update field visibility
-  const noteTypeSelect = document.getElementById("noteType");
-  if (noteTypeSelect) {
-    noteTypeSelect.value = quote.note_type || "quote";
-  }
-  updateFieldVisibility();
-  
-  // Set score radio button
-  const scoreValue = quote.score || "0";
-  const scoreRadio = document.querySelector(`input[name="quoteScore"][value="${scoreValue}"]`);
-  if (scoreRadio) {
-    scoreRadio.checked = true;
-  }
-  
-  // Populate tags using new system
-  populateTagsForEdit(quote.tags || "");
-  
-  noteInput.value = quote.note || "";
-
-  // Store source_id for updating
-  window.currentSourceId = quote.source_id || null;
-
-  // Set quote images if exist
-  currentQuoteImage = quote.image || "";
-  currentQuoteImageFull = quote.image_full || "";
-  currentAttachmentType = quote.attachment_type || "image";
-  
-  // Set translation group
-  document.getElementById("translationGroup").value = quote.translation_group || "";
-
-  // Display attachment preview (check image_full first for PDFs/docs that don't have thumbnail)
+  // Display attachment preview (app-specific)
   if (currentQuoteImage || currentQuoteImageFull) {
     // Check if it's an icon thumbnail (non-image attachment)
     if (currentAttachmentType !== 'image') {
@@ -1786,22 +1611,16 @@ function openEditModal(quote) {
     clearImagePreview(quoteImagePreview, "quote");
   }
   
-  // Reset image section (always collapsed by default)
+  // Reset image section (app-specific)
   const imageSection = document.getElementById('imageSection');
   const toggleIcon = document.getElementById('imageToggleIcon');
   if (imageSection) imageSection.style.display = 'none';
   if (toggleIcon) toggleIcon.textContent = '▶';
   
-  // Update image indicator
+  // Update image indicator (app-specific)
   updateImageIndicator();
   
-  // Show delete button for editing with appropriate label
-  const deleteQuoteBtn = document.getElementById("deleteQuoteBtn");
-  if (deleteQuoteBtn) {
-    deleteQuoteBtn.style.display = "inline-block";
-    deleteQuoteBtn.textContent = `Delete ${typeLabel}`;
-  }
-
+  // Show modal
   quoteModal.style.display = "block";
 }
 
@@ -1841,21 +1660,8 @@ function clearFilters() {
 }
 
 // API Functions
-// Helper function to retry failed fetch requests (for server startup delays)
-async function fetchWithRetry(url, options = {}, maxRetries = 3, delayMs = 500) {
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      const response = await fetch(url, options);
-      return response;
-    } catch (error) {
-      if (attempt === maxRetries) {
-        throw error;
-      }
-      console.log(`Connection failed (attempt ${attempt}/${maxRetries}), retrying in ${delayMs}ms...`);
-      await new Promise(resolve => setTimeout(resolve, delayMs));
-    }
-  }
-}
+// MIGRATED: fetchWithRetry is now imported from api.js
+// async function fetchWithRetry(url, options = {}, maxRetries = 3, delayMs = 500) {...}
 
 // Helper function to add refresh animation
 function addRefreshAnimation(buttonId, asyncFunction) {
@@ -2251,6 +2057,8 @@ async function showTranslationGroup(groupName) {
     alert('Failed to load translation group');
   }
 }
+// Make global for onclick handlers
+window.showTranslationGroup = showTranslationGroup;
 
 // Display Functions
 function displayQuotes(quotes) {
@@ -2382,139 +2190,10 @@ function displayQuotes(quotes) {
   });
 }
 
+// ============= CARD RENDERING =============
+// MIGRATED: Using library function - pass context as parameters
 function createQuoteCard(quote) {
-  // Resolve attachment URLs (convert file: references to /attachments/ URLs)
-  const imageUrl = quote.image ? resolveAttachmentUrl(quote.image) : null;
-  const imageFullUrl = quote.image_full ? resolveAttachmentUrl(quote.image_full) : null;
-  
-  const tags = quote.tags
-    ? quote.tags
-        .split(",")
-        .map((tag) => `<span class="tag">${tag.trim()}</span>`)
-        .join("")
-    : "";
-
-  const author = quote.author_name || "";
-  const source = quote.source_name || "";
-  const sourceType = quote.source_type || "BOOK";
-  const sourceIcon =
-    sourceType === "MOVIE-TV" ? "🎬" : 
-    sourceType === "ASSORTED" ? "📝" : 
-    sourceType === "POETRY" ? "📜" :
-    sourceType === "LYRICS" ? "🎵" :
-    sourceType === "JOKES" ? "😂" :
-    "📖";
-
-  // Check if quote is long (more than 10 lines or 600 characters)
-  const tempDiv = document.createElement('div');
-  tempDiv.innerHTML = quote.quote;
-  const textContent = tempDiv.textContent || tempDiv.innerText || '';
-  
-  // Count block-level elements as "lines" (p, h1, h2, h3, div, br, li)
-  const blockElements = tempDiv.querySelectorAll('p, h1, h2, h3, div, br, li');
-  const lineCount = Math.max(blockElements.length, textContent.split("\n").length);
-  const charCount = textContent.length;
-  const isLongQuote = lineCount > 10 || charCount > 600;
-  
-  const quoteId = `quote-${quote.id}`;
-  const expandBtnId = `expand-${quote.id}`;
-
-  // Check if score should be displayed
-  const displayScore = localStorage.getItem('displayScoreInCards') === 'true';
-  const score = quote.score;
-  const hasScore = score && parseInt(score) > 0 && displayScore;
-  const scoreIcon = hasScore ? `<i class="fa-solid fa-dice-${['one', 'two', 'three', 'four', 'five', 'six'][parseInt(score) - 1]}"></i>` : '';
-  
-  // Combine score and note on same line if both exist
-  let noteScoreLine = '';
-  if (hasScore && quote.note) {
-    noteScoreLine = `<div class="quote-note-title"><span>${scoreIcon}</span><span>${escapeHtml(quote.note)}</span></div>`;
-  } else if (hasScore) {
-    noteScoreLine = `<div class="quote-score-line">${scoreIcon}</div>`;
-  } else if (quote.note) {
-    noteScoreLine = `<div class="quote-note-title"><span></span><span>${escapeHtml(quote.note)}</span></div>`;
-  }
-  
-  // Translation group badge
-  const translationBadge = quote.translation_group 
-    ? `<span class="translation-badge" title="Translation group: ${escapeHtml(quote.translation_group)}" onclick="event.stopPropagation(); showTranslationGroup('${escapeHtml(quote.translation_group)}')">T</span>` 
-    : '';
-  
-  // Note type badge - only show on "All Notes" view (when no specific filter is active)
-  const noteType = quote.note_type || 'quote';
-  const noteTypeInfo = NOTE_TYPES[noteType];
-  const showNoteTypeBadge = currentNoteTypeFilter === null; // Only on "All Notes"
-  const noteTypeBadge = showNoteTypeBadge && noteTypeInfo
-    ? `<span class="translation-badge" style="background: ${noteTypeInfo.color};" title="${noteTypeInfo.label}">${noteTypeInfo.icon}</span>`
-    : '';
-  
-  // Build metadata section based on note type
-  let metadataContent = '';
-  
-  if (noteType === 'quote') {
-    // Quotes: Show author and source
-    metadataContent = author && source 
-      ? `<div class="meta-item-combined">${noteTypeBadge}${translationBadge}<span class="type-icon-badge">${sourceIcon}</span> <span class="meta-by">by</span> <span class="meta-value clickable author-link" data-id="${quote.author_id}" data-name="${escapeHtml(author)}">${escapeHtml(author)}</span> <span class="meta-from">from</span> <span class="meta-value clickable source-link" data-id="${quote.source_id}" data-name="${escapeHtml(source)}" data-type="${sourceType}">📚 ${escapeHtml(source)}</span></div>` 
-      : author 
-        ? `<div class="meta-item">${noteTypeBadge}${translationBadge}<span class="type-icon-badge">${sourceIcon}</span> <span class="meta-by">by</span> <span class="meta-value clickable author-link" data-id="${quote.author_id}" data-name="${escapeHtml(author)}">${escapeHtml(author)}</span></div>` 
-        : source 
-          ? `<div class="meta-item">${noteTypeBadge}${translationBadge}<span class="meta-value clickable source-link" data-id="${quote.source_id}" data-name="${escapeHtml(source)}" data-type="${sourceType}">📚 ${escapeHtml(source)}</span></div>` 
-          : (noteTypeBadge || translationBadge) ? `<div class="meta-item">${noteTypeBadge}${translationBadge}</div>` : '';
-  } else if (noteType === 'training') {
-    // Training: Show date and training type
-    const trainingTypes = getTrainingTypes();
-    const trainingTypeInfo = trainingTypes.find(t => t.value === sourceType);
-    const trainingIcon = trainingTypeInfo ? trainingTypeInfo.icon : '🏋️';
-    const trainingLabel = trainingTypeInfo ? trainingTypeInfo.label : sourceType;
-    
-    const dateStr = quote.note_date 
-      ? (() => {
-          // Parse as Date to automatically convert UTC to local time
-          const date = new Date(quote.note_date);
-          const dayName = date.toLocaleDateString('nb-NO', { weekday: 'short' });
-          const dateFormatted = date.toLocaleDateString('nb-NO');
-          return `${dayName} ${dateFormatted}`;
-        })()
-      : '';
-    const trainingTypeStr = sourceType && sourceType !== 'ASSORTED' 
-      ? `<span class="type-icon-badge">${trainingIcon}</span> ${trainingLabel}` 
-      : '';
-    
-    metadataContent = dateStr && trainingTypeStr
-      ? `<div class="meta-item-combined">${noteTypeBadge}${trainingTypeStr} <span class="meta-from">•</span> <span class="meta-value">📅 ${dateStr}</span></div>`
-      : dateStr
-        ? `<div class="meta-item">${noteTypeBadge}<span class="meta-value">📅 ${dateStr}</span></div>`
-        : trainingTypeStr
-          ? `<div class="meta-item">${noteTypeBadge}${trainingTypeStr}</div>`
-          : `<div class="meta-item">${noteTypeBadge}</div>`;
-  } else {
-    // For other note types (note, puzzle), just show the badge
-    metadataContent = `<div class="meta-item">${noteTypeBadge}</div>`;
-  }
-
-  return `
-        <div class="quote-card ${quote.image || quote.image_full ? 'has-image' : ''}" data-quote-id="${quote.id}" style="cursor: pointer;">
-            <div class="quote-card-content">
-                <div class="quote-top-section">
-                    <div class="quote-left-column">
-                        ${noteScoreLine}
-                        <div class="quote-text-wrapper">
-                            <div class="quote-text ${isLongQuote ? "collapsible" : ""}" id="${quoteId}" data-expanded="false">${quote.quote}</div>
-                            ${isLongQuote ? `<button class="expand-btn" id="${expandBtnId}" onclick="event.stopPropagation(); toggleQuoteExpand('${quote.id}')">▼ Show more</button>` : ""}
-                        </div>
-                    </div>
-                    ${(quote.image || quote.image_full) ? (quote.attachment_type === 'image' ? `<div class="quote-image-thumb" onclick="event.stopPropagation(); showFullImage('${quote.image_full || quote.image}', ${quote.id}, '${quote.attachment_type || 'image'}')"><img src="${imageUrl || imageFullUrl}" alt="Quote attachment"></div>` : `<div class="quote-file-thumb" onclick="event.stopPropagation(); showFullImage('${quote.image_full || quote.image}', ${quote.id}, '${quote.attachment_type || 'other'}')"><div class="file-icon">${quote.attachment_type === 'pdf' ? '📄' : quote.attachment_type === 'video' ? '🎬' : quote.attachment_type === 'document' ? '📎' : '📁'}</div><div class="file-label">${quote.attachment_type === 'pdf' ? 'PDF' : quote.attachment_type === 'video' ? 'Video' : 'File'}</div></div>`) : ""}
-                </div>
-                <div class="quote-separator"></div>
-                <div class="quote-metadata-row">
-                    <div class="quote-metadata-left">
-                        ${metadataContent}
-                    </div>
-                    ${tags ? `<div class="quote-tags-inline">${tags}</div>` : ''}
-                </div>
-            </div>
-        </div>
-    `;
+  return createQuoteCardLib(quote, currentNoteTypeFilter, getTrainingTypes, getQuoteTypes);
 }
 
 // Store full quotes for expand/collapse
@@ -2556,6 +2235,8 @@ function toggleQuoteExpand(quoteId) {
     }
   }
 }
+// Make global for onclick handlers
+window.toggleQuoteExpand = toggleQuoteExpand;
 
 // Download attachment (for non-image files like Excel, Word, PDF, etc.)
 window.downloadAttachment = function(dataUrl, filename, quoteId = null) {
@@ -2841,11 +2522,12 @@ async function downscaleAndMoveToDb(quoteId, imageUrl, filePath, modal) {
   }
 }
 
-function escapeHtml(text) {
-  const div = document.createElement("div");
-  div.textContent = text;
-  return div.innerHTML;
-}
+// MIGRATED: Now imported from utils.js
+// function escapeHtml(text) {
+//   const div = document.createElement("div");
+//   div.textContent = text;
+//   return div.innerHTML;
+// }
 
 // ============= AUTHOR/SOURCE EDIT MODALS =============
 
@@ -2952,6 +2634,8 @@ async function openAuthorModal(authorId, authorName, quoteCount = null) {
     alert("Failed to load author details");
   }
 }
+// Make global for onclick handlers
+window.openAuthorModal = openAuthorModal;
 
 // Open Source Modal
 async function openSourceModal(
@@ -2996,6 +2680,8 @@ async function openSourceModal(
     alert("Failed to load source details");
   }
 }
+// Make global for onclick handlers
+window.openSourceModal = openSourceModal;
 
 // Close Author Modal
 function closeAuthorEditModal() {
@@ -3215,17 +2901,18 @@ function readAttachmentFile(file, type) {
   reader.readAsDataURL(file);
 }
 
+// MIGRATED: Now imported from utils.js
 // Get icon for attachment type
-function getAttachmentIcon(type) {
-  const icons = {
-    pdf: "📄",
-    document: "📝",
-    video: "🎬",
-    audio: "🎵",
-    image: "🖼️"
-  };
-  return icons[type] || "📎";
-}
+// function getAttachmentIcon(type) {
+//   const icons = {
+//     pdf: "📄",
+//     document: "📝",
+//     video: "🎬",
+//     audio: "🎵",
+//     image: "🖼️"
+//   };
+//   return icons[type] || "📎";
+// }
 
 // Format file size
 function formatFileSize(bytes) {
@@ -3267,17 +2954,8 @@ function createIconThumbnail(icon, filename, size) {
 }
 
 // Display attachment preview
-function displayAttachmentPreview(container, icon, filename, size) {
-  const truncated = filename.length > 30 ? filename.substring(0, 27) + "..." : filename;
-  container.innerHTML = `
-    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 1rem; background: #f9f9f9;">
-      <div style="font-size: 60px; margin-bottom: 0.5rem;">${icon}</div>
-      <div style="font-size: 14px; font-weight: 500; text-align: center; margin-bottom: 0.25rem;">${escapeHtml(truncated)}</div>
-      <div style="font-size: 12px; color: #666;">${size}</div>
-    </div>
-  `;
-  container.classList.add("has-image");
-}
+// MIGRATED: displayAttachmentPreview is now imported from attachments.js
+// function displayAttachmentPreview(container, icon, filename, size) {...}
 
 function readImageFile(file, type) {
   if (!file.type.match("image.*")) {
@@ -3381,31 +3059,34 @@ function handlePaste(e, type) {
 }
 
 // Display Image
+// MIGRATED: Now imported from utils.js
 /**
  * Convert file storage reference to URL
  * Handles both base64 and file: references
  */
-function resolveAttachmentUrl(attachment) {
-  if (!attachment) return null;
-  
-  // If it's already a base64 data URL, return as-is
-  if (attachment.startsWith('data:')) {
-    return attachment;
-  }
-  
-  // If it's a file reference (e.g., "file:quotes/360_full.png:image/png")
-  if (attachment.startsWith('file:')) {
-    const parts = attachment.split(':');
-    if (parts.length >= 2) {
-      const path = parts[1]; // e.g., "quotes/360_full.png"
-      return `/attachments/${path}`;
-    }
-  }
-  
-  // Unknown format - return as-is
-  return attachment;
-}
+// function resolveAttachmentUrl(attachment) {
+//   if (!attachment) return null;
+//   
+//   // If it's already a base64 data URL, return as-is
+//   if (attachment.startsWith('data:')) {
+//     return attachment;
+//   }
+//   
+//   // If it's a file reference (e.g., "file:quotes/360_full.png:image/png")
+//   if (attachment.startsWith('file:')) {
+//     const parts = attachment.split(':');
+//     if (parts.length >= 2) {
+//       const path = parts[1]; // e.g., "quotes/360_full.png"
+//       return `/attachments/${path}`;
+//     }
+//   }
+//   
+//   // Unknown format - return as-is
+//   return attachment;
+// }
 
+// Note: Using local implementations as they have app-specific state management
+// The library versions in attachments.js are too generic
 function displayImage(container, base64Image) {
   const imageUrl = resolveAttachmentUrl(base64Image);
   if (imageUrl) {
@@ -3444,6 +3125,18 @@ function clearImagePreview(container, type) {
         `;
   }
   container.classList.remove("has-image");
+}
+
+function displayAttachmentPreview(container, icon, filename, size) {
+  const truncated = filename.length > 30 ? filename.substring(0, 27) + "..." : filename;
+  container.innerHTML = `
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 1rem; background: #f9f9f9;">
+      <div style="font-size: 60px; margin-bottom: 0.5rem;">${icon}</div>
+      <div style="font-size: 14px; font-weight: 500; text-align: center; margin-bottom: 0.25rem;">${escapeHtml(truncated)}</div>
+      <div style="font-size: 12px; color: #666;">${size}</div>
+    </div>
+  `;
+  container.classList.add("has-image");
 }
 
 // Clear Author Image
@@ -3887,6 +3580,11 @@ function switchView(view) {
     toggleTagOperationsPanel(tagOpsEnabled);
   } else if (view === "settings" && settingsView) {
     settingsView.style.display = "block";
+    // Re-render type lists to ensure they show current settings
+    renderQuoteTypesList();
+    renderTrainingTypesList();
+    // Setup event listeners for add buttons
+    setupTypeManagementListeners();
   }
 }
 
@@ -4297,6 +3995,8 @@ function filterByTag(tagName) {
     }
   });
 }
+// Make global for onclick handlers
+window.filterByTag = filterByTag;
 
 function filterByAuthor(authorName) {
   console.log("Filtering by author:", authorName);
@@ -4332,6 +4032,8 @@ function filterByAuthor(authorName) {
     }
   });
 }
+// Make global for onclick handlers
+window.filterByAuthor = filterByAuthor;
 
 function filterBySource(sourceName) {
   console.log("Filtering by source:", sourceName);
@@ -4360,6 +4062,8 @@ function filterBySource(sourceName) {
     }
   });
 }
+// Make global for onclick handlers
+window.filterBySource = filterBySource;
 
 // ============= RENAME FUNCTIONALITY =============
 
@@ -4394,6 +4098,8 @@ async function deleteTag(id, name) {
     showNotification(`Error: ${error.message}`, "error");
   }
 }
+// Make global for onclick handlers
+window.deleteTag = deleteTag;
 
 function editAuthor(id, name) {
   renameContext = { type: 'author', id, oldName: name };
@@ -4841,8 +4547,6 @@ async function exportToPdf() {
 
     // Download the PDF
     const blob = await pdfResponse.blob();
-
-    // Ensure blob is recognized as PDF
     const pdfBlob = new Blob([blob], { type: "application/pdf" });
     const url = window.URL.createObjectURL(pdfBlob);
     const a = document.createElement("a");
@@ -4852,7 +4556,6 @@ async function exportToPdf() {
     document.body.appendChild(a);
     a.click();
 
-    // Clean up
     setTimeout(() => {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
@@ -5293,6 +4996,8 @@ function removeTag(tagName) {
   updateSelectedTagsDisplay();
   document.getElementById('tags').value = selectedTagsArray.join(',');
 }
+// Make global for onclick handlers
+window.removeTag = removeTag;
 
 function updateSelectedTagsDisplay() {
   const container = document.getElementById('selectedTags');
@@ -6052,6 +5757,8 @@ function toggleImageSection() {
     toggleIcon.textContent = '▶';
   }
 }
+// Make global for onclick handlers
+window.toggleImageSection = toggleImageSection;
 
 // Update image indicator in modal
 function updateImageIndicator() {
@@ -6217,16 +5924,16 @@ function saveTrainingTypesAndRefresh(types) {
   }
 }
 
-// Initialize settings on page load
-document.addEventListener('DOMContentLoaded', () => {
-  initializeSettings();
-  
-  // Initialize quote types management UI
-  renderQuoteTypesList();
-  
-  const addTypeBtn = document.getElementById('addQuoteTypeBtn');
-  if (addTypeBtn) {
-    addTypeBtn.addEventListener('click', () => {
+// Setup event listeners for type management buttons
+function setupTypeManagementListeners() {
+  // Quote Types - Add button
+  const addQuoteTypeBtn = document.getElementById('addQuoteTypeBtn');
+  if (addQuoteTypeBtn) {
+    // Remove old listener by cloning
+    const newAddQuoteTypeBtn = addQuoteTypeBtn.cloneNode(true);
+    addQuoteTypeBtn.parentNode.replaceChild(newAddQuoteTypeBtn, addQuoteTypeBtn);
+    
+    newAddQuoteTypeBtn.addEventListener('click', () => {
       const types = getQuoteTypes();
       types.push({
         icon: '📝',
@@ -6237,12 +5944,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   
-  // Initialize training types management UI
-  renderTrainingTypesList();
-  
+  // Training Types - Add button
   const addTrainingTypeBtn = document.getElementById('addTrainingTypeBtn');
   if (addTrainingTypeBtn) {
-    addTrainingTypeBtn.addEventListener('click', () => {
+    // Remove old listener by cloning
+    const newAddTrainingTypeBtn = addTrainingTypeBtn.cloneNode(true);
+    addTrainingTypeBtn.parentNode.replaceChild(newAddTrainingTypeBtn, addTrainingTypeBtn);
+    
+    newAddTrainingTypeBtn.addEventListener('click', () => {
       const types = getTrainingTypes();
       types.push({
         icon: '💪',
@@ -6252,6 +5961,23 @@ document.addEventListener('DOMContentLoaded', () => {
       saveTrainingTypesAndRefresh(types);
     });
   }
+}
+
+// Initialize settings on page load
+document.addEventListener('DOMContentLoaded', async () => {
+  // Wait for settings to load first (this might already be done by the main DOMContentLoaded handler)
+  if (!globalSettings) {
+    await loadSettings();
+  }
+  
+  initializeSettings();
+  
+  // Initialize quote types management UI
+  renderQuoteTypesList();
+  renderTrainingTypesList();
+  
+  // Setup event listeners for add buttons
+  setupTypeManagementListeners();
 });
 
 // Also check when switching to tags view

@@ -1,10 +1,19 @@
 const pool = require("./db");
 
+// Cache for table existence check (avoid repeated queries)
+let tablesExistCache = null;
+
 /**
  * Check if new tag tables exist
+ * @param {boolean} forceRecheck - Force recheck even if cached
  * @returns {Promise<boolean>}
  */
-async function checkTagTablesExist() {
+async function checkTagTablesExist(forceRecheck = false) {
+  // Return cached result if available and not forcing recheck
+  if (tablesExistCache !== null && !forceRecheck) {
+    return tablesExistCache;
+  }
+  
   try {
     const result = await pool.query(`
       SELECT 
@@ -12,7 +21,8 @@ async function checkTagTablesExist() {
         (SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'quote_tags')) 
         AS exists
     `);
-    return result.rows[0].exists;
+    tablesExistCache = result.rows[0].exists;
+    return tablesExistCache;
   } catch (error) {
     console.error("Error checking tag tables:", error);
     return false;
@@ -31,7 +41,6 @@ async function getOrCreateTagIds(tagNames, client = pool) {
   }
 
   const hasNewTables = await checkTagTablesExist();
-  console.log("getOrCreateTagIds - Tables exist:", hasNewTables);
   if (!hasNewTables) {
     return []; // Skip if tables don't exist yet
   }
@@ -50,7 +59,6 @@ async function getOrCreateTagIds(tagNames, client = pool) {
          RETURNING id`,
         [trimmedTag]
       );
-      console.log("Created/found tag:", trimmedTag, "ID:", result.rows[0].id);
       tagIds.push(result.rows[0].id);
     } catch (error) {
       console.error("Error creating tag:", trimmedTag, error);

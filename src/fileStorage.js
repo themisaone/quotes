@@ -10,6 +10,31 @@ const path = require("path");
 const DEFAULT_MAX_SIZE_MB = 1;
 const ATTACHMENTS_DIR = path.join(__dirname, "../attachments");
 
+// MIME type mappings (centralized to avoid duplication)
+const MIME_TO_EXT = {
+  "image/jpeg": "jpg",
+  "image/jpg": "jpg",
+  "image/png": "png",
+  "image/gif": "gif",
+  "image/webp": "webp",
+  "application/pdf": "pdf",
+  "video/mp4": "mp4",
+  "video/quicktime": "mov",
+  "video/webm": "webm",
+};
+
+const EXT_TO_MIME = {
+  "jpg": "image/jpeg",
+  "jpeg": "image/jpeg",
+  "png": "image/png",
+  "gif": "image/gif",
+  "webp": "image/webp",
+  "pdf": "application/pdf",
+  "mp4": "video/mp4",
+  "mov": "video/quicktime",
+  "webm": "video/webm",
+};
+
 // Ensure attachments directories exist
 function ensureDirectories() {
   const dirs = [
@@ -46,6 +71,37 @@ function getBase64Size(base64String) {
 }
 
 /**
+ * Get file extension from MIME type
+ */
+function getExtensionFromMime(mimeType) {
+  return MIME_TO_EXT[mimeType] || "bin";
+}
+
+/**
+ * Get MIME type from file extension
+ */
+function getMimeFromExtension(ext) {
+  const normalized = ext.toLowerCase().replace(/^\./, ''); // Remove leading dot if present
+  return EXT_TO_MIME[normalized] || "application/octet-stream";
+}
+
+/**
+ * Parse base64 data URL into components
+ * @param {string} base64String - Full data URL with base64 data
+ * @returns {Object} { mimeType, data }
+ */
+function parseBase64Data(base64String) {
+  const matches = base64String.match(/^data:(.+?);base64,(.+)$/);
+  if (!matches) {
+    throw new Error("Invalid base64 string format");
+  }
+  return {
+    mimeType: matches[1],
+    data: matches[2]
+  };
+}
+
+/**
  * Check if file should be stored externally
  * @param {string} base64String - Base64 encoded data
  * @param {number} maxSizeMB - Maximum size in MB for DB storage (optional, default 1)
@@ -59,7 +115,7 @@ function shouldStoreExternally(base64String, maxSizeMB = DEFAULT_MAX_SIZE_MB) {
 /**
  * Save file to filesystem
  * @param {string} base64String - Base64 encoded file data
- * @param {string} type - 'quotes', 'authors', or 'sources'
+ * @param {string} type - 'quotes', 'authors', 'sources', 'training', 'notes', 'puzzles'
  * @param {number} id - ID of the entity
  * @param {string} suffix - Optional suffix (e.g., '_full' for full-size images)
  * @returns {string} Relative path to the saved file
@@ -67,35 +123,17 @@ function shouldStoreExternally(base64String, maxSizeMB = DEFAULT_MAX_SIZE_MB) {
 function saveToFilesystem(base64String, type, id, suffix = "") {
   ensureDirectories();
 
-  // Extract mime type and data
-  const matches = base64String.match(/^data:(.+?);base64,(.+)$/);
-  if (!matches) {
-    throw new Error("Invalid base64 string format");
-  }
-
-  const mimeType = matches[1];
-  const base64Data = matches[2];
-
-  // Determine file extension from mime type
-  const extensions = {
-    "image/jpeg": "jpg",
-    "image/jpg": "jpg",
-    "image/png": "png",
-    "image/gif": "gif",
-    "image/webp": "webp",
-    "application/pdf": "pdf",
-    "video/mp4": "mp4",
-    "video/quicktime": "mov",
-    "video/webm": "webm",
-  };
-
-  const ext = extensions[mimeType] || "bin";
+  // Parse base64 data
+  const { mimeType, data } = parseBase64Data(base64String);
+  
+  // Generate filename
+  const ext = getExtensionFromMime(mimeType);
   const filename = `${id}${suffix}.${ext}`;
   const relativePath = path.join(type, filename);
   const fullPath = path.join(ATTACHMENTS_DIR, relativePath);
 
   // Convert base64 to buffer and save
-  const buffer = Buffer.from(base64Data, "base64");
+  const buffer = Buffer.from(data, "base64");
   fs.writeFileSync(fullPath, buffer);
 
   console.log(`Saved external file: ${relativePath} (${(buffer.length / 1024 / 1024).toFixed(2)} MB)`);
@@ -120,19 +158,7 @@ function readFromFilesystem(relativePath) {
   
   // Determine mime type from extension
   const ext = path.extname(fullPath).toLowerCase().slice(1);
-  const mimeTypes = {
-    jpg: "image/jpeg",
-    jpeg: "image/jpeg",
-    png: "image/png",
-    gif: "image/gif",
-    webp: "image/webp",
-    pdf: "application/pdf",
-    mp4: "video/mp4",
-    mov: "video/quicktime",
-    webm: "video/webm",
-  };
-
-  const mimeType = mimeTypes[ext] || "application/octet-stream";
+  const mimeType = getMimeFromExtension(ext);
   const base64Data = buffer.toString("base64");
 
   return `data:${mimeType};base64,${base64Data}`;
@@ -189,8 +215,12 @@ function createFileReference(relativePath, mimeType) {
  * Extract mime type from base64 string
  */
 function getMimeTypeFromBase64(base64String) {
-  const matches = base64String.match(/^data:(.+?);base64,/);
-  return matches ? matches[1] : 'application/octet-stream';
+  try {
+    const { mimeType } = parseBase64Data(base64String);
+    return mimeType;
+  } catch (error) {
+    return 'application/octet-stream';
+  }
 }
 
 /**
@@ -267,8 +297,13 @@ function deleteAttachment(value) {
 module.exports = {
   DEFAULT_MAX_SIZE_MB,
   ATTACHMENTS_DIR,
+  MIME_TO_EXT,
+  EXT_TO_MIME,
   ensureDirectories,
   getBase64Size,
+  getExtensionFromMime,
+  getMimeFromExtension,
+  parseBase64Data,
   shouldStoreExternally,
   saveToFilesystem,
   readFromFilesystem,
