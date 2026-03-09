@@ -17,6 +17,9 @@ function ensureDirectories() {
     path.join(ATTACHMENTS_DIR, "quotes"),
     path.join(ATTACHMENTS_DIR, "authors"),
     path.join(ATTACHMENTS_DIR, "sources"),
+    path.join(ATTACHMENTS_DIR, "training"),
+    path.join(ATTACHMENTS_DIR, "notes"),
+    path.join(ATTACHMENTS_DIR, "puzzles"),
   ];
 
   dirs.forEach((dir) => {

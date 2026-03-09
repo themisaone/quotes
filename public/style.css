@@ -1461,6 +1461,44 @@ textarea {
   font-weight: 500;
 }
 
+/* File preview thumbnail (for PDFs, videos that open in viewer) */
+.quote-file-thumb {
+  max-width: 250px;
+  min-width: 120px;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.2s;
+  align-self: flex-start;
+  margin: 0;
+  padding: 1rem;
+  border-radius: 8px;
+  background: #f8f9fa;
+  border: 2px solid #cbd5e0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: var(--shadow);
+}
+
+.quote-file-thumb:hover {
+  transform: scale(1.02);
+  background: #e7f3ff;
+  border-color: var(--primary);
+}
+
+.quote-file-thumb .file-icon {
+  font-size: 3rem;
+  line-height: 1;
+}
+
+.quote-file-thumb .file-label {
+  font-size: 0.9rem;
+  color: #4a5568;
+  text-align: center;
+  font-weight: 500;
+}
+
 .quote-note-title {
   font-weight: normal;
   font-size: 0.9rem;

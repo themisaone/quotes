@@ -7,12 +7,19 @@ const path = require('path');
  * This script parses Evernote ENEX export files and converts them to a format
  * that can be directly imported using the "Restore Data" feature.
  * 
- * Usage: node scripts/parse-enex.js <enex-file> [output-json-file] [training-type]
+ * Usage: node scripts/parse-enex.js <enex-file> [output-json-file] [training-type] [batch-size] [max-attachment-mb]
  * 
  * Examples:
  *   node scripts/parse-enex.js 2026.enex training-2026.json
  *   node scripts/parse-enex.js 2026.enex training-2026.json CARDIO
- *   node scripts/parse-enex.js 2026.enex training-2026.json WEIGHTS
+ *   node scripts/parse-enex.js 2026.enex training-2026.json WEIGHTS 50
+ *   node scripts/parse-enex.js large.enex output.json WEIGHTS 100 10  (skip attachments > 10 MB)
+ * 
+ * Parameters:
+ *   - batch-size: Number of notes per file (default: 0 = no splitting)
+ *                 Use this for large ENEX files to avoid server size limits
+ *   - max-attachment-mb: Skip notes with attachments larger than this (default: 0 = no limit)
+ *                        Useful to exclude huge PDF/video files
  * 
  * Default training type: WEIGHTS
  * Available training types: WEIGHTS, CARDIO, FLEXIBILITY, SPORTS
@@ -87,6 +94,11 @@ function getTextContent(xmlString, tagName) {
 
 // Extract resource (attachment) from note
 function extractResource(noteXml) {
+  // Count total resources
+  const allResources = noteXml.match(/<resource>/g);
+  const resourceCount = allResources ? allResources.length : 0;
+  
+  // Only extract the first resource (app only supports one attachment per note)
   const resourceMatch = noteXml.match(/<resource>([\s\S]*?)<\/resource>/);
   if (!resourceMatch) return null;
   
@@ -99,6 +111,13 @@ function extractResource(noteXml) {
   // Clean up the base64 data (remove newlines and whitespace)
   const base64Data = dataMatch[1].replace(/\s+/g, '');
   
+  // Calculate file size (base64 is ~33% larger than original)
+  const base64Size = base64Data.length;
+  const actualSize = (base64Size * 3) / 4; // Approximate original file size
+  const sizeKB = (actualSize / 1024).toFixed(2);
+  const sizeMB = (actualSize / (1024 * 1024)).toFixed(2);
+  const sizeDisplay = actualSize > 1024 * 1024 ? `${sizeMB} MB` : `${sizeKB} KB`;
+  
   // Extract MIME type
   const mimeType = getTextContent(resourceXml, 'mime');
   
@@ -107,7 +126,17 @@ function extractResource(noteXml) {
   
   if (!base64Data || !mimeType) return null;
   
-  console.log(`   📎 Found attachment: ${filename || 'unnamed'} (${mimeType})`);
+  console.log(`   📎 Found attachment: ${filename || 'unnamed'} (${mimeType}) - ${sizeDisplay}`);
+  
+  // Warn if multiple attachments exist
+  if (resourceCount > 1) {
+    console.log(`   ⚠️  WARNING: Note has ${resourceCount} attachments, only the first one will be imported!`);
+  }
+  
+  // Warn if file is very large
+  if (actualSize > 50 * 1024 * 1024) {
+    console.log(`   ⚠️  WARNING: Large file! This may cause import issues (>${sizeMB} MB)`);
+  }
   
   // Determine attachment type based on MIME type
   let attachmentType = 'other';
@@ -133,9 +162,12 @@ function extractResource(noteXml) {
 }
 
 // Parse the ENEX file
-function parseEnex(enexPath, trainingType = 'WEIGHTS') {
+function parseEnex(enexPath, trainingType = 'WEIGHTS', maxAttachmentSizeMB = 0) {
   console.log(`📖 Reading ENEX file: ${enexPath}`);
   console.log(`🏋️  Default training type: ${trainingType}`);
+  if (maxAttachmentSizeMB > 0) {
+    console.log(`⚠️  Will skip notes with attachments > ${maxAttachmentSizeMB} MB`);
+  }
   
   const content = fs.readFileSync(enexPath, 'utf-8');
   
@@ -151,6 +183,8 @@ function parseEnex(enexPath, trainingType = 'WEIGHTS') {
   
   const notes = [];
   let skipped = 0;
+  let skippedLargeAttachments = 0;
+  const largeAttachments = [];
   
   noteMatches.forEach((noteXml, index) => {
     const title = getTextContent(noteXml, 'title');
@@ -176,6 +210,21 @@ function parseEnex(enexPath, trainingType = 'WEIGHTS') {
     // Extract attachment/resource if present
     const resourceData = extractResource(noteXml);
     
+    // Check if attachment is too large
+    if (maxAttachmentSizeMB > 0 && resourceData) {
+      const attachmentSizeMB = (resourceData.dataUrl.length * 3 / 4) / (1024 * 1024);
+      if (attachmentSizeMB > maxAttachmentSizeMB) {
+        console.warn(`⚠️  Skipping note ${index + 1}: Attachment too large (${attachmentSizeMB.toFixed(2)} MB > ${maxAttachmentSizeMB} MB limit)`);
+        largeAttachments.push({
+          title,
+          date: noteDate,
+          size: attachmentSizeMB.toFixed(2)
+        });
+        skippedLargeAttachments++;
+        return;
+      }
+    }
+    
     // Create note object compatible with the import system
     // IMPORTANT: This format must match what the server expects in /api/import/json
     const note = {
@@ -186,8 +235,10 @@ function parseEnex(enexPath, trainingType = 'WEIGHTS') {
       note: title,                     // Additional note/comment (original Evernote title)
       author_name: null,               // Not used for training notes
       source_name: null,               // Not used for training notes
-      image: resourceData ? resourceData.dataUrl : null,           // Base64 data URL for attachment (if any)
-      image_full: resourceData ? resourceData.dataUrl : null,      // Same as image for attachments
+      // For images: use same data for both (app may downscale image for thumbnail)
+      // For PDFs/docs: only use image_full, leave image as null (no thumbnail needed)
+      image: resourceData && resourceData.attachmentType === 'image' ? resourceData.dataUrl : null,
+      image_full: resourceData ? resourceData.dataUrl : null,      // Full attachment data
       storage_type: resourceData ? 'base64' : null,                // Indicate base64 storage
       attachment_type: resourceData ? resourceData.attachmentType : null,  // Type: image, pdf, document, video, other
       created_at: new Date(noteDate).toISOString(),
@@ -201,7 +252,14 @@ function parseEnex(enexPath, trainingType = 'WEIGHTS') {
   console.log(`\n📊 Summary:`);
   console.log(`   - Total notes found: ${noteMatches.length}`);
   console.log(`   - Successfully parsed: ${notes.length}`);
-  console.log(`   - Skipped: ${skipped}`);
+  console.log(`   - Skipped (no date/empty): ${skipped}`);
+  if (skippedLargeAttachments > 0) {
+    console.log(`   - Skipped (large attachments): ${skippedLargeAttachments}`);
+    console.log(`\n📎 Large attachments that were skipped:`);
+    largeAttachments.forEach(att => {
+      console.log(`      • ${att.date}: ${att.title} (${att.size} MB)`);
+    });
+  }
   
   return notes;
 }
@@ -211,11 +269,19 @@ function main() {
   const args = process.argv.slice(2);
   
   if (args.length === 0) {
-    console.error('❌ Usage: node scripts/parse-enex.js <enex-file> [output-json-file] [training-type]');
+    console.error('❌ Usage: node scripts/parse-enex.js <enex-file> [output-json-file] [training-type] [batch-size] [max-attachment-mb]');
     console.error('');
     console.error('Examples:');
     console.error('   node scripts/parse-enex.js 2026.enex training-2026.json');
     console.error('   node scripts/parse-enex.js 2026.enex training-2026.json CARDIO');
+    console.error('   node scripts/parse-enex.js 2026.enex training-2026.json WEIGHTS 50');
+    console.error('   node scripts/parse-enex.js 2016.enex output.json WEIGHTS 20 10  (skip attachments > 10 MB)');
+    console.error('');
+    console.error('Parameters:');
+    console.error('   batch-size: Split into multiple files (e.g., 50 notes per file)');
+    console.error('               Use this for large ENEX files to avoid server limits');
+    console.error('   max-attachment-mb: Skip notes with attachments > this size (MB)');
+    console.error('                      Useful to exclude huge PDF/video files');
     console.error('');
     console.error('Available training types: WEIGHTS, CARDIO, FLEXIBILITY, SPORTS');
     console.error('Default: WEIGHTS');
@@ -225,6 +291,8 @@ function main() {
   const enexPath = args[0];
   const outputPath = args[1] || enexPath.replace('.enex', '-import.json');
   const trainingType = (args[2] || 'WEIGHTS').toUpperCase();
+  const batchSize = args[3] ? parseInt(args[3]) : 0;
+  const maxAttachmentMB = args[4] ? parseInt(args[4]) : 0;
   
   // Validate training type
   const validTypes = ['WEIGHTS', 'CARDIO', 'FLEXIBILITY', 'SPORTS'];
@@ -240,43 +308,93 @@ function main() {
   }
   
   try {
-    const notes = parseEnex(enexPath, trainingType);
+    const notes = parseEnex(enexPath, trainingType, maxAttachmentMB);
     
     if (notes.length === 0) {
       console.error('❌ No notes were successfully parsed');
       process.exit(1);
     }
     
-    // Create the JSON structure for import (compatible with Restore Data format)
-    // This format matches the export from /api/export/json
-    const importData = {
-      data: {
-        quotes: notes,
-        authors: [],
-        sources: [],
-        tags: []
-      },
-      counts: {
-        quotes: notes.length,
-        authors: 0,
-        sources: 0,
-        tags: 0
+    // Determine if we need to split into multiple files
+    const shouldSplit = batchSize > 0 && notes.length > batchSize;
+    
+    if (shouldSplit) {
+      // Split into batches
+      const batches = [];
+      for (let i = 0; i < notes.length; i += batchSize) {
+        batches.push(notes.slice(i, i + batchSize));
       }
-    };
-    
-    // Write to output file
-    fs.writeFileSync(outputPath, JSON.stringify(importData, null, 2), 'utf-8');
-    
-    console.log(`\n✅ Successfully created JSON file: ${outputPath}`);
-    console.log(`   File size: ${(fs.statSync(outputPath).size / 1024).toFixed(2)} KB`);
-    console.log(`\n📋 Next steps:`);
-    console.log(`   1. Review the file (optional): cat ${outputPath} | less`);
-    console.log(`   2. Open your Notes app in the browser`);
-    console.log(`   3. Click "Restore Data" (📥) in the left menu`);
-    console.log(`   4. Select this file: ${outputPath}`);
-    console.log(`   5. Click to import`);
-    console.log(`\n💡 All notes are set to training type: ${trainingType}`);
-    console.log(`   You can edit individual notes after import if needed.`);
+      
+      console.log(`\n📦 Splitting into ${batches.length} files (${batchSize} notes each)...\n`);
+      
+      const outputFiles = [];
+      const baseOutputPath = outputPath.replace(/\.json$/, '');
+      
+      batches.forEach((batch, index) => {
+        const batchNumber = index + 1;
+        const batchOutputPath = `${baseOutputPath}-part${batchNumber}.json`;
+        
+        const importData = {
+          data: {
+            quotes: batch,
+            authors: [],
+            sources: [],
+            tags: []
+          },
+          counts: {
+            quotes: batch.length,
+            authors: 0,
+            sources: 0,
+            tags: 0
+          }
+        };
+        
+        fs.writeFileSync(batchOutputPath, JSON.stringify(importData, null, 2), 'utf-8');
+        const fileSize = (fs.statSync(batchOutputPath).size / 1024).toFixed(2);
+        console.log(`   ✅ Part ${batchNumber}: ${batch.length} notes → ${batchOutputPath} (${fileSize} KB)`);
+        outputFiles.push(batchOutputPath);
+      });
+      
+      console.log(`\n✅ Successfully created ${batches.length} JSON files!`);
+      console.log(`   Total notes: ${notes.length}`);
+      console.log(`\n📋 Next steps:`);
+      console.log(`   1. Import each file separately using "Restore Data"`);
+      console.log(`   2. Files to import:`);
+      outputFiles.forEach((file, index) => {
+        console.log(`      ${index + 1}. ${file}`);
+      });
+      console.log(`\n💡 All notes are set to training type: ${trainingType}`);
+      
+    } else {
+      // Single file output (original behavior)
+      const importData = {
+        data: {
+          quotes: notes,
+          authors: [],
+          sources: [],
+          tags: []
+        },
+        counts: {
+          quotes: notes.length,
+          authors: 0,
+          sources: 0,
+          tags: 0
+        }
+      };
+      
+      fs.writeFileSync(outputPath, JSON.stringify(importData, null, 2), 'utf-8');
+      
+      console.log(`\n✅ Successfully created JSON file: ${outputPath}`);
+      console.log(`   File size: ${(fs.statSync(outputPath).size / 1024).toFixed(2)} KB`);
+      console.log(`\n📋 Next steps:`);
+      console.log(`   1. Review the file (optional): cat ${outputPath} | less`);
+      console.log(`   2. Open your Notes app in the browser`);
+      console.log(`   3. Click "Restore Data" (📥) in the left menu`);
+      console.log(`   4. Select this file: ${outputPath}`);
+      console.log(`   5. Click to import`);
+      console.log(`\n💡 All notes are set to training type: ${trainingType}`);
+      console.log(`   You can edit individual notes after import if needed.`);
+    }
     
   } catch (error) {
     console.error('❌ Error parsing ENEX file:', error.message);

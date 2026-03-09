@@ -28,7 +28,8 @@ if (!fs.existsSync(configDir)) {
 
 // Middleware
 app.use(cors());
-app.use(express.json({ limit: "10mb" })); // Increased limit for image uploads
+app.use(express.json({ limit: "100mb" })); // Increased limit for bulk imports with attachments
+app.use(express.urlencoded({ limit: "100mb", extended: true })); // Also increase URL-encoded limit
 app.use(express.static(path.join(__dirname, "../public")));
 // Serve attachments folder for large files
 app.use('/attachments', express.static(path.join(__dirname, '../attachments')));
@@ -2018,6 +2019,9 @@ app.post("/api/import/json", async (req, res) => {
 
     // Import quotes
     console.log(`Importing ${data.quotes.length} quotes...`);
+    // Get storage threshold from settings
+    const storageThresholdMB = options?.storageThresholdMB || 1;
+    
     for (const quote of data.quotes) {
       try {
         // Get author_id
@@ -2052,6 +2056,14 @@ app.post("/api/import/json", async (req, res) => {
 
         if (existing.rows.length > 0) {
           if (options?.replaceExisting) {
+            const quoteId = existing.rows[0].id;
+            const noteType = quote.note_type || 'quote';
+            const storageFolder = noteType === 'training' ? 'training' : noteType === 'note' ? 'notes' : noteType === 'puzzle' ? 'puzzles' : 'quotes';
+            
+            // Process attachments through storage system (respects 1 MB threshold)
+            const processedImage = fileStorage.processForStorage(quote.image, storageFolder, quoteId, '', storageThresholdMB);
+            const processedImageFull = fileStorage.processForStorage(quote.image_full, storageFolder, quoteId, '_full', storageThresholdMB);
+            
             await client.query(
               `UPDATE quotes 
                SET source_id = $1, type = $2, image = $3, image_full = $4, note = $5, note_type = $6, note_date = $7, 
@@ -2060,13 +2072,13 @@ app.post("/api/import/json", async (req, res) => {
               [
                 sourceId,
                 quote.type,
-                quote.image,
-                quote.image_full,
+                processedImage,
+                processedImageFull,
                 quote.note,
-                quote.note_type || 'quote',
+                noteType,
                 quote.note_date || null,
                 quote.attachment_type || null,
-                existing.rows[0].id,
+                quoteId,
               ],
             );
             stats.quotes.updated++;
@@ -2074,25 +2086,42 @@ app.post("/api/import/json", async (req, res) => {
             stats.quotes.skipped++;
           }
         } else {
-          await client.query(
-            `INSERT INTO quotes (quote, author_id, source_id, type, image, image_full, note, note_type, note_date, 
+          // First insert without images to get the ID
+          const noteType = quote.note_type || 'quote';
+          const insertResult = await client.query(
+            `INSERT INTO quotes (quote, author_id, source_id, type, note, note_type, note_date, 
                                  attachment_type, created_at, updated_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+             RETURNING id`,
             [
               quote.quote,
               authorId,
               sourceId,
               quote.type,
-              quote.image,
-              quote.image_full,
               quote.note,
-              quote.note_type || 'quote',
+              noteType,
               quote.note_date || null,
               quote.attachment_type || null,
               quote.created_at || new Date(),
               quote.updated_at || new Date(),
             ],
           );
+          
+          const quoteId = insertResult.rows[0].id;
+          const storageFolder = noteType === 'training' ? 'training' : noteType === 'note' ? 'notes' : noteType === 'puzzle' ? 'puzzles' : 'quotes';
+          
+          // Now process attachments with the quote ID (respects 1 MB threshold)
+          const processedImage = fileStorage.processForStorage(quote.image, storageFolder, quoteId, '', storageThresholdMB);
+          const processedImageFull = fileStorage.processForStorage(quote.image_full, storageFolder, quoteId, '_full', storageThresholdMB);
+          
+          // Update with processed attachment references
+          if (processedImage || processedImageFull) {
+            await client.query(
+              `UPDATE quotes SET image = $1, image_full = $2 WHERE id = $3`,
+              [processedImage, processedImageFull, quoteId]
+            );
+          }
+          
           stats.quotes.created++;
         }
       } catch (error) {

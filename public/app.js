@@ -1772,13 +1772,14 @@ function openEditModal(quote) {
   // Set translation group
   document.getElementById("translationGroup").value = quote.translation_group || "";
 
-  if (currentQuoteImage) {
+  // Display attachment preview (check image_full first for PDFs/docs that don't have thumbnail)
+  if (currentQuoteImage || currentQuoteImageFull) {
     // Check if it's an icon thumbnail (non-image attachment)
     if (currentAttachmentType !== 'image') {
       // Show icon preview for PDFs, docs, etc.
       const icon = getAttachmentIcon(currentAttachmentType);
       displayAttachmentPreview(quoteImagePreview, icon, "Attachment", "");
-    } else {
+    } else if (currentQuoteImage) {
       displayImage(quoteImagePreview, currentQuoteImage);
     }
   } else {
@@ -2382,6 +2383,10 @@ function displayQuotes(quotes) {
 }
 
 function createQuoteCard(quote) {
+  // Resolve attachment URLs (convert file: references to /attachments/ URLs)
+  const imageUrl = quote.image ? resolveAttachmentUrl(quote.image) : null;
+  const imageFullUrl = quote.image_full ? resolveAttachmentUrl(quote.image_full) : null;
+  
   const tags = quote.tags
     ? quote.tags
         .split(",")
@@ -2488,7 +2493,7 @@ function createQuoteCard(quote) {
   }
 
   return `
-        <div class="quote-card ${quote.image ? 'has-image' : ''}" data-quote-id="${quote.id}" style="cursor: pointer;">
+        <div class="quote-card ${quote.image || quote.image_full ? 'has-image' : ''}" data-quote-id="${quote.id}" style="cursor: pointer;">
             <div class="quote-card-content">
                 <div class="quote-top-section">
                     <div class="quote-left-column">
@@ -2498,7 +2503,7 @@ function createQuoteCard(quote) {
                             ${isLongQuote ? `<button class="expand-btn" id="${expandBtnId}" onclick="event.stopPropagation(); toggleQuoteExpand('${quote.id}')">▼ Show more</button>` : ""}
                         </div>
                     </div>
-                    ${quote.image ? (quote.attachment_type === 'image' ? `<div class="quote-image-thumb" onclick="event.stopPropagation(); showFullImage('${quote.image_full || quote.image}', ${quote.id}, '${quote.attachment_type || 'image'}')"><img src="${quote.image}" alt="Quote attachment"></div>` : `<div class="quote-file-attachment" onclick="event.stopPropagation(); downloadAttachment('${quote.image_full || quote.image}', 'attachment', ${quote.id})" title="Click to download attachment"><div class="file-icon">${quote.attachment_type === 'pdf' ? '📄' : quote.attachment_type === 'document' ? '📎' : '📁'}</div><div class="file-label">File</div></div>`) : ""}
+                    ${(quote.image || quote.image_full) ? (quote.attachment_type === 'image' ? `<div class="quote-image-thumb" onclick="event.stopPropagation(); showFullImage('${quote.image_full || quote.image}', ${quote.id}, '${quote.attachment_type || 'image'}')"><img src="${imageUrl || imageFullUrl}" alt="Quote attachment"></div>` : `<div class="quote-file-thumb" onclick="event.stopPropagation(); showFullImage('${quote.image_full || quote.image}', ${quote.id}, '${quote.attachment_type || 'other'}')"><div class="file-icon">${quote.attachment_type === 'pdf' ? '📄' : quote.attachment_type === 'video' ? '🎬' : quote.attachment_type === 'document' ? '📎' : '📁'}</div><div class="file-label">${quote.attachment_type === 'pdf' ? 'PDF' : quote.attachment_type === 'video' ? 'Video' : 'File'}</div></div>`) : ""}
                 </div>
                 <div class="quote-separator"></div>
                 <div class="quote-metadata-row">
@@ -2585,7 +2590,7 @@ window.showFullImage = function (imageSrc, quoteId = null, attachmentType = 'ima
     actualSrc = `/attachments/${filePath}`;
   }
   
-  // For PDFs and other documents, show PDF viewer
+  // For PDFs, show PDF viewer
   if (attachmentType === 'pdf' || mimeType === 'application/pdf') {
     showPDFViewer(actualSrc, filePath);
     return;
@@ -2600,6 +2605,59 @@ window.showFullImage = function (imageSrc, quoteId = null, attachmentType = 'ima
   // For audio, show audio player
   if (attachmentType === 'audio' || mimeType.startsWith('audio/')) {
     showAudioPlayer(actualSrc, filePath);
+    return;
+  }
+  
+  // For other file types (documents, Excel, etc.), open in new tab
+  // The browser will either display it or prompt to download/open with app
+  if (attachmentType === 'document' || attachmentType === 'other') {
+    // Extract MIME type from data URL to determine file extension
+    let extension = 'bin';
+    let filename = 'attachment';
+    
+    if (actualSrc.startsWith('data:')) {
+      const mimeMatch = actualSrc.match(/^data:([^;]+);/);
+      if (mimeMatch) {
+        const mime = mimeMatch[1];
+        // Map MIME types to extensions
+        const mimeToExt = {
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+          'application/vnd.ms-excel': 'xls',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+          'application/msword': 'doc',
+          'application/vnd.oasis.opendocument.spreadsheet': 'ods',
+          'application/vnd.oasis.opendocument.text': 'odt',
+          'text/csv': 'csv',
+          'text/plain': 'txt',
+          'application/zip': 'zip',
+          'application/x-zip-compressed': 'zip',
+        };
+        extension = mimeToExt[mime] || 'bin';
+        
+        // Create a descriptive filename based on extension
+        const typeNames = {
+          'xlsx': 'spreadsheet',
+          'xls': 'spreadsheet',
+          'docx': 'document',
+          'doc': 'document',
+          'ods': 'spreadsheet',
+          'odt': 'document',
+          'csv': 'data',
+          'txt': 'text',
+          'zip': 'archive'
+        };
+        filename = `${typeNames[extension] || 'attachment'}.${extension}`;
+      }
+    }
+    
+    const link = document.createElement('a');
+    link.href = actualSrc;
+    link.download = filename;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
     return;
   }
   
@@ -3323,9 +3381,37 @@ function handlePaste(e, type) {
 }
 
 // Display Image
+/**
+ * Convert file storage reference to URL
+ * Handles both base64 and file: references
+ */
+function resolveAttachmentUrl(attachment) {
+  if (!attachment) return null;
+  
+  // If it's already a base64 data URL, return as-is
+  if (attachment.startsWith('data:')) {
+    return attachment;
+  }
+  
+  // If it's a file reference (e.g., "file:quotes/360_full.png:image/png")
+  if (attachment.startsWith('file:')) {
+    const parts = attachment.split(':');
+    if (parts.length >= 2) {
+      const path = parts[1]; // e.g., "quotes/360_full.png"
+      return `/attachments/${path}`;
+    }
+  }
+  
+  // Unknown format - return as-is
+  return attachment;
+}
+
 function displayImage(container, base64Image) {
-  container.innerHTML = `<img src="${base64Image}" alt="Preview">`;
-  container.classList.add("has-image");
+  const imageUrl = resolveAttachmentUrl(base64Image);
+  if (imageUrl) {
+    container.innerHTML = `<img src="${imageUrl}" alt="Preview">`;
+    container.classList.add("has-image");
+  }
 }
 
 // Clear Image Preview
