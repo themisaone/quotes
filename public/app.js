@@ -59,6 +59,42 @@ import {
   configureDeleteButton
 } from './js/lib/modalRenderer.js';
 
+import {
+  exportToPdf as exportToPdfLib,
+  exportToJson as exportToJsonLib,
+  handleImportFile as handleImportFileLib
+} from './js/lib/dataManager.js';
+
+import {
+  loadSettings,
+  saveSettings,
+  updateSetting,
+  getGlobalSettings,
+  getQuoteTypes,
+  saveQuoteTypes,
+  getTrainingTypes,
+  saveTrainingTypes,
+  renderQuoteTypesList,
+  renderTrainingTypesList,
+  setupTypeManagementListeners,
+  applyColorToCSS,
+  lightenColor,
+  darkenColor,
+  applyButtonColor,
+  applyHeaderColor,
+  applyTagColor,
+  applyDeleteColor,
+  applyCancelColor,
+  applyActiveCounterColor,
+  applyTotalCounterColor,
+  applyMenuColor,
+  applyAppBgColor,
+  toggleMetadataSearchSection,
+  applyQuoteSizingMode,
+  toggleTagOperationsPanel,
+  initializeSettings as initializeSettingsLib
+} from './js/lib/settingsManager.js';
+
 // Note: displayImage, clearImagePreview, displayAttachmentPreview NOT imported
 // They are kept as local functions due to tight coupling with app-specific state
 // Note: Export/Import functions kept local - too complex and app-specific for library
@@ -4447,294 +4483,69 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ============= PDF EXPORT =============
 
+// ============= EXPORT TO PDF =============
+
 async function exportToPdf() {
-  try {
-    const typeLabel = currentNoteTypeFilter ? NOTE_TYPES[currentNoteTypeFilter]?.label || 'Notes' : 'All Notes';
-    
-    const exportBtn = document.getElementById("exportPdfBtn");
-    const originalText = exportBtn.textContent;
-    exportBtn.textContent = "⏳ Generating PDF...";
-    exportBtn.disabled = true;
+  // Gather search field values
+  const searchFields = {
+    quote: searchQuote.value,
+    author: searchAuthor.value,
+    source: searchSource.value,
+    tags: searchTags.value,
+    score: searchScore.value,
+  };
 
-    // Fetch ALL quotes that match current filters (no pagination)
-    const params = new URLSearchParams();
-
-    if (searchQuote.value) params.append("quote", searchQuote.value);
-    if (searchAuthor.value) params.append("author", searchAuthor.value);
-    if (searchSource.value) params.append("source", searchSource.value);
-    if (searchTags.value) params.append("tags", searchTags.value);
-    if (searchScore.value) params.append("score", searchScore.value);
-
-    // Add note type filter (export only current view)
-    if (currentNoteTypeFilter) {
-      params.append("note_type", currentNoteTypeFilter);
+  // Get selected quote types
+  const selectedTypes = [];
+  const typeCheckboxes = document.querySelectorAll('.type-filter-option input[type="checkbox"]');
+  typeCheckboxes.forEach(checkbox => {
+    if (checkbox.checked) {
+      selectedTypes.push(checkbox.dataset.type);
     }
+  });
 
-    // Add type filter - dynamically based on configured types
-    // Only apply quote source types when on Quote view or All Notes view
-    if (currentNoteTypeFilter !== 'training') {
-      const selectedTypes = [];
-      const typeCheckboxes = document.querySelectorAll('.type-filter-option input[type="checkbox"]');
-      typeCheckboxes.forEach(checkbox => {
-        if (checkbox.checked) {
-          selectedTypes.push(checkbox.dataset.type);
-        }
-      });
-      
-      // Only add types filter if not all types are selected (optimization)
-      const quoteTypes = getQuoteTypes();
-      const totalTypes = quoteTypes.length;
-      if (selectedTypes.length > 0 && selectedTypes.length < totalTypes) {
-        params.append("types", selectedTypes.join(","));
-      }
+  // Get selected training types
+  const selectedTrainingTypes = [];
+  const trainingTypeCheckboxes = document.querySelectorAll('.training-type-filter-options input[type="checkbox"]');
+  trainingTypeCheckboxes.forEach(checkbox => {
+    if (checkbox.checked) {
+      selectedTrainingTypes.push(checkbox.dataset.type);
     }
-    
-    // Add training types filter (for training notes)
-    if (currentNoteTypeFilter === 'training') {
-      const selectedTrainingTypes = [];
-      const trainingTypeCheckboxes = document.querySelectorAll('.training-type-filter-options input[type="checkbox"]');
-      trainingTypeCheckboxes.forEach(checkbox => {
-        if (checkbox.checked) {
-          selectedTrainingTypes.push(checkbox.dataset.type);
-        }
-      });
-      
-      if (selectedTrainingTypes.length > 0) {
-        params.append("training_types", selectedTrainingTypes.join(","));
-      }
-    }
+  });
 
-    // Request ALL quotes (set very high limit)
-    params.append("limit", "10000");
-
-    const response = await fetch(`${API_URL}/quotes?${params.toString()}`);
-    const allQuotes = await response.json();
-    
-    console.log(`Exporting ${allQuotes.length} ${typeLabel.toLowerCase()} to PDF...`);
-
-    if (allQuotes.length === 0) {
-      alert(`No ${typeLabel.toLowerCase()} to export!`);
-      exportBtn.textContent = originalText;
-      exportBtn.disabled = false;
-      return;
-    }
-
-    // Prepare filters object for display in PDF
-    const filters = {};
-    if (currentNoteTypeFilter) filters.noteType = typeLabel;
-    if (searchQuote.value) filters.quote = searchQuote.value;
-    if (searchAuthor.value) filters.author = searchAuthor.value;
-    if (searchSource.value) filters.source = searchSource.value;
-    if (searchTags.value) filters.tags = searchTags.value;
-    if (searchScore.value) filters.score = searchScore.value;
-
-    // Send to server for PDF generation
-    const pdfResponse = await fetch(`${API_URL}/export/pdf`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        quotes: allQuotes,
-        filters: filters,
-      }),
-    });
-
-    if (!pdfResponse.ok) {
-      const errorData = await pdfResponse.json();
-      throw new Error(errorData.error || "Failed to generate PDF");
-    }
-
-    // Download the PDF
-    const blob = await pdfResponse.blob();
-    const pdfBlob = new Blob([blob], { type: "application/pdf" });
-    const url = window.URL.createObjectURL(pdfBlob);
-    const a = document.createElement("a");
-    a.href = url;
-    const filePrefix = currentNoteTypeFilter || 'all_notes';
-    a.download = `${filePrefix}_${new Date().toISOString().split("T")[0]}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-
-    setTimeout(() => {
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    }, 100);
-
-    exportBtn.textContent = originalText;
-    exportBtn.disabled = false;
-  } catch (error) {
-    console.error("Error exporting PDF:", error);
-    alert("Failed to export PDF. Please try again.");
-    const exportBtn = document.getElementById("exportPdfBtn");
-    exportBtn.textContent = "📄 Export to PDF";
-    exportBtn.disabled = false;
-  }
+  // Call library function
+  await exportToPdfLib({
+    searchFields,
+    currentNoteTypeFilter,
+    selectedTypes,
+    selectedTrainingTypes,
+    exportBtn: document.getElementById("exportPdfBtn"),
+    getQuoteTypes,
+  });
 }
 
 // ============= JSON EXPORT/IMPORT =============
 
 async function exportToJson() {
-  try {
-    const typeLabel = currentNoteTypeFilter ? NOTE_TYPES[currentNoteTypeFilter]?.label || 'Notes' : 'All Notes';
-    
-    // Show confirmation dialog
-    const message = currentNoteTypeFilter 
-      ? `Create backup of ${typeLabel}?\n\nThis will export ALL ${typeLabel.toLowerCase()} (ignoring current search filters).\n\nTo export only filtered results, use "Export to PDF" instead.`
-      : `Create backup of All Notes?\n\nThis will export your entire database:\n• All note types\n• All authors and sources\n• All tags\n\nThis may create a large file if you have many notes with images.`;
-    
-    if (!confirm(message)) {
-      return;
-    }
-    
-    const exportBtn = document.getElementById("exportJsonBtn");
-    const originalText = exportBtn.textContent;
-    exportBtn.textContent = "⏳ Exporting...";
-    exportBtn.disabled = true;
-
-    // Build URL with note type filter
-    let url = `${API_URL}/export/json`;
-    if (currentNoteTypeFilter) {
-      url += `?note_type=${currentNoteTypeFilter}`;
-    }
-
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      throw new Error("Failed to export data");
-    }
-
-    const blob = await response.blob();
-    const urlBlob = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = urlBlob;
-    const filePrefix = currentNoteTypeFilter || 'all_notes';
-    a.download = `${filePrefix}_backup_${new Date().toISOString().split("T")[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-
-    setTimeout(() => {
-      window.URL.revokeObjectURL(urlBlob);
-      document.body.removeChild(a);
-    }, 100);
-
-    exportBtn.textContent = originalText;
-    exportBtn.disabled = false;
-
-    alert(`✅ ${typeLabel} backup created successfully!`);
-  } catch (error) {
-    console.error("Error exporting JSON:", error);
-    alert("Failed to create backup. Please try again.");
-    const exportBtn = document.getElementById("exportJsonBtn");
-    exportBtn.textContent = "💾 Backup Data";
-    exportBtn.disabled = false;
-  }
+  await exportToJsonLib({
+    currentNoteTypeFilter,
+    exportBtn: document.getElementById("exportJsonBtn"),
+  });
 }
 
 async function handleImportFile(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  const importProgress = document.getElementById("importProgress");
-  const importStatus = document.getElementById("importStatus");
-  const selectFileBtn = document.getElementById("selectFileBtn");
-
-  try {
-    selectFileBtn.textContent = "⏳ Reading file...";
-    selectFileBtn.disabled = true;
-
-    // Read file
-    const text = await file.text();
-    const backupData = JSON.parse(text);
-
-    // Validate structure
-    if (
-      !backupData.data ||
-      !backupData.data.authors ||
-      !backupData.data.sources ||
-      !backupData.data.quotes
-    ) {
-      throw new Error("Invalid backup file format");
-    }
-
-    // Show confirmation
-    const replaceExisting = document.getElementById("replaceExisting").checked;
-    const message =
-      `About to import:\n\n` +
-      `• ${backupData.counts.authors} authors\n` +
-      `• ${backupData.counts.sources} sources\n` +
-      `• ${backupData.counts.quotes} quotes\n\n` +
-      `Mode: ${replaceExisting ? "Replace existing entries" : "Skip duplicates"}\n\n` +
-      `This may take a while. Continue?`;
-
-    if (!confirm(message)) {
-      selectFileBtn.textContent = "Select Backup File";
-      selectFileBtn.disabled = false;
-      event.target.value = "";
-      return;
-    }
-
-    // Show progress
-    importProgress.style.display = "block";
-    importStatus.innerHTML = "<p>⏳ Importing data...</p>";
-    selectFileBtn.textContent = "⏳ Importing...";
-
-    // Send to server
-    const response = await fetch(`${API_URL}/import/json`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        data: backupData.data,
-        options: {
-          replaceExisting: replaceExisting,
-        },
-      }),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.error || "Import failed");
-    }
-
-    // Show results
-    importStatus.innerHTML = `
-            <div style="background: #d1fae5; padding: 15px; border-radius: 8px; margin-top: 10px;">
-                <h4 style="margin-top: 0; color: #065f46;">✅ Import Completed!</h4>
-                <p><strong>Authors:</strong> ${result.stats.authors.created} created, ${result.stats.authors.updated} updated, ${result.stats.authors.skipped} skipped</p>
-                <p><strong>Sources:</strong> ${result.stats.sources.created} created, ${result.stats.sources.updated} updated, ${result.stats.sources.skipped} skipped</p>
-                <p><strong>Quotes:</strong> ${result.stats.quotes.created} created, ${result.stats.quotes.updated} updated, ${result.stats.quotes.skipped} skipped</p>
-                ${result.stats.errors.length > 0 ? `<p style="color: #dc2626;"><strong>Errors:</strong> ${result.stats.errors.length}</p>` : ""}
-            </div>
-        `;
-
-    selectFileBtn.textContent = "Select Backup File";
-    selectFileBtn.disabled = false;
-    event.target.value = "";
-
-    // Reload data
-    setTimeout(() => {
-      document.getElementById("importModal").style.display = "none";
+  await handleImportFileLib(event, {
+    importProgress: document.getElementById("importProgress"),
+    importStatus: document.getElementById("importStatus"),
+    selectFileBtn: document.getElementById("selectFileBtn"),
+    replaceExistingCheckbox: document.getElementById("replaceExisting"),
+    importModal: document.getElementById("importModal"),
+    onImportComplete: () => {
       currentPage = 1;
       loadQuotes();
       loadTotalCount();
-      alert("✅ Data restored successfully! Page will refresh.");
-      location.reload();
-    }, 3000);
-  } catch (error) {
-    console.error("Error importing JSON:", error);
-    importStatus.innerHTML = `
-            <div style="background: #fee2e2; padding: 15px; border-radius: 8px; margin-top: 10px;">
-                <h4 style="margin-top: 0; color: #991b1b;">❌ Import Failed</h4>
-                <p>${error.message}</p>
-            </div>
-        `;
-    selectFileBtn.textContent = "Select Backup File";
-    selectFileBtn.disabled = false;
-    event.target.value = "";
-  }
+    },
+  });
 }
 
 // Welcome Quote Feature
