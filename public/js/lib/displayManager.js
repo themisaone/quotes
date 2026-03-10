@@ -16,6 +16,7 @@
 
 import { API_URL, fetchWithRetry } from './api.js';
 import { createQuoteCard } from './cardRenderer.js';
+import { getSearchValues, getTrainingFilters } from './searchManager.js';
 
 // ============= MODULE STATE =============
 
@@ -65,18 +66,13 @@ function getSelectedCheckboxValues(selector) {
  * Add basic search filters to params
  */
 function addSearchFilters(params) {
-  const searchFields = [
-    { id: 'searchQuote', param: 'quote' },
-    { id: 'searchAuthor', param: 'author' },
-    { id: 'searchSource', param: 'source' },
-    { id: 'searchTags', param: 'tags' },
-    { id: 'searchScore', param: 'score' }
-  ];
+  const searchValues = getSearchValues();
   
-  searchFields.forEach(field => {
-    const value = getInputValue(field.id);
-    if (value) params.append(field.param, value);
-  });
+  if (searchValues.quote) params.append('quote', searchValues.quote);
+  if (searchValues.author) params.append('author', searchValues.author);
+  if (searchValues.source) params.append('source', searchValues.source);
+  if (searchValues.tags) params.append('tags', searchValues.tags);
+  if (searchValues.score) params.append('score', searchValues.score);
 }
 
 /**
@@ -111,12 +107,11 @@ function addTrainingTypeFilters(params, currentNoteTypeFilter) {
     params.append("training_types", selectedTrainingTypes.join(","));
   }
   
-  // Year and month filters
-  const yearFilter = getInputValue('trainingYearFilter');
-  const monthFilter = getInputValue('trainingMonthFilter');
+  // Year and month filters from searchManager
+  const trainingFilters = getTrainingFilters();
   
-  if (yearFilter) params.append("year", yearFilter);
-  if (monthFilter && yearFilter) params.append("month", monthFilter);
+  if (trainingFilters.year) params.append("year", trainingFilters.year);
+  if (trainingFilters.month && trainingFilters.year) params.append("month", trainingFilters.month);
 }
 
 /**

@@ -1,0 +1,412 @@
+/**
+ * ============================================================================
+ * FILTER MANAGER
+ * ============================================================================
+ * Manages all filter-related functionality including:
+ * - Type filter checkboxes (quote types and training types)
+ * - Dropdown toggles and visibility
+ * - Select All / Deselect All buttons
+ * - Clear filters functionality
+ * 
+ * Main functions:
+ * - initializeFilterHandlers() - Setup all filter event listeners
+ * - populateTypeFilterCheckboxes() - Populate quote type checkboxes
+ * - populateTrainingTypeFilterCheckboxes() - Populate training type checkboxes
+ * - clearFilters() - Reset all filters and reload
+ * - updateSourcesFilterVisibility() - Show/hide filter dropdowns by view
+ * 
+ * This module handles the UI interactions for filters but delegates
+ * the actual data fetching to displayManager.js
+ * 
+ * Dependencies:
+ * - searchManager.js for clearSearchFields()
+ * - Requires callbacks: loadQuotes, loadTotalCount, setCurrentPage
+ */
+
+import { clearSearchFields } from './searchManager.js';
+
+// ============= CONSTANTS =============
+
+const SELECTORS = {
+  quoteTypeOptions: '.type-filter-options',
+  trainingTypeOptions: '.training-type-filter-options',
+  quoteTypeCheckbox: '.type-filter-option input[type="checkbox"]',
+  trainingTypeCheckbox: '.training-type-filter-options input[type="checkbox"]',
+  typeFilterContainer: '.type-filter-dropdown-container',
+  trainingFilterContainer: '#trainingTypesFilterContainer'
+};
+
+const ELEMENT_IDS = {
+  // Quote type filter
+  typeFilterToggle: 'typeFilterToggle',
+  typeFilterDropdown: 'typeFilterDropdown',
+  typeSelectAllBtn: 'typeSelectAllBtn',
+  typeDeselectAllBtn: 'typeDeselectAllBtn',
+  
+  // Training type filter
+  trainingTypeFilterToggle: 'trainingTypeFilterToggle',
+  trainingTypeFilterDropdown: 'trainingTypeFilterDropdown',
+  trainingTypeSelectAllBtn: 'trainingTypeSelectAllBtn',
+  trainingTypeDeselectAllBtn: 'trainingTypeDeselectAllBtn',
+  
+  // Visibility (CORRECTED IDs)
+  sourcesFilterContainer: 'quoteSourcesFilterContainer',  // Was 'sourcesFilterContainer'
+  trainingTypesFilterContainer: 'trainingTypesFilterContainer'
+};
+
+// ============= MODULE STATE =============
+
+let typeFilterChanged = false;
+
+// ============= FILTER POPULATION =============
+
+/**
+ * Store current checkbox states before rebuild
+ */
+function getCheckboxStates(container) {
+  const checkedStates = {};
+  container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    checkedStates[cb.id] = cb.checked;
+  });
+  return checkedStates;
+}
+
+/**
+ * Create a type filter checkbox element
+ */
+function createTypeCheckbox(checkboxId, type, isChecked) {
+  const label = document.createElement('label');
+  label.className = 'type-filter-option';
+  label.innerHTML = `
+    <input type="checkbox" id="${checkboxId}" data-type="${type.value}" ${isChecked ? 'checked' : ''}>
+    <span>${type.icon} ${type.label}</span>
+  `;
+  
+  // Add event listener to set flag when changed
+  const checkbox = label.querySelector('input');
+  checkbox.addEventListener('change', () => {
+    typeFilterChanged = true;
+  });
+  
+  return label;
+}
+
+/**
+ * Populate quote type filter checkboxes
+ */
+export function populateTypeFilterCheckboxes(getQuoteTypes) {
+  const types = getQuoteTypes();
+  const container = document.querySelector(SELECTORS.quoteTypeOptions);
+  
+  if (!container) return;
+  
+  // Store current checked states
+  const checkedStates = getCheckboxStates(container);
+  
+  // Clear and rebuild
+  container.innerHTML = '';
+  
+  types.forEach(type => {
+    const checkboxId = `filterQuote${type.value.replace(/-/g, '')}`;
+    const isChecked = checkedStates[checkboxId] !== false;
+    container.appendChild(createTypeCheckbox(checkboxId, type, isChecked));
+  });
+}
+
+/**
+ * Populate training type filter checkboxes
+ */
+export function populateTrainingTypeFilterCheckboxes(getTrainingTypes) {
+  const trainingTypes = getTrainingTypes();
+  const container = document.querySelector(SELECTORS.trainingTypeOptions);
+  
+  if (!container) return;
+  
+  // Store current checked states
+  const checkedStates = getCheckboxStates(container);
+  
+  // Clear and rebuild
+  container.innerHTML = '';
+  
+  trainingTypes.forEach(type => {
+    const checkboxId = `filterTraining${type.value}`;
+    const isChecked = checkedStates[checkboxId] !== false;
+    container.appendChild(createTypeCheckbox(checkboxId, type, isChecked));
+  });
+}
+
+// ============= FILTER CLEARING =============
+
+/**
+ * Clear all search filters and reload
+ */
+export function clearFilters(callbacks) {
+  const { loadQuotes, setCurrentPage } = callbacks;
+  
+  // Clear search inputs and training filters via searchManager
+  clearSearchFields();
+  
+  setCurrentPage(1);
+  loadQuotes();
+}
+
+// ============= FILTER VISIBILITY =============
+
+/**
+ * Toggle element visibility
+ */
+function setElementVisibility(elementId, shouldShow) {
+  const element = document.getElementById(elementId);
+  if (element) {
+    element.style.display = shouldShow ? 'block' : 'none';
+  }
+}
+
+/**
+ * Update visibility of type filter dropdowns based on current view
+ */
+export function updateSourcesFilterVisibility(currentNoteTypeFilter) {
+  // Show quote sources for quotes and "all notes" view
+  const showQuoteSources = currentNoteTypeFilter === 'quote' || currentNoteTypeFilter === null;
+  setElementVisibility(ELEMENT_IDS.sourcesFilterContainer, showQuoteSources);
+  
+  // Show training types only for training view
+  const showTrainingTypes = currentNoteTypeFilter === 'training';
+  setElementVisibility(ELEMENT_IDS.trainingTypesFilterContainer, showTrainingTypes);
+  
+  // Hide Author/Source search fields for non-quote views
+  setElementVisibility('searchAuthorContainer', showQuoteSources);
+  setElementVisibility('searchSourceContainer', showQuoteSources);
+  
+  // Show/hide Year/Month filters for training view
+  setElementVisibility('trainingYearContainer', showTrainingTypes);
+  setElementVisibility('trainingMonthContainer', showTrainingTypes);
+  
+  // Update search header title based on note type
+  updateSearchHeaderTitle(currentNoteTypeFilter);
+}
+
+/**
+ * Update the search header title based on the current note type
+ */
+function updateSearchHeaderTitle(currentNoteTypeFilter) {
+  const searchHeaderTitle = document.getElementById('searchHeaderTitle');
+  if (!searchHeaderTitle) return;
+  
+  const titles = {
+    quote: '🔍 Search Quotes',
+    training: '🔍 Search Training',
+    note: '🔍 Search Notes',
+    puzzle: '🔍 Search Puzzles',
+    null: '🔍 Search All Notes'  // "All Notes" view
+  };
+  
+  const title = titles[currentNoteTypeFilter] || titles[null];
+  searchHeaderTitle.textContent = title;
+}
+
+// ============= DROPDOWN HANDLERS =============
+
+/**
+ * Get checked type IDs from checkboxes
+ */
+function getCheckedTypeIds(checkboxSelector) {
+  const checkboxes = document.querySelectorAll(checkboxSelector);
+  return Array.from(checkboxes)
+    .filter(cb => cb.checked)
+    .map(cb => cb.id);
+}
+
+/**
+ * Toggle dropdown and reload if needed when closing
+ */
+function handleDropdownToggle(toggleEl, dropdownEl, checkboxSelector, callbacks, wasOpen) {
+  dropdownEl.classList.toggle("show");
+  toggleEl.classList.toggle("open");
+  
+  // If closing and changes were made, reload quotes
+  if (wasOpen && typeFilterChanged) {
+    const checkedTypes = getCheckedTypeIds(checkboxSelector);
+    console.log("Reloading with types:", checkedTypes);
+    
+    if (callbacks.setCurrentPage) {
+      callbacks.setCurrentPage(1);
+    }
+    if (callbacks.loadQuotes) {
+      callbacks.loadQuotes();
+    }
+    if (callbacks.loadTotalCount) {
+      callbacks.loadTotalCount();
+    }
+    typeFilterChanged = false;
+  }
+}
+
+/**
+ * Setup quote type filter dropdown
+ */
+function setupQuoteTypeDropdown(callbacks) {
+  const typeFilterToggle = document.getElementById(ELEMENT_IDS.typeFilterToggle);
+  const typeFilterDropdown = document.getElementById(ELEMENT_IDS.typeFilterDropdown);
+
+  if (!typeFilterToggle || !typeFilterDropdown) return;
+
+  // Toggle dropdown on button click
+  typeFilterToggle.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const wasOpen = typeFilterDropdown.classList.contains("show");
+    handleDropdownToggle(
+      typeFilterToggle,
+      typeFilterDropdown,
+      SELECTORS.quoteTypeCheckbox,
+      callbacks,
+      wasOpen
+    );
+  });
+
+  // Close dropdown when clicking outside
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(SELECTORS.typeFilterContainer)) {
+      const wasOpen = typeFilterDropdown.classList.contains("show");
+      
+      if (wasOpen) {
+        const typeCheckboxes = document.querySelectorAll(SELECTORS.quoteTypeCheckbox);
+        const states = {};
+        typeCheckboxes.forEach(cb => {
+          states[cb.id] = cb.checked;
+        });
+        console.log("=== CLOSING DROPDOWN ===");
+        console.log("Checkbox states:", states);
+      }
+      
+      typeFilterDropdown.classList.remove("show");
+      typeFilterToggle.classList.remove("open");
+      
+      // If closing and changes were made, reload quotes
+      if (wasOpen && typeFilterChanged) {
+        handleDropdownToggle(
+          typeFilterToggle,
+          typeFilterDropdown,
+          SELECTORS.quoteTypeCheckbox,
+          callbacks,
+          true
+        );
+      }
+    }
+  });
+}
+
+/**
+ * Set all checkboxes to a specific state
+ */
+function setAllCheckboxes(selector, checked) {
+  const checkboxes = document.querySelectorAll(selector);
+  checkboxes.forEach(checkbox => {
+    checkbox.checked = checked;
+  });
+  typeFilterChanged = true;
+}
+
+/**
+ * Setup Select All / Deselect All buttons for any filter type
+ */
+function setupSelectButtons(selectAllBtnId, deselectAllBtnId, checkboxSelector) {
+  const selectAllBtn = document.getElementById(selectAllBtnId);
+  const deselectAllBtn = document.getElementById(deselectAllBtnId);
+
+  if (selectAllBtn) {
+    selectAllBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      setAllCheckboxes(checkboxSelector, true);
+    });
+  }
+
+  if (deselectAllBtn) {
+    deselectAllBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      setAllCheckboxes(checkboxSelector, false);
+    });
+  }
+}
+
+/**
+ * Setup Select All / Deselect All for quote types
+ */
+function setupQuoteTypeButtons() {
+  setupSelectButtons(
+    ELEMENT_IDS.typeSelectAllBtn,
+    ELEMENT_IDS.typeDeselectAllBtn,
+    SELECTORS.quoteTypeCheckbox
+  );
+}
+
+/**
+ * Setup training type filter dropdown
+ */
+function setupTrainingTypeDropdown(callbacks) {
+  const trainingTypeFilterToggle = document.getElementById(ELEMENT_IDS.trainingTypeFilterToggle);
+  const trainingTypeFilterDropdown = document.getElementById(ELEMENT_IDS.trainingTypeFilterDropdown);
+  
+  if (!trainingTypeFilterToggle || !trainingTypeFilterDropdown) return;
+
+  // Toggle dropdown on button click
+  trainingTypeFilterToggle.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const wasOpen = trainingTypeFilterDropdown.classList.contains("show");
+    
+    trainingTypeFilterDropdown.classList.toggle("show");
+    trainingTypeFilterToggle.classList.toggle("open");
+    
+    // If closing and changes were made, reload quotes
+    if (wasOpen && typeFilterChanged) {
+      const checkedTypes = getCheckedTypeIds(SELECTORS.trainingTypeCheckbox);
+      console.log("Reloading with training types:", checkedTypes);
+      
+      typeFilterChanged = false;
+      callbacks.loadQuotes();
+    }
+  });
+
+  // Close dropdown when clicking outside
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(SELECTORS.trainingFilterContainer)) {
+      const wasOpen = trainingTypeFilterDropdown.classList.contains("show");
+      
+      trainingTypeFilterDropdown.classList.remove("show");
+      trainingTypeFilterToggle.classList.remove("open");
+      
+      // If closing and changes were made, reload quotes
+      if (wasOpen && typeFilterChanged) {
+        const checkedTypes = getCheckedTypeIds(SELECTORS.trainingTypeCheckbox);
+        console.log("Reloading with training types:", checkedTypes);
+        
+        typeFilterChanged = false;
+        callbacks.loadQuotes();
+      }
+    }
+  });
+}
+
+/**
+ * Setup Select All / Deselect All for training types
+ */
+function setupTrainingTypeButtons() {
+  setupSelectButtons(
+    ELEMENT_IDS.trainingTypeSelectAllBtn,
+    ELEMENT_IDS.trainingTypeDeselectAllBtn,
+    SELECTORS.trainingTypeCheckbox
+  );
+}
+
+// ============= INITIALIZATION =============
+
+/**
+ * Initialize all filter event handlers
+ * @param {Object} callbacks - { loadQuotes, loadTotalCount, setCurrentPage }
+ */
+export function initializeFilterHandlers(callbacks) {
+  setupQuoteTypeDropdown(callbacks);
+  setupQuoteTypeButtons();
+  setupTrainingTypeDropdown(callbacks);
+  setupTrainingTypeButtons();
+}

@@ -82,6 +82,24 @@ import {
   getCurrentQuotesData
 } from './js/lib/displayManager.js';
 
+import {
+  populateTypeFilterCheckboxes as populateTypeFilterCheckboxesLib,
+  populateTrainingTypeFilterCheckboxes as populateTrainingTypeFilterCheckboxesLib,
+  clearFilters as clearFiltersLib,
+  updateSourcesFilterVisibility as updateSourcesFilterVisibilityLib2,
+  initializeFilterHandlers
+} from './js/lib/filterManager.js';
+
+import {
+  filterByAuthor as filterByAuthorLib,
+  filterBySource as filterBySourceLib,
+  getSearchValues,
+  getTrainingFilters,
+  clearSearchFields,
+  initializeSearchHandlers,
+  registerGlobalSearchFunctions
+} from './js/lib/searchManager.js';
+
 // Note: displayImage, clearImagePreview, displayAttachmentPreview NOT imported
 // They are kept as local functions due to tight coupling with app-specific state
 // Note: Export/Import functions kept local - too complex and app-specific for library
@@ -89,6 +107,7 @@ import {
 // ============= CONSTANTS =============
 // Auto-detect API URL based on current host
 const API_URL = `${window.location.protocol}//${window.location.hostname}:${window.location.port || '4000'}/api`;
+window.API_URL = API_URL; // Make available to modules that need it
 
 // Quill editor instance
 let quillEditor = null;
@@ -220,106 +239,14 @@ function populateTypeDropdowns() {
 }
 
 // Populate type filter checkboxes in search area
+// MIGRATED: Wrapper for filterManager library
 function populateTypeFilterCheckboxes() {
-  const types = getQuoteTypes();
-  const container = document.querySelector('.type-filter-options');
-  
-  if (!container) return;
-  
-  // Store current checked states
-  const checkedStates = {};
-  container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-    checkedStates[cb.id] = cb.checked;
-  });
-  
-  // Clear and rebuild
-  container.innerHTML = '';
-  
-  types.forEach(type => {
-    const checkboxId = `filterQuote${type.value.replace(/-/g, '')}`;
-    const label = document.createElement('label');
-    label.className = 'type-filter-option';
-    label.innerHTML = `
-      <input type="checkbox" id="${checkboxId}" data-type="${type.value}" ${checkedStates[checkboxId] !== false ? 'checked' : ''}>
-      <span>${type.icon} ${type.label}</span>
-    `;
-    container.appendChild(label);
-    
-    // Re-attach event listener
-    const checkbox = label.querySelector('input');
-    checkbox.addEventListener('change', () => {
-      typeFilterChanged = true;
-    });
-  });
+  populateTypeFilterCheckboxesLib(getQuoteTypes);
 }
 
+// MIGRATED: Wrapper for filterManager library
 function populateTrainingTypeFilterCheckboxes() {
-  const trainingTypes = getTrainingTypes();
-  const container = document.querySelector('.training-type-filter-options');
-  
-  if (!container) return;
-  
-  // Store current checked states
-  const checkedStates = {};
-  container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-    checkedStates[cb.id] = cb.checked;
-  });
-  
-  // Clear and rebuild
-  container.innerHTML = '';
-  
-  trainingTypes.forEach(type => {
-    const checkboxId = `filterTraining${type.value}`;
-    const label = document.createElement('label');
-    label.className = 'type-filter-option';
-    label.innerHTML = `
-      <input type="checkbox" id="${checkboxId}" data-type="${type.value}" ${checkedStates[checkboxId] !== false ? 'checked' : ''}>
-      <span>${type.icon} ${type.label}</span>
-    `;
-    container.appendChild(label);
-    
-    // Re-attach event listener - just set flag, don't load immediately
-    const checkbox = label.querySelector('input');
-    checkbox.addEventListener('change', () => {
-      typeFilterChanged = true;
-    });
-  });
-}
-
-// Populate training years from database
-async function populateTrainingYears() {
-  try {
-    console.log("🗓️ Populating training years...");
-    const response = await fetchWithRetry(`${API_URL}/quotes/training-years`);
-    const data = await response.json();
-    console.log("🗓️ Training years data:", data);
-    
-    const yearSelect = document.getElementById('trainingYearFilter');
-    if (!yearSelect) {
-      console.log("⚠️ Year select element not found!");
-      return;
-    }
-    
-    if (!data.years || data.years.length === 0) {
-      console.log("⚠️ No years data received");
-      return;
-    }
-    
-    // Keep the "All Years" option
-    yearSelect.innerHTML = '<option value="">📅 All Years</option>';
-    
-    // Add years in descending order (newest first)
-    data.years.sort((a, b) => b - a).forEach(year => {
-      const option = document.createElement('option');
-      option.value = year;
-      option.textContent = year;
-      yearSelect.appendChild(option);
-    });
-    
-    console.log(`✅ Populated ${data.years.length} years`);
-  } catch (error) {
-    console.error("❌ Error loading training years:", error);
-  }
+  populateTrainingTypeFilterCheckboxesLib(getTrainingTypes);
 }
 
 // Pagination state
@@ -395,6 +322,12 @@ window.addEventListener('hashchange', () => {
   updateAddButtonText();
   updateMainTitle();
   updateSourcesFilterVisibility();
+  
+  // Show/hide metadata search section based on current filter and settings
+  const metaSearchEnabled = globalSettings?.enableQuoteMetaSearches === true;
+  const shouldShowMetadata = (currentNoteTypeFilter === 'quote' || currentNoteTypeFilter === null) && metaSearchEnabled;
+  toggleMetadataSearchSection(shouldShowMetadata);
+  
   currentPage = 1;
   loadQuotes();
   loadTotalCount();
@@ -441,7 +374,7 @@ let currentQuoteImage = "";
 let currentQuoteImageFull = ""; // Store original size
 let currentAttachmentType = "image"; // Track: image, pdf, document, video, audio
 let currentAttachmentFileName = ""; // Track filename for non-image files
-let typeFilterChanged = false; // Track if type filter has changed
+// MIGRATED: typeFilterChanged is now managed in filterManager.js
 
 // Search inputs
 const searchQuote = document.getElementById("searchQuote");
@@ -453,7 +386,6 @@ const clearBtn = document.getElementById("clearBtn");
 
 // State
 let editingQuoteId = null;
-let searchTimeout = null;
 let autocompleteTimeout = null;
 let currentFocus = -1;
 
@@ -486,8 +418,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   updateMainTitle();
   updateSourcesFilterVisibility();
   
-  // Initialize sources filter visibility
-  updateSourcesFilterVisibility();
+  // Show/hide metadata search section based on current filter and settings
+  const metaSearchEnabled = globalSettings?.enableQuoteMetaSearches === true;
+  const shouldShowMetadata = (currentNoteTypeFilter === 'quote' || currentNoteTypeFilter === null) && metaSearchEnabled;
+  toggleMetadataSearchSection(shouldShowMetadata);
   
   // Initialize Quill editor
   initializeQuillEditor();
@@ -573,13 +507,15 @@ function setupEventListeners() {
       document.querySelectorAll('.note-type-filter').forEach(btn => btn.classList.remove('active'));
       button.classList.add('active');
       
-      // Update button text
-      updateAddButtonText();
-      
-      // Update UI
+      // Update UI elements
       updateAddButtonText();
       updateMainTitle();
       updateSourcesFilterVisibility();
+      
+      // Show/hide metadata search section based on note type and settings
+      const metaSearchEnabled = globalSettings?.enableQuoteMetaSearches === true;
+      const shouldShowMetadata = (noteType === 'quote' || noteType === null) && metaSearchEnabled;
+      toggleMetadataSearchSection(shouldShowMetadata);
       
       // Load filtered quotes
       loadQuotes();
@@ -741,11 +677,7 @@ function setupEventListeners() {
     handleAutocompleteKeys(e, bulkSourceSuggestions, "bulkSource");
   });
 
-  // Search with debounce
-  [searchQuote, searchAuthor, searchSource, searchTags, searchScore].forEach((input) => {
-    input.addEventListener("input", debounceSearch);
-  });
-
+  // NOTE: Search input debouncing is now handled by searchManager.js
   // NOTE: Type filter checkboxes are now handled by the dropdown logic below (line ~396)
   // The old individual listeners have been removed to avoid conflicts
 
@@ -852,207 +784,23 @@ function setupEventListeners() {
     }
   });
 
-  // Type filter dropdown
-  const typeFilterToggle = document.getElementById("typeFilterToggle");
-  const typeFilterDropdown = document.getElementById("typeFilterDropdown");
-  const typeSelectAllBtn = document.getElementById("typeSelectAllBtn");
-  const typeCheckboxes = document.querySelectorAll('.type-filter-option input[type="checkbox"]');
-
-  if (typeFilterToggle && typeFilterDropdown) {
-    // Toggle dropdown
-    typeFilterToggle.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const wasOpen = typeFilterDropdown.classList.contains("show");
-      
-      typeFilterDropdown.classList.toggle("show");
-      typeFilterToggle.classList.toggle("open");
-      
-      // If closing and changes were made, reload quotes
-      if (wasOpen && typeFilterChanged) {
-        // Log current checkbox states
-        const checkedTypes = Array.from(typeCheckboxes)
-          .filter(cb => cb.checked)
-          .map(cb => cb.id);
-        console.log("Reloading with types:", checkedTypes);
-        
-        currentPage = 1;
-        loadQuotes();
-        loadTotalCount();
-        typeFilterChanged = false;
-      }
-    });
-
-    // Close dropdown when clicking outside
-    document.addEventListener("click", (e) => {
-      if (!e.target.closest(".type-filter-dropdown-container")) {
-        const wasOpen = typeFilterDropdown.classList.contains("show");
-        
-        if (wasOpen) {
-          console.log("=== CLOSING DROPDOWN ===");
-          // Log current checkbox states BEFORE closing
-          const states = {};
-          typeCheckboxes.forEach(cb => {
-            states[cb.id] = cb.checked;
-          });
-          console.log("Checkbox states:", states);
-        }
-        
-        typeFilterDropdown.classList.remove("show");
-        typeFilterToggle.classList.remove("open");
-        
-        // If closing and changes were made, reload quotes
-        if (wasOpen && typeFilterChanged) {
-          // Log current checkbox states
-          const checkedTypes = Array.from(typeCheckboxes)
-            .filter(cb => cb.checked)
-            .map(cb => cb.id);
-          console.log("Reloading with types:", checkedTypes);
-          
-          currentPage = 1;
-          loadQuotes();
-          loadTotalCount();
-          typeFilterChanged = false;
-        }
-      }
-    });
-
-    // Select All button functionality
-    if (typeSelectAllBtn) {
-      typeSelectAllBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        // Query checkboxes dynamically (they're populated after page load)
-        const checkboxes = document.querySelectorAll('.type-filter-option input[type="checkbox"]');
-        checkboxes.forEach(checkbox => {
-          checkbox.checked = true;
-        });
-        typeFilterChanged = true;
-      });
-    }
-
-    // Deselect All button functionality
-    const typeDeselectAllBtn = document.getElementById("typeDeselectAllBtn");
-    if (typeDeselectAllBtn) {
-      typeDeselectAllBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        // Query checkboxes dynamically (they're populated after page load)
-        const checkboxes = document.querySelectorAll('.type-filter-option input[type="checkbox"]');
-        checkboxes.forEach(checkbox => {
-          checkbox.checked = false;
-        });
-        typeFilterChanged = true;
-      });
-    }
-
-    // Update when individual checkboxes change (handled in populateTypeFilterCheckboxes)
-  }
+  // MIGRATED: Filter dropdowns and buttons now in filterManager.js
+  initializeFilterHandlers({
+    loadQuotes,
+    loadTotalCount,
+    setCurrentPage: (page) => { currentPage = page; }
+  });
   
-  // Training Type Filter Dropdown
-  const trainingTypeFilterToggle = document.getElementById("trainingTypeFilterToggle");
-  const trainingTypeFilterDropdown = document.getElementById("trainingTypeFilterDropdown");
-  if (trainingTypeFilterToggle && trainingTypeFilterDropdown) {
-    trainingTypeFilterToggle.addEventListener("click", (e) => {
-      e.stopPropagation();
-      
-      const wasOpen = trainingTypeFilterDropdown.classList.contains("show");
-      
-      trainingTypeFilterDropdown.classList.toggle("show");
-      trainingTypeFilterToggle.classList.toggle("open");
-      
-      // If closing and changes were made, reload quotes
-      if (wasOpen && typeFilterChanged) {
-        const trainingTypeCheckboxes = document.querySelectorAll('.training-type-filter-options input[type="checkbox"]');
-        const checkedTypes = Array.from(trainingTypeCheckboxes)
-          .filter(cb => cb.checked)
-          .map(cb => cb.id);
-        console.log("Reloading with training types:", checkedTypes);
-        
-        typeFilterChanged = false;
-        loadQuotes();
-      }
-    });
-
-    // Close dropdown when clicking outside
-    document.addEventListener("click", (e) => {
-      if (!e.target.closest("#trainingTypesFilterContainer")) {
-        const wasOpen = trainingTypeFilterDropdown.classList.contains("show");
-        
-        trainingTypeFilterDropdown.classList.remove("show");
-        trainingTypeFilterToggle.classList.remove("open");
-        
-        // If closing and changes were made, reload quotes
-        if (wasOpen && typeFilterChanged) {
-          const trainingTypeCheckboxes = document.querySelectorAll('.training-type-filter-options input[type="checkbox"]');
-          const checkedTypes = Array.from(trainingTypeCheckboxes)
-            .filter(cb => cb.checked)
-            .map(cb => cb.id);
-          console.log("Reloading with training types:", checkedTypes);
-          
-          typeFilterChanged = false;
-          loadQuotes();
-        }
-      }
-    });
-
-    // Select All button for training types
-    const trainingTypeSelectAllBtn = document.getElementById("trainingTypeSelectAllBtn");
-    if (trainingTypeSelectAllBtn) {
-      trainingTypeSelectAllBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const checkboxes = document.querySelectorAll('.training-type-filter-options input[type="checkbox"]');
-        checkboxes.forEach(checkbox => {
-          checkbox.checked = true;
-        });
-        loadQuotes();
-      });
-    }
-
-    // Deselect All button for training types
-    const trainingTypeDeselectAllBtn = document.getElementById("trainingTypeDeselectAllBtn");
-    if (trainingTypeDeselectAllBtn) {
-      trainingTypeDeselectAllBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const checkboxes = document.querySelectorAll('.training-type-filter-options input[type="checkbox"]');
-        checkboxes.forEach(checkbox => {
-          checkbox.checked = false;
-        });
-        loadQuotes();
-      });
-    }
-  }
+  // MIGRATED: Search inputs and training filters now in searchManager.js
+  initializeSearchHandlers({
+    loadQuotes,
+    loadTotalCount,
+    setCurrentPage: (page) => { currentPage = page; },
+    switchView
+  });
   
-  // Training date filters
-  const trainingYearFilter = document.getElementById('trainingYearFilter');
-  const trainingMonthFilter = document.getElementById('trainingMonthFilter');
-  
-  if (trainingYearFilter) {
-    // Populate years when switching to training view
-    trainingYearFilter.addEventListener('focus', async () => {
-      if (trainingYearFilter.options.length === 1) {
-        await populateTrainingYears();
-      }
-    });
-    
-    trainingYearFilter.addEventListener('change', () => {
-      // Enable/disable month filter based on year selection
-      if (trainingMonthFilter) {
-        if (trainingYearFilter.value) {
-          trainingMonthFilter.disabled = false;
-        } else {
-          trainingMonthFilter.disabled = true;
-          trainingMonthFilter.value = '';
-        }
-      }
-      loadQuotes();
-      loadTotalCount();
-    });
-  }
-  
-  if (trainingMonthFilter) {
-    trainingMonthFilter.addEventListener('change', () => {
-      loadQuotes();
-      loadTotalCount();
-    });
-  }
+  // Register global search functions for onclick handlers
+  registerGlobalSearchFunctions();
   
   // Date picker sync - when date picker changes, update text input
   const noteDatePicker = document.getElementById("noteDatePicker");
@@ -1157,14 +905,6 @@ function setActive(items) {
   });
 }
 
-function debounceSearch() {
-  clearTimeout(searchTimeout);
-  searchTimeout = setTimeout(() => {
-    currentPage = 1; // Reset to first page when searching
-    loadQuotes();
-  }, 300);
-}
-
 // ============================================
 // Note Type Functions
 // ============================================
@@ -1183,8 +923,9 @@ function updateAddButtonText() {
 }
 
 // MIGRATED: Wrapper using noteTypes.js
+// MIGRATED: Wrapper for filterManager library
 function updateSourcesFilterVisibility() {
-  updateSourcesFilterVisibilityLib(currentNoteTypeFilter, populateTrainingYears);
+  updateSourcesFilterVisibilityLib2(currentNoteTypeFilter);
 }
 
 // MIGRATED: Wrapper using noteTypes.js (with app-specific additions)
@@ -1362,26 +1103,12 @@ function closeQuoteModal() {
   sourceSuggestions.classList.remove("show");
 }
 
+// MIGRATED: Wrapper for filterManager library
 function clearFilters() {
-  searchQuote.value = "";
-  searchAuthor.value = "";
-  searchSource.value = "";
-  searchTags.value = "";
-  searchScore.value = "";
-  
-  // Reset training date filters
-  const trainingYearFilter = document.getElementById('trainingYearFilter');
-  const trainingMonthFilter = document.getElementById('trainingMonthFilter');
-  if (trainingYearFilter) {
-    trainingYearFilter.value = "";
-  }
-  if (trainingMonthFilter) {
-    trainingMonthFilter.value = "";
-    trainingMonthFilter.disabled = true;
-  }
-  
-  currentPage = 1;
-  loadQuotes();
+  clearFiltersLib({
+    loadQuotes,
+    setCurrentPage: (page) => { currentPage = page; }
+  });
 }
 
 // API Functions
@@ -3272,73 +2999,14 @@ async function deleteTag(id, name) {
 // Make global for onclick handlers
 window.deleteTag = deleteTag;
 
-// filterByAuthor and filterBySource stay here (not part of tags module)
+// MIGRATED: Wrappers for searchManager library
 function filterByAuthor(authorName) {
-  console.log("Filtering by author:", authorName);
-  
-  // Switch to quotes view and filter by author
-  switchView("quotes");
-  
-  // Clear other filters
-  document.getElementById("searchQuote").value = "";
-  document.getElementById("searchSource").value = "";
-  document.getElementById("searchTags").value = "";
-  
-  // Set author filter
-  const authorField = document.getElementById("searchAuthor");
-  authorField.value = authorName;
-  
-  console.log("Author field value:", authorField.value);
-  
-  // Reset pagination and force reload
-  currentPage = 1;
-  
-  // Small delay to ensure view switch completes
-  setTimeout(() => {
-    console.log("Loading quotes for author:", authorName);
-    loadQuotes();
-  }, 50);
-
-  // Update active menu item
-  document.querySelectorAll(".menu-item[data-view]").forEach((item) => {
-    item.classList.remove("active");
-    if (item.dataset.view === "quotes") {
-      item.classList.add("active");
-    }
-  });
+  return filterByAuthorLib(authorName);
 }
-// Make global for onclick handlers
-window.filterByAuthor = filterByAuthor;
 
 function filterBySource(sourceName) {
-  console.log("Filtering by source:", sourceName);
-  
-  // Switch to quotes view and filter by source
-  switchView("quotes");
-  
-  // Clear other filters
-  document.getElementById("searchQuote").value = "";
-  document.getElementById("searchAuthor").value = "";
-  document.getElementById("searchTags").value = "";
-  
-  // Set source filter
-  document.getElementById("searchSource").value = sourceName;
-  currentPage = 1;
-  
-  setTimeout(() => {
-    loadQuotes();
-  }, 50);
-
-  // Update active menu item
-  document.querySelectorAll(".menu-item[data-view]").forEach((item) => {
-    item.classList.remove("active");
-    if (item.dataset.view === "quotes") {
-      item.classList.add("active");
-    }
-  });
+  return filterBySourceLib(sourceName);
 }
-// Make global for onclick handlers
-window.filterBySource = filterBySource;
 
 // ============= RENAME FUNCTIONALITY =============
 
