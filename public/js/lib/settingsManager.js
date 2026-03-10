@@ -697,10 +697,13 @@ export function toggleMetadataSearchSection(show) {
  * Apply quote sizing mode
  */
 export function applyQuoteSizingMode(useRealSize) {
+  const quotesList = document.getElementById('quotesList');
+  if (!quotesList) return;
+  
   if (useRealSize) {
-    document.body.classList.add('real-size-quotes');
+    quotesList.classList.add('natural-sizing');
   } else {
-    document.body.classList.remove('real-size-quotes');
+    quotesList.classList.remove('natural-sizing');
   }
 }
 
@@ -708,15 +711,9 @@ export function applyQuoteSizingMode(useRealSize) {
  * Toggle tag operations panel visibility
  */
 export function toggleTagOperationsPanel(show) {
-  const tagFilterContainer = document.querySelector('.tag-filter-container');
-  const tagSearchContainer = document.querySelector('.tag-search-container');
-  
-  if (tagFilterContainer) {
-    tagFilterContainer.style.display = show ? 'block' : 'none';
-  }
-  
-  if (tagSearchContainer) {
-    tagSearchContainer.style.display = show ? 'flex' : 'none';
+  const tagOpsPanel = document.querySelector('.tag-operations-panel');
+  if (tagOpsPanel) {
+    tagOpsPanel.style.display = show ? 'block' : 'none';
   }
 }
 
@@ -745,8 +742,8 @@ export function initializeSettings(callbacks = {}) {
   
   // Tag Operations setting
   if (enableTagOpsCheckbox) {
-    // Load saved setting from localStorage
-    const tagOpsEnabled = localStorage.getItem('enableTagOperations') !== 'false'; // Default true
+    // Load saved setting from globalSettings (default: true)
+    const tagOpsEnabled = globalSettings?.enableTagOperations !== false;
     enableTagOpsCheckbox.checked = tagOpsEnabled;
     
     // Apply initial state
@@ -762,8 +759,8 @@ export function initializeSettings(callbacks = {}) {
   
   // Downscale Quote Images setting
   if (downscaleQuoteImagesCheckbox) {
-    // Load saved setting from localStorage (default: true/checked)
-    const downscaleEnabled = localStorage.getItem('downscaleQuoteImages') !== 'false';
+    // Load saved setting from globalSettings (default: true/checked)
+    const downscaleEnabled = globalSettings?.downscaleQuoteImages !== false;
     downscaleQuoteImagesCheckbox.checked = downscaleEnabled;
     
     // Listen for changes
@@ -777,8 +774,8 @@ export function initializeSettings(callbacks = {}) {
   // External Storage Threshold setting
   const externalStorageThresholdSelect = document.getElementById('externalStorageThreshold');
   if (externalStorageThresholdSelect) {
-    // Load saved setting from localStorage (default: 1 MB)
-    const savedThreshold = localStorage.getItem('externalStorageThreshold') || '1';
+    // Load saved setting from globalSettings (default: 1 MB)
+    const savedThreshold = globalSettings?.externalStorageThreshold || 1;
     externalStorageThresholdSelect.value = savedThreshold;
     
     // Listen for changes
@@ -800,8 +797,8 @@ export function initializeSettings(callbacks = {}) {
   
   // Quote Meta Searches setting
   if (enableQuoteMetaSearchesCheckbox) {
-    // Load saved setting from localStorage
-    const quoteMetaSearchesEnabled = localStorage.getItem('enableQuoteMetaSearches') === 'true'; // Default false
+    // Load saved setting from globalSettings (default: false)
+    const quoteMetaSearchesEnabled = globalSettings?.enableQuoteMetaSearches === true;
     enableQuoteMetaSearchesCheckbox.checked = quoteMetaSearchesEnabled;
     
     // Apply initial state
@@ -810,15 +807,15 @@ export function initializeSettings(callbacks = {}) {
     // Listen for changes
     enableQuoteMetaSearchesCheckbox.addEventListener('change', (e) => {
       const isEnabled = e.target.checked;
-      localStorage.setItem('enableQuoteMetaSearches', isEnabled);
+      updateSetting('enableQuoteMetaSearches', isEnabled);
       toggleMetadataSearchSection(isEnabled);
     });
   }
   
   // Display Quotes by Real Size setting
   if (displayQuotesByRealSizeCheckbox) {
-    // Load saved setting from localStorage
-    const realSizeEnabled = localStorage.getItem('displayQuotesByRealSize') === 'true'; // Default false
+    // Load saved setting from globalSettings (default: false)
+    const realSizeEnabled = globalSettings?.displayQuotesByRealSize === true;
     displayQuotesByRealSizeCheckbox.checked = realSizeEnabled;
     
     // Apply initial state
@@ -827,21 +824,21 @@ export function initializeSettings(callbacks = {}) {
     // Listen for changes
     displayQuotesByRealSizeCheckbox.addEventListener('change', (e) => {
       const isEnabled = e.target.checked;
-      localStorage.setItem('displayQuotesByRealSize', isEnabled);
+      updateSetting('displayQuotesByRealSize', isEnabled);
       applyQuoteSizingMode(isEnabled);
     });
   }
   
   // Display Image Quotes Long setting
   if (displayImageQuotesLongCheckbox) {
-    // Load saved setting from localStorage
-    const imageLongEnabled = localStorage.getItem('displayImageQuotesLong') === 'true'; // Default false
+    // Load saved setting from globalSettings (default: false)
+    const imageLongEnabled = globalSettings?.displayImageQuotesLong === true;
     displayImageQuotesLongCheckbox.checked = imageLongEnabled;
     
     // Listen for changes
     displayImageQuotesLongCheckbox.addEventListener('change', (e) => {
       const isEnabled = e.target.checked;
-      localStorage.setItem('displayImageQuotesLong', isEnabled);
+      updateSetting('displayImageQuotesLong', isEnabled);
       // Reload quotes to apply the setting
       if (loadQuotes) loadQuotes();
     });
@@ -849,14 +846,14 @@ export function initializeSettings(callbacks = {}) {
   
   // Show Long Quotes Expanded setting
   if (showLongQuotesExpandedCheckbox) {
-    // Load saved setting from localStorage
-    const expandLongEnabled = localStorage.getItem('showLongQuotesExpanded') === 'true'; // Default false
+    // Load saved setting from globalSettings (default: false)
+    const expandLongEnabled = globalSettings?.showLongQuotesExpanded === true;
     showLongQuotesExpandedCheckbox.checked = expandLongEnabled;
     
     // Listen for changes
     showLongQuotesExpandedCheckbox.addEventListener('change', (e) => {
       const isEnabled = e.target.checked;
-      localStorage.setItem('showLongQuotesExpanded', isEnabled);
+      updateSetting('showLongQuotesExpanded', isEnabled);
       // Reload quotes to apply the setting
       if (loadQuotes) loadQuotes();
     });
@@ -864,14 +861,14 @@ export function initializeSettings(callbacks = {}) {
   
   // Display Score in Cards setting
   if (displayScoreInCardsCheckbox) {
-    // Load saved setting from localStorage
-    const scoreInCardsEnabled = localStorage.getItem('displayScoreInCards') === 'true'; // Default false
+    // Load saved setting from globalSettings (default: false)
+    const scoreInCardsEnabled = globalSettings?.displayScoreInCards === true;
     displayScoreInCardsCheckbox.checked = scoreInCardsEnabled;
     
     // Listen for changes
     displayScoreInCardsCheckbox.addEventListener('change', (e) => {
       const isEnabled = e.target.checked;
-      localStorage.setItem('displayScoreInCards', isEnabled);
+      updateSetting('displayScoreInCards', isEnabled);
       // Reload quotes to apply the setting
       if (loadQuotes) loadQuotes();
     });
@@ -911,8 +908,8 @@ function initializeColorCustomization() {
     
     if (!picker) return;
     
-    // Load saved color
-    const savedColor = localStorage.getItem(`${config.id}Color`) || config.default;
+    // Load saved color from globalSettings
+    const savedColor = globalSettings?.colors?.[config.id] || config.default;
     picker.value = savedColor;
     if (text) text.value = savedColor;
     config.apply(savedColor);
@@ -923,7 +920,6 @@ function initializeColorCustomization() {
       if (text) text.value = color;
       config.apply(color);
       updateSetting(`colors.${config.id}`, color);
-      localStorage.setItem(`${config.id}Color`, color);
     });
     
     // Handle text input changes
@@ -934,7 +930,6 @@ function initializeColorCustomization() {
           picker.value = color;
           config.apply(color);
           updateSetting(`colors.${config.id}`, color);
-          localStorage.setItem(`${config.id}Color`, color);
         }
       });
     }
@@ -946,7 +941,6 @@ function initializeColorCustomization() {
         if (text) text.value = config.default;
         config.apply(config.default);
         updateSetting(`colors.${config.id}`, config.default);
-        localStorage.setItem(`${config.id}Color`, config.default);
       });
     }
   });

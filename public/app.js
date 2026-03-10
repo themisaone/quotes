@@ -172,7 +172,26 @@ function setupFullscreenEditor() {
 // Global settings cache (loaded from server on startup)
 let globalSettings = null;
 
+// ============= SETTINGS FUNCTIONS - NOW IN settingsManager.js =============
+// These functions have been moved to settingsManager.js and are now imported.
+// Keeping local definitions commented for reference during transition.
+// TODO: Remove these commented functions after verifying everything works.
+
+/* MOVED TO settingsManager.js:
+- loadSettings()
+- saveSettings()
+- getQuoteTypes()
+- saveQuoteTypes()
+- getTrainingTypes()  
+- saveTrainingTypes()
+- migrateLocalStorageToFile()
+- applySettingsToUI()
+- applyColorToCSS()
+- updateSetting()
+*/
+
 // Load settings from server
+/* COMMENTED OUT - Now using settingsManager.js
 async function loadSettings() {
   try {
     const response = await fetch(`${API_URL}/settings`);
@@ -196,8 +215,10 @@ async function loadSettings() {
   console.warn('⚠️  Using localStorage fallback');
   return null;
 }
+*/
 
 // Save settings to server
+/* COMMENTED OUT - Now using settingsManager.js
 async function saveSettings(settings) {
   try {
     const response = await fetch(`${API_URL}/settings`, {
@@ -215,8 +236,9 @@ async function saveSettings(settings) {
     console.error('Error saving settings:', error);
   }
   return false;
-}
+*/
 
+/* COMMENTED OUT - Now using settingsManager.js
 // Get quote types (from global settings or localStorage fallback)
 function getQuoteTypes() {
   // Require global settings to be loaded
@@ -272,8 +294,13 @@ function getTrainingTypes() {
   return globalSettings.trainingTypes;
 }
 
-// Migrate localStorage settings to file (one-time)
-async function migrateLocalStorageToFile() {
+// ... (large migration and settings functions - all commented out)
+// See settingsManager.js for implementations
+
+// END OF COMMENTED BLOCK */
+
+/* COMMENTED OUT - Now using settingsManager.js
+async function updateSetting(key, value) {
   // Check if localStorage has any settings
   const hasLocalSettings = 
     localStorage.getItem('downscaleQuoteImages') !== null ||
@@ -506,6 +533,7 @@ async function updateSetting(key, value) {
   // Save to file
   await saveSettings(globalSettings);
 }
+*/
 
 // Populate type dropdowns dynamically
 function populateTypeDropdowns() {
@@ -800,8 +828,9 @@ let currentFocus = -1;
 
 // Initialize
 document.addEventListener("DOMContentLoaded", async () => {
-  // Load settings from file first
+  // Load settings from file first (using settingsManager library)
   await loadSettings();
+  globalSettings = getGlobalSettings(); // Sync local reference
   
   // Initialize quote types in dropdowns
   populateTypeDropdowns();
@@ -2007,7 +2036,7 @@ async function handleSubmit(e) {
     note_type: noteType,
     note_date: parsedNoteDate,
     translation_group: document.getElementById("translationGroup").value.trim() || null,
-    storageThresholdMB: parseFloat(localStorage.getItem('externalStorageThreshold') || '1'),
+    storageThresholdMB: globalSettings?.externalStorageThreshold || 1,
   };
 
   console.log("Submitting quote data:", quoteData);
@@ -2108,20 +2137,20 @@ function displayQuotes(quotes) {
 
   quotesList.innerHTML = quotes.map((quote) => createQuoteCard(quote)).join("");
 
-  // Apply sizing mode setting
-  const realSizeEnabled = localStorage.getItem('displayQuotesByRealSize') === 'true';
+  // Apply sizing mode setting from globalSettings
+  const realSizeEnabled = globalSettings?.displayQuotesByRealSize === true;
   applyQuoteSizingMode(realSizeEnabled);
 
-  // Apply image quotes long setting
-  const imageLongEnabled = localStorage.getItem('displayImageQuotesLong') === 'true';
+  // Apply image quotes long setting from globalSettings
+  const imageLongEnabled = globalSettings?.displayImageQuotesLong === true;
   if (imageLongEnabled) {
     document.querySelectorAll('.quote-card.has-image').forEach((card) => {
       card.classList.add('expanded-card');
     });
   }
 
-  // Apply show long quotes expanded setting
-  const expandLongEnabled = localStorage.getItem('showLongQuotesExpanded') === 'true';
+  // Apply show long quotes expanded setting from globalSettings
+  const expandLongEnabled = globalSettings?.showLongQuotesExpanded === true;
   if (expandLongEnabled) {
     document.querySelectorAll('.quote-text.collapsible').forEach((quoteText) => {
       // quoteText.id is like "quote-123"
@@ -2229,7 +2258,7 @@ function displayQuotes(quotes) {
 // ============= CARD RENDERING =============
 // MIGRATED: Using library function - pass context as parameters
 function createQuoteCard(quote) {
-  return createQuoteCardLib(quote, currentNoteTypeFilter, getTrainingTypes, getQuoteTypes);
+  return createQuoteCardLib(quote, currentNoteTypeFilter, getTrainingTypes, getQuoteTypes, globalSettings);
 }
 
 // Store full quotes for expand/collapse
@@ -3005,8 +3034,8 @@ function readImageFile(file, type) {
     img.onload = () => {
       // For quote images, check if downscaling is enabled
       if (type === "quote") {
-        // Check setting (default: true/checked = downscale)
-        const shouldDownscale = localStorage.getItem('downscaleQuoteImages') !== 'false';
+        // Check setting from globalSettings (default: true/checked = downscale)
+        const shouldDownscale = globalSettings?.downscaleQuoteImages !== false;
         
         if (shouldDownscale) {
           // DOWNSCALING ON: Resize to save space
@@ -3566,8 +3595,8 @@ function switchView(view) {
     quotesView.style.display = "block";
     loadQuotes();
     loadTotalCount();
-    // Check if Metadata Search should be shown
-    const metaSearchEnabled = localStorage.getItem('enableQuoteMetaSearches') === 'true';
+    // Check if Metadata Search should be shown from globalSettings
+    const metaSearchEnabled = globalSettings?.enableQuoteMetaSearches === true;
     toggleMetadataSearchSection(metaSearchEnabled);
   } else if (view === "authors" && authorsView) {
     authorsView.style.display = "block";
@@ -3611,16 +3640,16 @@ function switchView(view) {
   } else if (view === "tags" && tagsView) {
     tagsView.style.display = "block";
     loadTags();
-    // Check if Tag Operations should be shown
-    const tagOpsEnabled = localStorage.getItem('enableTagOperations') !== 'false';
+    // Check if Tag Operations should be shown from globalSettings
+    const tagOpsEnabled = globalSettings?.enableTagOperations !== false;
     toggleTagOperationsPanel(tagOpsEnabled);
   } else if (view === "settings" && settingsView) {
     settingsView.style.display = "block";
-    // Re-render type lists to ensure they show current settings
-    renderQuoteTypesList();
-    renderTrainingTypesList();
+    // Re-render type lists to ensure they show current settings (using settingsManager library)
+    renderQuoteTypesList(populateTypeDropdowns, populateTypeFilterCheckboxes);
+    renderTrainingTypesList(populateTrainingTypeFilterCheckboxes);
     // Setup event listeners for add buttons
-    setupTypeManagementListeners();
+    setupTypeManagementListeners(populateTypeDropdowns, populateTypeFilterCheckboxes, populateTrainingTypeFilterCheckboxes);
   }
 }
 
@@ -4857,6 +4886,17 @@ function populateTagsForEdit(tagsString) {
 }
 
 // Settings Management
+// ============= SETTINGS INITIALIZATION - NOW IN settingsManager.js =============
+// This large function (700+ lines) has been moved to settingsManager.js
+// Keeping commented for reference during transition.
+// TODO: Remove after verifying everything works.
+
+/* MOVED TO settingsManager.js - initializeSettings() and initializeColorCustomization() 
+
+// All settings initialization code commented out - see settingsManager.js
+*/
+
+/* COMMENTED OUT - Now using settingsManager.js
 function initializeSettings() {
   const enableTagOpsCheckbox = document.getElementById('enableTagOperations');
   const enableQuoteMetaSearchesCheckbox = document.getElementById('enableQuoteMetaSearches');
@@ -5384,8 +5424,26 @@ function initializeSettings() {
     });
   }
 }
+*/
 
 // Apply button color to CSS variables
+// ============= COLOR MANAGEMENT FUNCTIONS - NOW IN settingsManager.js =============
+// These functions have been moved to settingsManager.js
+// Keeping commented for reference during transition.
+// TODO: Remove after verifying everything works.
+
+/* MOVED TO settingsManager.js:
+- applyButtonColor(), applyHeaderColor(), applyTagColor()
+- applyDeleteColor(), applyCancelColor()
+- applyActiveCounterColor(), applyTotalCounterColor()
+- applyMenuColor(), applyAppBgColor()
+- lightenColor(), darkenColor()
+- toggleMetadataSearchSection(), applyQuoteSizingMode(), toggleTagOperationsPanel()
+
+// All color and UI toggle functions commented out - see settingsManager.js
+*/
+
+/* COMMENTED OUT - Now using settingsManager.js
 function applyButtonColor(color) {
   document.documentElement.style.setProperty('--primary-color', color);
   // Calculate hover color (darker)
@@ -5554,6 +5612,7 @@ function toggleTagOperationsPanel(show) {
     tagOpsPanel.style.display = show ? 'block' : 'none';
   }
 }
+*/
 
 // Toggle image section in quote modal
 function toggleImageSection() {
@@ -5589,8 +5648,20 @@ function updateImageIndicator() {
   }
 }
 
-// ============= QUOTE TYPES MANAGEMENT =============
+// ============= QUOTE TYPES MANAGEMENT - NOW IN settingsManager.js =============
+// These functions have been moved to settingsManager.js
+// Keeping commented for reference during transition.
+// TODO: Remove after verifying everything works.
 
+/* MOVED TO settingsManager.js:
+- renderQuoteTypesList()
+- saveQuoteTypesAndRefresh()
+- renderTrainingTypesList()
+- saveTrainingTypesAndRefresh()
+- setupTypeManagementListeners()
+*/
+
+/* COMMENTED OUT - Now using settingsManager.js
 function renderQuoteTypesList() {
   const container = document.getElementById('quoteTypesList');
   if (!container) return;
@@ -5773,22 +5844,30 @@ function setupTypeManagementListeners() {
     });
   }
 }
+*/
 
 // Initialize settings on page load
 document.addEventListener('DOMContentLoaded', async () => {
   // Wait for settings to load first (this might already be done by the main DOMContentLoaded handler)
   if (!globalSettings) {
     await loadSettings();
+    globalSettings = getGlobalSettings(); // Sync local reference
   }
   
-  initializeSettings();
+  // Initialize settings UI (using settingsManager library)
+  initializeSettingsLib({
+    loadQuotes,
+    populateTypeDropdowns,
+    populateTypeFilterCheckboxes,
+    populateTrainingTypeFilterCheckboxes
+  });
   
-  // Initialize quote types management UI
-  renderQuoteTypesList();
-  renderTrainingTypesList();
+  // Initialize quote types management UI (handled by initializeSettingsLib now)
+  // renderQuoteTypesList();
+  // renderTrainingTypesList();
   
-  // Setup event listeners for add buttons
-  setupTypeManagementListeners();
+  // Setup event listeners for add buttons (handled by initializeSettingsLib now)
+  // setupTypeManagementListeners();
 });
 
 // Also check when switching to tags view
@@ -5797,7 +5876,7 @@ if (typeof switchView === 'function') {
   window.switchView = function(viewName) {
     originalSwitchView(viewName);
     if (viewName === 'tags') {
-      const tagOpsEnabled = localStorage.getItem('enableTagOperations') !== 'false';
+      const tagOpsEnabled = globalSettings?.enableTagOperations !== false;
       toggleTagOperationsPanel(tagOpsEnabled);
     }
   };

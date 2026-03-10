@@ -86,8 +86,8 @@ function isLongContent(htmlContent) {
 /**
  * Build score and note title line
  */
-function buildScoreAndNoteLine(quote) {
-  const displayScore = localStorage.getItem('displayScoreInCards') === 'true';
+function buildScoreAndNoteLine(quote, globalSettings) {
+  const displayScore = globalSettings?.displayScoreInCards === true;
   const score = quote.score;
   const hasScore = score && parseInt(score) > 0 && displayScore;
   const scoreIcon = hasScore 
@@ -237,7 +237,7 @@ function buildAttachmentSection(quote, imageUrl, imageFullUrl) {
  * @param {Function} getQuoteTypes - Function that returns quote types config
  * @returns {string} HTML string for the card
  */
-export function createQuoteCard(quote, currentNoteTypeFilter, getTrainingTypes, getQuoteTypes) {
+export function createQuoteCard(quote, currentNoteTypeFilter, getTrainingTypes, getQuoteTypes, globalSettings) {
   console.log('🎴 CardRenderer - Creating card for:', quote.note_type, 'Filter:', currentNoteTypeFilter);
   
   // Resolve attachment URLs
@@ -258,7 +258,7 @@ export function createQuoteCard(quote, currentNoteTypeFilter, getTrainingTypes, 
   const expandBtnId = `expand-${quote.id}`;
 
   // Build score and note line
-  const noteScoreLine = buildScoreAndNoteLine(quote);
+  const noteScoreLine = buildScoreAndNoteLine(quote, globalSettings);
   
   // Translation group badge
   const translationBadge = quote.translation_group 
