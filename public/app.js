@@ -8,7 +8,6 @@ import {
 
 import {
   escapeHtml,
-  resolveAttachmentUrl,
   getAttachmentIcon
 } from './js/lib/utils.js';
 
@@ -20,7 +19,6 @@ import {
   clearImagePreview as clearImagePreviewLib,
   displayAttachmentPreview as displayAttachmentPreviewLib,
   downscaleAndMoveToDb as downscaleAndMoveToDbLib,
-  formatFileSize,
   resizeImage as resizeImageLib
 } from './js/lib/attachments.js';
 
@@ -102,6 +100,12 @@ import {
   initializeAutocomplete
 } from './js/lib/autocompleteManager.js';
 
+import {
+  initializeQuillEditor,
+  handleFormSubmit as handleFormSubmitLib,
+  deleteQuote as deleteQuoteLib
+} from './js/lib/quoteEditor.js';
+
 // Note: displayImage, clearImagePreview, displayAttachmentPreview NOT imported
 // They are kept as local functions due to tight coupling with app-specific state
 
@@ -113,67 +117,7 @@ window.API_URL = API_URL; // Make available to modules that need it
 // Quill editor instance
 let quillEditor = null;
 
-// Initialize Quill editor after DOM is loaded
-function initializeQuillEditor() {
-  quillEditor = new Quill('#quoteEditor', {
-    theme: 'snow',
-    modules: {
-      toolbar: [
-        ['bold', 'italic', 'underline'],
-        [{ 'header': [1, 2, 3, false] }],
-        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-        ['clean']
-      ]
-    },
-    placeholder: 'Enter the quote text...'
-  });
-  
-  // Update hidden field when content changes
-  quillEditor.on('text-change', function() {
-    const html = quillEditor.root.innerHTML;
-    document.getElementById('quoteText').value = html;
-  });
-  
-  // Setup fullscreen editor toggle
-  setupFullscreenEditor();
-}
-
-function setupFullscreenEditor() {
-  const toggleBtn = document.getElementById('toggleFullscreenEditor');
-  const editorGroup = document.querySelector('.quote-editor-group');
-  
-  if (!toggleBtn || !editorGroup) return;
-  
-  let isFullscreen = false;
-  
-  toggleBtn.addEventListener('click', () => {
-    isFullscreen = !isFullscreen;
-    
-    if (isFullscreen) {
-      // Enter fullscreen
-      editorGroup.classList.add('fullscreen');
-      toggleBtn.textContent = '✕';
-      toggleBtn.title = 'Exit Fullscreen (Esc)';
-      
-      // Focus editor
-      if (quillEditor) {
-        quillEditor.focus();
-      }
-    } else {
-      // Exit fullscreen
-      editorGroup.classList.remove('fullscreen');
-      toggleBtn.textContent = '⛶';
-      toggleBtn.title = 'Fullscreen Editor';
-    }
-  });
-  
-  // Exit fullscreen with Esc key
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && isFullscreen) {
-      toggleBtn.click();
-    }
-  });
-}
+// MIGRATED: Quill initialization and fullscreen setup moved to quoteEditor.js
 
 // Quote types configuration (can be extended by user)
 // Global settings cache (loaded from server on startup)
@@ -418,8 +362,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const shouldShowMetadata = (currentNoteTypeFilter === 'quote' || currentNoteTypeFilter === null) && metaSearchEnabled;
   toggleMetadataSearchSection(shouldShowMetadata);
   
-  // Initialize Quill editor
-  initializeQuillEditor();
+  // Initialize Quill editor using library
+  quillEditor = initializeQuillEditor();
   
   // Check if we're on a tablet (769px-1100px)
   const isTablet = window.matchMedia("(min-width: 769px) and (max-width: 1100px)").matches;
@@ -1029,94 +973,41 @@ async function loadTotalCount() {
 async function handleSubmit(e) {
   e.preventDefault();
 
-  const noteType = document.getElementById("noteType").value;
-  
-  // Parse note_date from dd.mm.yyyy format to YYYY-MM-DD for training notes
-  let parsedNoteDate = null;
-  if (noteType === 'training') {
-    const noteDateInput = document.getElementById("noteDate").value;
-    if (noteDateInput) {
-      // Parse dd.mm.yyyy format
-      const match = noteDateInput.match(/(\d{2})\.(\d{2})\.(\d{4})/);
-      if (match) {
-        const [_, day, month, year] = match;
-        parsedNoteDate = `${year}-${month}-${day}`; // Convert to YYYY-MM-DD
-      }
-    }
-  }
-  
-  const quoteData = {
-    quote: document.getElementById("quoteText").value,
-    author: document.getElementById("author").value,
-    source: document.getElementById("source").value,
-    sourceType: noteType === 'training' ? document.getElementById("trainingType").value || "ASSORTED" : (document.getElementById("sourceType").value || "ASSORTED"),
-    sourceId: window.currentSourceId || null,
-    tags: document.getElementById("tags").value,
-    note: noteInput.value,
-    score: document.querySelector('input[name="quoteScore"]:checked')?.value || "0",
-    image: currentQuoteImage,
-    image_full: currentQuoteImageFull,
-    attachment_type: currentAttachmentType,
-    note_type: noteType,
-    note_date: parsedNoteDate,
-    translation_group: document.getElementById("translationGroup").value.trim() || null,
-    storageThresholdMB: globalSettings?.externalStorageThreshold || 1,
+  const state = {
+    editingQuoteId,
+    currentQuoteImage,
+    currentQuoteImageFull,
+    currentAttachmentType,
+    globalSettings
   };
-
-  console.log("Submitting quote data:", quoteData);
-
-  try {
-    let response;
-    if (editingQuoteId) {
-      response = await fetch(`${API_URL}/quotes/${editingQuoteId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(quoteData),
-      });
-    } else {
-      response = await fetch(`${API_URL}/quotes`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(quoteData),
-      });
-    }
-
-    if (response.ok) {
+  
+  const callbacks = {
+    onSuccess: () => {
       closeQuoteModal();
       loadQuotes();
-      loadTotalCount(); // Update total count
-    } else {
-      const errorData = await response.json();
-      alert(
-        "Failed to save quote: " + (errorData.error || "Please try again."),
-      );
+      loadTotalCount();
+    },
+    onError: (error) => {
+      alert("Failed to save quote: " + error);
     }
-  } catch (error) {
-    console.error("Error saving quote:", error);
-    alert("Failed to save quote. Please try again.");
-  }
+  };
+  
+  await handleFormSubmitLib(e, { apiUrl: API_URL, state, callbacks });
 }
 
 async function deleteQuote(id) {
-  if (!confirm("Are you sure you want to delete this quote?")) {
-    return;
-  }
-
-  try {
-    const response = await fetch(`${API_URL}/quotes/${id}`, {
-      method: "DELETE",
-    });
-
-    if (response.ok) {
+  const callbacks = {
+    onSuccess: () => {
+      closeQuoteModal();
       loadQuotes();
-      loadTotalCount(); // Update total count
-    } else {
-      alert("Failed to delete quote. Please try again.");
+      loadTotalCount();
+    },
+    onError: (error) => {
+      alert("Failed to delete quote: " + error);
     }
-  } catch (error) {
-    console.error("Error deleting quote:", error);
-    alert("Failed to delete quote. Please try again.");
-  }
+  };
+  
+  await deleteQuoteLib(id, API_URL, callbacks);
 }
 
 // ============================================
