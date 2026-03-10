@@ -1022,6 +1022,7 @@ app.get("/api/quotes/random", async (req, res) => {
       FROM quotes q
       LEFT JOIN authors a ON q.author_id = a.id
       LEFT JOIN sources s ON q.source_id = s.id
+      WHERE q.note_type = 'quote'
       ORDER BY RANDOM()
       LIMIT 1
     `

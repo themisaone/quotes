@@ -123,6 +123,13 @@ import {
   downloadAttachment
 } from './js/lib/attachmentViewer.js';
 
+import {
+  switchView as switchViewLib,
+  setupMenuNavigation as setupMenuNavigationLib,
+  handleHashChange,
+  initializeHashChangeListener
+} from './js/lib/pageCoordinator.js';
+
 // Note: displayImage, clearImagePreview, displayAttachmentPreview NOT imported
 // They are kept as local functions due to tight coupling with app-specific state
 
@@ -266,24 +273,25 @@ function updateMainTitle() {
   updatePageTitleLib(currentNoteTypeFilter);
 }
 
-// Listen for hash changes (browser back/forward)
-window.addEventListener('hashchange', () => {
-  console.log('🔄 Hash changed:', window.location.hash);
-  handleHashNavigation();
-  updateActiveMenuState();
-  updateAddButtonText();
-  updateMainTitle();
-  updateSourcesFilterVisibility();
-  
-  // Show/hide metadata search section based on current filter and settings
-  const metaSearchEnabled = globalSettings?.enableQuoteMetaSearches === true;
-  const shouldShowMetadata = (currentNoteTypeFilter === 'quote' || currentNoteTypeFilter === null) && metaSearchEnabled;
-  toggleMetadataSearchSection(shouldShowMetadata);
-  
-  currentPage = 1;
-  loadQuotes();
-  loadTotalCount();
-});
+// MIGRATED: Hash change handling moved to pageCoordinator.js
+initializeHashChangeListener(
+  {
+    handleHashNavigation,
+    updateActiveMenuState,
+    updateAddButtonText,
+    updateMainTitle,
+    updateSourcesFilterVisibility,
+    toggleMetadataSearchSection,
+    loadQuotes,
+    loadTotalCount,
+    setCurrentPage: (page) => { currentPage = page; }
+  },
+  () => ({
+    currentNoteTypeFilter,
+    globalSettings
+  })
+);
+
 let currentQuotesData = []; // Store current quotes for PDF export
 
 // DOM Elements
@@ -1659,7 +1667,7 @@ function setupMenuNavigation() {
       const view = item.dataset.view;
       console.log("Switching to view:", view);
       
-      // Reset note type filter when clicking "All Notes"
+      // Reset note type filter when clicking "All Notes" (app-specific logic)
       if (view === "quotes") {
         currentNoteTypeFilter = null;
         // Remove active state from all note type filters
@@ -1677,6 +1685,7 @@ function setupMenuNavigation() {
         updateSourcesFilterVisibility();
       }
       
+      // MIGRATED: Core view switching logic now in pageCoordinator.js
       switchView(view);
 
       // Update active state only for view navigation items
@@ -1686,86 +1695,29 @@ function setupMenuNavigation() {
   });
 }
 
+// MIGRATED: View switching logic moved to pageCoordinator.js
 function switchView(view) {
-  // Get all view elements
-  const menuView = document.getElementById("menuView");
-  const quotesView = document.getElementById("quotesView");
-  const authorsView = document.getElementById("authorsView");
-  const sourcesView = document.getElementById("sourcesView");
-  const tagsView = document.getElementById("tagsView");
-  const settingsView = document.getElementById("settingsView");
-
-  // Hide all views
-  if (menuView) menuView.style.display = "none";
-  if (quotesView) quotesView.style.display = "none";
-  if (authorsView) authorsView.style.display = "none";
-  if (sourcesView) sourcesView.style.display = "none";
-  if (tagsView) tagsView.style.display = "none";
-  if (settingsView) settingsView.style.display = "none";
-
-  // Show selected view and load data
-  if (view === "menu" && menuView) {
-    menuView.style.display = "block";
-  } else if (view === "quotes" && quotesView) {
-    quotesView.style.display = "block";
-    loadQuotes();
-    loadTotalCount();
-    // Check if Metadata Search should be shown from globalSettings
-    const metaSearchEnabled = globalSettings?.enableQuoteMetaSearches === true;
-    toggleMetadataSearchSection(metaSearchEnabled);
-  } else if (view === "authors" && authorsView) {
-    authorsView.style.display = "block";
-    loadAuthors();
-  } else if (view === "sources" && sourcesView) {
-    sourcesView.style.display = "block";
-    loadSources();
-
-    // Setup source type filters
-    const filterBook = document.getElementById("filterBook");
-    const filterMovie = document.getElementById("filterMovie");
-    const filterAssorted = document.getElementById("filterAssorted");
-    const filterPoetry = document.getElementById("filterPoetry");
-    const filterLyrics = document.getElementById("filterLyrics");
-    const filterJokes = document.getElementById("filterJokes");
-
-    if (filterBook && !filterBook.hasAttribute("data-listener")) {
-      filterBook.addEventListener("change", loadSources);
-      filterBook.setAttribute("data-listener", "true");
+  switchViewLib(
+    view,
+    {
+      loadQuotes,
+      loadTotalCount,
+      loadAuthors,
+      loadSources,
+      loadTags,
+      toggleMetadataSearchSection,
+      toggleTagOperationsPanel,
+      renderQuoteTypesList,
+      renderTrainingTypesList,
+      setupTypeManagementListeners,
+      populateTypeDropdowns,
+      populateTypeFilterCheckboxes: () => populateTypeFilterCheckboxesLib(getQuoteTypes),
+      populateTrainingTypeFilterCheckboxes: () => populateTrainingTypeFilterCheckboxesLib(getTrainingTypes)
+    },
+    {
+      globalSettings
     }
-    if (filterMovie && !filterMovie.hasAttribute("data-listener")) {
-      filterMovie.addEventListener("change", loadSources);
-      filterMovie.setAttribute("data-listener", "true");
-    }
-    if (filterAssorted && !filterAssorted.hasAttribute("data-listener")) {
-      filterAssorted.addEventListener("change", loadSources);
-      filterAssorted.setAttribute("data-listener", "true");
-    }
-    if (filterPoetry && !filterPoetry.hasAttribute("data-listener")) {
-      filterPoetry.addEventListener("change", loadSources);
-      filterPoetry.setAttribute("data-listener", "true");
-    }
-    if (filterLyrics && !filterLyrics.hasAttribute("data-listener")) {
-      filterLyrics.addEventListener("change", loadSources);
-      filterLyrics.setAttribute("data-listener", "true");
-    }
-    if (filterJokes && !filterJokes.hasAttribute("data-listener")) {
-      filterJokes.addEventListener("change", loadSources);
-      filterJokes.setAttribute("data-listener", "true");
-    }
-  } else if (view === "tags" && tagsView) {
-    tagsView.style.display = "block";
-    loadTags();
-    // Check if Tag Operations should be shown from globalSettings
-    const tagOpsEnabled = globalSettings?.enableTagOperations !== false;
-    toggleTagOperationsPanel(tagOpsEnabled);
-  } else if (view === "settings" && settingsView) {
-    settingsView.style.display = "block";
-    // Re-render type lists to ensure they show current settings (using settingsManager library)
-    renderQuoteTypesList(populateTypeDropdowns, populateTypeFilterCheckboxes);
-    renderTrainingTypesList(populateTrainingTypeFilterCheckboxes);
-    // Setup event listeners for add buttons
-    setupTypeManagementListeners(populateTypeDropdowns, populateTypeFilterCheckboxes, populateTrainingTypeFilterCheckboxes);
-  }
+  );
 }
 
 async function loadAuthors() {
