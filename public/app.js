@@ -952,15 +952,44 @@ function setupEventListeners() {
   if (trainingTypeFilterToggle && trainingTypeFilterDropdown) {
     trainingTypeFilterToggle.addEventListener("click", (e) => {
       e.stopPropagation();
+      
+      const wasOpen = trainingTypeFilterDropdown.classList.contains("show");
+      
       trainingTypeFilterDropdown.classList.toggle("show");
       trainingTypeFilterToggle.classList.toggle("open");
+      
+      // If closing and changes were made, reload quotes
+      if (wasOpen && typeFilterChanged) {
+        const trainingTypeCheckboxes = document.querySelectorAll('.training-type-filter-options input[type="checkbox"]');
+        const checkedTypes = Array.from(trainingTypeCheckboxes)
+          .filter(cb => cb.checked)
+          .map(cb => cb.id);
+        console.log("Reloading with training types:", checkedTypes);
+        
+        typeFilterChanged = false;
+        loadQuotes();
+      }
     });
 
     // Close dropdown when clicking outside
     document.addEventListener("click", (e) => {
       if (!e.target.closest("#trainingTypesFilterContainer")) {
+        const wasOpen = trainingTypeFilterDropdown.classList.contains("show");
+        
         trainingTypeFilterDropdown.classList.remove("show");
         trainingTypeFilterToggle.classList.remove("open");
+        
+        // If closing and changes were made, reload quotes
+        if (wasOpen && typeFilterChanged) {
+          const trainingTypeCheckboxes = document.querySelectorAll('.training-type-filter-options input[type="checkbox"]');
+          const checkedTypes = Array.from(trainingTypeCheckboxes)
+            .filter(cb => cb.checked)
+            .map(cb => cb.id);
+          console.log("Reloading with training types:", checkedTypes);
+          
+          typeFilterChanged = false;
+          loadQuotes();
+        }
       }
     });
 
