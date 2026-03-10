@@ -3,6 +3,7 @@ import {
   parseUrlHash,
   updateUrlHash as updateUrlHashLib,
   updateActiveMenuState as updateActiveMenuStateLib,
+  updatePageTitle as updatePageTitleLib,
   initializeView
   // Note: updateAddButtonText imported from noteTypes.js instead
   // Note: switchView not imported - keeping local version for now
@@ -53,7 +54,8 @@ import {
   setupTypeManagementListeners,
   toggleMetadataSearchSection,
   applyQuoteSizingMode,
-  toggleTagOperationsPanel
+  toggleTagOperationsPanel,
+  initializeSettings as initializeSettingsLib
 } from './js/lib/settingsManager.js';
 
 import {
