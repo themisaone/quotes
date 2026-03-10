@@ -3,11 +3,7 @@ import {
   parseUrlHash,
   updateUrlHash as updateUrlHashLib,
   updateActiveMenuState as updateActiveMenuStateLib,
-  updatePageTitle as updatePageTitleLib,
-  initializeView
-  // Note: updateAddButtonText imported from noteTypes.js instead
-  // Note: switchView not imported - keeping local version for now
-  // Note: setupHashChangeListener not imported - keeping local version
+  updatePageTitle as updatePageTitleLib
 } from './js/lib/viewManager.js';
 
 import {
@@ -17,17 +13,11 @@ import {
 } from './js/lib/utils.js';
 
 import {
-  NOTE_TYPES,
   getNoteTypeConfig,
   updateModalFieldVisibility,
   updateModalLabels,
-  updateAddButtonText as updateAddButtonTextLib,
-  updateSourcesFilterVisibility as updateSourcesFilterVisibilityLib
+  updateAddButtonText as updateAddButtonTextLib
 } from './js/lib/noteTypes.js';
-
-import {
-  fetchWithRetry
-} from './js/lib/api.js';
 
 import {
   createQuoteCard as createQuoteCardLib
@@ -71,8 +61,7 @@ import {
 import {
   loadTags as loadTagsLib,
   filterByTag as filterByTagLib,
-  deleteTag as deleteTagLib,
-  setupTagOperations
+  deleteTag as deleteTagLib
 } from './js/lib/tagsManager.js';
 
 import {
@@ -93,16 +82,12 @@ import {
 import {
   filterByAuthor as filterByAuthorLib,
   filterBySource as filterBySourceLib,
-  getSearchValues,
-  getTrainingFilters,
-  clearSearchFields,
   initializeSearchHandlers,
   registerGlobalSearchFunctions
 } from './js/lib/searchManager.js';
 
 // Note: displayImage, clearImagePreview, displayAttachmentPreview NOT imported
 // They are kept as local functions due to tight coupling with app-specific state
-// Note: Export/Import functions kept local - too complex and app-specific for library
 
 // ============= CONSTANTS =============
 // Auto-detect API URL based on current host
@@ -239,12 +224,12 @@ function populateTypeDropdowns() {
 }
 
 // Populate type filter checkboxes in search area
-// MIGRATED: Wrapper for filterManager library
+// Wrapper for filterManager library
 function populateTypeFilterCheckboxes() {
   populateTypeFilterCheckboxesLib(getQuoteTypes);
 }
 
-// MIGRATED: Wrapper for filterManager library
+// Wrapper for filterManager library
 function populateTrainingTypeFilterCheckboxes() {
   populateTrainingTypeFilterCheckboxesLib(getTrainingTypes);
 }
@@ -299,17 +284,14 @@ function handleHashNavigation() {
 }
 
 // Update URL hash when view changes
-// MIGRATED: Using library function
 function updateUrlHash() {
   updateUrlHashLib(currentNoteTypeFilter);
 }
 
-// MIGRATED: Using library function  
 function updateActiveMenuState() {
   updateActiveMenuStateLib(currentNoteTypeFilter);
 }
 
-// MIGRATED: Using library function
 function updateMainTitle() {
   updatePageTitleLib(currentNoteTypeFilter);
 }
@@ -374,7 +356,6 @@ let currentQuoteImage = "";
 let currentQuoteImageFull = ""; // Store original size
 let currentAttachmentType = "image"; // Track: image, pdf, document, video, audio
 let currentAttachmentFileName = ""; // Track filename for non-image files
-// MIGRATED: typeFilterChanged is now managed in filterManager.js
 
 // Search inputs
 const searchQuote = document.getElementById("searchQuote");
@@ -677,10 +658,6 @@ function setupEventListeners() {
     handleAutocompleteKeys(e, bulkSourceSuggestions, "bulkSource");
   });
 
-  // NOTE: Search input debouncing is now handled by searchManager.js
-  // NOTE: Type filter checkboxes are now handled by the dropdown logic below (line ~396)
-  // The old individual listeners have been removed to avoid conflicts
-
   // Sources view: Type filter checkboxes
   ["filterBook", "filterMovie"].forEach((id) => {
     const checkbox = document.getElementById(id);
@@ -909,7 +886,6 @@ function setActive(items) {
 // Note Type Functions
 // ============================================
 
-// MIGRATED: Now imported from noteTypes.js
 // const NOTE_TYPES = {
 //   quote: { icon: 'Q', label: 'Quote', color: '#3b82f6' },
 //   note: { icon: 'N', label: 'Simple Note', color: '#10b981' },
@@ -917,18 +893,16 @@ function setActive(items) {
 //   puzzle: { icon: 'P', label: 'Logical Puzzle', color: '#8b5cf6' }
 // };
 
-// MIGRATED: Wrapper using noteTypes.js
 function updateAddButtonText() {
   updateAddButtonTextLib(currentNoteTypeFilter, updateSourcesFilterVisibility);
 }
 
-// MIGRATED: Wrapper using noteTypes.js
-// MIGRATED: Wrapper for filterManager library
+// Wrapper for filterManager library
 function updateSourcesFilterVisibility() {
   updateSourcesFilterVisibilityLib2(currentNoteTypeFilter);
 }
 
-// MIGRATED: Wrapper using noteTypes.js (with app-specific additions)
+// Wrapper with app-specific additions
 function updateFieldVisibility() {
   const noteType = document.getElementById('noteType').value;
   const isQuote = noteType === 'quote';
@@ -958,7 +932,6 @@ function updateFieldVisibility() {
   }
 }
 
-// MIGRATED: Now using library function directly
 // function updateModalLabels is imported from noteTypes.js
 
 function openAddModal() {
@@ -1103,7 +1076,7 @@ function closeQuoteModal() {
   sourceSuggestions.classList.remove("show");
 }
 
-// MIGRATED: Wrapper for filterManager library
+// Clear filters functionality
 function clearFilters() {
   clearFiltersLib({
     loadQuotes,
@@ -1112,7 +1085,6 @@ function clearFilters() {
 }
 
 // API Functions
-// MIGRATED: fetchWithRetry is now imported from api.js
 // async function fetchWithRetry(url, options = {}, maxRetries = 3, delayMs = 500) {...}
 
 // Helper function to add refresh animation
@@ -1135,8 +1107,7 @@ function addRefreshAnimation(buttonId, asyncFunction) {
   };
 }
 
-// MIGRATED: Wrapper for displayManager library
-// MIGRATED: Wrapper for displayManager library
+// Load and display quotes
 async function loadQuotes() {
   const currentSettings = getGlobalSettings();
   const quotes = await loadQuotesLib(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes, currentSettings);
@@ -1146,7 +1117,7 @@ async function loadQuotes() {
   displayQuotes(quotes);
 }
 
-// MIGRATED: Wrapper for displayManager library (maintains pagination state)
+// Load total count
 async function loadTotalCount() {
   await loadTotalCountLib(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes);
   
@@ -1287,7 +1258,6 @@ async function showTranslationGroup(groupName) {
 window.showTranslationGroup = showTranslationGroup;
 
 // Display Functions
-// MIGRATED: Wrapper that calls library then applies app-specific post-processing
 function displayQuotes(quotes) {
   quoteCount.textContent = `(${quotes.length})`;
 
@@ -1417,7 +1387,6 @@ function displayQuotes(quotes) {
 }
 
 // ============= CARD RENDERING =============
-// MIGRATED: Using library function - pass context as parameters
 function createQuoteCard(quote) {
   return createQuoteCardLib(quote, currentNoteTypeFilter, getTrainingTypes, getQuoteTypes, globalSettings);
 }
@@ -1748,7 +1717,6 @@ async function downscaleAndMoveToDb(quoteId, imageUrl, filePath, modal) {
   }
 }
 
-// MIGRATED: Now imported from utils.js
 // function escapeHtml(text) {
 //   const div = document.createElement("div");
 //   div.textContent = text;
@@ -2059,7 +2027,6 @@ function readAttachmentFile(file, type) {
   reader.readAsDataURL(file);
 }
 
-// MIGRATED: Now imported from utils.js
 // Get icon for attachment type
 // function getAttachmentIcon(type) {
 //   const icons = {
@@ -2112,7 +2079,6 @@ function createIconThumbnail(icon, filename, size) {
 }
 
 // Display attachment preview
-// MIGRATED: displayAttachmentPreview is now imported from attachments.js
 // function displayAttachmentPreview(container, icon, filename, size) {...}
 
 function readImageFile(file, type) {
@@ -2217,7 +2183,6 @@ function handlePaste(e, type) {
 }
 
 // Display Image
-// MIGRATED: Now imported from utils.js
 /**
  * Convert file storage reference to URL
  * Handles both base64 and file: references
@@ -2999,7 +2964,6 @@ async function deleteTag(id, name) {
 // Make global for onclick handlers
 window.deleteTag = deleteTag;
 
-// MIGRATED: Wrappers for searchManager library
 function filterByAuthor(authorName) {
   return filterByAuthorLib(authorName);
 }
