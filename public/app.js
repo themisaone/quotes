@@ -115,6 +115,14 @@ import {
   initializeTranslationGroups
 } from './js/lib/translationGroups.js';
 
+import {
+  showFullImage as showFullImageLib,
+  showPDFViewer,
+  showVideoPlayer,
+  showAudioPlayer,
+  downloadAttachment
+} from './js/lib/attachmentViewer.js';
+
 // Note: displayImage, clearImagePreview, displayAttachmentPreview NOT imported
 // They are kept as local functions due to tight coupling with app-specific state
 
@@ -194,14 +202,7 @@ function populateTypeDropdowns() {
 
 // Populate type filter checkboxes in search area
 // Wrapper for filterManager library
-function populateTypeFilterCheckboxes() {
-  populateTypeFilterCheckboxesLib(getQuoteTypes);
-}
-
-// Wrapper for filterManager library
-function populateTrainingTypeFilterCheckboxes() {
-  populateTrainingTypeFilterCheckboxesLib(getTrainingTypes);
-}
+// MIGRATED: Filter checkbox population now in filterManager.js (direct library access)
 
 // Pagination state
 // Local state synced with displayManager library
@@ -335,11 +336,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Initialize quote types in dropdowns
   populateTypeDropdowns();
   
-  // Initialize quote source type filter checkboxes
-  populateTypeFilterCheckboxes();
+  // Initialize quote source type filter checkboxes (direct library call)
+  populateTypeFilterCheckboxesLib(getQuoteTypes);
   
-  // Initialize training type filter checkboxes
-  populateTrainingTypeFilterCheckboxes();
+  // Initialize training type filter checkboxes (direct library call)
+  populateTrainingTypeFilterCheckboxesLib(getTrainingTypes);
   
   // Handle URL hash navigation (takes priority over saved view)
   if (window.location.hash) {
@@ -1190,225 +1191,22 @@ function toggleQuoteExpand(quoteId) {
 window.toggleQuoteExpand = toggleQuoteExpand;
 
 // Download attachment (for non-image files like Excel, Word, PDF, etc.)
-window.downloadAttachment = function(dataUrl, filename, quoteId = null) {
-  try {
-    // Create a temporary link and trigger download
-    const link = document.createElement('a');
-    link.href = dataUrl;
-    link.download = filename || 'attachment';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  } catch (error) {
-    console.error('Error downloading attachment:', error);
-    alert('Failed to download attachment. Please try again.');
-  }
-};
+// MIGRATED: Download attachment function moved to attachmentViewer.js
+window.downloadAttachment = downloadAttachment;
 
 // Show full-size image in modal (make it global for onclick)
+// MIGRATED: Attachment viewer functions moved to attachmentViewer.js
+// Wrapper to pass downscale callback
 window.showFullImage = function (imageSrc, quoteId = null, attachmentType = 'image') {
-  // Handle file references from external storage
-  let actualSrc = imageSrc;
-  let isExternalFile = false;
-  let filePath = null;
-  let mimeType = 'image/jpeg';
-  
-  if (imageSrc && imageSrc.startsWith('file:')) {
-    isExternalFile = true;
-    // Parse: "file:quotes/123.jpg:image/jpeg" -> "/attachments/quotes/123.jpg"
-    const parts = imageSrc.split(':');
-    filePath = parts[1]; // "quotes/123_full.jpg"
-    mimeType = parts[2] || 'image/jpeg';
-    actualSrc = `/attachments/${filePath}`;
-  }
-  
-  // For PDFs, show PDF viewer
-  if (attachmentType === 'pdf' || mimeType === 'application/pdf') {
-    showPDFViewer(actualSrc, filePath);
-    return;
-  }
-  
-  // For videos, show video player
-  if (attachmentType === 'video' || mimeType.startsWith('video/')) {
-    showVideoPlayer(actualSrc, filePath);
-    return;
-  }
-  
-  // For audio, show audio player
-  if (attachmentType === 'audio' || mimeType.startsWith('audio/')) {
-    showAudioPlayer(actualSrc, filePath);
-    return;
-  }
-  
-  // For other file types (documents, Excel, etc.), open in new tab
-  // The browser will either display it or prompt to download/open with app
-  if (attachmentType === 'document' || attachmentType === 'other') {
-    // Extract MIME type from data URL to determine file extension
-    let extension = 'bin';
-    let filename = 'attachment';
-    
-    if (actualSrc.startsWith('data:')) {
-      const mimeMatch = actualSrc.match(/^data:([^;]+);/);
-      if (mimeMatch) {
-        const mime = mimeMatch[1];
-        // Map MIME types to extensions
-        const mimeToExt = {
-          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
-          'application/vnd.ms-excel': 'xls',
-          'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
-          'application/msword': 'doc',
-          'application/vnd.oasis.opendocument.spreadsheet': 'ods',
-          'application/vnd.oasis.opendocument.text': 'odt',
-          'text/csv': 'csv',
-          'text/plain': 'txt',
-          'application/zip': 'zip',
-          'application/x-zip-compressed': 'zip',
-        };
-        extension = mimeToExt[mime] || 'bin';
-        
-        // Create a descriptive filename based on extension
-        const typeNames = {
-          'xlsx': 'spreadsheet',
-          'xls': 'spreadsheet',
-          'docx': 'document',
-          'doc': 'document',
-          'ods': 'spreadsheet',
-          'odt': 'document',
-          'csv': 'data',
-          'txt': 'text',
-          'zip': 'archive'
-        };
-        filename = `${typeNames[extension] || 'attachment'}.${extension}`;
-      }
+  showFullImageLib(imageSrc, quoteId, attachmentType, {
+    onDownscale: async (quoteId, imageUrl, filePath, modal) => {
+      await downscaleAndMoveToDb(quoteId, imageUrl, filePath, modal);
     }
-    
-    const link = document.createElement('a');
-    link.href = actualSrc;
-    link.download = filename;
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    return;
-  }
-  
-  // Default: Image viewer
-  const modal = document.createElement("div");
-  modal.className = "image-modal";
-  
-  // Add downscale button if it's an external image file
-  const downscaleButton = isExternalFile && quoteId && attachmentType === 'image' ? `
-    <button id="downscaleImageBtn" class="btn btn-primary" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 10001; padding: 0.75rem 1.5rem; font-size: 1rem;">
-      📦 Downscale to 1024px & Move to DB
-    </button>
-  ` : '';
-  
-  modal.innerHTML = `
-        <div class="image-modal-content">
-            <span class="image-modal-close" onclick="this.parentElement.parentElement.remove()">&times;</span>
-            <img src="${actualSrc}" alt="Full size image">
-            ${downscaleButton}
-        </div>
-    `;
-  modal.onclick = (e) => {
-    if (e.target === modal) modal.remove();
-  };
-  document.body.appendChild(modal);
-  
-  // Setup downscale button handler
-  if (isExternalFile && quoteId && attachmentType === 'image') {
-    const btn = document.getElementById('downscaleImageBtn');
-    if (btn) {
-      btn.onclick = async (e) => {
-        e.stopPropagation();
-        await downscaleAndMoveToDb(quoteId, actualSrc, filePath, modal);
-      };
-    }
-  }
+  });
 };
 
 // Show PDF viewer
-function showPDFViewer(pdfSrc, filePath) {
-  const modal = document.createElement("div");
-  modal.className = "image-modal";
-  
-  const filename = filePath ? filePath.split('/').pop() : 'document.pdf';
-  
-  modal.innerHTML = `
-    <div class="image-modal-content" style="max-width: 90vw; max-height: 90vh; width: auto; height: auto;">
-      <div style="background: #333; padding: 1rem; display: flex; justify-content: space-between; align-items: center; border-radius: 8px 8px 0 0;">
-        <span style="color: white; font-weight: 500;">📄 ${escapeHtml(filename)}</span>
-        <span class="image-modal-close" onclick="this.parentElement.parentElement.parentElement.remove()" style="position: static; color: white; font-size: 2rem; cursor: pointer;">&times;</span>
-      </div>
-      <div style="background: white; padding: 0; height: 80vh; border-radius: 0 0 8px 8px;">
-        <embed src="${pdfSrc}" type="application/pdf" width="100%" height="100%" style="border: none; border-radius: 0 0 8px 8px;" />
-      </div>
-    </div>
-  `;
-  
-  modal.onclick = (e) => {
-    if (e.target === modal) modal.remove();
-  };
-  
-  document.body.appendChild(modal);
-}
-
-// Show video player
-function showVideoPlayer(videoSrc, filePath) {
-  const modal = document.createElement("div");
-  modal.className = "image-modal";
-  
-  const filename = filePath ? filePath.split('/').pop() : 'video';
-  
-  modal.innerHTML = `
-    <div class="image-modal-content">
-      <div style="background: #333; padding: 1rem; display: flex; justify-content: space-between; align-items: center; border-radius: 8px 8px 0 0;">
-        <span style="color: white; font-weight: 500;">🎬 ${escapeHtml(filename)}</span>
-        <span class="image-modal-close" onclick="this.parentElement.parentElement.parentElement.remove()" style="position: static; color: white; font-size: 2rem; cursor: pointer;">&times;</span>
-      </div>
-      <video controls style="max-width: 90vw; max-height: 80vh; border-radius: 0 0 8px 8px;">
-        <source src="${videoSrc}">
-        Your browser does not support the video tag.
-      </video>
-    </div>
-  `;
-  
-  modal.onclick = (e) => {
-    if (e.target === modal) modal.remove();
-  };
-  
-  document.body.appendChild(modal);
-}
-
-// Show audio player
-function showAudioPlayer(audioSrc, filePath) {
-  const modal = document.createElement("div");
-  modal.className = "image-modal";
-  
-  const filename = filePath ? filePath.split('/').pop() : 'audio';
-  
-  modal.innerHTML = `
-    <div class="image-modal-content" style="max-width: 500px;">
-      <div style="background: #333; padding: 1rem; display: flex; justify-content: space-between; align-items: center; border-radius: 8px 8px 0 0;">
-        <span style="color: white; font-weight: 500;">🎵 ${escapeHtml(filename)}</span>
-        <span class="image-modal-close" onclick="this.parentElement.parentElement.parentElement.remove()" style="position: static; color: white; font-size: 2rem; cursor: pointer;">&times;</span>
-      </div>
-      <div style="background: #f9f9f9; padding: 2rem; border-radius: 0 0 8px 8px;">
-        <audio controls style="width: 100%;">
-          <source src="${audioSrc}">
-          Your browser does not support the audio tag.
-        </audio>
-      </div>
-    </div>
-  `;
-  
-  modal.onclick = (e) => {
-    if (e.target === modal) modal.remove();
-  };
-  
-  document.body.appendChild(modal);
-}
+// MIGRATED: PDF, Video, Audio viewers moved to attachmentViewer.js
 
 // ============= ATTACHMENT HANDLING WRAPPERS =============
 // These wrappers bridge app-specific state with the attachments library
@@ -2211,11 +2009,8 @@ async function loadTags() {
   return loadTagsLib();
 }
 
-function filterByTag(tagName) {
-  return filterByTagLib(tagName);
-}
-// Make global for onclick handlers
-window.filterByTag = filterByTag;
+// Make global for onclick handlers (direct library access)
+window.filterByTag = filterByTagLib;
 
 async function deleteTag(id, name) {
   return deleteTagLib(id, name);
@@ -2223,13 +2018,9 @@ async function deleteTag(id, name) {
 // Make global for onclick handlers
 window.deleteTag = deleteTag;
 
-function filterByAuthor(authorName) {
-  return filterByAuthorLib(authorName);
-}
-
-function filterBySource(sourceName) {
-  return filterBySourceLib(sourceName);
-}
+// MIGRATED: Filter functions now in searchManager.js (make library functions global for onclick handlers)
+window.filterByAuthor = filterByAuthorLib;
+window.filterBySource = filterBySourceLib;
 
 // ============= RENAME FUNCTIONALITY =============
 
