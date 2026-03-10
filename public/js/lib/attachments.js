@@ -3,7 +3,7 @@
  * File upload, preview, and display logic
  */
 
-import { resolveAttachmentUrl, getAttachmentIcon } from './utils.js';
+import { resolveAttachmentUrl } from './utils.js';
 
 /**
  * Check if value is a base64 image

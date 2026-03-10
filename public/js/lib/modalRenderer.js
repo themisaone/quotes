@@ -27,8 +27,7 @@
  * - Reusable helper functions
  */
 
-import { formatDateNorwegian } from './utils.js';
-import { getNoteTypeConfig, hasAuthorField, hasSourceField, hasDateField, hasTrainingTypeField } from './noteTypes.js';
+import { getNoteTypeConfig } from './noteTypes.js';
 
 /**
  * Format metadata display (created/updated timestamps)
