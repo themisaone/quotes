@@ -106,6 +106,15 @@ import {
   deleteQuote as deleteQuoteLib
 } from './js/lib/quoteEditor.js';
 
+import {
+  initializeBulkImport,
+  getBulkImportInputs
+} from './js/lib/bulkImport.js';
+
+import {
+  initializeTranslationGroups
+} from './js/lib/translationGroups.js';
+
 // Note: displayImage, clearImagePreview, displayAttachmentPreview NOT imported
 // They are kept as local functions due to tight coupling with app-specific state
 
@@ -286,18 +295,7 @@ const quotesList = document.getElementById("quotesList");
 const quoteCount = document.getElementById("quoteCount");
 const modalTitle = document.getElementById("modalTitle");
 
-// Bulk import elements
-const bulkModal = document.getElementById("bulkModal");
-const bulkForm = document.getElementById("bulkForm");
-const addBulkBtn = document.getElementById("addBulkBtn");
-const closeBulkModal = document.querySelector(".close-bulk");
-const cancelBulkBtn = document.getElementById("cancelBulkBtn");
-// Preview button removed - no longer needed
-const bulkAuthorInput = document.getElementById("bulkAuthor");
-const bulkSourceInput = document.getElementById("bulkSource");
-const bulkQuotesInput = document.getElementById("bulkQuotes");
-const bulkAuthorSuggestions = document.getElementById("bulkAuthorSuggestions");
-const bulkSourceSuggestions = document.getElementById("bulkSourceSuggestions");
+// MIGRATED: Bulk import elements moved to bulkImport.js
 // Preview elements removed - no longer needed
 
 // Form inputs
@@ -587,19 +585,24 @@ function setupEventListeners() {
     });
   }
 
-  // Bulk import listeners
-  addBulkBtn.addEventListener("click", openBulkModal);
-  
-  // Tablet-specific bulk button (same functionality)
-  const addBulkBtnTablet = document.getElementById("addBulkBtnTablet");
-  if (addBulkBtnTablet) {
-    addBulkBtnTablet.addEventListener("click", openBulkModal);
-  }
-  
-  closeBulkModal.addEventListener("click", closeBulkImportModal);
-  cancelBulkBtn.addEventListener("click", closeBulkImportModal);
-  // Preview button removed - direct import works great!
-  bulkForm.addEventListener("submit", handleBulkSubmit);
+  // MIGRATED: Bulk import initialization moved to bulkImport.js
+  initializeBulkImport({
+    onSuccess: (results) => {
+      loadQuotes();
+      loadTotalCount();
+    },
+    onError: (error) => {
+      console.error("Bulk import failed:", error);
+    }
+  });
+
+  // MIGRATED: Translation groups initialization moved to translationGroups.js
+  initializeTranslationGroups({
+    displayQuotes,
+    updateCount: (message) => {
+      quoteCount.textContent = message;
+    }
+  });
 
   // Sources view: Type filter checkboxes
   ["filterBook", "filterMovie"].forEach((id) => {
@@ -676,10 +679,7 @@ function setupEventListeners() {
     sourceSuggestions,
     searchTags,
     tagsSuggestions,
-    bulkAuthorInput,
-    bulkAuthorSuggestions,
-    bulkSourceInput,
-    bulkSourceSuggestions
+    ...getBulkImportInputs()
   });
 
   // MIGRATED: Filter dropdowns and buttons now in filterManager.js
@@ -1011,34 +1011,7 @@ async function deleteQuote(id) {
 }
 
 // ============================================
-// Translation Functions
-// ============================================
-
-// ============================================
-// Translation Group Functions
-// ============================================
-
-async function showTranslationGroup(groupName) {
-  // Filter quotes to show only those in this translation group
-  try {
-    const response = await fetch(`${API_URL}/quotes?translation_group=${encodeURIComponent(groupName)}&limit=100`);
-    const quotes = await response.json();
-    
-    // Display the quotes
-    displayQuotes(quotes);
-    
-    // Show info message
-    quoteCount.textContent = `(${quotes.length} in group "${groupName}")`;
-    
-    // Optionally scroll to top
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  } catch (error) {
-    console.error('Error loading translation group:', error);
-    alert('Failed to load translation group');
-  }
-}
-// Make global for onclick handlers
-window.showTranslationGroup = showTranslationGroup;
+// MIGRATED: Translation group functions moved to translationGroups.js
 
 // Display Functions
 function displayQuotes(quotes) {
@@ -1794,128 +1767,7 @@ function handleSourceFileSelect(e) {
 
 // ============= BULK IMPORT FUNCTIONS =============
 
-function openBulkModal() {
-  bulkForm.reset();
-  // Preview section removed - no longer needed
-  
-  // Clear autocomplete suggestions
-  if (bulkAuthorSuggestions) {
-    bulkAuthorSuggestions.innerHTML = "";
-    bulkAuthorSuggestions.style.display = "none";
-  }
-  if (bulkSourceSuggestions) {
-    bulkSourceSuggestions.innerHTML = "";
-    bulkSourceSuggestions.style.display = "none";
-  }
-  
-  bulkModal.style.display = "block";
-}
-
-function closeBulkImportModal() {
-  bulkModal.style.display = "none";
-}
-
-// Preview function removed - no longer needed as direct import works great!
-
-async function handleBulkSubmit(e) {
-  e.preventDefault();
-
-  const author = bulkAuthorInput.value.trim();
-  const source = bulkSourceInput.value.trim();
-  const sourceType = document.getElementById("bulkSourceType").value;
-  const quotesText = bulkQuotesInput.value.trim();
-
-  if (!author) {
-    alert("Please enter an author name.");
-    return;
-  }
-
-  if (!quotesText) {
-    alert("Please paste some quotes.");
-    return;
-  }
-
-  // Split quotes by separator
-  const quotes = quotesText
-    .split(/\n---\n/)
-    .map((q) => q.trim())
-    .filter((q) => q.length > 0);
-
-  if (quotes.length === 0) {
-    alert(
-      "No quotes found. Make sure to separate quotes with --- on its own line.",
-    );
-    return;
-  }
-
-  // Confirm before adding
-  if (
-    !confirm(
-      `Add ${quotes.length} quotes by ${author}${source ? " from " + source : ""}?`,
-    )
-  ) {
-    return;
-  }
-
-  // Disable form while processing
-  const submitBtn = bulkForm.querySelector('button[type="submit"]');
-  const originalText = submitBtn.textContent;
-  submitBtn.disabled = true;
-  submitBtn.textContent = "Adding quotes...";
-
-  try {
-    let successCount = 0;
-    let errorCount = 0;
-
-    // Add quotes one by one
-    for (let i = 0; i < quotes.length; i++) {
-      try {
-        const response = await fetch(`${API_URL}/quotes`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            quote: quotes[i],
-            author: author,
-            source: source,
-            sourceType: sourceType,
-            tags: "",
-          }),
-        });
-
-        if (response.ok) {
-          successCount++;
-        } else {
-          errorCount++;
-          console.error(`Failed to add quote ${i + 1}`);
-        }
-
-        // Update button text with progress
-        submitBtn.textContent = `Adding quotes... (${i + 1}/${quotes.length})`;
-      } catch (error) {
-        errorCount++;
-        console.error(`Error adding quote ${i + 1}:`, error);
-      }
-    }
-
-    // Show results
-    if (errorCount === 0) {
-      alert(`✅ Successfully added all ${successCount} quotes!`);
-    } else {
-      alert(`Added ${successCount} quotes. ${errorCount} failed.`);
-    }
-
-    // Close modal and reload quotes
-    closeBulkImportModal();
-    loadQuotes();
-    loadTotalCount(); // Update total count
-  } catch (error) {
-    console.error("Bulk import error:", error);
-    alert("Failed to add quotes. Please try again.");
-  } finally {
-    submitBtn.disabled = false;
-    submitBtn.textContent = originalText;
-  }
-}
+// MIGRATED: Bulk import functions moved to bulkImport.js
 
 // ============= QUOTE IMAGE HANDLING =============
 
