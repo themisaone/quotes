@@ -78,7 +78,8 @@ import {
   loadQuotes as loadQuotesLib,
   loadTotalCount as loadTotalCountLib,
   displayQuotes as displayQuotesLib,
-  getCurrentQuotesData
+  getCurrentQuotesData,
+  setCurrentPage as setLibCurrentPage
 } from './js/lib/displayManager.js';
 
 import {
@@ -284,7 +285,10 @@ initializeHashChangeListener(
     toggleMetadataSearchSection,
     loadQuotes,
     loadTotalCount,
-    setCurrentPage: (page) => { currentPage = page; }
+    setCurrentPage: (page) => { 
+      currentPage = page;
+      setLibCurrentPage(page);
+    }
   },
   () => ({
     currentNoteTypeFilter,
@@ -444,6 +448,7 @@ function setupEventListeners() {
       const noteType = button.dataset.noteType;
       currentNoteTypeFilter = noteType;
       currentPage = 1;
+      setLibCurrentPage(1);
       
       // FIRST: Switch to quotes view if not already there
       switchView('quotes');
@@ -502,6 +507,7 @@ function setupEventListeners() {
     refreshQuotesBtn.addEventListener("click", async () => {
       refreshQuotesBtn.classList.add('refreshing');
       currentPage = 1;
+      setLibCurrentPage(1);
       try {
         await loadQuotes();
         await loadTotalCount();
@@ -701,14 +707,20 @@ function setupEventListeners() {
   initializeFilterHandlers({
     loadQuotes,
     loadTotalCount,
-    setCurrentPage: (page) => { currentPage = page; }
+    setCurrentPage: (page) => { 
+      currentPage = page;
+      setLibCurrentPage(page);
+    }
   });
   
   // MIGRATED: Search inputs and training filters now in searchManager.js
   initializeSearchHandlers({
     loadQuotes,
     loadTotalCount,
-    setCurrentPage: (page) => { currentPage = page; },
+    setCurrentPage: (page) => { 
+      currentPage = page;
+      setLibCurrentPage(page);
+    },
     switchView
   });
   
@@ -931,7 +943,10 @@ function closeQuoteModal() {
 function clearFilters() {
   clearFiltersLib({
     loadQuotes,
-    setCurrentPage: (page) => { currentPage = page; }
+    setCurrentPage: (page) => { 
+      currentPage = page;
+      setLibCurrentPage(page);
+    }
   });
 }
 
@@ -964,8 +979,21 @@ async function loadQuotes() {
   const quotes = await loadQuotesLib(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes, currentSettings);
   currentQuotesData = getCurrentQuotesData(); // Sync for PDF export
   
+  // Sync local state for pagination (loadQuotesLib calls loadTotalCount internally)
+  const filteredCountElement = document.getElementById("filteredQuotesCount");
+  if (filteredCountElement) {
+    filteredQuotes = parseInt(filteredCountElement.textContent) || 0;
+  }
+  const totalCountElement = document.getElementById("totalQuotesCount");
+  if (totalCountElement) {
+    totalQuotes = parseInt(totalCountElement.textContent) || 0;
+  }
+  
   // Display quotes using app wrapper (which adds click handlers)
   displayQuotes(quotes);
+  
+  // Update pagination controls after loading quotes
+  updatePaginationControls();
 }
 
 // Load total count
@@ -1331,53 +1359,34 @@ function clearSourceImage() {
 
 // ============= AUTHOR/SOURCE EDIT MODALS =============
 
-// Author Modal Elements
+// Author Modal Elements (only those needed for image handling and paste detection)
 const authorModal = document.getElementById("authorModal");
-const authorForm = document.getElementById("authorForm");
-const authorIdInput = document.getElementById("authorId");
-const authorNameInput = document.getElementById("authorName");
 const authorImageFile = document.getElementById("authorImageFile");
 const authorImagePreview = document.getElementById("authorImagePreview");
-const closeAuthorModal = document.querySelector(".close-author");
-const cancelAuthorBtn = document.getElementById("cancelAuthorBtn");
 const clearAuthorImageBtn = document.getElementById("clearAuthorImage");
 
-// Source Modal Elements
+// Source Modal Elements (only those needed for image handling, autocomplete, and paste detection)
 const sourceModal = document.getElementById("sourceModal");
-const sourceForm = document.getElementById("sourceForm");
-const sourceIdInput = document.getElementById("sourceId");
-const sourceNameInput = document.getElementById("sourceName");
-const sourceTypeEdit = document.getElementById("sourceTypeEdit");
+const sourceTypeEdit = document.getElementById("sourceTypeEdit"); // Used by autocomplete
 const sourceImageFile = document.getElementById("sourceImageFile");
 const sourceImagePreview = document.getElementById("sourceImagePreview");
-const closeSourceModal = document.querySelector(".close-source");
-const cancelSourceBtn = document.getElementById("cancelSourceBtn");
 const clearSourceImageBtn = document.getElementById("clearSourceImage");
 
 // State for images
 let currentAuthorImage = null;
 let currentSourceImage = null;
 
+// NOTE: Form elements (authorForm, authorIdInput, sourceForm, etc.) are now handled by entityModal.js
+
 // Setup modal event listeners
-closeAuthorModal.addEventListener("click", closeAuthorEditModal);
-cancelAuthorBtn.addEventListener("click", closeAuthorEditModal);
-authorForm.addEventListener("submit", handleAuthorSubmit);
+// NOTE: Form submit, close, and delete handlers are now set up by setupAuthorModalHandlers() and setupSourceModalHandlers()
+// via entityModal.js - no need for duplicate handlers here
+
+// Image-related handlers (not yet in entityModal.js)
 authorImageFile.addEventListener("change", handleAuthorFileSelect);
 clearAuthorImageBtn.addEventListener("click", clearAuthorImage);
-
-closeSourceModal.addEventListener("click", closeSourceEditModal);
-cancelSourceBtn.addEventListener("click", closeSourceEditModal);
-sourceForm.addEventListener("submit", handleSourceSubmit);
 sourceImageFile.addEventListener("change", handleSourceFileSelect);
 clearSourceImageBtn.addEventListener("click", clearSourceImage);
-
-// Delete button event listeners
-document
-  .getElementById("deleteAuthorBtn")
-  .addEventListener("click", handleDeleteAuthor);
-document
-  .getElementById("deleteSourceBtn")
-  .addEventListener("click", handleDeleteSource);
 
 // Click on preview to open file dialog
 authorImagePreview.addEventListener("click", () => authorImageFile.click());
@@ -1396,169 +1405,17 @@ document.addEventListener("paste", (e) => {
 // This prevents accidental data loss from clicking outside the modals
 // (Rename modal still allows click-outside-to-close as it's a quick action)
 
-// Open Author Modal
-async function openAuthorModal(authorId, authorName, quoteCount = null) {
-  return openAuthorModalLib(authorId, authorName, quoteCount);
-}
-// Make global for onclick handlers
-window.openAuthorModal = openAuthorModal;
+// Make library modal functions global for onclick handlers in HTML
+window.openAuthorModal = openAuthorModalLib;
+window.openSourceModal = openSourceModalLib;
 
-// Open Source Modal
-async function openSourceModal(
-  sourceId,
-  sourceName,
-  sourceType,
-  quoteCount = null,
-) {
-  return openSourceModalLib(sourceId, sourceName, sourceType, quoteCount);
-}
-// Make global for onclick handlers
-window.openSourceModal = openSourceModal;
-
-// Close Author Modal
-function closeAuthorEditModal() {
-  authorModal.style.display = "none";
-  authorForm.reset();
-  currentAuthorImage = null;
-  clearImagePreview(authorImagePreview, "author");
-}
-
-// Close Source Modal
-function closeSourceEditModal() {
-  sourceModal.style.display = "none";
-  sourceForm.reset();
-  currentSourceImage = null;
-  clearImagePreview(sourceImagePreview, "source");
-}
-
-// Handle Author Form Submit
-async function handleAuthorSubmit(e) {
-  e.preventDefault();
-
-  const authorId = authorIdInput.value;
-  const authorData = {
-    name: authorNameInput.value,
-    description: document.getElementById('authorDescription').value || '',
-    image: currentAuthorImage || "",
-  };
-
-  try {
-    const response = await fetch(`${API_URL}/authors/${authorId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(authorData),
-    });
-
-    if (response.ok) {
-      closeAuthorEditModal();
-      loadQuotes(); // Reload to show updated author info
-    } else {
-      alert("Failed to update author");
-    }
-  } catch (error) {
-    console.error("Error updating author:", error);
-    alert("Failed to update author");
-  }
-}
-
-// Handle Source Form Submit
-async function handleSourceSubmit(e) {
-  e.preventDefault();
-
-  const sourceId = sourceIdInput.value;
-  const sourceData = {
-    name: sourceNameInput.value,
-    type: sourceTypeEdit.value,
-    image: currentSourceImage || "",
-  };
-
-  try {
-    const response = await fetch(`${API_URL}/sources/${sourceId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(sourceData),
-    });
-
-    if (response.ok) {
-      closeSourceEditModal();
-      loadQuotes(); // Reload to show updated source info
-    } else {
-      alert("Failed to update source");
-    }
-  } catch (error) {
-    console.error("Error updating source:", error);
-    alert("Failed to update source");
-  }
-}
-
-// Handle Delete Author
-async function handleDeleteAuthor(e) {
-  const authorId = e.target.dataset.authorId;
-  const authorName = e.target.dataset.authorName;
-
-  if (
-    !confirm(
-      `Are you sure you want to delete author "${authorName}"? This action cannot be undone.`,
-    )
-  ) {
-    return;
-  }
-
-  try {
-    const response = await fetch(`${API_URL}/authors/${authorId}`, {
-      method: "DELETE",
-    });
-
-    if (response.ok) {
-      closeAuthorEditModal();
-      loadAuthors(); // Reload authors list
-      alert("Author deleted successfully");
-    } else {
-      const error = await response.json();
-      alert(error.error || "Failed to delete author");
-    }
-  } catch (error) {
-    console.error("Error deleting author:", error);
-    alert("Failed to delete author");
-  }
-}
-
-// Handle Delete Source
-async function handleDeleteSource(e) {
-  const sourceId = e.target.dataset.sourceId;
-  const sourceName = e.target.dataset.sourceName;
-
-  console.log("Attempting to delete source:", sourceId, sourceName);
-
-  if (
-    !confirm(
-      `Are you sure you want to delete source "${sourceName}"? This action cannot be undone.`,
-    )
-  ) {
-    return;
-  }
-
-  try {
-    const response = await fetch(`${API_URL}/sources/${sourceId}`, {
-      method: "DELETE",
-    });
-
-    console.log("Delete response status:", response.status);
-
-    if (response.ok) {
-      closeSourceEditModal();
-      loadSources(); // Reload sources list
-      alert("Source deleted successfully");
-    } else {
-      const error = await response.json();
-      console.error("Delete error:", error);
-      alert(error.error || "Failed to delete source");
-    }
-  } catch (error) {
-    console.error("Error deleting source:", error);
-    alert("Failed to delete source: " + error.message);
-  }
-}
+// NOTE: The following functions have been moved to authorModal.js and sourceModal.js:
+// - openAuthorModal() - Now handled by openAuthorModalLib
+// - closeAuthorEditModal() - Now handled by entityModal.js
+// - handleAuthorSubmit() - Now handled by entityModal.js
+// - openSourceModal() - Now handled by openSourceModalLib
+// - closeSourceEditModal() - Now handled by entityModal.js
+// - handleSourceSubmit() - Now handled by entityModal.js
 
 // Handle File Select
 function handleAuthorFileSelect(e) {
@@ -1656,9 +1513,13 @@ function updatePaginationControls() {
 }
 
 function goToPage(page) {
-  const totalPages = Math.ceil(totalQuotes / quotesPerPage);
+  const totalPages = Math.ceil(filteredQuotes / quotesPerPage);
   if (page < 1 || page > totalPages) return;
+  
+  // Update both local and library currentPage
   currentPage = page;
+  setLibCurrentPage(page);
+  
   loadQuotes();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -2400,6 +2261,7 @@ async function handleImportFile(event) {
     importModal: document.getElementById("importModal"),
     onImportComplete: () => {
       currentPage = 1;
+      setLibCurrentPage(1);
       loadQuotes();
       loadTotalCount();
     },
@@ -2821,6 +2683,7 @@ function setupMetadataSearchListeners() {
     if (checkbox && !checkbox.hasAttribute('data-listener')) {
       checkbox.addEventListener('change', () => {
         currentPage = 1;
+        setLibCurrentPage(1);
         loadQuotes();
       });
       checkbox.setAttribute('data-listener', 'true');
@@ -2833,6 +2696,7 @@ function setupMetadataSearchListeners() {
     if (select && !select.hasAttribute('data-listener')) {
       select.addEventListener('change', () => {
         currentPage = 1;
+        setLibCurrentPage(1);
         loadQuotes();
       });
       select.setAttribute('data-listener', 'true');

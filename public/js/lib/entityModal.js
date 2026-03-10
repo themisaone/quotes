@@ -27,12 +27,17 @@ import { displayImage, clearImagePreview } from './attachments.js';
  * Get modal elements based on entity type
  */
 function getModalElements(config) {
+  const modal = document.getElementById(config.modalId);
+  
   return {
-    modal: document.getElementById(config.modalId),
+    modal: modal,
     idInput: document.getElementById(config.idInputId),
     nameInput: document.getElementById(config.nameInputId),
     imagePreview: document.getElementById(config.imagePreviewId),
     deleteBtn: document.getElementById(config.deleteBtnId),
+    // Close buttons - try both .close selector (X button) and dedicated IDs
+    closeBtn: modal?.querySelector('.close'),
+    cancelBtn: document.getElementById(`cancel${config.entityName}Btn`),
     // Additional fields (optional)
     ...config.getAdditionalFields?.()
   };
@@ -278,12 +283,17 @@ async function handleDeleteClick(button, modal, config, callbacks) {
 }
 
 /**
- * Setup close button handler
+ * Setup close button handlers (both X and Cancel)
  */
-function setupCloseHandler(modal, config) {
-  const closeBtn = document.querySelector(`#${config.modalId} .close-modal`);
-  if (closeBtn) {
-    closeBtn.addEventListener('click', () => hideModal(modal));
+function setupCloseHandler(modal, elements, config) {
+  // Close button (X)
+  if (elements.closeBtn) {
+    elements.closeBtn.addEventListener('click', () => hideModal(modal));
+  }
+  
+  // Cancel button
+  if (elements.cancelBtn) {
+    elements.cancelBtn.addEventListener('click', () => hideModal(modal));
   }
 }
 
@@ -374,18 +384,17 @@ export function createEntityModalManager(config) {
      * @param {Function} callbacks.onDeleted - Called after entity is deleted
      */
     setupHandlers(callbacks = {}) {
-      const modal = document.getElementById(config.modalId);
+      const elements = getModalElements(config);
       const form = document.getElementById(config.formId);
-      const deleteBtn = document.getElementById(config.deleteBtnId);
       
       // Additional setup if configured (e.g., populate dropdowns)
       if (config.onSetup) {
         config.onSetup(callbacks);
       }
       
-      setupCloseHandler(modal, config);
-      setupFormHandler(form, modal, config, callbacks);
-      setupDeleteHandler(deleteBtn, modal, config, callbacks);
+      setupCloseHandler(elements.modal, elements, config);
+      setupFormHandler(form, elements.modal, config, callbacks);
+      setupDeleteHandler(elements.deleteBtn, elements.modal, config, callbacks);
     }
   };
 }
