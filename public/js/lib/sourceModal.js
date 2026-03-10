@@ -56,8 +56,8 @@ const sourceModalConfig = {
     };
   },
   
-  // Setup type dropdown with quote types
-  onSetup(callbacks) {
+  // Populate type dropdown when modal opens (after settings are loaded)
+  onBeforeOpen(data, callbacks) {
     const typeSelect = document.getElementById('sourceTypeEdit');
     
     if (typeSelect && callbacks.getQuoteTypes) {

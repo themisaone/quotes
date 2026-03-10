@@ -2289,10 +2289,16 @@ function generatePdfHtml(groupedByAuthor, filters) {
       `;
 
       source.quotes.forEach((quote) => {
+        // Use thumbnail (image) instead of full size
+        const quoteImage = quote.image || quote.image_full;
+        
         authorsHtml += `
-          <div style="margin-bottom: 15px; padding: 12px; background: #f9fafb; border-left: 3px solid #3b82f6; border-radius: 3px;">
-            <p style="margin: 0 0 8px 0; font-style: italic; color: #1f2937; line-height: 1.5; white-space: pre-wrap; font-size: 11pt;">"${escapeHtml(quote.quote)}"</p>
-            ${quote.tags ? `<p style="margin: 4px 0 0 0; font-size: 9pt; color: #6b7280;">Tags: ${escapeHtml(quote.tags)}</p>` : ""}
+          <div style="margin-bottom: 15px; padding: 12px; background: #f9fafb; border-left: 3px solid #3b82f6; border-radius: 3px; display: flex; gap: 12px;">
+            ${quoteImage ? `<div style="flex-shrink: 0;"><img src="${quoteImage}" style="width: 120px; height: auto; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"></div>` : ''}
+            <div style="flex: 1;">
+              <div style="margin: 0 0 8px 0; font-style: italic; color: #1f2937; line-height: 1.5; font-size: 11pt;">${quote.quote}</div>
+              ${quote.tags ? `<p style="margin: 4px 0 0 0; font-size: 9pt; color: #6b7280;">Tags: ${escapeHtml(quote.tags)}</p>` : ""}
+            </div>
           </div>
         `;
       });

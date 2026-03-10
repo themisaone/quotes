@@ -4,8 +4,6 @@
  * Main quotes/notes display and list management
  * Handles loading, filtering, pagination, and rendering the main list view
  * 
- * EXTRACTED FROM app.js - Initial extraction, maintainability refactoring pending
- * 
  * Main functions:
  * - loadQuotes() - Load and display quotes with current filters
  * - displayQuotes() - Render quotes list
@@ -19,10 +17,131 @@
 import { API_URL, fetchWithRetry } from './api.js';
 import { createQuoteCard } from './cardRenderer.js';
 
-// Module state
+// ============= MODULE STATE =============
+
 let currentQuotesData = []; // Store for PDF export
 let currentPage = 1;
 const quotesPerPage = 20;
+
+// ============= CONFIGURATION =============
+
+/**
+ * Metadata search filter configuration
+ * Each filter has a checkbox and a condition dropdown
+ */
+const METADATA_FILTERS = [
+  { name: 'Author', checkboxId: 'searchHasAuthor', conditionId: 'searchAuthorCondition', paramName: 'hasAuthor' },
+  { name: 'Source', checkboxId: 'searchHasSource', conditionId: 'searchSourceCondition', paramName: 'hasSource' },
+  { name: 'Note', checkboxId: 'searchHasNote', conditionId: 'searchNoteCondition', paramName: 'hasNote' },
+  { name: 'Tags', checkboxId: 'searchHasTags', conditionId: 'searchTagsCondition', paramName: 'hasTags' },
+  { name: 'Image', checkboxId: 'searchHasImage', conditionId: 'searchImageCondition', paramName: 'hasImage' }
+];
+
+// ============= HELPER FUNCTIONS =============
+
+/**
+ * Get value from input element if it exists and is not empty
+ */
+function getInputValue(elementId) {
+  const element = document.getElementById(elementId);
+  return element?.value || null;
+}
+
+/**
+ * Get selected values from checkboxes
+ */
+function getSelectedCheckboxValues(selector) {
+  const selected = [];
+  const checkboxes = document.querySelectorAll(selector);
+  checkboxes.forEach(checkbox => {
+    if (checkbox.checked) {
+      selected.push(checkbox.dataset.type);
+    }
+  });
+  return selected;
+}
+
+/**
+ * Add basic search filters to params
+ */
+function addSearchFilters(params) {
+  const searchFields = [
+    { id: 'searchQuote', param: 'quote' },
+    { id: 'searchAuthor', param: 'author' },
+    { id: 'searchSource', param: 'source' },
+    { id: 'searchTags', param: 'tags' },
+    { id: 'searchScore', param: 'score' }
+  ];
+  
+  searchFields.forEach(field => {
+    const value = getInputValue(field.id);
+    if (value) params.append(field.param, value);
+  });
+}
+
+/**
+ * Add quote type filters to params (for Quote view or All Notes view)
+ */
+function addQuoteTypeFilters(params, currentNoteTypeFilter, getQuoteTypes) {
+  if (currentNoteTypeFilter !== null && currentNoteTypeFilter !== 'quote') {
+    return;
+  }
+  
+  const selectedTypes = getSelectedCheckboxValues('.type-filter-options input[type="checkbox"]');
+  const quoteTypes = getQuoteTypes();
+  const totalTypes = quoteTypes.length;
+  
+  // Only add filter if some (but not all) types are selected
+  if (selectedTypes.length > 0 && selectedTypes.length < totalTypes) {
+    params.append("types", selectedTypes.join(","));
+  }
+}
+
+/**
+ * Add training type filters to params (for Training view)
+ */
+function addTrainingTypeFilters(params, currentNoteTypeFilter) {
+  if (currentNoteTypeFilter !== 'training') {
+    return;
+  }
+  
+  const selectedTrainingTypes = getSelectedCheckboxValues('.training-type-filter-options input[type="checkbox"]');
+  
+  if (selectedTrainingTypes.length > 0) {
+    params.append("training_types", selectedTrainingTypes.join(","));
+  }
+  
+  // Year and month filters
+  const yearFilter = getInputValue('trainingYearFilter');
+  const monthFilter = getInputValue('trainingMonthFilter');
+  
+  if (yearFilter) params.append("year", yearFilter);
+  if (monthFilter && yearFilter) params.append("month", monthFilter);
+}
+
+/**
+ * Add metadata search filters to params (has/doesn't have author, source, etc.)
+ */
+function addMetadataFilters(params) {
+  METADATA_FILTERS.forEach(filter => {
+    const checkbox = document.getElementById(filter.checkboxId);
+    if (checkbox?.checked) {
+      const condition = document.getElementById(filter.conditionId)?.value;
+      params.append(filter.paramName, condition === "has" ? "true" : "false");
+    }
+  });
+}
+
+/**
+ * Add pagination parameters
+ */
+function addPaginationParams(params) {
+  const offset = (currentPage - 1) * quotesPerPage;
+  params.append("limit", quotesPerPage);
+  params.append("offset", offset);
+}
+
+// ============= MAIN FUNCTIONS =============
 
 /**
  * Build URL parameters for quotes API based on current filters
@@ -30,97 +149,24 @@ const quotesPerPage = 20;
 function buildQuotesParams(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes) {
   const params = new URLSearchParams();
   
-  // Search filters
-  const searchQuote = document.getElementById("searchQuote");
-  const searchAuthor = document.getElementById("searchAuthor");
-  const searchSource = document.getElementById("searchSource");
-  const searchTags = document.getElementById("searchTags");
-  const searchScore = document.getElementById("searchScore");
+  addSearchFilters(params);
   
-  if (searchQuote?.value) params.append("quote", searchQuote.value);
-  if (searchAuthor?.value) params.append("author", searchAuthor.value);
-  if (searchSource?.value) params.append("source", searchSource.value);
-  if (searchTags?.value) params.append("tags", searchTags.value);
-  if (searchScore?.value) params.append("score", searchScore.value);
-  
-  // Note type filter
   if (currentNoteTypeFilter) {
     params.append("note_type", currentNoteTypeFilter);
   }
-
-  // Quote source type filters (for Quote view or All Notes view)
-  if (currentNoteTypeFilter === null || currentNoteTypeFilter === 'quote') {
-    const selectedTypes = [];
-    const typeCheckboxes = document.querySelectorAll('.type-filter-options input[type="checkbox"]');
-    typeCheckboxes.forEach(checkbox => {
-      if (checkbox.checked) {
-        selectedTypes.push(checkbox.dataset.type);
-      }
-    });
-    
-    const quoteTypes = getQuoteTypes();
-    const totalTypes = quoteTypes.length;
-    if (selectedTypes.length > 0 && selectedTypes.length < totalTypes) {
-      params.append("types", selectedTypes.join(","));
-    }
-  }
   
-  // Training type filters (for training view)
-  if (currentNoteTypeFilter === 'training') {
-    const selectedTrainingTypes = [];
-    const trainingTypeCheckboxes = document.querySelectorAll('.training-type-filter-options input[type="checkbox"]');
-    trainingTypeCheckboxes.forEach(checkbox => {
-      if (checkbox.checked) {
-        selectedTrainingTypes.push(checkbox.dataset.type);
-      }
-    });
-    
-    if (selectedTrainingTypes.length > 0) {
-      params.append("training_types", selectedTrainingTypes.join(","));
-    }
-    
-    // Year and month filters
-    const yearFilter = document.getElementById('trainingYearFilter')?.value;
-    const monthFilter = document.getElementById('trainingMonthFilter')?.value;
-    
-    if (yearFilter) params.append("year", yearFilter);
-    if (monthFilter && yearFilter) params.append("month", monthFilter);
-  }
-  
-  // Metadata search filters
-  if (document.getElementById("searchHasAuthor")?.checked) {
-    const condition = document.getElementById("searchAuthorCondition")?.value;
-    params.append("hasAuthor", condition === "has" ? "true" : "false");
-  }
-  if (document.getElementById("searchHasSource")?.checked) {
-    const condition = document.getElementById("searchSourceCondition")?.value;
-    params.append("hasSource", condition === "has" ? "true" : "false");
-  }
-  if (document.getElementById("searchHasNote")?.checked) {
-    const condition = document.getElementById("searchNoteCondition")?.value;
-    params.append("hasNote", condition === "has" ? "true" : "false");
-  }
-  if (document.getElementById("searchHasTags")?.checked) {
-    const condition = document.getElementById("searchTagsCondition")?.value;
-    params.append("hasTags", condition === "has" ? "true" : "false");
-  }
-  if (document.getElementById("searchHasImage")?.checked) {
-    const condition = document.getElementById("searchImageCondition")?.value;
-    params.append("hasImage", condition === "has" ? "true" : "false");
-  }
-
-  // Pagination
-  const offset = (currentPage - 1) * quotesPerPage;
-  params.append("limit", quotesPerPage);
-  params.append("offset", offset);
+  addQuoteTypeFilters(params, currentNoteTypeFilter, getQuoteTypes);
+  addTrainingTypeFilters(params, currentNoteTypeFilter);
+  addMetadataFilters(params);
+  addPaginationParams(params);
   
   return params;
 }
-
 /**
- * Load and display quotes with current filters
+ * Load quotes from API and return them
+ * Note: Does NOT render quotes - caller should call displayQuotes with the result
  */
-export async function loadQuotes(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes) {
+export async function loadQuotes(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes, globalSettings) {
   const quotesList = document.getElementById("quotesList");
   
   try {
@@ -129,13 +175,15 @@ export async function loadQuotes(currentNoteTypeFilter, getQuoteTypes, getTraini
     const quotes = await response.json();
 
     currentQuotesData = quotes;
-    displayQuotes(quotes, currentNoteTypeFilter, getQuoteTypes, getTrainingTypes);
     await loadTotalCount(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes);
+    
+    return quotes; // Return quotes for caller to display
   } catch (error) {
     console.error("Error loading quotes:", error);
     if (quotesList) {
       quotesList.innerHTML = '<div class="no-quotes">Failed to load quotes. Please try again.</div>';
     }
+    return []; // Return empty array on error
   }
 }
 
@@ -143,9 +191,9 @@ export async function loadQuotes(currentNoteTypeFilter, getQuoteTypes, getTraini
  * Load and update total count with filters
  */
 export async function loadTotalCount(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes) {
-  const totalCountElement = document.getElementById("totalCount");
-  const typeCountElement = document.getElementById("typeCount");
-  const filteredCountElement = document.getElementById("filteredCount");
+  const totalCountElement = document.getElementById("totalQuotesCount");
+  const typeCountElement = document.getElementById("typeQuotesCount");
+  const filteredCountElement = document.getElementById("filteredQuotesCount");
   
   try {
     const params = buildQuotesParams(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes);
@@ -167,7 +215,7 @@ export async function loadTotalCount(currentNoteTypeFilter, getQuoteTypes, getTr
 /**
  * Display quotes in the list
  */
-export function displayQuotes(quotes, currentNoteTypeFilter, getQuoteTypes, getTrainingTypes) {
+export function displayQuotes(quotes, currentNoteTypeFilter, getQuoteTypes, getTrainingTypes, globalSettings) {
   const quotesList = document.getElementById("quotesList");
   const quoteCount = document.getElementById("quoteCount");
   
@@ -186,7 +234,7 @@ export function displayQuotes(quotes, currentNoteTypeFilter, getQuoteTypes, getT
   }
 
   quotesList.innerHTML = quotes
-    .map(quote => createQuoteCard(quote, currentNoteTypeFilter, getTrainingTypes, getQuoteTypes))
+    .map(quote => createQuoteCard(quote, currentNoteTypeFilter, getTrainingTypes, getQuoteTypes, globalSettings))
     .join("");
 }
 

@@ -238,8 +238,6 @@ function buildAttachmentSection(quote, imageUrl, imageFullUrl) {
  * @returns {string} HTML string for the card
  */
 export function createQuoteCard(quote, currentNoteTypeFilter, getTrainingTypes, getQuoteTypes, globalSettings) {
-  console.log('🎴 CardRenderer - Creating card for:', quote.note_type, 'Filter:', currentNoteTypeFilter);
-  
   // Resolve attachment URLs
   const imageUrl = quote.image ? resolveAttachmentUrl(quote.image) : null;
   const imageFullUrl = quote.image_full ? resolveAttachmentUrl(quote.image_full) : null;
