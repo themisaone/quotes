@@ -1,11 +1,8 @@
 // ============= IMPORTS =============
-import { 
-  parseUrlHash, 
-  updateUrlHash as updateUrlHashLib, 
+import {
+  parseUrlHash,
+  updateUrlHash as updateUrlHashLib,
   updateActiveMenuState as updateActiveMenuStateLib,
-  updatePageTitle as updatePageTitleLib,
-  updateSearchHeader,
-  updateFilterVisibility,
   initializeView
   // Note: updateAddButtonText imported from noteTypes.js instead
   // Note: switchView not imported - keeping local version for now
@@ -15,29 +12,16 @@ import {
 import {
   escapeHtml,
   resolveAttachmentUrl,
-  getAttachmentIcon,
-  formatDateNorwegian,
-  parseNorwegianDate,
-  formatDateWithDayName
+  getAttachmentIcon
 } from './js/lib/utils.js';
 
 import {
   NOTE_TYPES,
   getNoteTypeConfig,
-  hasAuthorField,
-  hasSourceField,
-  hasDateField,
-  hasTrainingTypeField,
-  getModalTitle,
-  getMainTextLabel,
-  getCommentLabel,
-  getAttachmentLabel,
-  getDeleteButtonText,
   updateModalFieldVisibility,
   updateModalLabels,
   updateAddButtonText as updateAddButtonTextLib,
-  updateSourcesFilterVisibility as updateSourcesFilterVisibilityLib,
-  getNoteTypeBadgeHtml
+  updateSourcesFilterVisibility as updateSourcesFilterVisibilityLib
 } from './js/lib/noteTypes.js';
 
 import {
@@ -50,13 +34,7 @@ import {
 
 import {
   setupAddModal,
-  setupEditModal,
-  setDefaultQuoteFields,
-  setDefaultTrainingFields,
-  clearTypeSpecificFields,
-  displayMetadata,
-  hideMetadata,
-  configureDeleteButton
+  setupEditModal
 } from './js/lib/modalRenderer.js';
 
 import {
@@ -67,32 +45,15 @@ import {
 
 import {
   loadSettings,
-  saveSettings,
-  updateSetting,
   getGlobalSettings,
   getQuoteTypes,
-  saveQuoteTypes,
   getTrainingTypes,
-  saveTrainingTypes,
   renderQuoteTypesList,
   renderTrainingTypesList,
   setupTypeManagementListeners,
-  applyColorToCSS,
-  lightenColor,
-  darkenColor,
-  applyButtonColor,
-  applyHeaderColor,
-  applyTagColor,
-  applyDeleteColor,
-  applyCancelColor,
-  applyActiveCounterColor,
-  applyTotalCounterColor,
-  applyMenuColor,
-  applyAppBgColor,
   toggleMetadataSearchSection,
   applyQuoteSizingMode,
-  toggleTagOperationsPanel,
-  initializeSettings as initializeSettingsLib
+  toggleTagOperationsPanel
 } from './js/lib/settingsManager.js';
 
 import {
@@ -116,10 +77,7 @@ import {
   loadQuotes as loadQuotesLib,
   loadTotalCount as loadTotalCountLib,
   displayQuotes as displayQuotesLib,
-  getCurrentQuotesData,
-  getCurrentPage as getLibCurrentPage,
-  setCurrentPage as setLibCurrentPage,
-  getQuotesPerPage
+  getCurrentQuotesData
 } from './js/lib/displayManager.js';
 
 // Note: displayImage, clearImagePreview, displayAttachmentPreview NOT imported
