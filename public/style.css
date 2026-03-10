@@ -93,6 +93,14 @@ body {
   color: white;
 }
 
+/* Menu separator line */
+.menu-separator {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.15);
+  margin: 0.5rem 0;
+  list-style: none;
+}
+
 /* Desktop: show full text with icons */
 .menu-icon {
   display: inline;

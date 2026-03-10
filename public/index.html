@@ -47,55 +47,63 @@
               <span class="menu-icon">💬</span><span class="menu-text"> All Notes</span>
             </button>
           </li>
-          <li style="padding-left: 1rem;">
+          <li class="menu-separator"></li>
+          <li>
             <button class="menu-item note-type-filter" data-note-type="quote">
               <span class="menu-icon">📖</span><span class="menu-text"> Quotes</span>
             </button>
           </li>
-          <li style="padding-left: 2rem;">
-            <button class="menu-item" data-view="authors"><span class="menu-icon">✍️</span><span class="menu-text"> Authors</span></button>
-          </li>
-          <li style="padding-left: 2rem;">
-            <button class="menu-item" data-view="sources"><span class="menu-icon">📚</span><span class="menu-text"> Sources</span></button>
-          </li>
-          <li style="padding-left: 1rem;">
+          <li>
             <button class="menu-item note-type-filter" data-note-type="note">
               <span class="menu-icon">📄</span><span class="menu-text"> Notes</span>
             </button>
           </li>
-          <li style="padding-left: 1rem;">
-            <button class="menu-item note-type-filter" data-note-type="training">
-              <span class="menu-icon">💪</span><span class="menu-text"> Training</span>
-            </button>
-          </li>
-          <li style="padding-left: 1rem;">
+          <li>
             <button class="menu-item note-type-filter" data-note-type="puzzle">
               <span class="menu-icon">🧩</span><span class="menu-text"> Puzzles</span>
             </button>
           </li>
           <li>
-            <button class="menu-item" data-view="tags"><span class="menu-icon">🏷️</span><span class="menu-text"> Tags</span></button>
+            <button class="menu-item note-type-filter" data-note-type="training">
+              <span class="menu-icon">💪</span><span class="menu-text"> Training</span>
+            </button>
+          </li>
+          <li class="menu-separator"></li>
+          <li>
+            <button class="menu-item" data-view="authors"><span class="menu-icon">✍️</span><span class="menu-text"> Authors</span></button>
           </li>
           <li>
-            <button id="randomQuoteBtn" class="menu-item"><span class="menu-icon">🎲</span><span class="menu-text-desktop"> Random Quote</span><span class="menu-text-mobile"> Random</span></button>
+            <button class="menu-item" data-view="sources"><span class="menu-icon">📚</span><span class="menu-text"> Sources</span></button>
+          </li>
+          <li>
+            <button class="menu-item" data-view="tags"><span class="menu-icon">🏷️</span><span class="menu-text"> Tags</span></button>
           </li>
         </ul>
 
         <div class="menu-divider desktop-only"></div>
 
-        <h3 class="menu-section-title desktop-only">Admin Operations</h3>
-        <ul class="menu-list menu-operations desktop-only">
+        <h3 class="menu-section-title desktop-only">Utilities</h3>
+        <ul class="menu-list desktop-only">
           <li>
-            <button id="exportJsonBtn" class="menu-item"><span class="menu-icon">💾</span><span class="menu-text"> Backup Data</span></button>
+            <button id="randomQuoteBtn" class="menu-item"><span class="menu-icon">🎲</span><span class="menu-text"> Random Quote</span></button>
           </li>
           <li>
-            <button id="importJsonBtn" class="menu-item">
-              <span class="menu-icon">📥</span><span class="menu-text"> Restore Data</span>
+            <button id="exportPdfBtn" class="menu-item" title="Export current filtered selection to PDF">
+              <span class="menu-icon">📄</span><span class="menu-text"> Export to PDF</span>
             </button>
           </li>
+        </ul>
+
+        <div class="menu-divider desktop-only"></div>
+
+        <h3 class="menu-section-title desktop-only">Data Management</h3>
+        <ul class="menu-list menu-operations desktop-only">
           <li>
-            <button id="exportPdfBtn" class="menu-item">
-              <span class="menu-icon">📄</span><span class="menu-text"> Export to PDF</span>
+            <button id="exportJsonBtn" class="menu-item" title="Export all notes of the current selected type (Quotes, Training, etc.)"><span class="menu-icon">💾</span><span class="menu-text"> Export Notes</span></button>
+          </li>
+          <li>
+            <button id="importJsonBtn" class="menu-item" title="Import notes from a JSON backup file">
+              <span class="menu-icon">📥</span><span class="menu-text"> Import Notes</span>
             </button>
           </li>
         </ul>

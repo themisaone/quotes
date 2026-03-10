@@ -445,13 +445,19 @@ function setupEventListeners() {
       currentNoteTypeFilter = noteType;
       currentPage = 1;
       
+      // FIRST: Switch to quotes view if not already there
+      switchView('quotes');
+      
       // Save view and update URL
       saveCurrentView();
       updateUrlHash();
       
-      // Update active state
+      // Update active state for note type filters ONLY
       document.querySelectorAll('.note-type-filter').forEach(btn => btn.classList.remove('active'));
       button.classList.add('active');
+      
+      // Remove active state from view navigation items (data-view)
+      document.querySelectorAll('.menu-item[data-view]').forEach(btn => btn.classList.remove('active'));
       
       // Update UI elements
       updateAddButtonText();
@@ -1688,9 +1694,14 @@ function setupMenuNavigation() {
       // MIGRATED: Core view switching logic now in pageCoordinator.js
       switchView(view);
 
-      // Update active state only for view navigation items
-      menuItems.forEach((mi) => mi.classList.remove("active"));
+      // Update active state only for view navigation items (not note-type filters)
+      document.querySelectorAll('.menu-item[data-view]').forEach((mi) => mi.classList.remove("active"));
       item.classList.add("active");
+      
+      // Remove active state from note type filters when switching to non-quotes views
+      if (view !== "quotes") {
+        document.querySelectorAll('.note-type-filter').forEach(btn => btn.classList.remove('active'));
+      }
     });
   });
 }
@@ -2760,12 +2771,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     globalSettings = getGlobalSettings(); // Sync local reference
   }
   
+  // Create wrapper functions for filter checkbox population
+  const populateTypeFilterCheckboxesWrapper = () => populateTypeFilterCheckboxesLib(getQuoteTypes);
+  const populateTrainingTypeFilterCheckboxesWrapper = () => populateTrainingTypeFilterCheckboxesLib(getTrainingTypes);
+  
   // Initialize settings UI (using settingsManager library)
   initializeSettingsLib({
     loadQuotes,
     populateTypeDropdowns,
-    populateTypeFilterCheckboxes,
-    populateTrainingTypeFilterCheckboxes
+    populateTypeFilterCheckboxes: populateTypeFilterCheckboxesWrapper,
+    populateTrainingTypeFilterCheckboxes: populateTrainingTypeFilterCheckboxesWrapper
   });
   
   // Initialize quote types management UI (handled by initializeSettingsLib now)

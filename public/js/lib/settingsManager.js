@@ -201,11 +201,34 @@ function applySettingsToUI() {
   // Apply compact mode
   if (globalSettings.compactMode) {
     document.body.classList.add('compact-mode');
-    const toggle = document.getElementById('compactModeToggle');
-    if (toggle) toggle.checked = true;
   }
   
-  // Apply colors
+  // Apply all checkbox settings
+  const checkboxMappings = [
+    { id: 'compactModeToggle', setting: 'compactMode' },
+    { id: 'enableTagOperations', setting: 'enableTagOperations' },
+    { id: 'enableQuoteMetaSearches', setting: 'enableQuoteMetaSearches' },
+    { id: 'displayQuotesByRealSize', setting: 'displayQuotesByRealSize' },
+    { id: 'displayImageQuotesLong', setting: 'displayImageQuotesLong' },
+    { id: 'showLongQuotesExpanded', setting: 'showLongQuotesExpanded' },
+    { id: 'displayScoreInCards', setting: 'displayScoreInCards' },
+    { id: 'downscaleQuoteImages', setting: 'downscaleQuoteImages' }
+  ];
+  
+  checkboxMappings.forEach(({ id, setting }) => {
+    const checkbox = document.getElementById(id);
+    if (checkbox && globalSettings.hasOwnProperty(setting)) {
+      checkbox.checked = globalSettings[setting];
+    }
+  });
+  
+  // Apply external storage threshold
+  const thresholdSelect = document.getElementById('externalStorageThreshold');
+  if (thresholdSelect && globalSettings.externalStorageThreshold) {
+    thresholdSelect.value = globalSettings.externalStorageThreshold;
+  }
+  
+  // Apply colors to CSS
   if (globalSettings.colors) {
     if (globalSettings.colors.button) applyButtonColor(globalSettings.colors.button);
     if (globalSettings.colors.header) applyHeaderColor(globalSettings.colors.header);
@@ -217,6 +240,26 @@ function applySettingsToUI() {
     if (globalSettings.colors.menu) applyMenuColor(globalSettings.colors.menu);
     if (globalSettings.colors.appBg) applyAppBgColor(globalSettings.colors.appBg);
   }
+  
+  // Apply colors to color picker inputs
+  const colorInputMappings = [
+    { id: 'buttonColor', colorKey: 'button' },
+    { id: 'headerColor', colorKey: 'header' },
+    { id: 'tagColor', colorKey: 'tag' },
+    { id: 'deleteColor', colorKey: 'delete' },
+    { id: 'cancelColor', colorKey: 'cancel' },
+    { id: 'activeCounterColor', colorKey: 'activeCounter' },
+    { id: 'totalCounterColor', colorKey: 'totalCounter' },
+    { id: 'menuColor', colorKey: 'menu' },
+    { id: 'appBgColor', colorKey: 'appBg' }
+  ];
+  
+  colorInputMappings.forEach(({ id, colorKey }) => {
+    const input = document.getElementById(id);
+    if (input && globalSettings.colors && globalSettings.colors[colorKey]) {
+      input.value = globalSettings.colors[colorKey];
+    }
+  });
 }
 
 /**
