@@ -86,6 +86,10 @@ import {
   registerGlobalSearchFunctions
 } from './js/lib/searchManager.js';
 
+import {
+  initializeAutocomplete
+} from './js/lib/autocompleteManager.js';
+
 // Note: displayImage, clearImagePreview, displayAttachmentPreview NOT imported
 // They are kept as local functions due to tight coupling with app-specific state
 
@@ -367,8 +371,6 @@ const clearBtn = document.getElementById("clearBtn");
 
 // State
 let editingQuoteId = null;
-let autocompleteTimeout = null;
-let currentFocus = -1;
 
 // Initialize
 document.addEventListener("DOMContentLoaded", async () => {
@@ -643,21 +645,6 @@ function setupEventListeners() {
   // Preview button removed - direct import works great!
   bulkForm.addEventListener("submit", handleBulkSubmit);
 
-  // Autocomplete for bulk import
-  bulkAuthorInput.addEventListener("input", (e) => {
-    debounceAutocomplete(e.target.value, "bulkAuthor");
-  });
-  bulkAuthorInput.addEventListener("keydown", (e) => {
-    handleAutocompleteKeys(e, bulkAuthorSuggestions, "bulkAuthor");
-  });
-
-  bulkSourceInput.addEventListener("input", (e) => {
-    debounceAutocomplete(e.target.value, "bulkSource");
-  });
-  bulkSourceInput.addEventListener("keydown", (e) => {
-    handleAutocompleteKeys(e, bulkSourceSuggestions, "bulkSource");
-  });
-
   // Sources view: Type filter checkboxes
   ["filterBook", "filterMovie"].forEach((id) => {
     const checkbox = document.getElementById(id);
@@ -724,41 +711,19 @@ function setupEventListeners() {
     });
   }
 
-  // Autocomplete for author
-  authorInput.addEventListener("input", (e) => {
-    debounceAutocomplete(e.target.value, "author");
-  });
-
-  authorInput.addEventListener("keydown", (e) => {
-    handleAutocompleteKeys(e, authorSuggestions, "author");
-  });
-
-  // Autocomplete for source
-  sourceInput.addEventListener("input", (e) => {
-    debounceAutocomplete(e.target.value, "source");
-  });
-
-  sourceInput.addEventListener("keydown", (e) => {
-    handleAutocompleteKeys(e, sourceSuggestions, "source");
-  });
-
-  // Autocomplete for tags search
-  searchTags.addEventListener("input", (e) => {
-    debounceAutocomplete(e.target.value, "tags");
-  });
-
-  searchTags.addEventListener("keydown", (e) => {
-    handleAutocompleteKeys(e, tagsSuggestions, "tags");
-  });
-
-  // Close suggestions when clicking outside
-  document.addEventListener("click", (e) => {
-    if (!e.target.closest(".autocomplete-wrapper")) {
-      authorSuggestions.classList.remove("show");
-      sourceSuggestions.classList.remove("show");
-      bulkAuthorSuggestions.classList.remove("show");
-      bulkSourceSuggestions.classList.remove("show");
-    }
+  // Initialize autocomplete for all inputs
+  initializeAutocomplete({
+    escapeHtml,
+    authorInput,
+    authorSuggestions,
+    sourceInput,
+    sourceSuggestions,
+    searchTags,
+    tagsSuggestions,
+    bulkAuthorInput,
+    bulkAuthorSuggestions,
+    bulkSourceInput,
+    bulkSourceSuggestions
   });
 
   // MIGRATED: Filter dropdowns and buttons now in filterManager.js
@@ -795,91 +760,6 @@ function setupEventListeners() {
 
   // Note: Modal can only be closed via Cancel button, X button, or Save button
   // This prevents accidental data loss from clicking outside the modal
-}
-
-// Autocomplete Functions
-async function fetchSuggestions(search, type, container, input) {
-  try {
-    const endpoint = type === "authors" ? "authors" : "sources";
-    const url = `${API_URL}/${endpoint}?search=${encodeURIComponent(search)}`;
-    const response = await fetch(url);
-    const items = await response.json();
-
-    // Hide if no results
-    if (!items || items.length === 0) {
-      container.classList.remove("show");
-      container.innerHTML = "";
-      return;
-    }
-
-    displaySuggestions(items, container, input, type);
-  } catch (error) {
-    console.error(`Error fetching ${type} suggestions:`, error);
-    container.classList.remove("show");
-    container.innerHTML = "";
-  }
-}
-
-function displaySuggestions(items, container, input, type) {
-  currentFocus = -1;
-
-  if (items.length === 0) {
-    container.classList.remove("show");
-    return;
-  }
-
-  // Limit to max 10 suggestions
-  const limitedItems = items.slice(0, 10);
-
-  container.innerHTML = limitedItems
-    .map(
-      (item) =>
-        `<div class="autocomplete-item" data-value="${escapeHtml(item.name)}">${escapeHtml(item.name)}</div>`,
-    )
-    .join("");
-
-  // Add click handlers
-  container.querySelectorAll(".autocomplete-item").forEach((item) => {
-    item.addEventListener("click", () => {
-      input.value = item.dataset.value;
-      container.classList.remove("show");
-    });
-  });
-
-  container.classList.add("show");
-}
-
-function handleAutocompleteKeys(e, container, type) {
-  const items = container.querySelectorAll(".autocomplete-item");
-
-  if (e.key === "ArrowDown") {
-    e.preventDefault();
-    currentFocus++;
-    if (currentFocus >= items.length) currentFocus = 0;
-    setActive(items);
-  } else if (e.key === "ArrowUp") {
-    e.preventDefault();
-    currentFocus--;
-    if (currentFocus < 0) currentFocus = items.length - 1;
-    setActive(items);
-  } else if (e.key === "Enter") {
-    if (currentFocus > -1 && items[currentFocus]) {
-      e.preventDefault();
-      items[currentFocus].click();
-    }
-  } else if (e.key === "Escape") {
-    container.classList.remove("show");
-  }
-}
-
-function setActive(items) {
-  items.forEach((item, index) => {
-    item.classList.remove("active");
-    if (index === currentFocus) {
-      item.classList.add("active");
-      item.scrollIntoView({ block: "nearest" });
-    }
-  });
 }
 
 // ============================================
@@ -2399,48 +2279,6 @@ async function handleBulkSubmit(e) {
   }
 }
 
-// Update autocomplete to handle bulk import fields
-const originalDebounceAutocomplete = debounceAutocomplete;
-
-function debounceAutocomplete(value, type) {
-  clearTimeout(autocompleteTimeout);
-  autocompleteTimeout = setTimeout(() => {
-    if (value.length < 1) {
-      // Hide suggestions if input is too short
-      if (type === "author") authorSuggestions.classList.remove("show");
-      else if (type === "source") sourceSuggestions.classList.remove("show");
-      else if (type === "bulkAuthor")
-        bulkAuthorSuggestions.classList.remove("show");
-      else if (type === "bulkSource")
-        bulkSourceSuggestions.classList.remove("show");
-      else if (type === "tags") tagsSuggestions.classList.remove("show");
-      return;
-    }
-
-    if (type === "author") {
-      fetchSuggestions(value, "authors", authorSuggestions, authorInput);
-    } else if (type === "source") {
-      fetchSuggestions(value, "sources", sourceSuggestions, sourceInput);
-    } else if (type === "bulkAuthor") {
-      fetchSuggestions(
-        value,
-        "authors",
-        bulkAuthorSuggestions,
-        bulkAuthorInput,
-      );
-    } else if (type === "bulkSource") {
-      fetchSuggestions(
-        value,
-        "sources",
-        bulkSourceSuggestions,
-        bulkSourceInput,
-      );
-    } else if (type === "tags") {
-      fetchTagSuggestions(value, tagsSuggestions, searchTags);
-    }
-  }, 300);
-}
-
 // ============= QUOTE IMAGE HANDLING =============
 
 // Handle quote image file selection
@@ -2468,76 +2306,7 @@ clearQuoteImageBtn.addEventListener("click", (e) => {
   updateImageIndicator();
 });
 
-// ============= TAG AUTOCOMPLETE =============
-
-async function fetchTagSuggestions(search, container, input) {
-  try {
-    // Extract the last tag being typed (after the last comma)
-    const lastCommaIndex = search.lastIndexOf(",");
-    const currentTag =
-      lastCommaIndex >= 0
-        ? search.substring(lastCommaIndex + 1).trim()
-        : search.trim();
-
-    if (currentTag.length < 2) {
-      container.classList.remove("show");
-      return;
-    }
-
-    const response = await fetch(`${API_URL}/tags`);
-    const tags = await response.json();
-
-    // Filter tags that match the current tag being typed
-    const filteredTags = tags.filter((tag) =>
-      tag.name.toLowerCase().includes(currentTag.toLowerCase()),
-    );
-
-    displayTagSuggestions(filteredTags, container, input, search, currentTag);
-  } catch (error) {
-    console.error("Error fetching tag suggestions:", error);
-  }
-}
-
-function displayTagSuggestions(tags, container, input, fullValue, currentTag) {
-  currentFocus = -1;
-
-  if (tags.length === 0) {
-    container.classList.remove("show");
-    return;
-  }
-
-  container.innerHTML = tags
-    .map(
-      (tag) =>
-        `<div class="autocomplete-item" data-value="${escapeHtml(tag.name)}">
-            ${escapeHtml(tag.name)} <span style="color: var(--text-secondary);">(${tag.quote_count})</span>
-        </div>`,
-    )
-    .join("");
-
-  container.classList.add("show");
-
-  // Add click handlers
-  container.querySelectorAll(".autocomplete-item").forEach((item) => {
-    item.addEventListener("click", () => {
-      // Replace only the last tag being typed
-      const lastCommaIndex = fullValue.lastIndexOf(",");
-      let newValue;
-      if (lastCommaIndex >= 0) {
-        // Keep everything before the last comma and append the selected tag
-        newValue =
-          fullValue.substring(0, lastCommaIndex + 1) + " " + item.dataset.value;
-      } else {
-        // No comma, just replace the entire value
-        newValue = item.dataset.value;
-      }
-
-      input.value = newValue;
-      container.classList.remove("show");
-      debounceSearch(); // Trigger search after selection
-    });
-  });
-}
+// MIGRATED: Autocomplete functions (including tag autocomplete) moved to autocompleteManager.js
 
 // ============= PAGINATION =============
 

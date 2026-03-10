@@ -61,7 +61,7 @@
   "downscaleQuoteImages": true,
   "externalStorageThreshold": 1,
   "compactMode": false,
-  "enableTagOperations": false,
+  "enableTagOperations": true,
   "enableQuoteMetaSearches": true,
   "displayQuotesByRealSize": true,
   "displayImageQuotesLong": false,
