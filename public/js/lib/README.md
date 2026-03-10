@@ -321,7 +321,7 @@ await handleImportFile(event, {
 
 ---
 
-### `settingsManager.js` ⭐⭐⭐⭐ NEW! **LARGEST MODULE**
+### `settingsManager.js` ⭐⭐⭐⭐ **LARGEST MODULE**
 Complete settings management system - **953 lines** of consolidated functionality!
 
 **Architecture (5 major sections, 35+ functions):**
@@ -396,6 +396,117 @@ const trainingTypes = getTrainingTypes();
 
 ---
 
+### `authorModal.js` ⭐ **NEW!**
+Author modal management - display and editing author information.
+
+**Main functions:**
+- `openAuthorModal(authorId, authorName, quoteCount)` - Display author in modal
+- `setupAuthorModalHandlers(callbacks)` - Set up event listeners
+
+**Callbacks:**
+- `onAuthorSaved()` - Called after author is updated
+- `onAuthorDeleted()` - Called after author is deleted
+
+**Usage:**
+```javascript
+import { openAuthorModal, setupAuthorModalHandlers } from './lib/authorModal.js';
+
+// Setup modal handlers on page load
+setupAuthorModalHandlers({
+  onAuthorSaved: () => loadAuthors(),
+  onAuthorDeleted: () => loadAuthors()
+});
+
+// Open modal (called from onclick handlers)
+openAuthorModal(123, 'Author Name', 5);
+```
+
+**Key features:**
+- ✅ Async loading of author data
+- ✅ Image display and editing
+- ✅ Conditional delete button (only if no quotes)
+- ✅ Clean callback pattern
+
+---
+
+### `sourceModal.js` ⭐ **NEW!**
+Source modal management - display and editing source information.
+
+**Main functions:**
+- `openSourceModal(sourceId, sourceName, sourceType, quoteCount)` - Display source in modal
+- `setupSourceModalHandlers(callbacks)` - Set up event listeners
+
+**Callbacks:**
+- `onSourceSaved()` - Called after source is updated
+- `onSourceDeleted()` - Called after source is deleted
+- `getQuoteTypes()` - Function to get quote types for dropdown
+
+**Usage:**
+```javascript
+import { openSourceModal, setupSourceModalHandlers } from './lib/sourceModal.js';
+
+// Setup modal handlers on page load
+setupSourceModalHandlers({
+  onSourceSaved: () => loadSources(),
+  onSourceDeleted: () => loadSources(),
+  getQuoteTypes: getQuoteTypes
+});
+
+// Open modal (called from onclick handlers)
+openSourceModal(456, 'Source Name', 'BOOK', 10);
+```
+
+**Key features:**
+- ✅ Async loading of source data
+- ✅ Image display and editing
+- ✅ Dynamic source type dropdown
+- ✅ Conditional delete button (only if no quotes)
+- ✅ Clean callback pattern
+
+---
+
+### `tagsManager.js` ⭐⭐ **NEW!**
+Tags page management - display, search, operations (rename, merge, delete).
+
+**Main functions:**
+- `loadTags()` - Load and display all tags
+- `filterByTag(tagName)` - Filter quotes by tag (switches to quotes view)
+- `deleteTag(id, name)` - Delete a tag
+- `setupTagOperations()` - Set up tag operations (rename, merge)
+
+**Tag Operations:**
+- **Rename Tag** - Rename a tag across all quotes (or merge with existing tag)
+- **Add Tag to Tagged Quotes** - Bulk add a tag to all quotes that have another tag
+
+**Usage:**
+```javascript
+import { loadTags, filterByTag, deleteTag, setupTagOperations } from './lib/tagsManager.js';
+
+// Load tags page
+await loadTags();
+
+// Setup tag operations on page load
+setupTagOperations();
+
+// Filter by tag (called from onclick handlers)
+filterByTag('important');
+
+// Delete tag (called from onclick handlers)
+await deleteTag(789, 'obsolete');
+```
+
+**Key features:**
+- ✅ Tag listing with quote counts
+- ✅ Tag autocomplete for operations
+- ✅ Rename with automatic merging
+- ✅ Bulk tag operations
+- ✅ Inline notifications
+- ✅ Clean separation from app.js
+
+**Note:** Tag operations require `window.switchView` and `window.loadQuotes` to be available (for filtering).
+
+---
+
 ## 💡 Benefits
 
 - ✅ **Reusable** - Use across multiple apps
@@ -453,21 +564,26 @@ public/
 │       ├── cardRenderer.js     ✅ Card generation (9 KB) ⭐
 │       ├── modalRenderer.js    ✅ Modal setup (12 KB) ⭐⭐
 │       ├── dataManager.js      ✅ Export/Import (14 KB) ⭐⭐⭐
-│       ├── settingsManager.js  ✅ Settings (27 KB) ⭐⭐⭐⭐ NEW!
+│       ├── settingsManager.js  ✅ Settings (27 KB) ⭐⭐⭐⭐
+│       ├── authorModal.js      ✅ Author modals (5 KB) ⭐ NEW!
+│       ├── sourceModal.js      ✅ Source modals (6 KB) ⭐ NEW!
+│       ├── tagsManager.js      ✅ Tags page (14 KB) ⭐⭐ NEW!
 │       └── README.md           ✅ Documentation
-├── app.js                      📝 Main app (5903 lines, was 6282)
+├── app.js                      📝 Main app (~5700 lines, was 5926)
 └── index.html
 ```
 
-**Total library size:** ~99 KB (9 well-organized, specialized modules)
-**Code reduction in app.js:** ~379 lines net (6% reduction, MUCH better organized)
-**Modules created:** 9 production-ready modules
+**Total library size:** ~124 KB (12 well-organized, specialized modules)
+**Code reduction in app.js:** ~226 lines net from previous step
+**Modules created:** 12 production-ready modules
+**Latest additions:** authorModal, sourceModal, tagsManager (March 2026)
 
 **Improvement metrics:**
 - Before modularization: 6282 lines in one monolithic file
-- After modularization: 5903 lines in app.js + 9 clean libraries
-- Average module size: ~11 KB (highly maintainable)
+- After modularization: ~5700 lines in app.js + 12 clean libraries
+- Average module size: ~10 KB (highly maintainable)
 - Average function length across libraries: ~20-30 lines (excellent)
+- Total extracted: ~582 lines moved to specialized modules
 
 ---
 

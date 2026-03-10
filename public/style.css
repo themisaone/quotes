@@ -797,6 +797,14 @@ h2 {
   animation: slideDown 0.3s;
 }
 
+/* Narrower modals for author and source */
+#authorModal .modal-content,
+#sourceModal .modal-content {
+  width: fit-content;
+  max-width: 90vw;
+  min-width: 500px;
+}
+
 /* Dark green modal header */
 .modal-header {
   background: #166534;

@@ -95,6 +95,23 @@ import {
   initializeSettings as initializeSettingsLib
 } from './js/lib/settingsManager.js';
 
+import {
+  openAuthorModal as openAuthorModalLib,
+  setupAuthorModalHandlers
+} from './js/lib/authorModal.js';
+
+import {
+  openSourceModal as openSourceModalLib,
+  setupSourceModalHandlers
+} from './js/lib/sourceModal.js';
+
+import {
+  loadTags as loadTagsLib,
+  filterByTag as filterByTagLib,
+  deleteTag as deleteTagLib,
+  setupTagOperations
+} from './js/lib/tagsManager.js';
+
 // Note: displayImage, clearImagePreview, displayAttachmentPreview NOT imported
 // They are kept as local functions due to tight coupling with app-specific state
 // Note: Export/Import functions kept local - too complex and app-specific for library
@@ -2663,41 +2680,7 @@ document.addEventListener("paste", (e) => {
 
 // Open Author Modal
 async function openAuthorModal(authorId, authorName, quoteCount = null) {
-  try {
-    const response = await fetch(`${API_URL}/authors/${authorId}`);
-    const author = await response.json();
-
-    authorIdInput.value = author.id;
-    authorNameInput.value = author.name;
-    document.getElementById('authorDescription').value = author.description || '';
-    currentAuthorImage = author.image;
-
-    if (author.image) {
-      displayImage(authorImagePreview, author.image);
-    } else {
-      clearImagePreview(authorImagePreview, "author");
-    }
-
-    // If quoteCount is not provided, fetch it from the API response
-    if (quoteCount === null && author.quote_count !== undefined) {
-      quoteCount = parseInt(author.quote_count) || 0;
-    }
-
-    // Show/hide delete button based on quote count
-    const deleteBtn = document.getElementById("deleteAuthorBtn");
-    if (quoteCount !== null && quoteCount === 0) {
-      deleteBtn.style.display = "inline-block";
-      deleteBtn.dataset.authorId = author.id;
-      deleteBtn.dataset.authorName = author.name;
-    } else {
-      deleteBtn.style.display = "none";
-    }
-
-    authorModal.style.display = "block";
-  } catch (error) {
-    console.error("Error loading author:", error);
-    alert("Failed to load author details");
-  }
+  return openAuthorModalLib(authorId, authorName, quoteCount);
 }
 // Make global for onclick handlers
 window.openAuthorModal = openAuthorModal;
@@ -2709,41 +2692,7 @@ async function openSourceModal(
   sourceType,
   quoteCount = null,
 ) {
-  try {
-    const response = await fetch(`${API_URL}/sources/${sourceId}`);
-    const source = await response.json();
-
-    sourceIdInput.value = source.id;
-    sourceNameInput.value = source.name;
-    sourceTypeEdit.value = source.type || "BOOK";
-    currentSourceImage = source.image;
-
-    if (source.image) {
-      displayImage(sourceImagePreview, source.image);
-    } else {
-      clearImagePreview(sourceImagePreview, "source");
-    }
-
-    // If quoteCount is not provided, fetch it from the API response
-    if (quoteCount === null && source.quote_count !== undefined) {
-      quoteCount = parseInt(source.quote_count) || 0;
-    }
-
-    // Show/hide delete button based on quote count
-    const deleteBtn = document.getElementById("deleteSourceBtn");
-    if (quoteCount !== null && quoteCount === 0) {
-      deleteBtn.style.display = "inline-block";
-      deleteBtn.dataset.sourceId = source.id;
-      deleteBtn.dataset.sourceName = source.name;
-    } else {
-      deleteBtn.style.display = "none";
-    }
-
-    sourceModal.style.display = "block";
-  } catch (error) {
-    console.error("Error loading source:", error);
-    alert("Failed to load source details");
-  }
+  return openSourceModalLib(sourceId, sourceName, sourceType, quoteCount);
 }
 // Make global for onclick handlers
 window.openSourceModal = openSourceModal;
@@ -3889,180 +3838,24 @@ function displaySources(sources) {
     .join("");
 }
 
+// ============= TAGS PAGE - MIGRATED TO tagsManager.js =============
 async function loadTags() {
-  try {
-    const response = await fetch(`${API_URL}/tags`);
-    const tags = await response.json();
-    allTags = tags; // Store globally for search/filter
-    
-    // Update counters
-    const totalCountElement = document.getElementById("totalTagsCount");
-    const filteredCountElement = document.getElementById("filteredTagsCount");
-    if (totalCountElement) {
-      totalCountElement.textContent = tags.length;
-    }
-    if (filteredCountElement) {
-      filteredCountElement.textContent = tags.length;
-    }
-    
-    displayTags(tags);
-  } catch (error) {
-    console.error("Error loading tags:", error);
-    document.getElementById("tagsList").innerHTML =
-      '<div class="no-items">Failed to load tags.</div>';
-  }
-}
-
-function displayTags(tags) {
-  const tagsList = document.getElementById("tagsList");
-
-  if (!tagsList) {
-    console.error("tagsList element not found!");
-    return;
-  }
-
-  if (tags.length === 0) {
-    tagsList.innerHTML = '<div class="no-items">No tags found.</div>';
-    return;
-  }
-
-  tagsList.innerHTML = tags
-    .map(
-      (tag) => `
-        <div class="tag-card" onclick="filterByTag('${escapeHtml(tag.name)}')">
-            <div class="tag-card-name">
-                <span class="tag-card-icon">🏷️</span>
-                <span>${escapeHtml(tag.name)}</span>
-            </div>
-            <div class="tag-card-actions">
-                <div class="tag-card-count">${tag.quote_count} quotes</div>
-                <button class="tag-delete-btn" onclick="event.stopPropagation(); deleteTag(${tag.id}, '${escapeHtml(tag.name)}')" title="Delete tag">🗑️</button>
-            </div>
-        </div>
-    `,
-    )
-    .join("");
-  
-  // Setup tag operation autocompletes
-  setupTagOperationsAutocomplete(tags);
-}
-
-// Store all tags for autocomplete
-let allTagsForOperations = [];
-
-function setupTagOperationsAutocomplete(tags) {
-  allTagsForOperations = tags;
-  
-  const renameTagInput = document.getElementById('renameTagInput');
-  const sourceTagInput = document.getElementById('sourceTagInput');
-  const targetTagInput = document.getElementById('targetTagInput');
-  
-  if (renameTagInput) {
-    setupTagAutocomplete(renameTagInput, 'renameTagSuggestions', false);
-  }
-  
-  if (sourceTagInput) {
-    setupTagAutocomplete(sourceTagInput, 'sourceTagSuggestions', false);
-  }
-  
-  if (targetTagInput) {
-    setupTagAutocomplete(targetTagInput, 'targetTagSuggestions', true); // Allow new tags
-  }
-}
-
-let tagAutocompleteTimeout;
-
-function setupTagAutocomplete(input, suggestionsId, allowNew) {
-  const suggestionsDiv = document.getElementById(suggestionsId);
-  if (!suggestionsDiv) return;
-  
-  input.addEventListener('input', () => {
-    clearTimeout(tagAutocompleteTimeout);
-    tagAutocompleteTimeout = setTimeout(() => {
-      const value = input.value.trim().toLowerCase();
-      
-      if (value.length === 0) {
-        suggestionsDiv.innerHTML = '';
-        suggestionsDiv.classList.remove('show');
-        return;
-      }
-      
-      const matches = allTagsForOperations.filter(tag => 
-        tag.name.toLowerCase().includes(value)
-      );
-      
-      if (matches.length === 0) {
-        if (allowNew) {
-          suggestionsDiv.innerHTML = `<div class="autocomplete-item create-new">
-            <span>✨ Create new tag: "${escapeHtml(input.value)}"</span>
-          </div>`;
-          suggestionsDiv.classList.add('show');
-        } else {
-          suggestionsDiv.innerHTML = '<div class="autocomplete-item no-match">No matching tags found</div>';
-          suggestionsDiv.classList.add('show');
-        }
-        return;
-      }
-      
-      suggestionsDiv.innerHTML = matches.map(tag => `
-        <div class="autocomplete-item" data-tag-id="${tag.id}" data-tag-name="${escapeHtml(tag.name)}">
-          ${escapeHtml(tag.name)} <span class="tag-count">(${tag.quote_count})</span>
-        </div>
-      `).join('');
-      
-      suggestionsDiv.classList.add('show');
-      
-      // Add click handlers
-      suggestionsDiv.querySelectorAll('.autocomplete-item').forEach(item => {
-        item.addEventListener('click', () => {
-          const tagName = item.getAttribute('data-tag-name') || input.value;
-          input.value = tagName;
-          input.setAttribute('data-tag-id', item.getAttribute('data-tag-id') || '');
-          input.setAttribute('data-tag-name', tagName);
-          suggestionsDiv.classList.remove('show');
-        });
-      });
-    }, 200);
-  });
-  
-  // Hide suggestions when clicking outside
-  document.addEventListener('click', (e) => {
-    if (!input.contains(e.target) && !suggestionsDiv.contains(e.target)) {
-      suggestionsDiv.classList.remove('show');
-    }
-  });
+  return loadTagsLib();
 }
 
 function filterByTag(tagName) {
-  console.log("Filtering by tag:", tagName);
-  
-  // Switch to quotes view and filter by tag
-  switchView("quotes");
-  
-  // Clear other filters
-  document.getElementById("searchQuote").value = "";
-  document.getElementById("searchAuthor").value = "";
-  document.getElementById("searchSource").value = "";
-  
-  // Set tag filter
-  document.getElementById("searchTags").value = tagName;
-  currentPage = 1;
-  
-  setTimeout(() => {
-    loadQuotes();
-  }, 50);
-
-  // Update active menu item
-  document.querySelectorAll(".menu-item[data-view]").forEach((item) => {
-    item.classList.remove("active");
-    if (item.dataset.view === "quotes") {
-      item.classList.add("active");
-    }
-  });
+  return filterByTagLib(tagName);
 }
 // Make global for onclick handlers
 window.filterByTag = filterByTag;
 
+async function deleteTag(id, name) {
+  return deleteTagLib(id, name);
+}
+// Make global for onclick handlers
+window.deleteTag = deleteTag;
+
+// filterByAuthor and filterBySource stay here (not part of tags module)
 function filterByAuthor(authorName) {
   console.log("Filtering by author:", authorName);
   
@@ -4138,33 +3931,7 @@ let renameContext = {
   oldName: null
 };
 
-async function deleteTag(id, name) {
-  const confirmDelete = confirm(
-    `Are you sure you want to delete the tag "${name}"?\n\nThis will remove the tag from all quotes that have it. The quotes themselves will not be deleted.`
-  );
-  
-  if (!confirmDelete) return;
-  
-  try {
-    const response = await fetch(`${API_URL}/tags/${id}`, {
-      method: "DELETE",
-    });
-    
-    const data = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(data.error || "Failed to delete tag");
-    }
-    
-    showNotification(data.message, "success");
-    loadTags(); // Refresh the tags list
-  } catch (error) {
-    console.error("Error deleting tag:", error);
-    showNotification(`Error: ${error.message}`, "error");
-  }
-}
-// Make global for onclick handlers
-window.deleteTag = deleteTag;
+// deleteTag moved above (see TAGS PAGE section)
 
 function editAuthor(id, name) {
   renameContext = { type: 'author', id, oldName: name };
@@ -5922,4 +5689,31 @@ function setupMetadataSearchListeners() {
 // Call when switching to quotes view or when metadata section is shown
 document.addEventListener('DOMContentLoaded', () => {
   setupMetadataSearchListeners();
+  
+  // Setup modal handlers for Author and Source
+  setupAuthorModalHandlers({
+    onAuthorSaved: () => {
+      loadAuthors();
+      loadQuotes(); // Refresh if on quotes view
+    },
+    onAuthorDeleted: () => {
+      loadAuthors();
+      loadQuotes(); // Refresh if on quotes view
+    }
+  });
+  
+  setupSourceModalHandlers({
+    onSourceSaved: () => {
+      loadSources();
+      loadQuotes(); // Refresh if on quotes view
+    },
+    onSourceDeleted: () => {
+      loadSources();
+      loadQuotes(); // Refresh if on quotes view
+    },
+    getQuoteTypes: getQuoteTypes
+  });
+  
+  // Note: setupTagOperations() is called automatically by displayTags()
+  // after autocomplete setup clones the input elements
 });
