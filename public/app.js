@@ -13,6 +13,18 @@ import {
 } from './js/lib/utils.js';
 
 import {
+  readAttachmentFile as readAttachmentFileLib,
+  readImageFile as readImageFileLib,
+  handlePasteEvent,
+  displayImage as displayImageLib,
+  clearImagePreview as clearImagePreviewLib,
+  displayAttachmentPreview as displayAttachmentPreviewLib,
+  downscaleAndMoveToDb as downscaleAndMoveToDbLib,
+  formatFileSize,
+  resizeImage as resizeImageLib
+} from './js/lib/attachments.js';
+
+import {
   getNoteTypeConfig,
   updateModalFieldVisibility,
   updateModalLabels,
@@ -1534,74 +1546,112 @@ function showAudioPlayer(audioSrc, filePath) {
   document.body.appendChild(modal);
 }
 
+// ============= ATTACHMENT HANDLING WRAPPERS =============
+// These wrappers bridge app-specific state with the attachments library
+
 async function downscaleAndMoveToDb(quoteId, imageUrl, filePath, modal) {
-  const btn = document.getElementById('downscaleImageBtn');
-  if (!btn) return;
-  
-  try {
-    // Update button state
-    btn.disabled = true;
-    btn.textContent = '⏳ Processing...';
-    
-    // Load the image
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    
-    await new Promise((resolve, reject) => {
-      img.onload = resolve;
-      img.onerror = reject;
-      img.src = imageUrl;
-    });
-    
-    // Resize to 1024px (longest side)
-    const resized1024 = resizeImage(img, 1024);
-    const thumbnail240 = resizeImage(img, 240);
-    
-    console.log(`📦 Downscaling external image: ${filePath}`);
-    console.log(`   Original: ${img.width}x${img.height}`);
-    console.log(`   New: max 1024px, size: ${(resized1024.length / 1024).toFixed(0)} KB`);
-    
-    // Send to server
-    const response = await fetch(`${API_URL}/quotes/${quoteId}/downscale-image`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        image: thumbnail240,
-        image_full: resized1024,
-        oldFilePath: filePath
-      })
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to downscale image');
-    }
-    
-    // Success!
-    btn.textContent = '✅ Moved to DB!';
-    btn.style.background = '#10b981';
-    
-    // Close modal after 1 second
-    setTimeout(() => {
-      modal.remove();
-      // Reload quotes to show updated image
-      if (typeof loadQuotes === 'function') {
-        loadQuotes();
-      }
-    }, 1000);
-    
-  } catch (error) {
-    console.error('Error downscaling image:', error);
-    btn.disabled = false;
-    btn.textContent = '❌ Error - Try Again';
-    btn.style.background = '#ef4444';
-  }
+  return downscaleAndMoveToDbLib(quoteId, imageUrl, filePath, modal, API_URL, loadQuotes);
 }
 
-// function escapeHtml(text) {
-//   const div = document.createElement("div");
-//   div.textContent = text;
-//   return div.innerHTML;
-// }
+function readAttachmentFile(file, type) {
+  const callbacks = {
+    onAttachmentLoaded: (result, icon, filename, size) => {
+      currentQuoteImageFull = result.full;
+      currentQuoteImage = result.thumbnail;
+      currentAttachmentType = result.type;
+      currentAttachmentFileName = result.filename;
+      displayAttachmentPreview(quoteImagePreview, icon, filename, size);
+      updateImageIndicator();
+    }
+  };
+  
+  return readAttachmentFileLib(file, type, globalSettings, callbacks);
+}
+
+function readImageFile(file, type) {
+  const callbacks = {
+    onImageLoaded: (result) => {
+      if (type === "quote") {
+        currentQuoteImageFull = result.full;
+        currentQuoteImage = result.thumbnail;
+        currentAttachmentType = result.type;
+        currentAttachmentFileName = result.filename;
+        displayImage(quoteImagePreview, result.thumbnail);
+        updateImageIndicator();
+      } else if (type === "author") {
+        currentAuthorImage = result.image;
+        displayImage(authorImagePreview, result.image);
+      } else if (type === "source") {
+        currentSourceImage = result.image;
+        displayImage(sourceImagePreview, result.image);
+      }
+    }
+  };
+  
+  return readImageFileLib(file, type, globalSettings, callbacks);
+}
+
+// Handle Paste - wrapper for library function
+function handlePaste(e, type) {
+  const callbacks = {
+    onImageLoaded: (result) => {
+      if (type === "quote") {
+        currentQuoteImageFull = result.full;
+        currentQuoteImage = result.thumbnail;
+        currentAttachmentType = result.type;
+        currentAttachmentFileName = result.filename;
+        displayImage(quoteImagePreview, result.thumbnail);
+        updateImageIndicator();
+      } else if (type === "author") {
+        currentAuthorImage = result.image;
+        displayImage(authorImagePreview, result.image);
+      } else if (type === "source") {
+        currentSourceImage = result.image;
+        displayImage(sourceImagePreview, result.image);
+      }
+    }
+  };
+  
+  handlePasteEvent(e, type, globalSettings, callbacks);
+}
+
+// Display Image - wrapper for library function
+function displayImage(container, base64Image) {
+  displayImageLib(container, base64Image, escapeHtml);
+}
+
+// Clear Image Preview - wrapper for library function with app-specific state management
+function clearImagePreview(container, type) {
+  // Clear the image data
+  if (type === "quote") {
+    currentQuoteImage = "";
+    currentQuoteImageFull = "";
+  }
+  
+  clearImagePreviewLib(container, type);
+}
+
+// Display Attachment Preview - wrapper for library function
+function displayAttachmentPreview(container, icon, filename, size) {
+  displayAttachmentPreviewLib(container, icon, filename, size, escapeHtml);
+}
+
+// Resize Image - wrapper for library function
+function resizeImage(img, maxDimension) {
+  return resizeImageLib(img, maxDimension);
+}
+
+// Clear Author Image
+function clearAuthorImage() {
+  currentAuthorImage = "";
+  clearImagePreview(authorImagePreview, "author");
+}
+
+// Clear Source Image
+function clearSourceImage() {
+  currentSourceImage = "";
+  clearImagePreview(sourceImagePreview, "source");
+}
 
 // ============= AUTHOR/SOURCE EDIT MODALS =============
 
@@ -1849,310 +1899,7 @@ function handleSourceFileSelect(e) {
   }
 }
 
-// Read Image File
-// Read attachment file (images, PDFs, documents, etc.)
-function readAttachmentFile(file, type) {
-  if (type !== "quote") {
-    // For author/source, only images allowed
-    readImageFile(file, type);
-    return;
-  }
-  
-  // Determine attachment type
-  const mimeType = file.type;
-  let attachmentType = "document"; // default
-  
-  if (mimeType.startsWith("image/")) {
-    attachmentType = "image";
-  } else if (mimeType === "application/pdf") {
-    attachmentType = "pdf";
-  } else if (mimeType.startsWith("video/")) {
-    attachmentType = "video";
-  } else if (mimeType.startsWith("audio/")) {
-    attachmentType = "audio";
-  }
-  
-  currentAttachmentType = attachmentType;
-  currentAttachmentFileName = file.name;
-  
-  console.log(`📎 Reading ${attachmentType} file: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
-  
-  // Handle images differently - downscale if needed
-  if (attachmentType === "image") {
-    readImageFile(file, type);
-    return;
-  }
-  
-  // For non-images (PDF, docs, videos), read as-is
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const base64Data = e.target.result;
-    
-    // Store full file
-    currentQuoteImageFull = base64Data;
-    
-    // Create icon/preview for thumbnail
-    const icon = getAttachmentIcon(attachmentType);
-    const sizeText = formatFileSize(base64Data.length);
-    
-    currentQuoteImage = createIconThumbnail(icon, file.name, sizeText);
-    
-    // Display preview
-    displayAttachmentPreview(quoteImagePreview, icon, file.name, sizeText);
-    updateImageIndicator();
-    
-    console.log(`✅ Loaded ${attachmentType}: ${file.name}, Size: ${sizeText}`);
-  };
-  
-  reader.readAsDataURL(file);
-}
-
-// Get icon for attachment type
-// function getAttachmentIcon(type) {
-//   const icons = {
-//     pdf: "📄",
-//     document: "📝",
-//     video: "🎬",
-//     audio: "🎵",
-//     image: "🖼️"
-//   };
-//   return icons[type] || "📎";
-// }
-
-// Format file size
-function formatFileSize(bytes) {
-  if (bytes < 1024) return bytes + " B";
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-  return (bytes / 1024 / 1024).toFixed(1) + " MB";
-}
-
-// Create icon thumbnail (base64 icon for cards)
-function createIconThumbnail(icon, filename, size) {
-  // Create a small canvas with icon
-  const canvas = document.createElement("canvas");
-  canvas.width = 240;
-  canvas.height = 240;
-  const ctx = canvas.getContext("2d");
-  
-  // Background
-  ctx.fillStyle = "#f0f0f0";
-  ctx.fillRect(0, 0, 240, 240);
-  
-  // Icon
-  ctx.font = "80px Arial";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(icon, 120, 100);
-  
-  // Filename (truncated)
-  ctx.font = "14px Arial";
-  ctx.fillStyle = "#333";
-  const truncated = filename.length > 20 ? filename.substring(0, 17) + "..." : filename;
-  ctx.fillText(truncated, 120, 160);
-  
-  // Size
-  ctx.font = "12px Arial";
-  ctx.fillStyle = "#666";
-  ctx.fillText(size, 120, 180);
-  
-  return canvas.toDataURL("image/png");
-}
-
-// Display attachment preview
-// function displayAttachmentPreview(container, icon, filename, size) {...}
-
-function readImageFile(file, type) {
-  if (!file.type.match("image.*")) {
-    alert("Please select an image file");
-    return;
-  }
-
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const img = new Image();
-    img.onload = () => {
-      // For quote images, check if downscaling is enabled
-      if (type === "quote") {
-        // Check setting from globalSettings (default: true/checked = downscale)
-        const shouldDownscale = globalSettings?.downscaleQuoteImages !== false;
-        
-        if (shouldDownscale) {
-          // DOWNSCALING ON: Resize to save space
-          // Store full-size limited to 1024px (saves DB space!)
-          const fullSize = resizeImage(img, 1024);
-          currentQuoteImageFull = fullSize;
-
-          // Create thumbnail for display (240px)
-          const thumbnail = resizeImage(img, 240);
-          currentQuoteImage = thumbnail;
-          
-          console.log(`✅ DOWNSCALING ON: Full=${(fullSize.length/1024).toFixed(0)}KB, Thumb=${(thumbnail.length/1024).toFixed(0)}KB`);
-        } else {
-          // DOWNSCALING OFF: Store raw images at full size
-          // Store original/raw image (may trigger external storage if > 2 MB)
-          currentQuoteImageFull = e.target.result;
-          
-          // Still create thumbnail for cards (240px) - keeps cards small!
-          const thumbnail = resizeImage(img, 240);
-          currentQuoteImage = thumbnail;
-          
-          console.log(`✅ DOWNSCALING OFF: Full=${(e.target.result.length/1024/1024).toFixed(2)}MB, Thumb=${(thumbnail.length/1024).toFixed(0)}KB`);
-        }
-        
-        displayImage(quoteImagePreview, currentQuoteImage);
-        updateImageIndicator();
-      } else {
-        // For author/source, always resize to 300px
-        const resizedBase64 = resizeImage(img, 300);
-
-        if (type === "author") {
-          currentAuthorImage = resizedBase64;
-          displayImage(authorImagePreview, resizedBase64);
-        } else if (type === "source") {
-          currentSourceImage = resizedBase64;
-          displayImage(sourceImagePreview, resizedBase64);
-        }
-      }
-    };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-
-// Resize image to fit within maxDimension (longest side)
-function resizeImage(img, maxDimension) {
-  const canvas = document.createElement("canvas");
-  let width = img.width;
-  let height = img.height;
-
-  // Calculate new dimensions
-  if (width > height) {
-    if (width > maxDimension) {
-      height = Math.round((height * maxDimension) / width);
-      width = maxDimension;
-    }
-  } else {
-    if (height > maxDimension) {
-      width = Math.round((width * maxDimension) / height);
-      height = maxDimension;
-    }
-  }
-
-  canvas.width = width;
-  canvas.height = height;
-
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(img, 0, 0, width, height);
-
-  // Convert to base64 with compression
-  return canvas.toDataURL("image/jpeg", 0.85);
-}
-
-// Handle Paste
-function handlePaste(e, type) {
-  const items = e.clipboardData.items;
-
-  for (let i = 0; i < items.length; i++) {
-    if (items[i].type.indexOf("image") !== -1) {
-      e.preventDefault();
-      const blob = items[i].getAsFile();
-      readImageFile(blob, type);
-      break;
-    }
-  }
-}
-
-// Display Image
-/**
- * Convert file storage reference to URL
- * Handles both base64 and file: references
- */
-// function resolveAttachmentUrl(attachment) {
-//   if (!attachment) return null;
-//   
-//   // If it's already a base64 data URL, return as-is
-//   if (attachment.startsWith('data:')) {
-//     return attachment;
-//   }
-//   
-//   // If it's a file reference (e.g., "file:quotes/360_full.png:image/png")
-//   if (attachment.startsWith('file:')) {
-//     const parts = attachment.split(':');
-//     if (parts.length >= 2) {
-//       const path = parts[1]; // e.g., "quotes/360_full.png"
-//       return `/attachments/${path}`;
-//     }
-//   }
-//   
-//   // Unknown format - return as-is
-//   return attachment;
-// }
-
-// Note: Using local implementations as they have app-specific state management
-// The library versions in attachments.js are too generic
-function displayImage(container, base64Image) {
-  const imageUrl = resolveAttachmentUrl(base64Image);
-  if (imageUrl) {
-    container.innerHTML = `<img src="${imageUrl}" alt="Preview">`;
-    container.classList.add("has-image");
-  }
-}
-
-// Clear Image Preview
-function clearImagePreview(container, type) {
-  const icon = type === "author" ? "📷" : type === "source" ? "📚" : "📎";
-  const placeholder = type === "quote" ? "Paste image (Ctrl+V) or click to upload file" : "Paste image (Ctrl+V) or click to upload";
-
-  // Clear the image data
-  if (type === "quote") {
-    currentQuoteImage = "";
-    currentQuoteImageFull = "";
-  }
-
-  // Check if it's the compact preview
-  const isCompact = container.classList.contains("image-preview-compact");
-
-  if (isCompact) {
-    container.innerHTML = `
-            <div class="image-placeholder-compact">
-                <span>${icon}</span>
-                <p>Paste (Ctrl+V) or click 📁</p>
-            </div>
-        `;
-  } else {
-    container.innerHTML = `
-            <div class="image-placeholder">
-                <span>${icon}</span>
-                <p>${placeholder}</p>
-            </div>
-        `;
-  }
-  container.classList.remove("has-image");
-}
-
-function displayAttachmentPreview(container, icon, filename, size) {
-  const truncated = filename.length > 30 ? filename.substring(0, 27) + "..." : filename;
-  container.innerHTML = `
-    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 1rem; background: #f9f9f9;">
-      <div style="font-size: 60px; margin-bottom: 0.5rem;">${icon}</div>
-      <div style="font-size: 14px; font-weight: 500; text-align: center; margin-bottom: 0.25rem;">${escapeHtml(truncated)}</div>
-      <div style="font-size: 12px; color: #666;">${size}</div>
-    </div>
-  `;
-  container.classList.add("has-image");
-}
-
-// Clear Author Image
-function clearAuthorImage() {
-  currentAuthorImage = "";
-  clearImagePreview(authorImagePreview, "author");
-}
-
-// Clear Source Image
-function clearSourceImage() {
-  currentSourceImage = "";
-  clearImagePreview(sourceImagePreview, "source");
-}
+// MIGRATED: Attachment functions moved to attachments.js and wrapped above
 
 // ============= BULK IMPORT FUNCTIONS =============
 

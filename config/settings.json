@@ -58,7 +58,7 @@
       "label": "Overview/DOC"
     }
   ],
-  "downscaleQuoteImages": true,
+  "downscaleQuoteImages": false,
   "externalStorageThreshold": 1,
   "compactMode": false,
   "enableTagOperations": true,
