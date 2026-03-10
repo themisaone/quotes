@@ -278,10 +278,10 @@ function populateTrainingTypeFilterCheckboxes() {
     `;
     container.appendChild(label);
     
-    // Re-attach event listener
+    // Re-attach event listener - just set flag, don't load immediately
     const checkbox = label.querySelector('input');
     checkbox.addEventListener('change', () => {
-      loadQuotes();
+      typeFilterChanged = true;
     });
   });
 }
