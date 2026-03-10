@@ -112,6 +112,17 @@ import {
   setupTagOperations
 } from './js/lib/tagsManager.js';
 
+// TODO: Integrate displayManager.js - module created but not yet integrated
+// import {
+//   loadQuotes as loadQuotesLib,
+//   loadTotalCount as loadTotalCountLib,
+//   displayQuotes as displayQuotesLib,
+//   getCurrentQuotesData,
+//   getCurrentPage,
+//   setCurrentPage,
+//   getQuotesPerPage
+// } from './js/lib/displayManager.js';
+
 // Note: displayImage, clearImagePreview, displayAttachmentPreview NOT imported
 // They are kept as local functions due to tight coupling with app-specific state
 // Note: Export/Import functions kept local - too complex and app-specific for library
