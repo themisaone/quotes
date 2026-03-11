@@ -242,11 +242,14 @@ export function createQuoteCard(quote, currentNoteTypeFilter, getTrainingTypes, 
   const imageUrl = quote.image ? resolveAttachmentUrl(quote.image) : null;
   const imageFullUrl = quote.image_full ? resolveAttachmentUrl(quote.image_full) : null;
   
-  // Build tags
+  // Build tags (make them clickable)
   const tags = quote.tags
     ? quote.tags
         .split(",")
-        .map((tag) => `<span class="tag">${tag.trim()}</span>`)
+        .map((tag) => {
+          const trimmedTag = tag.trim();
+          return `<span class="tag tag-clickable" onclick="event.stopPropagation(); window.filterByTag('${trimmedTag.replace(/'/g, "\\'")}')" title="Click to filter by this tag">${trimmedTag}</span>`;
+        })
         .join("")
     : "";
 

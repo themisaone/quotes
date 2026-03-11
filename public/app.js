@@ -1591,6 +1591,10 @@ function switchView(view) {
     }
   );
 }
+// Make global for filterByTag functionality
+window.switchView = switchView;
+window.loadQuotes = loadQuotes;
+window.setLibCurrentPage = setLibCurrentPage;
 
 async function loadAuthors() {
   try {

@@ -2000,6 +2000,20 @@ textarea {
   font-size: 0.75rem;
 }
 
+.tag-clickable {
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+}
+
+.tag-clickable:hover {
+  opacity: 0.85;
+  transform: scale(1.05);
+}
+
+.tag-clickable:active {
+  transform: scale(0.98);
+}
+
 .quote-actions {
   display: flex;
   gap: 0.5rem;

@@ -328,6 +328,10 @@ export function filterByTag(tagName) {
   if (window.currentPage !== undefined) {
     window.currentPage = 1;
   }
+  // Also sync with library if available
+  if (window.setLibCurrentPage) {
+    window.setLibCurrentPage(1);
+  }
   
   setTimeout(() => {
     window.loadQuotes();
