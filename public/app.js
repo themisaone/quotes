@@ -94,7 +94,8 @@ import {
   filterByAuthor as filterByAuthorLib,
   filterBySource as filterBySourceLib,
   initializeSearchHandlers,
-  registerGlobalSearchFunctions
+  registerGlobalSearchFunctions,
+  clearSearchFields
 } from './js/lib/searchManager.js';
 
 import {
@@ -115,6 +116,11 @@ import {
 import {
   initializeTranslationGroups
 } from './js/lib/translationGroups.js';
+
+import {
+  pushState,
+  initializeBackButton
+} from './js/lib/historyManager.js';
 
 import {
   showFullImage as showFullImageLib,
@@ -218,9 +224,16 @@ let currentPage = 1; // Sync via setLibCurrentPage() when changed
 let currentNoteTypeFilter = null; // null = show all types
 const quotesPerPage = 20;
 
+// Expose globally for historyManager
+window.currentNoteTypeFilter = currentNoteTypeFilter;
+window.currentPage = currentPage;
+window.currentPage = currentPage;
+window.currentNoteTypeFilter = currentNoteTypeFilter;
+
 // Ensure currentPage stays in sync with library
 function syncCurrentPage(newPage) {
   currentPage = newPage;
+  window.currentPage = newPage; // Sync with global
   setLibCurrentPage(newPage);
 }
 let totalQuotes = 0;
@@ -244,6 +257,7 @@ function restoreLastView() {
     const savedView = localStorage.getItem('lastNoteTypeFilter');
     if (savedView && savedView !== 'all') {
       currentNoteTypeFilter = savedView;
+      window.currentNoteTypeFilter = savedView; // Sync with global
       console.log('✅ Restored view:', currentNoteTypeFilter);
       return true;
     }
@@ -258,6 +272,7 @@ function restoreLastView() {
 function handleHashNavigation() {
   // MIGRATED: Now using parseUrlHash() from viewManager.js
   currentNoteTypeFilter = parseUrlHash();
+  window.currentNoteTypeFilter = currentNoteTypeFilter; // Sync with global
   console.log('✅ Set view from hash:', currentNoteTypeFilter || 'all');
 }
 
@@ -390,6 +405,23 @@ document.addEventListener("DOMContentLoaded", async () => {
   
   setupEventListeners();
   setupMenuNavigation();
+  
+  // Initialize back button for history navigation
+  initializeBackButton({
+    switchView,
+    loadQuotes,
+    loadAuthors,
+    loadSources,
+    loadTags,
+    setNoteTypeFilter: (noteType) => {
+      currentNoteTypeFilter = noteType;
+      window.currentNoteTypeFilter = noteType;
+    },
+    setCurrentPage: (page) => {
+      currentPage = page;
+      setLibCurrentPage(page);
+    }
+  });
 });
 
 // Event Listeners
@@ -428,10 +460,14 @@ function setupEventListeners() {
       e.stopPropagation();
       const noteType = item.dataset.type;
       currentNoteTypeFilter = noteType;
+      window.currentNoteTypeFilter = noteType; // Sync with global
       noteTypePopup.style.display = 'none';
       openAddModal();
       // Reset filter after opening modal so next click shows popup again
-      setTimeout(() => { currentNoteTypeFilter = null; }, 100);
+      setTimeout(() => { 
+        currentNoteTypeFilter = null;
+        window.currentNoteTypeFilter = null;
+      }, 100);
     });
   });
   
@@ -447,6 +483,7 @@ function setupEventListeners() {
     button.addEventListener('click', () => {
       const noteType = button.dataset.noteType;
       currentNoteTypeFilter = noteType;
+      window.currentNoteTypeFilter = noteType; // Sync with global
       currentPage = 1;
       setLibCurrentPage(1);
       
@@ -473,6 +510,9 @@ function setupEventListeners() {
       const metaSearchEnabled = globalSettings?.enableQuoteMetaSearches === true;
       const shouldShowMetadata = (noteType === 'quote' || noteType === null) && metaSearchEnabled;
       toggleMetadataSearchSection(shouldShowMetadata);
+      
+      // Clear all search filters when switching note types to avoid confusion
+      clearSearchFields();
       
       // Load filtered quotes
       loadQuotes();
@@ -994,6 +1034,9 @@ async function loadQuotes() {
   
   // Update pagination controls after loading quotes
   updatePaginationControls();
+  
+  // Push current state to history (AFTER successful load)
+  pushState();
 }
 
 // Load total count
@@ -1537,6 +1580,7 @@ function setupMenuNavigation() {
       // Reset note type filter when clicking "All Notes" (app-specific logic)
       if (view === "quotes") {
         currentNoteTypeFilter = null;
+        window.currentNoteTypeFilter = null; // Sync with global
         // Remove active state from all note type filters
         document.querySelectorAll('.note-type-filter').forEach(btn => btn.classList.remove('active'));
         // Update button text
