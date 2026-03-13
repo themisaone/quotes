@@ -100,8 +100,17 @@ import {
 } from './js/lib/searchManager.js';
 
 import {
-  initializeAutocomplete
+  initializeAutocomplete,
+  setupAutocompleteInput
 } from './js/lib/autocompleteManager.js';
+
+import {
+  FILTER_IDS,
+  CSS_CLASSES,
+  getElementValue,
+  getCheckboxState,
+  getCheckedValues
+} from './js/constants.js';
 
 import {
   initializeQuillEditor,
@@ -607,6 +616,51 @@ function setupEventListeners() {
   if (importFileInput) {
     importFileInput.addEventListener("change", handleImportFile);
   }
+
+  // Bulk operations modal
+  const bulkOperationsBtn = document.getElementById("bulkOperationsBtn");
+  const closeBulkOpsModal = document.getElementById("closeBulkOpsModal");
+  const cancelBulkOpsBtn = document.getElementById("cancelBulkOpsBtn");
+  const bulkTagExecuteBtn = document.getElementById("bulkTagExecuteBtn");
+  const bulkUntagExecuteBtn = document.getElementById("bulkUntagExecuteBtn");
+  const bulkExportPdfBtn = document.getElementById("bulkExportPdfBtn");
+  const bulkDeleteBtn = document.getElementById("bulkDeleteBtn");
+
+  if (bulkOperationsBtn) {
+    bulkOperationsBtn.addEventListener("click", openBulkOperationsModal);
+  }
+
+  if (closeBulkOpsModal) {
+    closeBulkOpsModal.addEventListener("click", closeBulkOperationsModal);
+  }
+
+  if (cancelBulkOpsBtn) {
+    cancelBulkOpsBtn.addEventListener("click", closeBulkOperationsModal);
+  }
+
+  if (bulkTagExecuteBtn) {
+    bulkTagExecuteBtn.addEventListener("click", handleBulkTag);
+  }
+
+  if (bulkUntagExecuteBtn) {
+    bulkUntagExecuteBtn.addEventListener("click", handleBulkUntag);
+  }
+
+  if (bulkExportPdfBtn) {
+    bulkExportPdfBtn.addEventListener("click", handleBulkExportPdf);
+  }
+
+  if (bulkDeleteBtn) {
+    bulkDeleteBtn.addEventListener("click", handleBulkDelete);
+  }
+
+  // Close bulk operations modal on outside click
+  window.addEventListener("click", (e) => {
+    const bulkOpsModal = document.getElementById("bulkOperationsModal");
+    if (e.target === bulkOpsModal) {
+      closeBulkOperationsModal();
+    }
+  });
 
   if (refreshAuthorsBtn) {
     refreshAuthorsBtn.addEventListener("click", async () => {
@@ -2314,6 +2368,258 @@ async function handleImportFile(event) {
       loadTotalCount();
     },
   });
+}
+
+// ============= BULK OPERATIONS =============
+
+function getCurrentFilters() {
+  return {
+    note_type: currentNoteTypeFilter,
+    author_id: getElementValue(FILTER_IDS.AUTHOR_FILTER),
+    source_id: getElementValue(FILTER_IDS.SOURCE_FILTER),
+    search: getElementValue(FILTER_IDS.SEARCH_QUOTE),
+    tag: getElementValue(FILTER_IDS.SEARCH_TAGS),
+    types: getCheckedValues(CSS_CLASSES.TYPE_CHECKBOX).join(','),
+    training_types: getCheckedValues(CSS_CLASSES.TRAINING_TYPE_CHECKBOX).join(','),
+    year: getElementValue(FILTER_IDS.YEAR_FILTER),
+    month: getElementValue(FILTER_IDS.MONTH_FILTER),
+    score: getElementValue(FILTER_IDS.SEARCH_SCORE),
+    hasAuthor: getCheckboxState(FILTER_IDS.HAS_AUTHOR_CHECKBOX) 
+      ? getElementValue(FILTER_IDS.HAS_AUTHOR_CONDITION) : '',
+    hasSource: getCheckboxState(FILTER_IDS.HAS_SOURCE_CHECKBOX) 
+      ? getElementValue(FILTER_IDS.HAS_SOURCE_CONDITION) : '',
+    hasNote: getCheckboxState(FILTER_IDS.HAS_NOTE_CHECKBOX) 
+      ? getElementValue(FILTER_IDS.HAS_NOTE_CONDITION) : '',
+    hasTags: getCheckboxState(FILTER_IDS.HAS_TAGS_CHECKBOX) 
+      ? getElementValue(FILTER_IDS.HAS_TAGS_CONDITION) : ''
+  };
+}
+
+function getFilterSummary() {
+  const filters = getCurrentFilters();
+  const parts = [];
+  
+  if (filters.note_type) parts.push(`Type: ${filters.note_type}`);
+  if (filters.author_id && filters.author_id !== 'all') {
+    const authorSelect = document.getElementById("authorFilter");
+    const authorName = authorSelect?.options[authorSelect.selectedIndex]?.text || 'Unknown';
+    parts.push(`Author: ${authorName}`);
+  }
+  if (filters.source_id && filters.source_id !== 'all') {
+    const sourceSelect = document.getElementById("sourceFilter");
+    const sourceName = sourceSelect?.options[sourceSelect.selectedIndex]?.text || 'Unknown';
+    parts.push(`Source: ${sourceName}`);
+  }
+  if (filters.search) parts.push(`Search: "${filters.search}"`);
+  if (filters.tag) parts.push(`Tags: ${filters.tag}`);
+  if (filters.year) parts.push(`Year: ${filters.year}`);
+  if (filters.month && filters.year) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    parts.push(`Month: ${months[parseInt(filters.month) - 1]}`);
+  }
+  if (filters.score) parts.push(`Score: ${filters.score}`);
+  
+  return parts.length > 0 ? parts.join(' | ') : 'No filters applied';
+}
+
+async function openBulkOperationsModal() {
+  const modal = document.getElementById("bulkOperationsModal");
+  const countElement = document.getElementById("bulkOpsCount");
+  const filtersElement = document.getElementById("bulkOpsFilters");
+  
+  // Show modal first
+  modal.style.display = "block";
+  
+  // Show loading state
+  countElement.textContent = "...";
+  filtersElement.textContent = "Loading...";
+  
+  try {
+    // Fetch actual filtered count from server
+    const filters = getCurrentFilters();
+    
+    const response = await fetch(`${API_URL}/quotes/bulk-count`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filters })
+    });
+    
+    const result = await response.json();
+    
+    // Update count with actual filtered count
+    countElement.textContent = result.count || 0;
+    filtersElement.textContent = getFilterSummary();
+    
+    // Setup autocomplete for tag input
+    const bulkTagInput = document.getElementById("bulkTagInput");
+    const bulkTagSuggestions = document.getElementById("bulkTagSuggestions");
+    if (bulkTagInput && bulkTagSuggestions) {
+      setupAutocompleteInput(bulkTagInput, bulkTagSuggestions, 'tags', currentNoteTypeFilter);
+    }
+    
+    // Setup autocomplete for untag input
+    const bulkUntagInput = document.getElementById("bulkUntagInput");
+    const bulkUntagSuggestions = document.getElementById("bulkUntagSuggestions");
+    if (bulkUntagInput && bulkUntagSuggestions) {
+      setupAutocompleteInput(bulkUntagInput, bulkUntagSuggestions, 'tags', currentNoteTypeFilter);
+    }
+    
+  } catch (error) {
+    console.error("Error fetching filtered count:", error);
+    countElement.textContent = "Error";
+    filtersElement.textContent = "Failed to load filter info";
+  }
+}
+
+function closeBulkOperationsModal() {
+  const modal = document.getElementById("bulkOperationsModal");
+  modal.style.display = "none";
+}
+
+async function handleBulkTag() {
+  const tagInput = document.getElementById("bulkTagInput");
+  const tagName = tagInput?.value?.trim();
+  
+  if (!tagName) {
+    alert("⚠️ Please enter a tag name");
+    tagInput?.focus();
+    return;
+  }
+  
+  const filters = getCurrentFilters();
+  const countElement = document.getElementById("bulkOpsCount");
+  const count = parseInt(countElement.textContent) || 0;
+  
+  if (count === 0) {
+    alert("⚠️ No quotes match the current filters");
+    return;
+  }
+  
+  if (!confirm(`Add tag "${tagName}" to ${count} filtered quotes?`)) {
+    return;
+  }
+  
+  try {
+    const response = await fetch(`${API_URL}/quotes/bulk-tag`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filters, tagName })
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok) {
+      alert(`✅ ${result.message}`);
+      tagInput.value = ''; // Clear input
+      closeBulkOperationsModal();
+      loadQuotes(); // Refresh to show new tags
+    } else {
+      alert(`❌ Error: ${result.error}`);
+    }
+  } catch (error) {
+    console.error("Bulk tag error:", error);
+    alert("❌ Failed to tag quotes. Check console for details.");
+  }
+}
+
+async function handleBulkUntag() {
+  const untagInput = document.getElementById("bulkUntagInput");
+  const tagName = untagInput?.value?.trim();
+  
+  if (!tagName) {
+    alert("⚠️ Please enter a tag name to remove");
+    untagInput?.focus();
+    return;
+  }
+  
+  const filters = getCurrentFilters();
+  const countElement = document.getElementById("bulkOpsCount");
+  const count = parseInt(countElement.textContent) || 0;
+  
+  if (count === 0) {
+    alert("⚠️ No quotes match the current filters");
+    return;
+  }
+  
+  if (!confirm(`Remove tag "${tagName}" from ${count} filtered quotes?`)) {
+    return;
+  }
+  
+  try {
+    const response = await fetch(`${API_URL}/quotes/bulk-untag`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filters, tagName })
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok) {
+      alert(`✅ ${result.message}`);
+      untagInput.value = ''; // Clear input
+      closeBulkOperationsModal();
+      loadQuotes(); // Refresh to show updated tags
+    } else {
+      alert(`❌ Error: ${result.error}`);
+    }
+  } catch (error) {
+    console.error("Bulk untag error:", error);
+    alert("❌ Failed to remove tag from quotes. Check console for details.");
+  }
+}
+
+async function handleBulkExportPdf() {
+  closeBulkOperationsModal();
+  // Reuse existing PDF export functionality
+  const exportBtn = document.getElementById("exportPdfBtn");
+  if (exportBtn) {
+    exportBtn.click();
+  }
+}
+
+async function handleBulkDelete() {
+  const filters = getCurrentFilters();
+  const countElement = document.getElementById("bulkOpsCount");
+  const count = parseInt(countElement.textContent) || 0;
+  
+  if (count === 0) {
+    alert("No quotes match the current filters.");
+    return;
+  }
+  
+  const confirmation = prompt(
+    `⚠️ WARNING: This will PERMANENTLY delete ${count} quotes!\n\n` +
+    `Type "DELETE ${count}" to confirm:`
+  );
+  
+  if (confirmation !== `DELETE ${count}`) {
+    alert("Deletion cancelled.");
+    return;
+  }
+  
+  try {
+    const response = await fetch(`${API_URL}/quotes/bulk-delete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filters })
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok) {
+      alert(`✅ ${result.message}`);
+      closeBulkOperationsModal();
+      currentPage = 1;
+      setLibCurrentPage(1);
+      loadQuotes();
+      loadTotalCount();
+    } else {
+      alert(`❌ Error: ${result.error}`);
+    }
+  } catch (error) {
+    console.error("Bulk delete error:", error);
+    alert("❌ Failed to delete quotes. Check console for details.");
+  }
 }
 
 // Welcome Quote Feature

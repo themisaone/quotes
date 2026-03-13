@@ -1598,6 +1598,341 @@ app.delete("/api/quotes/:id", async (req, res) => {
   }
 });
 
+// ============= BULK OPERATIONS API =============
+
+// Get count of filtered quotes (for bulk operations preview)
+app.post("/api/quotes/bulk-count", async (req, res) => {
+  try {
+    const { filters } = req.body;
+    
+    // Build filter query to get matching quote count
+    const { query, params } = buildFilterQuery(filters);
+    const fullQuery = `SELECT COUNT(*) as count ${query}`;
+    
+    const result = await pool.query(fullQuery, params);
+    const count = parseInt(result.rows[0].count);
+    
+    res.json({ count });
+  } catch (error) {
+    console.error("Error counting filtered quotes:", error);
+    res.status(500).json({ error: "Failed to count quotes" });
+  }
+});
+
+// Helper function to build quote filter query (reuses logic from GET /api/quotes)
+function buildFilterQuery(filters) {
+  let query = `FROM quotes q`;
+  const params = [];
+  let paramCounter = 1;
+  
+  // Note type filter
+  if (filters.note_type) {
+    query += ` WHERE q.note_type = $${paramCounter}`;
+    params.push(filters.note_type);
+    paramCounter++;
+  } else {
+    query += ` WHERE 1=1`;
+  }
+  
+  // Author filter
+  if (filters.author_id && filters.author_id !== 'all') {
+    query += ` AND q.author_id = $${paramCounter}`;
+    params.push(parseInt(filters.author_id));
+    paramCounter++;
+  }
+  
+  // Source filter
+  if (filters.source_id && filters.source_id !== 'all') {
+    query += ` AND q.source_id = $${paramCounter}`;
+    params.push(parseInt(filters.source_id));
+    paramCounter++;
+  }
+  
+  // Search query
+  if (filters.search) {
+    query += ` AND (q.quote ILIKE $${paramCounter} OR q.note ILIKE $${paramCounter})`;
+    params.push(`%${filters.search}%`);
+    paramCounter++;
+  }
+  
+  // Tag search (AND logic)
+  if (filters.tag) {
+    const searchTags = filters.tag.split(',').map(t => t.trim()).filter(t => t);
+    searchTags.forEach((tag) => {
+      query += ` AND EXISTS (
+        SELECT 1 FROM quote_tags qt 
+        JOIN tags t ON qt.tag_id = t.id 
+        WHERE qt.quote_id = q.id AND t.name ILIKE $${paramCounter}
+      )`;
+      params.push(`%${tag}%`);
+      paramCounter++;
+    });
+  }
+  
+  // Quote types filter
+  if (filters.types && filters.note_type !== 'training') {
+    const typeArray = filters.types.split(",").filter((t) => t);
+    const totalTypes = 6;
+    if (typeArray.length > 0 && typeArray.length < totalTypes) {
+      query += ` AND q.type = ANY($${paramCounter})`;
+      params.push(typeArray);
+      paramCounter++;
+    }
+  }
+  
+  // Training types filter
+  if (filters.training_types && filters.note_type === 'training') {
+    const trainingTypeArray = filters.training_types.split(",").filter((t) => t);
+    if (trainingTypeArray.length > 0) {
+      query += ` AND q.type = ANY($${paramCounter}`;
+      params.push(trainingTypeArray);
+      paramCounter++;
+    }
+  }
+  
+  // Year filter
+  if (filters.year) {
+    query += ` AND EXTRACT(YEAR FROM q.note_date) = $${paramCounter}`;
+    params.push(parseInt(filters.year));
+    paramCounter++;
+  }
+  
+  // Month filter
+  if (filters.month && filters.year) {
+    query += ` AND EXTRACT(MONTH FROM q.note_date) = $${paramCounter}`;
+    params.push(parseInt(filters.month));
+    paramCounter++;
+  }
+  
+  // Score filter
+  if (filters.score) {
+    if (filters.score.includes('-')) {
+      const [min, max] = filters.score.split('-').map(s => s.trim());
+      if (min && max && !isNaN(min) && !isNaN(max)) {
+        query += ` AND q.score >= $${paramCounter} AND q.score <= $${paramCounter + 1}`;
+        params.push(min, max);
+        paramCounter += 2;
+      }
+    } else if (filters.score.endsWith('+')) {
+      const min = filters.score.replace('+', '').trim();
+      if (min && !isNaN(min)) {
+        query += ` AND q.score >= $${paramCounter}`;
+        params.push(min);
+        paramCounter++;
+      }
+    } else {
+      query += ` AND q.score = $${paramCounter}`;
+      params.push(filters.score.trim());
+      paramCounter++;
+    }
+  }
+  
+  // Metadata filters
+  if (filters.hasAuthor === 'true') {
+    query += ` AND q.author_id IS NOT NULL`;
+  } else if (filters.hasAuthor === 'false') {
+    query += ` AND q.author_id IS NULL`;
+  }
+  
+  if (filters.hasSource === 'true') {
+    query += ` AND q.source_id IS NOT NULL`;
+  } else if (filters.hasSource === 'false') {
+    query += ` AND q.source_id IS NULL`;
+  }
+  
+  if (filters.hasNote === 'true') {
+    query += ` AND q.note IS NOT NULL AND q.note != ''`;
+  } else if (filters.hasNote === 'false') {
+    query += ` AND (q.note IS NULL OR q.note = '')`;
+  }
+  
+  if (filters.hasTags === 'true') {
+    query += ` AND EXISTS (SELECT 1 FROM quote_tags WHERE quote_id = q.id)`;
+  } else if (filters.hasTags === 'false') {
+    query += ` AND NOT EXISTS (SELECT 1 FROM quote_tags WHERE quote_id = q.id)`;
+  }
+  
+  return { query, params };
+}
+
+// Bulk tag operation
+app.post("/api/quotes/bulk-tag", async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    
+    const { filters, tagName } = req.body;
+    
+    if (!tagName || !tagName.trim()) {
+      return res.status(400).json({ error: "Tag name is required" });
+    }
+    
+    // Build filter query to get matching quote IDs
+    const { query, params } = buildFilterQuery(filters);
+    const fullQuery = `SELECT q.id ${query}`;
+    
+    const quotesResult = await client.query(fullQuery, params);
+    const quoteIds = quotesResult.rows.map(r => r.id);
+    
+    if (quoteIds.length === 0) {
+      await client.query("ROLLBACK");
+      return res.json({ count: 0, message: "No quotes match the current filters" });
+    }
+    
+    // Get or create the tag
+    const noteType = filters.note_type || 'quote';
+    const tagResult = await client.query(
+      `INSERT INTO tags (name, type) 
+       VALUES ($1, $2) 
+       ON CONFLICT (name, type) DO UPDATE SET name = tags.name
+       RETURNING id`,
+      [tagName.trim(), noteType]
+    );
+    const tagId = tagResult.rows[0].id;
+    
+    // Add tag to all filtered quotes
+    let taggedCount = 0;
+    for (const quoteId of quoteIds) {
+      const insertResult = await client.query(
+        `INSERT INTO quote_tags (quote_id, tag_id) 
+         VALUES ($1, $2) 
+         ON CONFLICT DO NOTHING
+         RETURNING *`,
+        [quoteId, tagId]
+      );
+      if (insertResult.rows.length > 0) {
+        taggedCount++;
+      }
+    }
+    
+    await client.query("COMMIT");
+    
+    res.json({
+      count: taggedCount,
+      total: quoteIds.length,
+      message: `Tagged ${taggedCount} quotes (${quoteIds.length - taggedCount} already had this tag)`
+    });
+    
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Error in bulk tag operation:", error);
+    res.status(500).json({ error: "Failed to tag quotes" });
+  } finally {
+    client.release();
+  }
+});
+
+// Bulk untag (remove tag) operation
+app.post("/api/quotes/bulk-untag", async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    
+    const { filters, tagName } = req.body;
+    
+    if (!tagName || !tagName.trim()) {
+      return res.status(400).json({ error: "Tag name is required" });
+    }
+    
+    // Build filter query to get matching quote IDs
+    const { query, params } = buildFilterQuery(filters);
+    const fullQuery = `SELECT q.id ${query}`;
+    
+    const quotesResult = await client.query(fullQuery, params);
+    const quoteIds = quotesResult.rows.map(r => r.id);
+    
+    if (quoteIds.length === 0) {
+      await client.query("ROLLBACK");
+      return res.json({ count: 0, message: "No quotes match the current filters" });
+    }
+    
+    // Find the tag
+    const noteType = filters.note_type || 'quote';
+    const tagResult = await client.query(
+      `SELECT id FROM tags WHERE name = $1 AND type = $2`,
+      [tagName.trim(), noteType]
+    );
+    
+    if (tagResult.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.json({ count: 0, message: `Tag "${tagName}" not found for type "${noteType}"` });
+    }
+    
+    const tagId = tagResult.rows[0].id;
+    
+    // Remove tag from all filtered quotes
+    const deleteResult = await client.query(
+      `DELETE FROM quote_tags 
+       WHERE tag_id = $1 AND quote_id = ANY($2)
+       RETURNING *`,
+      [tagId, quoteIds]
+    );
+    
+    await client.query("COMMIT");
+    
+    res.json({
+      count: deleteResult.rowCount,
+      total: quoteIds.length,
+      message: `Removed tag from ${deleteResult.rowCount} quotes (${quoteIds.length - deleteResult.rowCount} didn't have this tag)`
+    });
+    
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Error in bulk untag operation:", error);
+    res.status(500).json({ error: "Failed to remove tag from quotes" });
+  } finally {
+    client.release();
+  }
+});
+
+// Bulk delete operation
+app.post("/api/quotes/bulk-delete", async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    
+    const { filters } = req.body;
+    
+    // Build filter query to get matching quotes
+    const { query, params } = buildFilterQuery(filters);
+    const fullQuery = `SELECT q.id, q.image, q.image_full ${query}`;
+    
+    const quotesResult = await client.query(fullQuery, params);
+    
+    if (quotesResult.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.json({ count: 0, message: "No quotes match the current filters" });
+    }
+    
+    // Delete external files for each quote
+    for (const quote of quotesResult.rows) {
+      fileStorage.deleteAttachment(quote.image);
+      fileStorage.deleteAttachment(quote.image_full);
+    }
+    
+    // Delete all matching quotes
+    const quoteIds = quotesResult.rows.map(r => r.id);
+    const deleteResult = await client.query(
+      `DELETE FROM quotes WHERE id = ANY($1)`,
+      [quoteIds]
+    );
+    
+    await client.query("COMMIT");
+    
+    res.json({
+      count: deleteResult.rowCount,
+      message: `Deleted ${deleteResult.rowCount} quotes`
+    });
+    
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Error in bulk delete operation:", error);
+    res.status(500).json({ error: "Failed to delete quotes" });
+  } finally {
+    client.release();
+  }
+});
+
 // ============= TAGS API =============
 
 // Get all tags with quote counts

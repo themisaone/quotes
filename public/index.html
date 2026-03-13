@@ -87,17 +87,17 @@
           <li>
             <button id="randomQuoteBtn" class="menu-item"><span class="menu-icon">🎲</span><span class="menu-text"> Random Quote</span></button>
           </li>
-          <li>
-            <button id="exportPdfBtn" class="menu-item" title="Export current filtered selection to PDF">
-              <span class="menu-icon">📄</span><span class="menu-text"> Export to PDF</span>
-            </button>
-          </li>
         </ul>
 
         <div class="menu-divider desktop-only"></div>
 
         <h3 class="menu-section-title desktop-only">Data Management</h3>
         <ul class="menu-list menu-operations desktop-only">
+          <li>
+            <button id="bulkOperationsBtn" class="menu-item" title="Perform operations on currently filtered quotes">
+              <span class="menu-icon">⚡</span><span class="menu-text"> Bulk Operations</span>
+            </button>
+          </li>
           <li>
             <button id="exportJsonBtn" class="menu-item" title="Export all notes of the current selected type (Quotes, Training, etc.)"><span class="menu-icon">💾</span><span class="menu-text"> Export Notes</span></button>
           </li>
@@ -1498,6 +1498,103 @@ Quote number three..."
           <h3>Import Progress</h3>
           <div id="importStatus"></div>
         </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bulk Operations Modal -->
+    <div id="bulkOperationsModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div class="modal-header-left">
+            <span class="modal-header-icon">⚡</span>
+            <h2>Bulk Operations on Filtered Data</h2>
+          </div>
+          <span class="close" id="closeBulkOpsModal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div id="bulkOpsFilterSummary" style="background: #f3f4f6; padding: 12px; border-radius: 6px; margin-bottom: 20px;">
+            <p style="margin: 0; font-weight: 500;">
+              Currently filtered: <span id="bulkOpsCount" style="font-size: 1.2rem; color: #2563eb;">...</span> quotes
+            </p>
+            <p id="bulkOpsFilters" style="margin: 5px 0 0 0; font-size: 0.9rem; color: #6b7280;"></p>
+          </div>
+
+          <div style="display: grid; gap: 12px;">
+            <!-- Tag All Operation -->
+            <div id="bulkTagSection" style="border: 2px solid #e5e7eb; border-radius: 8px; padding: 16px;">
+              <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                <span style="font-size: 1.5rem; margin-right: 12px;">🏷️</span>
+                <div style="flex: 1;">
+                  <div style="font-weight: 600; font-size: 1rem;">Tag All With...</div>
+                  <div style="font-size: 0.85rem; opacity: 0.8; margin-top: 2px;">Add the same tag to all filtered quotes</div>
+                </div>
+              </div>
+              <div style="display: flex; gap: 8px; position: relative;">
+                <div style="flex: 1; position: relative;">
+                  <input 
+                    type="text" 
+                    id="bulkTagInput" 
+                    placeholder="Enter tag name..." 
+                    style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem;"
+                  />
+                  <div id="bulkTagSuggestions" class="autocomplete-suggestions" style="position: absolute; top: 100%; left: 0; right: 0; z-index: 1000;"></div>
+                </div>
+                <button id="bulkTagExecuteBtn" class="btn btn-primary" style="white-space: nowrap; padding: 10px 16px; min-width: 180px; font-size: 0.95rem;">
+                  Apply Tag To All
+                </button>
+              </div>
+            </div>
+
+            <!-- Remove Tag Operation -->
+            <div id="bulkUntagSection" style="border: 2px solid #e5e7eb; border-radius: 8px; padding: 16px;">
+              <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                <span style="font-size: 1.5rem; margin-right: 12px;">🏷️</span>
+                <div style="flex: 1;">
+                  <div style="font-weight: 600; font-size: 1rem;">Remove Tag From All...</div>
+                  <div style="font-size: 0.85rem; opacity: 0.8; margin-top: 2px;">Remove the same tag from all filtered quotes</div>
+                </div>
+              </div>
+              <div style="display: flex; gap: 8px; position: relative;">
+                <div style="flex: 1; position: relative;">
+                  <input 
+                    type="text" 
+                    id="bulkUntagInput" 
+                    placeholder="Enter tag name to remove..." 
+                    style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem;"
+                  />
+                  <div id="bulkUntagSuggestions" class="autocomplete-suggestions" style="position: absolute; top: 100%; left: 0; right: 0; z-index: 1000;"></div>
+                </div>
+                <button id="bulkUntagExecuteBtn" class="btn" style="white-space: nowrap; padding: 10px 16px; min-width: 180px; font-size: 0.95rem; background: #fef3c7; color: #92400e; border: 1px solid #fcd34d;">
+                  Remove Tag From All
+                </button>
+              </div>
+            </div>
+
+            <!-- Export to PDF -->
+            <button id="bulkExportPdfBtn" class="btn btn-primary" style="display: flex; align-items: center; padding: 12px; text-align: left;">
+              <span style="font-size: 1.5rem; margin-right: 12px;">📄</span>
+              <div style="flex: 1;">
+                <div style="font-weight: 600; font-size: 1rem;">Export to PDF</div>
+                <div style="font-size: 0.85rem; opacity: 0.8; margin-top: 2px;">Export all filtered quotes as PDF</div>
+              </div>
+            </button>
+
+            <!-- Delete All -->
+            <button id="bulkDeleteBtn" class="btn" style="display: flex; align-items: center; padding: 12px; text-align: left; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca;">
+              <span style="font-size: 1.5rem; margin-right: 12px;">🗑️</span>
+              <div style="flex: 1;">
+                <div style="font-weight: 600; font-size: 1rem;">Delete All</div>
+                <div style="font-size: 0.85rem; opacity: 0.8; margin-top: 2px;">Permanently delete all filtered quotes (with confirmation)</div>
+              </div>
+            </button>
+          </div>
+
+          <div style="margin-top: 20px;">
+            <button type="button" id="cancelBulkOpsBtn" class="btn btn-secondary" style="width: 100%;">
+              Cancel
+            </button>
+          </div>
         </div>
       </div>
     </div>

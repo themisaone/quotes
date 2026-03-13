@@ -395,8 +395,9 @@ export function debounceAutocomplete(value, type, container, input) {
  * @param {HTMLElement} input - Input element
  * @param {HTMLElement} container - Suggestions container element
  * @param {string} type - Autocomplete type
+ * @param {string} noteType - Note type for tag filtering
  */
-function setupAutocompleteInput(input, container, type) {
+export function setupAutocompleteInput(input, container, type, noteType) {
   if (!input || !container) {
     console.log(`⚠️ Autocomplete skipped for ${type}: input=${!!input}, container=${!!container}`);
     return;

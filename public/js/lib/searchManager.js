@@ -58,24 +58,31 @@ function createYearOption(year) {
  */
 async function populateTrainingYears() {
   try {
-    console.log("🗓️ Populating training years...");
-    const response = await fetch(`${window.API_URL}/quotes/training-years`);
-    const data = await response.json();
-    console.log("🗓️ Training years data:", data);
-    
     const yearSelect = document.getElementById('trainingYearFilter');
     if (!yearSelect) {
       console.log("⚠️ Year select element not found!");
       return;
     }
     
+    // Check if already populated (has more than just "All Years" option)
+    if (yearSelect.options.length > 1) {
+      console.log("✅ Training years already populated, skipping");
+      return;
+    }
+    
+    console.log("🗓️ Populating training years...");
+    const response = await fetch(`${window.API_URL}/quotes/training-years`);
+    const data = await response.json();
+    console.log("🗓️ Training years data:", data);
+    
     if (!data.years || data.years.length === 0) {
       console.log("⚠️ No years data received");
       return;
     }
     
-    // Keep the "All Years" option
-    yearSelect.innerHTML = '<option value="">📅 All Years</option>';
+    // Keep the "All Years" option and add years
+    // Don't reset innerHTML to avoid focus loss
+    const currentFirstOption = yearSelect.options[0];
     
     // Add years in descending order (newest first)
     data.years
@@ -114,8 +121,10 @@ function setupYearFilter() {
   if (!trainingYearFilter) return;
 
   // Lazy load years on focus
+  // Populate years on first focus (lazy loading)
   trainingYearFilter.addEventListener('focus', async () => {
-    if (trainingYearFilter.options.length === 1) {
+    // Only populate if not already populated (more than just "All Years")
+    if (trainingYearFilter.options.length <= 1) {
       await populateTrainingYears();
     }
   });
