@@ -85,13 +85,13 @@ function captureCurrentState() {
     timestamp: Date.now(),
     view: getCurrentView(),
     noteType: window.currentNoteTypeFilter || 'all',
-    searchText: getElementValueSafe(FILTER_IDS.SEARCH_QUOTE, 'captureCurrentState'),
-    tagsSearch: getElementValueSafe(FILTER_IDS.SEARCH_TAGS, 'captureCurrentState'),
-    authorSearch: getElementValueSafe(FILTER_IDS.SEARCH_AUTHOR, 'captureCurrentState'),
-    sourceSearch: getElementValueSafe(FILTER_IDS.SEARCH_SOURCE, 'captureCurrentState'),
-    searchScore: getElementValueSafe(FILTER_IDS.SEARCH_SCORE, 'captureCurrentState'),
-    yearFilter: getElementValueSafe(FILTER_IDS.YEAR_FILTER, 'captureCurrentState'),
-    monthFilter: getElementValueSafe(FILTER_IDS.MONTH_FILTER, 'captureCurrentState'),
+    searchText: getElementValueSafe(FILTER_IDS.SEARCH_QUOTE),
+    tagsSearch: getElementValueSafe(FILTER_IDS.SEARCH_TAGS),
+    authorSearch: getElementValueSafe(FILTER_IDS.SEARCH_AUTHOR),
+    sourceSearch: getElementValueSafe(FILTER_IDS.SEARCH_SOURCE),
+    searchScore: getElementValueSafe(FILTER_IDS.SEARCH_SCORE),
+    yearFilter: getElementValueSafe(FILTER_IDS.YEAR_FILTER),
+    monthFilter: getElementValueSafe(FILTER_IDS.MONTH_FILTER),
     quoteTypes: getCheckedQuoteTypes(),
     trainingTypes: getCheckedTrainingTypes(),
     page: window.currentPage || 1,
@@ -233,11 +233,11 @@ function restoreNoteType(state, callbacks) {
  * @param {Object} state - State to restore
  */
 function restoreSearchFields(state) {
-  setElementValueSafe(FILTER_IDS.SEARCH_QUOTE, state.searchText, 'restoreSearchFields');
-  setElementValueSafe(FILTER_IDS.SEARCH_TAGS, state.tagsSearch, 'restoreSearchFields');
-  setElementValueSafe(FILTER_IDS.SEARCH_AUTHOR, state.authorSearch, 'restoreSearchFields');
-  setElementValueSafe(FILTER_IDS.SEARCH_SOURCE, state.sourceSearch, 'restoreSearchFields');
-  setElementValueSafe(FILTER_IDS.SEARCH_SCORE, state.searchScore, 'restoreSearchFields');
+  setElementValueSafe(FILTER_IDS.SEARCH_QUOTE, state.searchText);
+  setElementValueSafe(FILTER_IDS.SEARCH_TAGS, state.tagsSearch);
+  setElementValueSafe(FILTER_IDS.SEARCH_AUTHOR, state.authorSearch);
+  setElementValueSafe(FILTER_IDS.SEARCH_SOURCE, state.sourceSearch);
+  setElementValueSafe(FILTER_IDS.SEARCH_SCORE, state.searchScore);
 }
 
 /**
@@ -245,8 +245,8 @@ function restoreSearchFields(state) {
  * @param {Object} state - State to restore
  */
 function restoreFilters(state) {
-  setElementValueSafe(FILTER_IDS.YEAR_FILTER, state.yearFilter, 'restoreFilters');
-  setElementValueSafe(FILTER_IDS.MONTH_FILTER, state.monthFilter, 'restoreFilters');
+  setElementValueSafe(FILTER_IDS.YEAR_FILTER, state.yearFilter);
+  setElementValueSafe(FILTER_IDS.MONTH_FILTER, state.monthFilter);
 }
 
 /**
