@@ -26,6 +26,13 @@
 
 import { API_URL } from './api.js';
 import { escapeHtml } from './utils.js';
+import { 
+  FILTER_IDS,
+  CONTAINER_IDS,
+  getElementByIdSafe,
+  getElementValue,
+  setElementValue
+} from '../constants.js';
 
 // ============= MODULE STATE =============
 let allTagsForOperations = [];
@@ -49,7 +56,7 @@ const NOTIFICATION_COLORS = {
  * Get tag list container element
  */
 function getTagsListElement() {
-  const tagsList = document.getElementById("tagsList");
+  const tagsList = getElementByIdSafe("tagsList");
   if (!tagsList) {
     console.error("tagsList element not found!");
   }
@@ -60,8 +67,8 @@ function getTagsListElement() {
  * Update tag counters
  */
 function updateTagCounters(count) {
-  const totalCountElement = document.getElementById("totalTagsCount");
-  const filteredCountElement = document.getElementById("filteredTagsCount");
+  const totalCountElement = getElementByIdSafe("totalTagsCount");
+  const filteredCountElement = getElementByIdSafe("filteredTagsCount");
   
   if (totalCountElement) {
     totalCountElement.textContent = count;
@@ -239,7 +246,7 @@ function setupClickOutsideHandler(input, suggestionsDiv) {
  * Set up autocomplete for a single tag input
  */
 function setupTagAutocomplete(input, suggestionsId, allowNew) {
-  const suggestionsDiv = document.getElementById(suggestionsId);
+  const suggestionsDiv = getElementByIdSafe(suggestionsId);
   if (!suggestionsDiv) return;
   
   // Remove previous listeners by cloning
@@ -266,7 +273,7 @@ function setupTagOperationsAutocomplete(tags) {
   ];
   
   inputs.forEach(({ id, suggestions, allowNew }) => {
-    const input = document.getElementById(id);
+    const input = getElementByIdSafe(id);
     if (input) {
       setupTagAutocomplete(input, suggestions, allowNew);
     }
@@ -281,7 +288,7 @@ function setupTagOperationsAutocomplete(tags) {
 function clearSearchFilters() {
   const filters = ['searchQuote', 'searchAuthor', 'searchSource'];
   filters.forEach(id => {
-    const element = document.getElementById(id);
+    const element = getElementByIdSafe(id);
     if (element) element.value = "";
   });
 }
@@ -290,7 +297,7 @@ function clearSearchFilters() {
  * Set tag filter value
  */
 function setTagFilter(tagName) {
-  const searchTags = document.getElementById("searchTags");
+  const searchTags = getElementByIdSafe("searchTags");
   if (searchTags) {
     searchTags.value = tagName;
   }
@@ -485,9 +492,9 @@ function resetRenameForm(renameTagInput, renameTagNewName) {
  */
 async function handleRenameTag() {
   // Get fresh references from DOM (not stale references)
-  const renameTagInput = document.getElementById('renameTagInput');
-  const renameTagNewName = document.getElementById('renameTagNewName');
-  const renameTagBtn = document.getElementById('renameTagBtn');
+  const renameTagInput = getElementByIdSafe('renameTagInput');
+  const renameTagNewName = getElementByIdSafe('renameTagNewName');
+  const renameTagBtn = getElementByIdSafe('renameTagBtn');
   
   if (!renameTagInput || !renameTagNewName || !renameTagBtn) {
     console.error('Rename tag elements not found');
@@ -531,9 +538,9 @@ async function handleRenameTag() {
  * Setup rename tag operation
  */
 function setupRenameTagOperation() {
-  const renameTagBtn = document.getElementById('renameTagBtn');
-  const renameTagInput = document.getElementById('renameTagInput');
-  const renameTagNewName = document.getElementById('renameTagNewName');
+  const renameTagBtn = getElementByIdSafe('renameTagBtn');
+  const renameTagInput = getElementByIdSafe('renameTagInput');
+  const renameTagNewName = getElementByIdSafe('renameTagNewName');
   
   if (!renameTagBtn || !renameTagInput || !renameTagNewName) return;
   
@@ -577,9 +584,9 @@ function generateMergeConfirmMessage(isNewTag, targetTagValue, sourceTagName) {
  */
 async function handleMergeTags() {
   // Get fresh references from DOM (not stale references)
-  const addTagToTaggedBtn = document.getElementById('addTagToTaggedBtn');
-  const sourceTagInput = document.getElementById('sourceTagInput');
-  const targetTagInput = document.getElementById('targetTagInput');
+  const addTagToTaggedBtn = getElementByIdSafe('addTagToTaggedBtn');
+  const sourceTagInput = getElementByIdSafe('sourceTagInput');
+  const targetTagInput = getElementByIdSafe('targetTagInput');
   
   if (!addTagToTaggedBtn || !sourceTagInput || !targetTagInput) {
     console.error('Merge tags elements not found');
@@ -627,9 +634,9 @@ async function handleMergeTags() {
  * Setup merge tags operation
  */
 function setupMergeTagsOperation() {
-  const addTagToTaggedBtn = document.getElementById('addTagToTaggedBtn');
-  const sourceTagInput = document.getElementById('sourceTagInput');
-  const targetTagInput = document.getElementById('targetTagInput');
+  const addTagToTaggedBtn = getElementByIdSafe('addTagToTaggedBtn');
+  const sourceTagInput = getElementByIdSafe('sourceTagInput');
+  const targetTagInput = getElementByIdSafe('targetTagInput');
   
   if (!addTagToTaggedBtn || !sourceTagInput || !targetTagInput) return;
   

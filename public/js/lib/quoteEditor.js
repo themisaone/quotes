@@ -16,6 +16,8 @@
  * - modalRenderer.js for modal setup
  */
 
+import { FILTER_IDS, getElementByIdSafe, getElementValue } from '../constants.js';
+
 // ============= CONSTANTS =============
 
 const QUILL_TOOLBAR_CONFIG = [
@@ -61,7 +63,7 @@ export function initializeQuillEditor(editorSelector = '#quoteEditor', hiddenInp
   // Update hidden field when content changes
   quillEditorInstance.on('text-change', function() {
     const html = quillEditorInstance.root.innerHTML;
-    const hiddenInput = document.getElementById(hiddenInputId);
+    const hiddenInput = getElementByIdSafe(hiddenInputId, 'initializeQuillEditor');
     if (hiddenInput) {
       hiddenInput.value = html;
     }
@@ -89,7 +91,7 @@ export function getQuillEditor() {
  * Setup fullscreen editor toggle functionality
  */
 function setupFullscreenEditor() {
-  const toggleBtn = document.getElementById('toggleFullscreenEditor');
+  const toggleBtn = getElementByIdSafe('toggleFullscreenEditor', 'setupFullscreenEditor');
   const editorGroup = document.querySelector('.quote-editor-group');
   
   if (!toggleBtn || !editorGroup) return;
@@ -169,32 +171,32 @@ function parseNorwegianDate(dateStr) {
  * @returns {Object} Form data object
  */
 export function collectFormData(state) {
-  const noteType = document.getElementById("noteType").value;
+  const noteType = getElementValue(FILTER_IDS.NOTE_TYPE_SELECT, 'collectFormData');
   
   // Parse note_date for training notes
   let parsedNoteDate = null;
   if (noteType === 'training') {
-    const noteDateInput = document.getElementById("noteDate").value;
+    const noteDateInput = getElementValue(FILTER_IDS.NOTE_DATE_INPUT, 'collectFormData');
     parsedNoteDate = parseNorwegianDate(noteDateInput);
   }
   
   return {
-    quote: document.getElementById("quoteText").value,
-    author: document.getElementById("author").value,
-    source: document.getElementById("source").value,
+    quote: getElementValue(FILTER_IDS.QUOTE_TEXT, 'collectFormData'),
+    author: getElementValue(FILTER_IDS.AUTHOR_INPUT, 'collectFormData'),
+    source: getElementValue(FILTER_IDS.SOURCE_INPUT, 'collectFormData'),
     sourceType: noteType === 'training' 
-      ? (document.getElementById("trainingType").value || "ASSORTED")
-      : (document.getElementById("sourceType").value || "ASSORTED"),
+      ? (getElementValue(FILTER_IDS.TRAINING_TYPE_SELECT, 'collectFormData') || "ASSORTED")
+      : (getElementValue(FILTER_IDS.SOURCE_TYPE_SELECT, 'collectFormData') || "ASSORTED"),
     sourceId: window.currentSourceId || null,
-    tags: document.getElementById("tags").value,
-    note: document.getElementById("note").value,
+    tags: getElementValue(FILTER_IDS.TAG_INPUT, 'collectFormData'),
+    note: getElementValue(FILTER_IDS.NOTE_INPUT, 'collectFormData'),
     score: document.querySelector('input[name="quoteScore"]:checked')?.value || "0",
     image: state.currentQuoteImage,
     image_full: state.currentQuoteImageFull,
     attachment_type: state.currentAttachmentType,
     note_type: noteType,
     note_date: parsedNoteDate,
-    translation_group: document.getElementById("translationGroup").value.trim() || null,
+    translation_group: getElementValue(FILTER_IDS.TRANSLATION_GROUP_INPUT, 'collectFormData').trim() || null,
     storageThresholdMB: state.globalSettings?.externalStorageThreshold || 1,
   };
 }

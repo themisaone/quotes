@@ -14,6 +14,8 @@
  * - Hash change coordination
  */
 
+import { getElementByIdSafe, FILTER_IDS, CONTAINER_IDS } from '../constants.js';
+
 // ============================================
 // Constants
 // ============================================
@@ -36,16 +38,6 @@ const VIEWS = {
   SOURCES: 'sources',
   TAGS: 'tags',
   SETTINGS: 'settings'
-};
-
-// Filter Element IDs
-const FILTER_IDS = {
-  BOOK: 'filterBook',
-  MOVIE: 'filterMovie',
-  ASSORTED: 'filterAssorted',
-  POETRY: 'filterPoetry',
-  LYRICS: 'filterLyrics',
-  JOKES: 'filterJokes'
 };
 
 // Data Listener Attribute
@@ -183,7 +175,7 @@ function hideAllViews() {
   ];
   
   views.forEach(viewId => {
-    const view = document.getElementById(viewId);
+    const view = getElementByIdSafe(viewId, 'hideAllViews');
     if (view) {
       view.style.display = 'none';
     }
@@ -272,7 +264,7 @@ function showSettingsView(callbacks) {
  * @param {string} viewId - View ID to show
  */
 function showView(viewId) {
-  const view = document.getElementById(viewId);
+  const view = getElementByIdSafe(viewId, 'showView');
   if (view) {
     view.style.display = 'block';
   }
@@ -288,12 +280,11 @@ function showView(viewId) {
  */
 function setupSourceTypeFilters(loadSourcesCallback) {
   const filterIds = [
-    FILTER_IDS.BOOK,
-    FILTER_IDS.MOVIE,
-    FILTER_IDS.ASSORTED,
-    FILTER_IDS.POETRY,
-    FILTER_IDS.LYRICS,
-    FILTER_IDS.JOKES
+    FILTER_IDS.FILTER_BOOK,
+    FILTER_IDS.FILTER_MOVIE,
+    FILTER_IDS.FILTER_POETRY,
+    FILTER_IDS.FILTER_LYRICS,
+    FILTER_IDS.FILTER_JOKES
   ];
   
   filterIds.forEach(filterId => {
@@ -307,7 +298,7 @@ function setupSourceTypeFilters(loadSourcesCallback) {
  * @param {Function} callback - Callback function
  */
 function attachFilterListener(elementId, callback) {
-  const element = document.getElementById(elementId);
+  const element = getElementByIdSafe(elementId, 'attachFilterListener');
   
   if (element && !hasListener(element)) {
     element.addEventListener('change', callback);

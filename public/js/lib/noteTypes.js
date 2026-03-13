@@ -3,6 +3,8 @@
  * Handles logic specific to different note types (quote, training, note, puzzle)
  */
 
+import { getElementByIdSafe, CONTAINER_IDS } from '../constants.js';
+
 // Note type definitions with metadata
 export const NOTE_TYPES = {
   quote: {
@@ -158,20 +160,14 @@ export function getNoteTypeBadgeHtml(noteType, showOnlyForAllNotes = false, curr
  * Update field visibility in modal based on note type
  */
 export function updateModalFieldVisibility(noteType) {
-  // Author/Source fields (only for quotes)
-  const authorContainer = document.getElementById('authorContainer');
-  const sourceContainer = document.getElementById('sourceContainer');
-  const sourceTypeContainer = document.getElementById('sourceTypeContainer');
-  
-  if (authorContainer && sourceContainer && sourceTypeContainer) {
-    const display = hasAuthorField(noteType) ? 'block' : 'none';
-    authorContainer.style.display = display;
-    sourceContainer.style.display = display;
-    sourceTypeContainer.style.display = display;
+  // Author/Source fields (only for quotes) - all contained in quoteSpecificFields
+  const quoteFields = getElementByIdSafe(CONTAINER_IDS.QUOTE_SPECIFIC_FIELDS, 'updateModalFieldVisibility');
+  if (quoteFields) {
+    quoteFields.style.display = hasAuthorField(noteType) ? 'block' : 'none';
   }
   
   // Training-specific fields
-  const trainingFields = document.getElementById('trainingSpecificFields');
+  const trainingFields = getElementByIdSafe(CONTAINER_IDS.TRAINING_SPECIFIC_FIELDS, 'updateModalFieldVisibility');
   if (trainingFields) {
     trainingFields.style.display = hasDateField(noteType) ? 'block' : 'none';
   }
@@ -181,9 +177,9 @@ export function updateModalFieldVisibility(noteType) {
  * Update modal labels based on note type
  */
 export function updateModalLabels(noteType) {
-  const quoteTextLabel = document.getElementById('quoteTextLabel');
-  const noteLabel = document.getElementById('noteLabel');
-  const attachmentLabel = document.getElementById('attachmentLabel');
+  const quoteTextLabel = getElementByIdSafe('quoteTextLabel', 'updateModalLabels');
+  const noteLabel = getElementByIdSafe('noteLabel', 'updateModalLabels');
+  const attachmentLabel = getElementByIdSafe('attachmentLabel', 'updateModalLabels');
   
   if (quoteTextLabel) {
     quoteTextLabel.textContent = getMainTextLabel(noteType);
@@ -233,8 +229,8 @@ export function prepareSubmissionData(noteType, formData) {
  * @param {Function} updateSourcesFilterVisibilityFn - Callback to update sources filter visibility
  */
 export function updateAddButtonText(currentNoteTypeFilter, updateSourcesFilterVisibilityFn) {
-  const btnTextDesktop = document.getElementById('addNoteBtnText');
-  const btnTextTablet = document.getElementById('addNoteBtnTextTablet');
+  const btnTextDesktop = getElementByIdSafe('addNoteBtnText');
+  const btnTextTablet = getElementByIdSafe('addNoteBtnTextTablet');
   
   if (currentNoteTypeFilter && NOTE_TYPES[currentNoteTypeFilter]) {
     const typeInfo = NOTE_TYPES[currentNoteTypeFilter];
@@ -255,7 +251,7 @@ export function updateAddButtonText(currentNoteTypeFilter, updateSourcesFilterVi
  * Update search header title based on note type
  */
 function updateSearchHeaderForType(noteTypeFilter) {
-  const searchHeaderTitle = document.getElementById('searchHeaderTitle');
+  const searchHeaderTitle = getElementByIdSafe('searchHeaderTitle');
   if (!searchHeaderTitle) return;
   
   const titles = {
@@ -273,8 +269,8 @@ function updateSearchHeaderForType(noteTypeFilter) {
  * Show/hide Author and Source search fields (only for Quotes)
  */
 function showHideQuoteSearchFields(isQuoteView) {
-  const searchAuthorContainer = document.getElementById('searchAuthorContainer');
-  const searchSourceContainer = document.getElementById('searchSourceContainer');
+  const searchAuthorContainer = getElementByIdSafe('searchAuthorContainer');
+  const searchSourceContainer = getElementByIdSafe('searchSourceContainer');
   
   if (searchAuthorContainer) {
     searchAuthorContainer.style.display = isQuoteView ? 'block' : 'none';
@@ -288,7 +284,7 @@ function showHideQuoteSearchFields(isQuoteView) {
  * Show/hide Quote Sources filter
  */
 function showHideQuoteSourcesFilter(noteTypeFilter) {
-  const quoteSourcesContainer = document.getElementById('quoteSourcesFilterContainer');
+  const quoteSourcesContainer = getElementByIdSafe('quoteSourcesFilterContainer');
   
   if (quoteSourcesContainer) {
     const showFilter = noteTypeFilter === 'quote';
@@ -300,9 +296,9 @@ function showHideQuoteSourcesFilter(noteTypeFilter) {
  * Show/hide Training filters (types, year, month)
  */
 function showHideTrainingFilters(noteTypeFilter, populateTrainingYearsFn) {
-  const trainingTypesContainer = document.getElementById('trainingTypesFilterContainer');
-  const trainingYearContainer = document.getElementById('trainingYearContainer');
-  const trainingMonthContainer = document.getElementById('trainingMonthContainer');
+  const trainingTypesContainer = getElementByIdSafe('trainingTypesFilterContainer');
+  const trainingYearContainer = getElementByIdSafe('trainingYearContainer');
+  const trainingMonthContainer = getElementByIdSafe('trainingMonthContainer');
   
   const isTrainingView = noteTypeFilter === 'training';
   

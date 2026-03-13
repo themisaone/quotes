@@ -13,6 +13,8 @@
  * - Document handler (opens in new tab)
  */
 
+import { getElementByIdSafe } from '../constants.js';
+
 // ============================================
 // Constants
 // ============================================
@@ -416,7 +418,7 @@ function shouldShowDownscaleButton(fileInfo, quoteId, attachmentType) {
  * @param {Object} callbacks - Callbacks
  */
 function attachDownscaleHandler(modal, quoteId, fileInfo, callbacks) {
-  const btn = document.getElementById('downscaleImageBtn');
+  const btn = getElementByIdSafe('downscaleImageBtn');
   if (!btn || !callbacks.onDownscale) return;
   
   btn.onclick = async (e) => {

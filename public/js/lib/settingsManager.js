@@ -10,6 +10,7 @@
  */
 
 import { API_URL } from './api.js';
+import { getElementByIdSafe } from '../constants.js';
 
 // ============= GLOBAL STATE =============
 
@@ -205,7 +206,7 @@ function applySettingsToUI() {
   
   // Apply all checkbox settings
   const checkboxMappings = [
-    { id: 'compactModeToggle', setting: 'compactMode' },
+    // Note: 'compactModeToggle' removed - feature deprecated, element doesn't exist in HTML
     { id: 'enableTagOperations', setting: 'enableTagOperations' },
     { id: 'enableQuoteMetaSearches', setting: 'enableQuoteMetaSearches' },
     { id: 'displayQuotesByRealSize', setting: 'displayQuotesByRealSize' },
@@ -216,14 +217,14 @@ function applySettingsToUI() {
   ];
   
   checkboxMappings.forEach(({ id, setting }) => {
-    const checkbox = document.getElementById(id);
+    const checkbox = getElementByIdSafe(id, 'applyCoreSettings');
     if (checkbox && globalSettings.hasOwnProperty(setting)) {
       checkbox.checked = globalSettings[setting];
     }
   });
   
   // Apply external storage threshold
-  const thresholdSelect = document.getElementById('externalStorageThreshold');
+  const thresholdSelect = getElementByIdSafe('externalStorageThreshold', 'applyCoreSettings');
   if (thresholdSelect && globalSettings.externalStorageThreshold) {
     thresholdSelect.value = globalSettings.externalStorageThreshold;
   }
@@ -255,7 +256,7 @@ function applySettingsToUI() {
   ];
   
   colorInputMappings.forEach(({ id, colorKey }) => {
-    const input = document.getElementById(id);
+    const input = getElementByIdSafe(id, 'applyCoreSettings');
     if (input && globalSettings.colors && globalSettings.colors[colorKey]) {
       input.value = globalSettings.colors[colorKey];
     }
@@ -325,7 +326,7 @@ export function saveQuoteTypes(types) {
  * Render quote types list in settings UI
  */
 export function renderQuoteTypesList(populateTypeDropdowns, populateTypeFilterCheckboxes) {
-  const container = document.getElementById('quoteTypesList');
+  const container = getElementByIdSafe('quoteTypesList', 'renderQuoteTypesList');
   if (!container) return;
   
   const types = getQuoteTypes();
@@ -437,7 +438,7 @@ export function saveTrainingTypes(types) {
  * Render training types list in settings UI
  */
 export function renderTrainingTypesList(populateTrainingTypeFilterCheckboxes) {
-  const container = document.getElementById('trainingTypesList');
+  const container = getElementByIdSafe('trainingTypesList');
   if (!container) return;
   
   const types = getTrainingTypes();
@@ -514,7 +515,7 @@ function saveTrainingTypesAndRefresh(types, populateTrainingTypeFilterCheckboxes
  */
 export function setupTypeManagementListeners(populateTypeDropdowns, populateTypeFilterCheckboxes, populateTrainingTypeFilterCheckboxes) {
   // Quote Types - Add button
-  const addQuoteTypeBtn = document.getElementById('addQuoteTypeBtn');
+  const addQuoteTypeBtn = getElementByIdSafe('addQuoteTypeBtn');
   if (addQuoteTypeBtn) {
     // Remove old listener by cloning
     const newAddQuoteTypeBtn = addQuoteTypeBtn.cloneNode(true);
@@ -532,7 +533,7 @@ export function setupTypeManagementListeners(populateTypeDropdowns, populateType
   }
   
   // Training Types - Add button
-  const addTrainingTypeBtn = document.getElementById('addTrainingTypeBtn');
+  const addTrainingTypeBtn = getElementByIdSafe('addTrainingTypeBtn');
   if (addTrainingTypeBtn) {
     // Remove old listener by cloning
     const newAddTrainingTypeBtn = addTrainingTypeBtn.cloneNode(true);
@@ -728,7 +729,7 @@ export {
  * Toggle metadata search section visibility
  */
 export function toggleMetadataSearchSection(show) {
-  const metadataContainer = document.getElementById('metadataFiltersContainer');
+  const metadataContainer = getElementByIdSafe('metadataFiltersContainer');
   console.log('toggleMetadataSearchSection called:', show, 'metadataContainer found:', !!metadataContainer);
   if (metadataContainer) {
     metadataContainer.style.display = show ? 'block' : 'none';
@@ -740,7 +741,7 @@ export function toggleMetadataSearchSection(show) {
  * Apply quote sizing mode
  */
 export function applyQuoteSizingMode(useRealSize) {
-  const quotesList = document.getElementById('quotesList');
+  const quotesList = getElementByIdSafe('quotesList');
   if (!quotesList) return;
   
   if (useRealSize) {
@@ -775,13 +776,13 @@ export function initializeSettings(callbacks = {}) {
     populateTrainingTypeFilterCheckboxes
   } = callbacks;
 
-  const enableTagOpsCheckbox = document.getElementById('enableTagOperations');
-  const enableQuoteMetaSearchesCheckbox = document.getElementById('enableQuoteMetaSearches');
-  const displayQuotesByRealSizeCheckbox = document.getElementById('displayQuotesByRealSize');
-  const displayImageQuotesLongCheckbox = document.getElementById('displayImageQuotesLong');
-  const showLongQuotesExpandedCheckbox = document.getElementById('showLongQuotesExpanded');
-  const displayScoreInCardsCheckbox = document.getElementById('displayScoreInCards');
-  const downscaleQuoteImagesCheckbox = document.getElementById('downscaleQuoteImages');
+  const enableTagOpsCheckbox = getElementByIdSafe('enableTagOperations');
+  const enableQuoteMetaSearchesCheckbox = getElementByIdSafe('enableQuoteMetaSearches');
+  const displayQuotesByRealSizeCheckbox = getElementByIdSafe('displayQuotesByRealSize');
+  const displayImageQuotesLongCheckbox = getElementByIdSafe('displayImageQuotesLong');
+  const showLongQuotesExpandedCheckbox = getElementByIdSafe('showLongQuotesExpanded');
+  const displayScoreInCardsCheckbox = getElementByIdSafe('displayScoreInCards');
+  const downscaleQuoteImagesCheckbox = getElementByIdSafe('downscaleQuoteImages');
   
   // Tag Operations setting
   if (enableTagOpsCheckbox) {
@@ -815,7 +816,7 @@ export function initializeSettings(callbacks = {}) {
   }
   
   // External Storage Threshold setting
-  const externalStorageThresholdSelect = document.getElementById('externalStorageThreshold');
+  const externalStorageThresholdSelect = getElementByIdSafe('externalStorageThreshold');
   if (externalStorageThresholdSelect) {
     // Load saved setting from globalSettings (default: 1 MB)
     const savedThreshold = globalSettings?.externalStorageThreshold || 1;
@@ -945,9 +946,9 @@ function initializeColorCustomization() {
   ];
   
   colorConfigs.forEach(config => {
-    const picker = document.getElementById(`${config.id}Color`);
-    const text = document.getElementById(`${config.id}ColorText`);
-    const resetBtn = document.getElementById(`reset${config.id.charAt(0).toUpperCase() + config.id.slice(1)}Color`);
+    const picker = getElementByIdSafe(`${config.id}Color`);
+    const text = getElementByIdSafe(`${config.id}ColorText`);
+    const resetBtn = getElementByIdSafe(`reset${config.id.charAt(0).toUpperCase() + config.id.slice(1)}Color`);
     
     if (!picker) return;
     

@@ -17,6 +17,15 @@
 import { API_URL, fetchWithRetry } from './api.js';
 import { createQuoteCard } from './cardRenderer.js';
 import { getSearchValues, getTrainingFilters } from './searchManager.js';
+import { 
+  FILTER_IDS,
+  CONTAINER_IDS,
+  CSS_CLASSES,
+  getElementValue,
+  getCheckboxState,
+  getElementByIdSafe,
+  getCheckedValues
+} from '../constants.js';
 
 // ============= MODULE STATE =============
 
@@ -29,23 +38,24 @@ const quotesPerPage = 20;
 /**
  * Metadata search filter configuration
  * Each filter has a checkbox and a condition dropdown
+ * Now using constants for IDs
  */
 const METADATA_FILTERS = [
-  { name: 'Author', checkboxId: 'searchHasAuthor', conditionId: 'searchAuthorCondition', paramName: 'hasAuthor' },
-  { name: 'Source', checkboxId: 'searchHasSource', conditionId: 'searchSourceCondition', paramName: 'hasSource' },
-  { name: 'Note', checkboxId: 'searchHasNote', conditionId: 'searchNoteCondition', paramName: 'hasNote' },
-  { name: 'Tags', checkboxId: 'searchHasTags', conditionId: 'searchTagsCondition', paramName: 'hasTags' },
-  { name: 'Image', checkboxId: 'searchHasImage', conditionId: 'searchImageCondition', paramName: 'hasImage' }
+  { name: 'Author', checkboxId: FILTER_IDS.HAS_AUTHOR_CHECKBOX, conditionId: FILTER_IDS.HAS_AUTHOR_CONDITION, paramName: 'hasAuthor' },
+  { name: 'Source', checkboxId: FILTER_IDS.HAS_SOURCE_CHECKBOX, conditionId: FILTER_IDS.HAS_SOURCE_CONDITION, paramName: 'hasSource' },
+  { name: 'Note', checkboxId: FILTER_IDS.HAS_NOTE_CHECKBOX, conditionId: FILTER_IDS.HAS_NOTE_CONDITION, paramName: 'hasNote' },
+  { name: 'Tags', checkboxId: FILTER_IDS.HAS_TAGS_CHECKBOX, conditionId: FILTER_IDS.HAS_TAGS_CONDITION, paramName: 'hasTags' },
+  { name: 'Image', checkboxId: FILTER_IDS.HAS_IMAGE_CHECKBOX, conditionId: FILTER_IDS.HAS_IMAGE_CONDITION, paramName: 'hasImage' }
 ];
 
 // ============= HELPER FUNCTIONS =============
 
 /**
  * Get value from input element if it exists and is not empty
+ * @deprecated Use getElementValue from constants.js instead
  */
 function getInputValue(elementId) {
-  const element = document.getElementById(elementId);
-  return element?.value || null;
+  return getElementValue(elementId) || null;
 }
 
 /**
@@ -116,12 +126,12 @@ function addTrainingTypeFilters(params, currentNoteTypeFilter) {
 
 /**
  * Add metadata search filters to params (has/doesn't have author, source, etc.)
+ * Now using constants for element IDs
  */
 function addMetadataFilters(params) {
   METADATA_FILTERS.forEach(filter => {
-    const checkbox = document.getElementById(filter.checkboxId);
-    if (checkbox?.checked) {
-      const condition = document.getElementById(filter.conditionId)?.value;
+    if (getCheckboxState(filter.checkboxId)) {
+      const condition = getElementValue(filter.conditionId);
       params.append(filter.paramName, condition === "has" ? "true" : "false");
     }
   });
@@ -162,7 +172,7 @@ function buildQuotesParams(currentNoteTypeFilter, getQuoteTypes, getTrainingType
  * Note: Does NOT render quotes - caller should call displayQuotes with the result
  */
 export async function loadQuotes(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes, globalSettings) {
-  const quotesList = document.getElementById("quotesList");
+  const quotesList = getElementByIdSafe(CONTAINER_IDS.QUOTES_CONTAINER, 'loadQuotes');
   
   try {
     const params = buildQuotesParams(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes);
@@ -186,9 +196,9 @@ export async function loadQuotes(currentNoteTypeFilter, getQuoteTypes, getTraini
  * Load and update total count with filters
  */
 export async function loadTotalCount(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes) {
-  const totalCountElement = document.getElementById("totalQuotesCount");
-  const typeCountElement = document.getElementById("typeQuotesCount");
-  const filteredCountElement = document.getElementById("filteredQuotesCount");
+  const totalCountElement = getElementByIdSafe("totalQuotesCount", 'loadTotalCount');
+  const typeCountElement = getElementByIdSafe("typeQuotesCount", 'loadTotalCount');
+  const filteredCountElement = getElementByIdSafe("filteredQuotesCount", 'loadTotalCount');
   
   try {
     const params = buildQuotesParams(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes);
@@ -211,8 +221,8 @@ export async function loadTotalCount(currentNoteTypeFilter, getQuoteTypes, getTr
  * Display quotes in the list
  */
 export function displayQuotes(quotes, currentNoteTypeFilter, getQuoteTypes, getTrainingTypes, globalSettings) {
-  const quotesList = document.getElementById("quotesList");
-  const quoteCount = document.getElementById("quoteCount");
+  const quotesList = getElementByIdSafe(CONTAINER_IDS.QUOTES_CONTAINER, 'displayQuotes');
+  const quoteCount = getElementByIdSafe('quoteCount', 'displayQuotes');
   
   if (quoteCount) {
     quoteCount.textContent = `(${quotes.length})`;

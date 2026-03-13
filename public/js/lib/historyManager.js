@@ -5,23 +5,19 @@
  * Back: Pop current + pop previous + execute previous (which pushes itself again)
  */
 
+import { 
+  FILTER_IDS, 
+  BUTTON_IDS,
+  getElementByIdSafe, 
+  getElementValue as getElementValueSafe, 
+  setElementValue as setElementValueSafe 
+} from '../constants.js';
+
 // ============= CONSTANTS =============
 
 const MAX_HISTORY_SIZE = 50;
 const PUSH_DEBOUNCE_MS = 1000; // Wait 1 second before pushing to allow user to finish typing
 const SCROLL_RESTORE_DELAY_MS = 100; // Delay before restoring scroll position
-
-// DOM Element IDs
-const ELEMENT_IDS = {
-  backButton: 'backButton',
-  searchQuote: 'searchQuote',
-  searchTags: 'searchTags',
-  searchAuthor: 'searchAuthor',
-  searchSource: 'searchSource',
-  searchScore: 'searchScore',
-  yearFilter: 'yearFilter',
-  monthFilter: 'monthFilter'
-};
 
 // Selectors
 const SELECTORS = {
@@ -37,27 +33,7 @@ let pushTimeout = null;
 let pendingState = null;
 
 // ============= HELPER FUNCTIONS =============
-
-/**
- * Get element value safely
- * @param {string} elementId - DOM element ID
- * @returns {string} Element value or empty string
- */
-function getElementValue(elementId) {
-  return document.getElementById(elementId)?.value || '';
-}
-
-/**
- * Set element value safely
- * @param {string} elementId - DOM element ID
- * @param {string} value - Value to set
- */
-function setElementValue(elementId, value) {
-  const element = document.getElementById(elementId);
-  if (element) {
-    element.value = value;
-  }
-}
+// Note: Using centralized helper functions from constants.js
 
 /**
  * Get checked values from checkboxes
@@ -109,13 +85,13 @@ function captureCurrentState() {
     timestamp: Date.now(),
     view: getCurrentView(),
     noteType: window.currentNoteTypeFilter || 'all',
-    searchText: getElementValue(ELEMENT_IDS.searchQuote),
-    tagsSearch: getElementValue(ELEMENT_IDS.searchTags),
-    authorSearch: getElementValue(ELEMENT_IDS.searchAuthor),
-    sourceSearch: getElementValue(ELEMENT_IDS.searchSource),
-    searchScore: getElementValue(ELEMENT_IDS.searchScore),
-    yearFilter: getElementValue(ELEMENT_IDS.yearFilter),
-    monthFilter: getElementValue(ELEMENT_IDS.monthFilter),
+    searchText: getElementValueSafe(FILTER_IDS.SEARCH_QUOTE, 'captureCurrentState'),
+    tagsSearch: getElementValueSafe(FILTER_IDS.SEARCH_TAGS, 'captureCurrentState'),
+    authorSearch: getElementValueSafe(FILTER_IDS.SEARCH_AUTHOR, 'captureCurrentState'),
+    sourceSearch: getElementValueSafe(FILTER_IDS.SEARCH_SOURCE, 'captureCurrentState'),
+    searchScore: getElementValueSafe(FILTER_IDS.SEARCH_SCORE, 'captureCurrentState'),
+    yearFilter: getElementValueSafe(FILTER_IDS.YEAR_FILTER, 'captureCurrentState'),
+    monthFilter: getElementValueSafe(FILTER_IDS.MONTH_FILTER, 'captureCurrentState'),
     quoteTypes: getCheckedQuoteTypes(),
     trainingTypes: getCheckedTrainingTypes(),
     page: window.currentPage || 1,
@@ -257,11 +233,11 @@ function restoreNoteType(state, callbacks) {
  * @param {Object} state - State to restore
  */
 function restoreSearchFields(state) {
-  setElementValue(ELEMENT_IDS.searchQuote, state.searchText);
-  setElementValue(ELEMENT_IDS.searchTags, state.tagsSearch);
-  setElementValue(ELEMENT_IDS.searchAuthor, state.authorSearch);
-  setElementValue(ELEMENT_IDS.searchSource, state.sourceSearch);
-  setElementValue(ELEMENT_IDS.searchScore, state.searchScore);
+  setElementValueSafe(FILTER_IDS.SEARCH_QUOTE, state.searchText, 'restoreSearchFields');
+  setElementValueSafe(FILTER_IDS.SEARCH_TAGS, state.tagsSearch, 'restoreSearchFields');
+  setElementValueSafe(FILTER_IDS.SEARCH_AUTHOR, state.authorSearch, 'restoreSearchFields');
+  setElementValueSafe(FILTER_IDS.SEARCH_SOURCE, state.sourceSearch, 'restoreSearchFields');
+  setElementValueSafe(FILTER_IDS.SEARCH_SCORE, state.searchScore, 'restoreSearchFields');
 }
 
 /**
@@ -269,8 +245,8 @@ function restoreSearchFields(state) {
  * @param {Object} state - State to restore
  */
 function restoreFilters(state) {
-  setElementValue(ELEMENT_IDS.yearFilter, state.yearFilter);
-  setElementValue(ELEMENT_IDS.monthFilter, state.monthFilter);
+  setElementValueSafe(FILTER_IDS.YEAR_FILTER, state.yearFilter, 'restoreFilters');
+  setElementValueSafe(FILTER_IDS.MONTH_FILTER, state.monthFilter, 'restoreFilters');
 }
 
 /**
@@ -358,7 +334,7 @@ async function restoreState(state, callbacks) {
 // ============= UI UPDATES =============
 
 function updateBackButton() {
-  const backButton = document.getElementById('backButton');
+  const backButton = getElementByIdSafe(BUTTON_IDS.BACK_BTN, 'updateBackButton');
   if (!backButton) return;
   
   const canGoBack = historyStack.length > 1;
@@ -371,7 +347,7 @@ function updateBackButton() {
  * Initialize back button event handler
  */
 export function initializeBackButton(callbacks) {
-  const backButton = document.getElementById('backButton');
+  const backButton = getElementByIdSafe(BUTTON_IDS.BACK_BTN, 'initializeBackButton');
   if (!backButton) {
     console.warn('⚠️ Back button not found in DOM');
     return;

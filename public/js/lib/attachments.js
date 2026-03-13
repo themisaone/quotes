@@ -17,6 +17,7 @@
  */
 
 import { resolveAttachmentUrl, getAttachmentIcon } from './utils.js';
+import { getElementByIdSafe } from '../constants.js';
 
 // ============= CONSTANTS =============
 
@@ -500,7 +501,7 @@ export function clearImagePreview(container, type = 'quote') {
  * @returns {Promise<void>}
  */
 export async function downscaleAndMoveToDb(quoteId, imageUrl, filePath, modal, apiUrl, onSuccess) {
-  const btn = document.getElementById('downscaleImageBtn');
+  const btn = getElementByIdSafe('downscaleImageBtn');
   if (!btn) return;
   
   try {

@@ -3,6 +3,8 @@
  * Handles navigation, URL routing, and menu state
  */
 
+import { getElementByIdSafe, BUTTON_IDS, CONTAINER_IDS } from '../constants.js';
+
 /**
  * Parse URL hash and return note type filter
  */
@@ -60,8 +62,8 @@ export function updateActiveMenuState(noteTypeFilter) {
  * Update page title based on current filter
  */
 export function updatePageTitle(noteTypeFilter) {
-  const titleIcon = document.getElementById('mainTitleIcon');
-  const titleText = document.getElementById('mainTitleText');
+  const titleIcon = getElementByIdSafe('mainTitleIcon', 'updatePageTitle');
+  const titleText = getElementByIdSafe('mainTitleText', 'updatePageTitle');
   
   if (!titleIcon || !titleText) return;
   
@@ -82,7 +84,7 @@ export function updatePageTitle(noteTypeFilter) {
  * Update search header text
  */
 export function updateSearchHeader(noteTypeFilter) {
-  const searchHeader = document.getElementById('searchHeaderTitle');
+  const searchHeader = getElementByIdSafe('searchHeaderTitle', 'updateSearchHeader');
   if (!searchHeader) return;
   
   if (!noteTypeFilter) {
@@ -103,7 +105,7 @@ export function updateSearchHeader(noteTypeFilter) {
  */
 export function updateFilterVisibility(noteTypeFilter) {
   // Quote sources filter
-  const sourcesContainer = document.getElementById('quoteSourcesFilterContainer');
+  const sourcesContainer = getElementByIdSafe('quoteSourcesFilterContainer', 'updateFilterVisibility');
   const authorSearchContainer = document.querySelector('.search-item:has(#searchAuthor)');
   const sourceSearchContainer = document.querySelector('.search-item:has(#searchSource)');
   
@@ -122,9 +124,9 @@ export function updateFilterVisibility(noteTypeFilter) {
   }
   
   // Training filters
-  const trainingTypesContainer = document.getElementById('trainingTypesFilterContainer');
-  const trainingYearContainer = document.getElementById('trainingYearContainer');
-  const trainingMonthContainer = document.getElementById('trainingMonthContainer');
+  const trainingTypesContainer = getElementByIdSafe('trainingTypesFilterContainer', 'updateFilterVisibility');
+  const trainingYearContainer = getElementByIdSafe('trainingYearContainer', 'updateFilterVisibility');
+  const trainingMonthContainer = getElementByIdSafe('trainingMonthContainer', 'updateFilterVisibility');
   
   const showTrainingFilters = noteTypeFilter === 'training';
   
@@ -143,7 +145,7 @@ export function updateFilterVisibility(noteTypeFilter) {
  * Update add button text
  */
 export function updateAddButtonText(noteTypeFilter) {
-  const addBtn = document.getElementById('addQuoteBtn');
+  const addBtn = getElementByIdSafe(BUTTON_IDS.ADD_QUOTE_BTN, 'updateAddButtonText');
   if (!addBtn) return;
   
   if (!noteTypeFilter) {

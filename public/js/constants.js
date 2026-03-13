@@ -27,6 +27,13 @@ export const FILTER_IDS = {
   MONTH_FILTER: 'trainingMonthFilter',
   TAG_TYPE_FILTER: 'tagTypeFilter',
   
+  // Source type filters (checkboxes in Sources view)
+  FILTER_BOOK: 'filterBook',
+  FILTER_MOVIE: 'filterMovie',
+  FILTER_POETRY: 'filterPoetry',
+  FILTER_LYRICS: 'filterLyrics',
+  FILTER_JOKES: 'filterJokes',
+  
   // Metadata filters (checkboxes + conditions)
   HAS_AUTHOR_CHECKBOX: 'searchHasAuthor',
   HAS_AUTHOR_CONDITION: 'searchAuthorCondition',
@@ -61,19 +68,25 @@ export const MODAL_IDS = {
   // Form inputs
   QUOTE_ID: 'quoteId',
   QUOTE_TEXT: 'quoteText',
-  AUTHOR_INPUT: 'authorInput',
+  AUTHOR_INPUT: 'author', // Changed from 'authorInput' to match actual HTML
   AUTHOR_SUGGESTIONS: 'authorSuggestions',
-  SOURCE_INPUT: 'sourceInput',
+  SOURCE_INPUT: 'source', // Changed from 'sourceInput' to match actual HTML
   SOURCE_SUGGESTIONS: 'sourceSuggestions',
-  TAG_INPUT: 'tagInput',
+  TAG_INPUT: 'tags', // Changed from 'tagInput' to match actual HTML
   TAG_SUGGESTIONS: 'tagInputSuggestions',
-  NOTE_INPUT: 'noteInput',
+  NOTE_INPUT: 'note', // Changed from 'noteInput' to match actual HTML
+  NOTE_TYPE_SELECT: 'noteType', // Added for note type dropdown
   SCORE_INPUT: 'scoreInput',
-  NOTE_DATE_INPUT: 'noteDateInput',
+  NOTE_DATE_INPUT: 'noteDate', // Changed from 'noteDateInput' to match actual HTML
+  TRANSLATION_GROUP_INPUT: 'translationGroup', // Added
   
   // Type dropdowns
-  QUOTE_TYPE_SELECT: 'quoteTypeSelect',
-  TRAINING_TYPE_SELECT: 'trainingTypeSelect',
+  SOURCE_TYPE_SELECT: 'sourceType', // Added for regular quotes
+  TRAINING_TYPE_SELECT: 'trainingType', // Changed from 'trainingTypeSelect' to match actual HTML
+  
+  // Editor elements
+  QUOTE_EDITOR: 'quoteEditor',
+  TOGGLE_FULLSCREEN_EDITOR: 'toggleFullscreenEditor',
   
   // Image/attachment handling
   IMAGE_FILE: 'imageFile',
@@ -148,6 +161,9 @@ export const BUTTON_IDS = {
   // Clear filters
   CLEAR_FILTERS_BTN: 'clearFiltersBtn',
   
+  // Navigation
+  BACK_BTN: 'backButton',
+  
   // Pagination (dynamic, but base IDs)
   PREV_PAGE_BTN: 'prevPageBtn',
   NEXT_PAGE_BTN: 'nextPageBtn',
@@ -163,10 +179,14 @@ export const CONTAINER_IDS = {
   OPTIONS_VIEW: 'optionsView',
   
   // Content containers
-  QUOTES_CONTAINER: 'quotesContainer',
+  QUOTES_CONTAINER: 'quotesList',
   AUTHORS_CONTAINER: 'authorsContainer',
   SOURCES_CONTAINER: 'sourcesContainer',
   TAGS_CONTAINER: 'tagsContainer',
+  
+  // Modal field containers
+  QUOTE_SPECIFIC_FIELDS: 'quoteSpecificFields',
+  TRAINING_SPECIFIC_FIELDS: 'trainingSpecificFields',
   
   // Pagination
   PAGINATION_CONTROLS: 'paginationControls',
@@ -233,35 +253,105 @@ export const API_ENDPOINTS = {
 
 /**
  * Safely get element by ID with error logging
+ * @param {string} id - Element ID from constants
+ * @param {string} context - Where this is being called from (for debugging)
+ * @returns {HTMLElement|null}
  */
 export function getElementByIdSafe(id, context = 'Unknown') {
   const element = document.getElementById(id);
   if (!element) {
-    console.warn(`⚠️ Element not found: "${id}" (Context: ${context})`);
+    console.warn(`⚠️ [CONSTANTS] Element not found: "${id}" (Called from: ${context})`);
+    console.warn(`   👉 Either the ID is wrong in constants.js, or the HTML element doesn't exist`);
   }
   return element;
 }
 
 /**
- * Get element value safely
+ * Get element value safely with validation
+ * @param {string} id - Element ID from constants
+ * @param {string} defaultValue - Default value if element not found
+ * @returns {string}
  */
 export function getElementValue(id, defaultValue = '') {
   const element = document.getElementById(id);
+  if (!element) {
+    console.warn(`⚠️ [CONSTANTS] Cannot get value - element not found: "${id}"`);
+    return defaultValue;
+  }
   return element?.value || defaultValue;
 }
 
 /**
- * Get checkbox state
+ * Set element value safely with validation
+ * @param {string} id - Element ID from constants
+ * @param {string} value - Value to set
+ * @returns {boolean} - Success status
+ */
+export function setElementValue(id, value) {
+  const element = document.getElementById(id);
+  if (!element) {
+    console.warn(`⚠️ [CONSTANTS] Cannot set value - element not found: "${id}"`);
+    return false;
+  }
+  element.value = value;
+  return true;
+}
+
+/**
+ * Get checkbox state with validation
+ * @param {string} id - Element ID from constants
+ * @returns {boolean}
  */
 export function getCheckboxState(id) {
   const checkbox = document.getElementById(id);
+  if (!checkbox) {
+    console.warn(`⚠️ [CONSTANTS] Cannot get checkbox state - element not found: "${id}"`);
+    return false;
+  }
   return checkbox?.checked || false;
 }
 
 /**
+ * Set checkbox state safely with validation
+ * @param {string} id - Element ID from constants
+ * @param {boolean} checked - Checked state
+ * @returns {boolean} - Success status
+ */
+export function setCheckboxState(id, checked) {
+  const checkbox = document.getElementById(id);
+  if (!checkbox) {
+    console.warn(`⚠️ [CONSTANTS] Cannot set checkbox state - element not found: "${id}"`);
+    return false;
+  }
+  checkbox.checked = checked;
+  return true;
+}
+
+/**
  * Get all checked values from checkboxes with a class
+ * @param {string} className - CSS class name from constants
+ * @returns {Array<string>}
  */
 export function getCheckedValues(className) {
-  return Array.from(document.querySelectorAll(`.${className}:checked`))
-    .map(cb => cb.value);
+  const elements = document.querySelectorAll(`.${className}:checked`);
+  if (elements.length === 0) {
+    console.debug(`ℹ️ [CONSTANTS] No checked elements found for class: "${className}"`);
+  }
+  return Array.from(elements).map(cb => cb.value);
+}
+
+/**
+ * Show/hide element safely
+ * @param {string} id - Element ID from constants
+ * @param {boolean} show - True to show, false to hide
+ * @returns {boolean} - Success status
+ */
+export function toggleElementVisibility(id, show) {
+  const element = document.getElementById(id);
+  if (!element) {
+    console.warn(`⚠️ [CONSTANTS] Cannot toggle visibility - element not found: "${id}"`);
+    return false;
+  }
+  element.style.display = show ? '' : 'none';
+  return true;
 }

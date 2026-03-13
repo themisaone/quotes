@@ -24,6 +24,7 @@
  */
 
 import { clearSearchFields } from './searchManager.js';
+import { getElementByIdSafe } from '../constants.js';
 
 // ============= CONSTANTS =============
 
@@ -156,7 +157,7 @@ export function clearFilters(callbacks) {
  * Toggle element visibility
  */
 function setElementVisibility(elementId, shouldShow) {
-  const element = document.getElementById(elementId);
+  const element = getElementByIdSafe(elementId, 'setElementVisibility');
   if (element) {
     element.style.display = shouldShow ? 'block' : 'none';
   }
@@ -190,7 +191,7 @@ export function updateSourcesFilterVisibility(currentNoteTypeFilter) {
  * Update the search header title based on the current note type
  */
 function updateSearchHeaderTitle(currentNoteTypeFilter) {
-  const searchHeaderTitle = document.getElementById('searchHeaderTitle');
+  const searchHeaderTitle = getElementByIdSafe('searchHeaderTitle', 'updateSearchHeaderTitle');
   if (!searchHeaderTitle) return;
   
   const titles = {
@@ -246,8 +247,8 @@ function handleDropdownToggle(toggleEl, dropdownEl, checkboxSelector, callbacks,
  * Setup quote type filter dropdown
  */
 function setupQuoteTypeDropdown(callbacks) {
-  const typeFilterToggle = document.getElementById(ELEMENT_IDS.typeFilterToggle);
-  const typeFilterDropdown = document.getElementById(ELEMENT_IDS.typeFilterDropdown);
+  const typeFilterToggle = getElementByIdSafe(ELEMENT_IDS.typeFilterToggle, 'setupQuoteTypeDropdown');
+  const typeFilterDropdown = getElementByIdSafe(ELEMENT_IDS.typeFilterDropdown, 'setupQuoteTypeDropdown');
 
   if (!typeFilterToggle || !typeFilterDropdown) return;
 
@@ -311,8 +312,8 @@ function setAllCheckboxes(selector, checked) {
  * Setup Select All / Deselect All buttons for any filter type
  */
 function setupSelectButtons(selectAllBtnId, deselectAllBtnId, checkboxSelector) {
-  const selectAllBtn = document.getElementById(selectAllBtnId);
-  const deselectAllBtn = document.getElementById(deselectAllBtnId);
+  const selectAllBtn = getElementByIdSafe(selectAllBtnId, 'setupSelectButtons');
+  const deselectAllBtn = getElementByIdSafe(deselectAllBtnId, 'setupSelectButtons');
 
   if (selectAllBtn) {
     selectAllBtn.addEventListener("click", (e) => {
@@ -344,8 +345,8 @@ function setupQuoteTypeButtons() {
  * Setup training type filter dropdown
  */
 function setupTrainingTypeDropdown(callbacks) {
-  const trainingTypeFilterToggle = document.getElementById(ELEMENT_IDS.trainingTypeFilterToggle);
-  const trainingTypeFilterDropdown = document.getElementById(ELEMENT_IDS.trainingTypeFilterDropdown);
+  const trainingTypeFilterToggle = getElementByIdSafe(ELEMENT_IDS.trainingTypeFilterToggle, 'setupTrainingTypeDropdown');
+  const trainingTypeFilterDropdown = getElementByIdSafe(ELEMENT_IDS.trainingTypeFilterDropdown, 'setupTrainingTypeDropdown');
   
   if (!trainingTypeFilterToggle || !trainingTypeFilterDropdown) return;
 

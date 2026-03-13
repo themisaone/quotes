@@ -20,24 +20,26 @@
 
 import { API_URL } from './api.js';
 import { displayImage, clearImagePreview } from './attachments.js';
+import { getElementByIdSafe } from '../constants.js';
 
 // ============= 1. DOM HELPERS =============
 
 /**
  * Get modal elements based on entity type
+ * Now using constants helper for validation
  */
 function getModalElements(config) {
-  const modal = document.getElementById(config.modalId);
+  const modal = getElementByIdSafe(config.modalId, 'getModalElements');
   
   return {
     modal: modal,
-    idInput: document.getElementById(config.idInputId),
-    nameInput: document.getElementById(config.nameInputId),
-    imagePreview: document.getElementById(config.imagePreviewId),
-    deleteBtn: document.getElementById(config.deleteBtnId),
+    idInput: getElementByIdSafe(config.idInputId, 'getModalElements'),
+    nameInput: getElementByIdSafe(config.nameInputId, 'getModalElements'),
+    imagePreview: getElementByIdSafe(config.imagePreviewId, 'getModalElements'),
+    deleteBtn: getElementByIdSafe(config.deleteBtnId, 'getModalElements'),
     // Close buttons - try both .close selector (X button) and dedicated IDs
     closeBtn: modal?.querySelector('.close'),
-    cancelBtn: document.getElementById(`cancel${config.entityName}Btn`),
+    cancelBtn: getElementByIdSafe(`cancel${config.entityName}Btn`, 'getModalElements'),
     // Additional fields (optional)
     ...config.getAdditionalFields?.()
   };
@@ -158,8 +160,8 @@ function hideModal(modal) {
  * Get form data for entity update
  */
 function getFormData(config) {
-  const id = document.getElementById(config.idInputId).value;
-  const name = document.getElementById(config.nameInputId).value.trim();
+  const id = getElementByIdSafe(config.idInputId, 'getFormData').value;
+  const name = getElementByIdSafe(config.nameInputId, 'getFormData').value.trim();
   const image = window[config.imageStorageKey] || null;
   
   const data = { id, name, image };
@@ -385,7 +387,7 @@ export function createEntityModalManager(config) {
      */
     setupHandlers(callbacks = {}) {
       const elements = getModalElements(config);
-      const form = document.getElementById(config.formId);
+      const form = getElementByIdSafe(config.formId, 'setupHandlers');
       
       // Additional setup if configured (e.g., populate dropdowns)
       if (config.onSetup) {

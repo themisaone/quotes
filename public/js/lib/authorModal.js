@@ -12,6 +12,7 @@
  */
 
 import { createEntityModalManager } from './entityModal.js';
+import { getElementByIdSafe } from '../constants.js';
 
 // ============= CONFIGURATION =============
 
@@ -30,7 +31,7 @@ const authorModalConfig = {
   // Get additional form elements (description field)
   getAdditionalFields() {
     return {
-      descriptionInput: document.getElementById('authorDescription')
+      descriptionInput: getElementByIdSafe('authorDescription', 'authorModal.getAdditionalFields')
     };
   },
   
@@ -43,7 +44,7 @@ const authorModalConfig = {
   
   // Get additional form data
   getAdditionalFormData() {
-    const descriptionInput = document.getElementById('authorDescription');
+    const descriptionInput = getElementByIdSafe('authorDescription', 'getAdditionalFormData');
     return {
       description: descriptionInput ? descriptionInput.value.trim() : ''
     };

@@ -12,6 +12,7 @@
  */
 
 import { createEntityModalManager } from './entityModal.js';
+import { getElementByIdSafe } from '../constants.js';
 
 // ============= CONFIGURATION =============
 
@@ -30,7 +31,7 @@ const sourceModalConfig = {
   // Get additional form elements (type dropdown)
   getAdditionalFields() {
     return {
-      typeSelect: document.getElementById('sourceTypeEdit')
+      typeSelect: getElementByIdSafe('sourceTypeEdit', 'sourceModal.getAdditionalFields')
     };
   },
   
@@ -43,7 +44,7 @@ const sourceModalConfig = {
   
   // Get additional form data
   getAdditionalFormData() {
-    const typeSelect = document.getElementById('sourceTypeEdit');
+    const typeSelect = getElementByIdSafe('sourceTypeEdit', 'getAdditionalFormData');
     return {
       type: typeSelect ? typeSelect.value : 'BOOK'
     };
@@ -58,7 +59,7 @@ const sourceModalConfig = {
   
   // Populate type dropdown when modal opens (after settings are loaded)
   onBeforeOpen(data, callbacks) {
-    const typeSelect = document.getElementById('sourceTypeEdit');
+    const typeSelect = getElementByIdSafe('sourceTypeEdit', 'onBeforeOpen');
     
     if (typeSelect && callbacks.getQuoteTypes) {
       const quoteTypes = callbacks.getQuoteTypes();

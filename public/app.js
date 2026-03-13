@@ -107,6 +107,7 @@ import {
 import {
   FILTER_IDS,
   CSS_CLASSES,
+  getElementByIdSafe,
   getElementValue,
   getCheckboxState,
   getCheckedValues
@@ -170,9 +171,9 @@ function populateTypeDropdowns() {
   
   // Find all type dropdowns
   const dropdowns = [
-    document.getElementById('sourceType'),      // Quote modal
-    document.getElementById('sourceTypeEdit'), // Source edit modal  
-    document.getElementById('authorTypeFilter') // Author filter (if exists)
+    getElementByIdSafe('sourceType', 'populateTypeDropdowns'),      // Quote modal
+    getElementByIdSafe('sourceTypeEdit', 'populateTypeDropdowns')  // Source edit modal  
+    // Note: 'authorTypeFilter' removed - element doesn't exist
   ].filter(Boolean); // Remove nulls
   
   dropdowns.forEach(dropdown => {
@@ -204,7 +205,7 @@ function populateTypeDropdowns() {
   });
   
   // Populate training type dropdown
-  const trainingTypeDropdown = document.getElementById('trainingType');
+  const trainingTypeDropdown = getElementByIdSafe('trainingType');
   if (trainingTypeDropdown) {
     const trainingTypes = getTrainingTypes();
     const currentValue = trainingTypeDropdown.value;
@@ -324,28 +325,28 @@ initializeHashChangeListener(
 let currentQuotesData = []; // Store current quotes for PDF export
 
 // DOM Elements
-const quoteModal = document.getElementById("quoteModal");
-const quoteForm = document.getElementById("quoteForm");
-const addQuoteBtn = document.getElementById("addQuoteBtn");
+const quoteModal = getElementByIdSafe("quoteModal");
+const quoteForm = getElementByIdSafe("quoteForm");
+const addQuoteBtn = getElementByIdSafe("addQuoteBtn");
 const closeModal = document.querySelector(".close");
-const cancelBtn = document.getElementById("cancelBtn");
-const quotesList = document.getElementById("quotesList");
-const quoteCount = document.getElementById("quoteCount");
-const modalTitle = document.getElementById("modalTitle");
+const cancelBtn = getElementByIdSafe("cancelBtn");
+const quotesList = getElementByIdSafe("quotesList");
+const quoteCount = getElementByIdSafe("quoteCount");
+const modalTitle = getElementByIdSafe("modalTitle");
 
 // MIGRATED: Bulk import elements moved to bulkImport.js
 // Preview elements removed - no longer needed
 
 // Form inputs
-const authorInput = document.getElementById("author");
-const sourceInput = document.getElementById("source");
-const authorSuggestions = document.getElementById("authorSuggestions");
-const sourceSuggestions = document.getElementById("sourceSuggestions");
-const tagsSuggestions = document.getElementById("tagsSuggestions");
-const noteInput = document.getElementById("note");
-const quoteImageFile = document.getElementById("quoteImageFile");
-const quoteImagePreview = document.getElementById("quoteImagePreview");
-const clearQuoteImageBtn = document.getElementById("clearQuoteImage");
+const authorInput = getElementByIdSafe("author");
+const sourceInput = getElementByIdSafe("source");
+const authorSuggestions = getElementByIdSafe("authorSuggestions");
+const sourceSuggestions = getElementByIdSafe("sourceSuggestions");
+const tagsSuggestions = getElementByIdSafe("tagsSuggestions");
+const noteInput = getElementByIdSafe("note");
+const quoteImageFile = getElementByIdSafe("quoteImageFile");
+const quoteImagePreview = getElementByIdSafe("quoteImagePreview");
+const clearQuoteImageBtn = getElementByIdSafe("clearQuoteImage");
 
 // State for quote image
 let currentQuoteImage = "";
@@ -354,12 +355,12 @@ let currentAttachmentType = "image"; // Track: image, pdf, document, video, audi
 let currentAttachmentFileName = ""; // Track filename for non-image files
 
 // Search inputs
-const searchQuote = document.getElementById("searchQuote");
-const searchAuthor = document.getElementById("searchAuthor");
-const searchSource = document.getElementById("searchSource");
-const searchTags = document.getElementById("searchTags");
-const searchScore = document.getElementById("searchScore");
-const clearBtn = document.getElementById("clearBtn");
+const searchQuote = getElementByIdSafe("searchQuote");
+const searchAuthor = getElementByIdSafe("searchAuthor");
+const searchSource = getElementByIdSafe("searchSource");
+const searchTags = getElementByIdSafe("searchTags");
+const searchScore = getElementByIdSafe("searchScore");
+const clearBtn = getElementByIdSafe("clearBtn");
 
 // State
 let editingQuoteId = null;
@@ -437,8 +438,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 // Event Listeners
 function setupEventListeners() {
   // Add note button handlers with popup menu
-  const addQuoteBtnTablet = document.getElementById("addQuoteBtnTablet");
-  const noteTypePopup = document.getElementById("noteTypePopup");
+  const addQuoteBtnTablet = getElementByIdSafe("addQuoteBtnTablet");
+  const noteTypePopup = getElementByIdSafe("noteTypePopup");
   
   function handleAddNoteClick(e) {
     e.stopPropagation();
@@ -482,7 +483,7 @@ function setupEventListeners() {
   });
   
   // Note type change handler (removed from modal, but keep for edit mode)
-  const noteTypeSelect = document.getElementById("noteType");
+  const noteTypeSelect = getElementByIdSafe("noteType");
   if (noteTypeSelect) {
     noteTypeSelect.addEventListener("change", updateFieldVisibility);
   }
@@ -536,10 +537,10 @@ function setupEventListeners() {
   clearBtn.addEventListener("click", clearFilters);
   
   // Delete quote button in modal
-  const deleteQuoteBtn = document.getElementById("deleteQuoteBtn");
+  const deleteQuoteBtn = getElementByIdSafe("deleteQuoteBtn");
   if (deleteQuoteBtn) {
     deleteQuoteBtn.addEventListener("click", () => {
-      const quoteId = document.getElementById("quoteId").value;
+      const quoteId = getElementByIdSafe("quoteId").value;
       if (quoteId) {
         closeQuoteModal();
         deleteQuote(quoteId);
@@ -548,10 +549,10 @@ function setupEventListeners() {
   }
 
   // Refresh buttons
-  const refreshQuotesBtn = document.getElementById("refreshQuotesBtn");
-  const refreshAuthorsBtn = document.getElementById("refreshAuthorsBtn");
-  const refreshSourcesBtn = document.getElementById("refreshSourcesBtn");
-  const refreshTagsBtn = document.getElementById("refreshTagsBtn");
+  const refreshQuotesBtn = getElementByIdSafe("refreshQuotesBtn");
+  const refreshAuthorsBtn = getElementByIdSafe("refreshAuthorsBtn");
+  const refreshSourcesBtn = getElementByIdSafe("refreshSourcesBtn");
+  const refreshTagsBtn = getElementByIdSafe("refreshTagsBtn");
 
   if (refreshQuotesBtn) {
     refreshQuotesBtn.addEventListener("click", async () => {
@@ -569,25 +570,22 @@ function setupEventListeners() {
     });
   }
 
-  // Export PDF button
-  const exportPdfBtn = document.getElementById("exportPdfBtn");
-  if (exportPdfBtn) {
-    exportPdfBtn.addEventListener("click", exportToPdf);
-  }
+  // Export PDF button - REMOVED: Moved to bulk operations modal
+  // If you need export PDF, use the "Bulk Operations" button instead
 
   // Export JSON button
-  const exportJsonBtn = document.getElementById("exportJsonBtn");
+  const exportJsonBtn = getElementByIdSafe("exportJsonBtn");
   if (exportJsonBtn) {
     exportJsonBtn.addEventListener("click", exportToJson);
   }
 
   // Import JSON button
-  const importJsonBtn = document.getElementById("importJsonBtn");
-  const importModal = document.getElementById("importModal");
-  const closeImportModal = document.getElementById("closeImportModal");
-  const cancelImportBtn = document.getElementById("cancelImportBtn");
-  const selectFileBtn = document.getElementById("selectFileBtn");
-  const importFileInput = document.getElementById("importFileInput");
+  const importJsonBtn = getElementByIdSafe("importJsonBtn");
+  const importModal = getElementByIdSafe("importModal");
+  const closeImportModal = getElementByIdSafe("closeImportModal");
+  const cancelImportBtn = getElementByIdSafe("cancelImportBtn");
+  const selectFileBtn = getElementByIdSafe("selectFileBtn");
+  const importFileInput = getElementByIdSafe("importFileInput");
 
   if (importJsonBtn) {
     importJsonBtn.addEventListener("click", () => {
@@ -618,13 +616,13 @@ function setupEventListeners() {
   }
 
   // Bulk operations modal
-  const bulkOperationsBtn = document.getElementById("bulkOperationsBtn");
-  const closeBulkOpsModal = document.getElementById("closeBulkOpsModal");
-  const cancelBulkOpsBtn = document.getElementById("cancelBulkOpsBtn");
-  const bulkTagExecuteBtn = document.getElementById("bulkTagExecuteBtn");
-  const bulkUntagExecuteBtn = document.getElementById("bulkUntagExecuteBtn");
-  const bulkExportPdfBtn = document.getElementById("bulkExportPdfBtn");
-  const bulkDeleteBtn = document.getElementById("bulkDeleteBtn");
+  const bulkOperationsBtn = getElementByIdSafe("bulkOperationsBtn");
+  const closeBulkOpsModal = getElementByIdSafe("closeBulkOpsModal");
+  const cancelBulkOpsBtn = getElementByIdSafe("cancelBulkOpsBtn");
+  const bulkTagExecuteBtn = getElementByIdSafe("bulkTagExecuteBtn");
+  const bulkUntagExecuteBtn = getElementByIdSafe("bulkUntagExecuteBtn");
+  const bulkExportPdfBtn = getElementByIdSafe("bulkExportPdfBtn");
+  const bulkDeleteBtn = getElementByIdSafe("bulkDeleteBtn");
 
   if (bulkOperationsBtn) {
     bulkOperationsBtn.addEventListener("click", openBulkOperationsModal);
@@ -656,7 +654,7 @@ function setupEventListeners() {
 
   // Close bulk operations modal on outside click
   window.addEventListener("click", (e) => {
-    const bulkOpsModal = document.getElementById("bulkOperationsModal");
+    const bulkOpsModal = getElementByIdSafe("bulkOperationsModal");
     if (e.target === bulkOpsModal) {
       closeBulkOperationsModal();
     }
@@ -722,14 +720,14 @@ function setupEventListeners() {
 
   // Sources view: Type filter checkboxes
   ["filterBook", "filterMovie"].forEach((id) => {
-    const checkbox = document.getElementById(id);
+    const checkbox = getElementByIdSafe(id);
     if (checkbox) {
       checkbox.addEventListener("change", loadSources);
     }
   });
 
   // Sources view: Search input
-  const searchSourceName = document.getElementById("searchSourceName");
+  const searchSourceName = getElementByIdSafe("searchSourceName");
   if (searchSourceName) {
     searchSourceName.addEventListener("input", () => {
       clearTimeout(window.sourceSearchTimeout);
@@ -738,8 +736,8 @@ function setupEventListeners() {
   }
 
   // Sources view: Sort buttons
-  const sortByName = document.getElementById("sortByName");
-  const sortByCount = document.getElementById("sortByCount");
+  const sortByName = getElementByIdSafe("sortByName");
+  const sortByCount = getElementByIdSafe("sortByCount");
   if (sortByName) {
     sortByName.addEventListener("click", () => {
       window.sourceSortBy = "name";
@@ -758,7 +756,7 @@ function setupEventListeners() {
   }
 
   // Authors view: Search input
-  const searchAuthorName = document.getElementById("searchAuthorName");
+  const searchAuthorName = getElementByIdSafe("searchAuthorName");
   if (searchAuthorName) {
     searchAuthorName.addEventListener("input", () => {
       clearTimeout(window.authorSearchTimeout);
@@ -767,8 +765,8 @@ function setupEventListeners() {
   }
 
   // Authors view: Sort buttons
-  const sortAuthorsByName = document.getElementById("sortAuthorsByName");
-  const sortAuthorsByCount = document.getElementById("sortAuthorsByCount");
+  const sortAuthorsByName = getElementByIdSafe("sortAuthorsByName");
+  const sortAuthorsByCount = getElementByIdSafe("sortAuthorsByCount");
   if (sortAuthorsByName) {
     sortAuthorsByName.addEventListener("click", () => {
       window.authorSortBy = "name";
@@ -823,8 +821,8 @@ function setupEventListeners() {
   registerGlobalSearchFunctions();
   
   // Date picker sync - when date picker changes, update text input
-  const noteDatePicker = document.getElementById("noteDatePicker");
-  const noteDateText = document.getElementById("noteDate");
+  const noteDatePicker = getElementByIdSafe("noteDatePicker");
+  const noteDateText = getElementByIdSafe("noteDate");
   
   if (noteDatePicker && noteDateText) {
     noteDatePicker.addEventListener("change", () => {
@@ -862,15 +860,15 @@ function updateSourcesFilterVisibility() {
 
 // Wrapper with app-specific additions
 function updateFieldVisibility() {
-  const noteType = document.getElementById('noteType').value;
+  const noteType = getElementByIdSafe('noteType').value;
   const isQuote = noteType === 'quote';
   
   // Use library function for standard field visibility
   updateModalFieldVisibility(noteType);
   
   // App-specific fields not in library
-  const quoteSpecificFields = document.getElementById('quoteSpecificFields');
-  const translationGroupContainer = document.getElementById('translationGroupContainer');
+  const quoteSpecificFields = getElementByIdSafe('quoteSpecificFields');
+  const translationGroupContainer = getElementByIdSafe('translationGroupContainer');
   
   if (quoteSpecificFields) {
     quoteSpecificFields.style.display = isQuote ? 'flex' : 'none';
@@ -900,20 +898,20 @@ function openAddModal() {
   const elements = {
     modalTitle: modalTitle,
     form: quoteForm,
-    quoteTextInput: document.getElementById("quoteText"),
+    quoteTextInput: getElementByIdSafe("quoteText"),
     noteInput: noteInput,
-    noteTypeSelect: document.getElementById("noteType"),
+    noteTypeSelect: getElementByIdSafe("noteType"),
     authorInput: authorInput,
-    sourceInput: document.getElementById("source"),
-    sourceTypeSelect: document.getElementById("sourceType"),
-    noteDateInput: document.getElementById("noteDate"),
-    noteDatePicker: document.getElementById("noteDatePicker"),
-    trainingTypeSelect: document.getElementById("trainingType"),
-    translationGroupInput: document.getElementById("translationGroup"),
+    sourceInput: getElementByIdSafe("source"),
+    sourceTypeSelect: getElementByIdSafe("sourceType"),
+    noteDateInput: getElementByIdSafe("noteDate"),
+    noteDatePicker: getElementByIdSafe("noteDatePicker"),
+    trainingTypeSelect: getElementByIdSafe("trainingType"),
+    translationGroupInput: getElementByIdSafe("translationGroup"),
     scoreRadios: true, // Flag to indicate score radios exist
-    metadataElement: document.getElementById("quoteMetadata"),
-    deleteBtn: document.getElementById("deleteQuoteBtn"),
-    quoteIdInput: document.getElementById("quoteId")
+    metadataElement: getElementByIdSafe("quoteMetadata"),
+    deleteBtn: getElementByIdSafe("deleteQuoteBtn"),
+    quoteIdInput: getElementByIdSafe("quoteId")
   };
   
   // Setup modal using library
@@ -941,8 +939,8 @@ function openAddModal() {
   updateSelectedTagsDisplay();
   
   // Reset image section (app-specific)
-  const imageSection = document.getElementById('imageSection');
-  const toggleIcon = document.getElementById('imageToggleIcon');
+  const imageSection = getElementByIdSafe('imageSection');
+  const toggleIcon = getElementByIdSafe('imageToggleIcon');
   if (imageSection) imageSection.style.display = 'none';
   if (toggleIcon) toggleIcon.textContent = '▶';
   
@@ -960,20 +958,20 @@ function openEditModal(quote) {
   const elements = {
     modalTitle: modalTitle,
     form: quoteForm,
-    quoteTextInput: document.getElementById("quoteText"),
+    quoteTextInput: getElementByIdSafe("quoteText"),
     noteInput: noteInput,
-    noteTypeSelect: document.getElementById("noteType"),
+    noteTypeSelect: getElementByIdSafe("noteType"),
     authorInput: authorInput,
-    sourceInput: document.getElementById("source"),
-    sourceTypeSelect: document.getElementById("sourceType"),
-    noteDateInput: document.getElementById("noteDate"),
-    noteDatePicker: document.getElementById("noteDatePicker"),
-    trainingTypeSelect: document.getElementById("trainingType"),
-    translationGroupInput: document.getElementById("translationGroup"),
+    sourceInput: getElementByIdSafe("source"),
+    sourceTypeSelect: getElementByIdSafe("sourceType"),
+    noteDateInput: getElementByIdSafe("noteDate"),
+    noteDatePicker: getElementByIdSafe("noteDatePicker"),
+    trainingTypeSelect: getElementByIdSafe("trainingType"),
+    translationGroupInput: getElementByIdSafe("translationGroup"),
     scoreRadios: true, // Flag to indicate score radios exist
-    metadataElement: document.getElementById("quoteMetadata"),
-    deleteBtn: document.getElementById("deleteQuoteBtn"),
-    quoteIdInput: document.getElementById("quoteId")
+    metadataElement: getElementByIdSafe("quoteMetadata"),
+    deleteBtn: getElementByIdSafe("deleteQuoteBtn"),
+    quoteIdInput: getElementByIdSafe("quoteId")
   };
   
   // Setup modal using library
@@ -1009,8 +1007,8 @@ function openEditModal(quote) {
   }
   
   // Reset image section (app-specific)
-  const imageSection = document.getElementById('imageSection');
-  const toggleIcon = document.getElementById('imageToggleIcon');
+  const imageSection = getElementByIdSafe('imageSection');
+  const toggleIcon = getElementByIdSafe('imageToggleIcon');
   if (imageSection) imageSection.style.display = 'none';
   if (toggleIcon) toggleIcon.textContent = '▶';
   
@@ -1051,7 +1049,7 @@ function clearFilters() {
 // Helper function to add refresh animation
 function addRefreshAnimation(buttonId, asyncFunction) {
   return async function() {
-    const button = document.getElementById(buttonId);
+    const button = getElementByIdSafe(buttonId);
     if (button) {
       button.classList.add('refreshing');
     }
@@ -1075,11 +1073,11 @@ async function loadQuotes() {
   currentQuotesData = getCurrentQuotesData(); // Sync for PDF export
   
   // Sync local state for pagination (loadQuotesLib calls loadTotalCount internally)
-  const filteredCountElement = document.getElementById("filteredQuotesCount");
+  const filteredCountElement = getElementByIdSafe("filteredQuotesCount");
   if (filteredCountElement) {
     filteredQuotes = parseInt(filteredCountElement.textContent) || 0;
   }
-  const totalCountElement = document.getElementById("totalQuotesCount");
+  const totalCountElement = getElementByIdSafe("totalQuotesCount");
   if (totalCountElement) {
     totalQuotes = parseInt(totalCountElement.textContent) || 0;
   }
@@ -1099,11 +1097,11 @@ async function loadTotalCount() {
   await loadTotalCountLib(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes);
   
   // Sync local state for pagination
-  const filteredCountElement = document.getElementById("filteredQuotesCount");
+  const filteredCountElement = getElementByIdSafe("filteredQuotesCount");
   if (filteredCountElement) {
     filteredQuotes = parseInt(filteredCountElement.textContent) || 0;
   }
-  const totalCountElement = document.getElementById("totalQuotesCount");
+  const totalCountElement = getElementByIdSafe("totalQuotesCount");
   if (totalCountElement) {
     totalQuotes = parseInt(totalCountElement.textContent) || 0;
   }
@@ -1186,7 +1184,7 @@ function displayQuotes(quotes) {
     document.querySelectorAll('.quote-text.collapsible').forEach((quoteText) => {
       const numericId = quoteText.id.replace('quote-', '');
       const btnId = `expand-${numericId}`;
-      const btnEl = document.getElementById(btnId);
+      const btnEl = getElementByIdSafe(btnId);
       
       if (btnEl) {
         quoteText.classList.remove('collapsible');
@@ -1297,8 +1295,8 @@ function toggleCardExpand(card) {
 }
 
 function toggleQuoteExpand(quoteId) {
-  const quoteEl = document.getElementById(`quote-${quoteId}`);
-  const btnEl = document.getElementById(`expand-${quoteId}`);
+  const quoteEl = getElementByIdSafe(`quote-${quoteId}`);
+  const btnEl = getElementByIdSafe(`expand-${quoteId}`);
   const isExpanded = quoteEl.dataset.expanded === "true";
 
   if (!window.fullQuotes[quoteId]) {
@@ -1458,17 +1456,17 @@ function clearSourceImage() {
 // ============= AUTHOR/SOURCE EDIT MODALS =============
 
 // Author Modal Elements (only those needed for image handling and paste detection)
-const authorModal = document.getElementById("authorModal");
-const authorImageFile = document.getElementById("authorImageFile");
-const authorImagePreview = document.getElementById("authorImagePreview");
-const clearAuthorImageBtn = document.getElementById("clearAuthorImage");
+const authorModal = getElementByIdSafe("authorModal");
+const authorImageFile = getElementByIdSafe("authorImageFile");
+const authorImagePreview = getElementByIdSafe("authorImagePreview");
+const clearAuthorImageBtn = getElementByIdSafe("clearAuthorImage");
 
 // Source Modal Elements (only those needed for image handling, autocomplete, and paste detection)
-const sourceModal = document.getElementById("sourceModal");
-const sourceTypeEdit = document.getElementById("sourceTypeEdit"); // Used by autocomplete
-const sourceImageFile = document.getElementById("sourceImageFile");
-const sourceImagePreview = document.getElementById("sourceImagePreview");
-const clearSourceImageBtn = document.getElementById("clearSourceImage");
+const sourceModal = getElementByIdSafe("sourceModal");
+const sourceTypeEdit = getElementByIdSafe("sourceTypeEdit"); // Used by autocomplete
+const sourceImageFile = getElementByIdSafe("sourceImageFile");
+const sourceImagePreview = getElementByIdSafe("sourceImagePreview");
+const clearSourceImageBtn = getElementByIdSafe("clearSourceImage");
 
 // State for images
 let currentAuthorImage = null;
@@ -1547,7 +1545,7 @@ quoteImageFile.addEventListener("change", (e) => {
 });
 
 // Handle quote image paste
-document.getElementById("quoteModal").addEventListener("paste", (e) => {
+getElementByIdSafe("quoteModal").addEventListener("paste", (e) => {
   handlePaste(e, "quote");
 });
 
@@ -1568,7 +1566,7 @@ clearQuoteImageBtn.addEventListener("click", (e) => {
 // ============= PAGINATION =============
 
 function updatePaginationControls() {
-  const paginationContainer = document.getElementById("paginationControls");
+  const paginationContainer = getElementByIdSafe("paginationControls");
   if (!paginationContainer) return;
 
   // Use filteredQuotes for pagination calculations
@@ -1731,8 +1729,8 @@ async function loadAuthors() {
     displayAuthors(authors);
     
     // Update counters
-    const totalCountElement = document.getElementById("totalAuthorsCount");
-    const filteredCountElement = document.getElementById("filteredAuthorsCount");
+    const totalCountElement = getElementByIdSafe("totalAuthorsCount");
+    const filteredCountElement = getElementByIdSafe("filteredAuthorsCount");
     if (totalCountElement) {
       totalCountElement.textContent = totalCount;
     }
@@ -1741,13 +1739,13 @@ async function loadAuthors() {
     }
   } catch (error) {
     console.error("Error loading authors:", error);
-    document.getElementById("authorsList").innerHTML =
+    getElementByIdSafe("authorsList").innerHTML =
       '<div class="no-items">Failed to load authors.</div>';
   }
 }
 
 function displayAuthors(authors) {
-  const authorsList = document.getElementById("authorsList");
+  const authorsList = getElementByIdSafe("authorsList");
 
   if (!authorsList) {
     console.error("authorsList element not found!");
@@ -1809,11 +1807,11 @@ function displayAuthors(authors) {
 async function loadSources() {
   try {
     // Get checked source types
-    const filterBook = document.getElementById("filterBook")?.checked !== false;
-    const filterMovie = document.getElementById("filterMovie")?.checked !== false;
-    const filterPoetry = document.getElementById("filterPoetry")?.checked !== false;
-    const filterLyrics = document.getElementById("filterLyrics")?.checked !== false;
-    const filterJokes = document.getElementById("filterJokes")?.checked !== false;
+    const filterBook = getElementByIdSafe("filterBook")?.checked !== false;
+    const filterMovie = getElementByIdSafe("filterMovie")?.checked !== false;
+    const filterPoetry = getElementByIdSafe("filterPoetry")?.checked !== false;
+    const filterLyrics = getElementByIdSafe("filterLyrics")?.checked !== false;
+    const filterJokes = getElementByIdSafe("filterJokes")?.checked !== false;
 
     const response = await fetch(`${API_URL}/sources`);
     let sources = await response.json();
@@ -1822,7 +1820,7 @@ async function loadSources() {
     const totalCount = sources.length;
 
     // Filter by type if filters exist AND at least one is unchecked
-    if (document.getElementById("filterBook")) {
+    if (getElementByIdSafe("filterBook")) {
       // Only apply filter if not all are checked (i.e., user is actually filtering)
       if (!filterBook || !filterMovie || !filterPoetry || !filterLyrics || !filterJokes) {
         sources = sources.filter((source) => {
@@ -1866,8 +1864,8 @@ async function loadSources() {
     displaySources(sources);
     
     // Update counters
-    const totalCountElement = document.getElementById("totalSourcesCount");
-    const filteredCountElement = document.getElementById("filteredSourcesCount");
+    const totalCountElement = getElementByIdSafe("totalSourcesCount");
+    const filteredCountElement = getElementByIdSafe("filteredSourcesCount");
     if (totalCountElement) {
       totalCountElement.textContent = totalCount;
     }
@@ -1876,13 +1874,13 @@ async function loadSources() {
     }
   } catch (error) {
     console.error("Error loading sources:", error);
-    document.getElementById("sourcesList").innerHTML =
+    getElementByIdSafe("sourcesList").innerHTML =
       '<div class="no-items">Failed to load sources.</div>';
   }
 }
 
 function displaySources(sources) {
-  const sourcesList = document.getElementById("sourcesList");
+  const sourcesList = getElementByIdSafe("sourcesList");
 
   if (!sourcesList) {
     console.error("sourcesList element not found!");
@@ -1970,10 +1968,10 @@ function editSource(id, name) {
 }
 
 function showRenameModal(type, currentName) {
-  const modal = document.getElementById('renameModal');
-  const title = document.getElementById('renameModalTitle');
-  const input = document.getElementById('renameInput');
-  const warning = document.getElementById('renameWarning');
+  const modal = getElementByIdSafe('renameModal');
+  const title = getElementByIdSafe('renameModalTitle');
+  const input = getElementByIdSafe('renameInput');
+  const warning = getElementByIdSafe('renameWarning');
   
   title.textContent = `Rename ${type}`;
   input.value = currentName;
@@ -1985,13 +1983,13 @@ function showRenameModal(type, currentName) {
 }
 
 function hideRenameModal() {
-  const modal = document.getElementById('renameModal');
+  const modal = getElementByIdSafe('renameModal');
   modal.style.display = 'none';
   renameContext = { type: null, id: null, oldName: null };
 }
 
 async function performRename() {
-  const input = document.getElementById('renameInput');
+  const input = getElementByIdSafe('renameInput');
   const newName = input.value.trim();
   
   if (!newName) {
@@ -2004,7 +2002,7 @@ async function performRename() {
     return;
   }
   
-  const confirmBtn = document.getElementById('renameConfirmBtn');
+  const confirmBtn = getElementByIdSafe('renameConfirmBtn');
   const originalText = confirmBtn.textContent;
   confirmBtn.textContent = '⏳ Renaming...';
   confirmBtn.disabled = true;
@@ -2097,10 +2095,10 @@ function showNotification(message, type = 'info') {
 
 // Event listeners for rename modal
 document.addEventListener('DOMContentLoaded', () => {
-  const renameModal = document.getElementById('renameModal');
-  const renameCancelBtn = document.getElementById('renameCancelBtn');
-  const renameConfirmBtn = document.getElementById('renameConfirmBtn');
-  const renameInput = document.getElementById('renameInput');
+  const renameModal = getElementByIdSafe('renameModal');
+  const renameCancelBtn = getElementByIdSafe('renameCancelBtn');
+  const renameConfirmBtn = getElementByIdSafe('renameConfirmBtn');
+  const renameInput = getElementByIdSafe('renameInput');
   
   // Cancel button
   renameCancelBtn.addEventListener('click', hideRenameModal);
@@ -2129,9 +2127,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Handle rename tag from operations panel
 document.addEventListener('DOMContentLoaded', () => {
-  const renameTagBtn = document.getElementById('renameTagBtn');
-  const renameTagInput = document.getElementById('renameTagInput');
-  const renameTagNewName = document.getElementById('renameTagNewName');
+  const renameTagBtn = getElementByIdSafe('renameTagBtn');
+  const renameTagInput = getElementByIdSafe('renameTagInput');
+  const renameTagNewName = getElementByIdSafe('renameTagNewName');
   
   if (renameTagBtn && renameTagInput && renameTagNewName) {
     // Auto-fill new name when tag is selected
@@ -2201,9 +2199,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   
   // Handle add tag to tagged quotes
-  const addTagToTaggedBtn = document.getElementById('addTagToTaggedBtn');
-  const sourceTagInput = document.getElementById('sourceTagInput');
-  const targetTagInput = document.getElementById('targetTagInput');
+  const addTagToTaggedBtn = getElementByIdSafe('addTagToTaggedBtn');
+  const sourceTagInput = getElementByIdSafe('sourceTagInput');
+  const targetTagInput = getElementByIdSafe('targetTagInput');
   
   if (addTagToTaggedBtn && sourceTagInput && targetTagInput) {
     addTagToTaggedBtn.addEventListener('click', async () => {
@@ -2341,7 +2339,7 @@ async function exportToPdf() {
     currentNoteTypeFilter,
     selectedTypes,
     selectedTrainingTypes,
-    exportBtn: document.getElementById("exportPdfBtn"),
+    exportBtn: getElementByIdSafe("exportPdfBtn", "exportToPdf"), // May be null if moved to bulk ops
     getQuoteTypes,
   });
 }
@@ -2351,16 +2349,16 @@ async function exportToPdf() {
 async function exportToJson() {
   await exportToJsonLib({
     currentNoteTypeFilter,
-    exportBtn: document.getElementById("exportJsonBtn"),
+    exportBtn: getElementByIdSafe("exportJsonBtn"),
   });
 }
 
 async function handleImportFile(event) {
   await handleImportFileLib(event, {
-    importProgress: document.getElementById("importProgress"),
-    importStatus: document.getElementById("importStatus"),
-    selectFileBtn: document.getElementById("selectFileBtn"),
-    importModal: document.getElementById("importModal"),
+    importProgress: getElementByIdSafe("importProgress"),
+    importStatus: getElementByIdSafe("importStatus"),
+    selectFileBtn: getElementByIdSafe("selectFileBtn"),
+    importModal: getElementByIdSafe("importModal"),
     onImportComplete: () => {
       currentPage = 1;
       setLibCurrentPage(1);
@@ -2373,25 +2371,28 @@ async function handleImportFile(event) {
 // ============= BULK OPERATIONS =============
 
 function getCurrentFilters() {
+  // Helper to get value silently for optional elements (no warnings)
+  // Uses raw getElementById for elements that only exist in certain views
+  const getOptionalValue = (id) => {
+    const element = document.getElementById(id);
+    return element?.value || '';
+  };
+  
   return {
     note_type: currentNoteTypeFilter,
-    author_id: getElementValue(FILTER_IDS.AUTHOR_FILTER),
-    source_id: getElementValue(FILTER_IDS.SOURCE_FILTER),
-    search: getElementValue(FILTER_IDS.SEARCH_QUOTE),
-    tag: getElementValue(FILTER_IDS.SEARCH_TAGS),
+    author_id: getOptionalValue(FILTER_IDS.AUTHOR_FILTER), // Only exists in quotes view
+    source_id: getOptionalValue(FILTER_IDS.SOURCE_FILTER), // Only exists in quotes view
+    search: getElementValue(FILTER_IDS.SEARCH_QUOTE, 'getCurrentFilters'),
+    tag: getElementValue(FILTER_IDS.SEARCH_TAGS, 'getCurrentFilters'),
     types: getCheckedValues(CSS_CLASSES.TYPE_CHECKBOX).join(','),
     training_types: getCheckedValues(CSS_CLASSES.TRAINING_TYPE_CHECKBOX).join(','),
-    year: getElementValue(FILTER_IDS.YEAR_FILTER),
-    month: getElementValue(FILTER_IDS.MONTH_FILTER),
-    score: getElementValue(FILTER_IDS.SEARCH_SCORE),
-    hasAuthor: getCheckboxState(FILTER_IDS.HAS_AUTHOR_CHECKBOX) 
-      ? getElementValue(FILTER_IDS.HAS_AUTHOR_CONDITION) : '',
-    hasSource: getCheckboxState(FILTER_IDS.HAS_SOURCE_CHECKBOX) 
-      ? getElementValue(FILTER_IDS.HAS_SOURCE_CONDITION) : '',
-    hasNote: getCheckboxState(FILTER_IDS.HAS_NOTE_CHECKBOX) 
-      ? getElementValue(FILTER_IDS.HAS_NOTE_CONDITION) : '',
-    hasTags: getCheckboxState(FILTER_IDS.HAS_TAGS_CHECKBOX) 
-      ? getElementValue(FILTER_IDS.HAS_TAGS_CONDITION) : ''
+    year: getOptionalValue(FILTER_IDS.YEAR_FILTER), // Only exists in training view
+    month: getOptionalValue(FILTER_IDS.MONTH_FILTER), // Only exists in training view
+    score: getElementValue(FILTER_IDS.SEARCH_SCORE, 'getCurrentFilters'),
+    hasAuthor: getCheckboxState(FILTER_IDS.HAS_AUTHOR_CHECKBOX, FILTER_IDS.HAS_AUTHOR_CONDITION, 'getCurrentFilters'),
+    hasSource: getCheckboxState(FILTER_IDS.HAS_SOURCE_CHECKBOX, FILTER_IDS.HAS_SOURCE_CONDITION, 'getCurrentFilters'),
+    hasNote: getCheckboxState(FILTER_IDS.HAS_NOTE_CHECKBOX, FILTER_IDS.HAS_NOTE_CONDITION, 'getCurrentFilters'),
+    hasTags: getCheckboxState(FILTER_IDS.HAS_TAGS_CHECKBOX, FILTER_IDS.HAS_TAGS_CONDITION, 'getCurrentFilters')
   };
 }
 
@@ -2401,12 +2402,12 @@ function getFilterSummary() {
   
   if (filters.note_type) parts.push(`Type: ${filters.note_type}`);
   if (filters.author_id && filters.author_id !== 'all') {
-    const authorSelect = document.getElementById("authorFilter");
+    const authorSelect = getElementByIdSafe("authorFilter", "getFilterSummary");
     const authorName = authorSelect?.options[authorSelect.selectedIndex]?.text || 'Unknown';
     parts.push(`Author: ${authorName}`);
   }
   if (filters.source_id && filters.source_id !== 'all') {
-    const sourceSelect = document.getElementById("sourceFilter");
+    const sourceSelect = getElementByIdSafe("sourceFilter", "getFilterSummary");
     const sourceName = sourceSelect?.options[sourceSelect.selectedIndex]?.text || 'Unknown';
     parts.push(`Source: ${sourceName}`);
   }
@@ -2423,9 +2424,9 @@ function getFilterSummary() {
 }
 
 async function openBulkOperationsModal() {
-  const modal = document.getElementById("bulkOperationsModal");
-  const countElement = document.getElementById("bulkOpsCount");
-  const filtersElement = document.getElementById("bulkOpsFilters");
+  const modal = getElementByIdSafe("bulkOperationsModal");
+  const countElement = getElementByIdSafe("bulkOpsCount");
+  const filtersElement = getElementByIdSafe("bulkOpsFilters");
   
   // Show modal first
   modal.style.display = "block";
@@ -2451,15 +2452,15 @@ async function openBulkOperationsModal() {
     filtersElement.textContent = getFilterSummary();
     
     // Setup autocomplete for tag input
-    const bulkTagInput = document.getElementById("bulkTagInput");
-    const bulkTagSuggestions = document.getElementById("bulkTagSuggestions");
+    const bulkTagInput = getElementByIdSafe("bulkTagInput");
+    const bulkTagSuggestions = getElementByIdSafe("bulkTagSuggestions");
     if (bulkTagInput && bulkTagSuggestions) {
       setupAutocompleteInput(bulkTagInput, bulkTagSuggestions, 'tags', currentNoteTypeFilter);
     }
     
     // Setup autocomplete for untag input
-    const bulkUntagInput = document.getElementById("bulkUntagInput");
-    const bulkUntagSuggestions = document.getElementById("bulkUntagSuggestions");
+    const bulkUntagInput = getElementByIdSafe("bulkUntagInput");
+    const bulkUntagSuggestions = getElementByIdSafe("bulkUntagSuggestions");
     if (bulkUntagInput && bulkUntagSuggestions) {
       setupAutocompleteInput(bulkUntagInput, bulkUntagSuggestions, 'tags', currentNoteTypeFilter);
     }
@@ -2472,12 +2473,12 @@ async function openBulkOperationsModal() {
 }
 
 function closeBulkOperationsModal() {
-  const modal = document.getElementById("bulkOperationsModal");
+  const modal = getElementByIdSafe("bulkOperationsModal");
   modal.style.display = "none";
 }
 
 async function handleBulkTag() {
-  const tagInput = document.getElementById("bulkTagInput");
+  const tagInput = getElementByIdSafe("bulkTagInput");
   const tagName = tagInput?.value?.trim();
   
   if (!tagName) {
@@ -2487,7 +2488,7 @@ async function handleBulkTag() {
   }
   
   const filters = getCurrentFilters();
-  const countElement = document.getElementById("bulkOpsCount");
+  const countElement = getElementByIdSafe("bulkOpsCount");
   const count = parseInt(countElement.textContent) || 0;
   
   if (count === 0) {
@@ -2523,7 +2524,7 @@ async function handleBulkTag() {
 }
 
 async function handleBulkUntag() {
-  const untagInput = document.getElementById("bulkUntagInput");
+  const untagInput = getElementByIdSafe("bulkUntagInput");
   const tagName = untagInput?.value?.trim();
   
   if (!tagName) {
@@ -2533,7 +2534,7 @@ async function handleBulkUntag() {
   }
   
   const filters = getCurrentFilters();
-  const countElement = document.getElementById("bulkOpsCount");
+  const countElement = getElementByIdSafe("bulkOpsCount");
   const count = parseInt(countElement.textContent) || 0;
   
   if (count === 0) {
@@ -2570,16 +2571,13 @@ async function handleBulkUntag() {
 
 async function handleBulkExportPdf() {
   closeBulkOperationsModal();
-  // Reuse existing PDF export functionality
-  const exportBtn = document.getElementById("exportPdfBtn");
-  if (exportBtn) {
-    exportBtn.click();
-  }
+  // Call exportToPdf directly instead of trying to click removed button
+  await exportToPdf();
 }
 
 async function handleBulkDelete() {
   const filters = getCurrentFilters();
-  const countElement = document.getElementById("bulkOpsCount");
+  const countElement = getElementByIdSafe("bulkOpsCount");
   const count = parseInt(countElement.textContent) || 0;
   
   if (count === 0) {
@@ -2640,7 +2638,7 @@ async function showWelcomeQuote(force = false) {
     const quote = await response.json();
     
     // Get overlay elements
-    const overlay = document.getElementById("welcomeQuoteOverlay");
+    const overlay = getElementByIdSafe("welcomeQuoteOverlay");
     const container = overlay.querySelector(".welcome-quote-container");
     
     // Clear container and create quote card HTML
@@ -2705,7 +2703,7 @@ window.addEventListener("DOMContentLoaded", () => {
   setTimeout(showWelcomeQuote, 300);
   
   // Add event listener for Random Quote button
-  const randomQuoteBtn = document.getElementById("randomQuoteBtn");
+  const randomQuoteBtn = getElementByIdSafe("randomQuoteBtn");
   if (randomQuoteBtn) {
     randomQuoteBtn.addEventListener("click", () => showWelcomeQuote(true));
   }
@@ -2716,10 +2714,10 @@ window.allTags = []; // Make it global so tagsManager can update it
 let currentSortBy = "name";
 
 document.addEventListener("DOMContentLoaded", () => {
-  const searchInput = document.getElementById("searchSourcesInput");
-  const sortByName = document.getElementById("sortTagsByName");
-  const sortByCount = document.getElementById("sortTagsByCount");
-  const tagTypeFilter = document.getElementById("tagTypeFilter");
+  const searchInput = getElementByIdSafe("searchSourcesInput");
+  const sortByName = getElementByIdSafe("sortTagsByName");
+  const sortByCount = getElementByIdSafe("sortTagsByCount");
+  const tagTypeFilter = getElementByIdSafe("tagTypeFilter");
   
   if (searchInput) {
     searchInput.addEventListener("input", filterTags);
@@ -2752,8 +2750,8 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function filterTags() {
-  const searchValue = document.getElementById("searchSourcesInput")?.value.toLowerCase() || "";
-  const tagTypeFilter = document.getElementById("tagTypeFilter");
+  const searchValue = getElementByIdSafe("searchSourcesInput")?.value.toLowerCase() || "";
+  const tagTypeFilter = getElementByIdSafe("tagTypeFilter");
   const selectedType = tagTypeFilter ? tagTypeFilter.value || null : null;
   
   // Get current tags (filtered by type from last loadTags call)
@@ -2768,8 +2766,8 @@ function filterTags() {
   }
   
   // Update counters
-  const totalCountElement = document.getElementById("totalTagsCount");
-  const filteredCountElement = document.getElementById("filteredTagsCount");
+  const totalCountElement = getElementByIdSafe("totalTagsCount");
+  const filteredCountElement = getElementByIdSafe("filteredTagsCount");
   if (totalCountElement) {
     totalCountElement.textContent = window.allTags.length;
   }
@@ -2785,9 +2783,9 @@ function filterTags() {
 let selectedTagsArray = [];
 
 function initializeTagInput() {
-  const tagInput = document.getElementById('tagInput');
-  const addTagBtn = document.getElementById('addTagBtn');
-  const tagInputSuggestions = document.getElementById('tagInputSuggestions');
+  const tagInput = getElementByIdSafe('tagInput');
+  const addTagBtn = getElementByIdSafe('addTagBtn');
+  const tagInputSuggestions = getElementByIdSafe('tagInputSuggestions');
   
   if (!tagInput || !addTagBtn) return;
   
@@ -2861,7 +2859,7 @@ function initializeTagInput() {
 }
 
 function addTagFromInput() {
-  const tagInput = document.getElementById('tagInput');
+  const tagInput = getElementByIdSafe('tagInput');
   const tagValue = tagInput.value.trim();
   
   if (!tagValue) return;
@@ -2879,29 +2877,29 @@ function addTagFromInput() {
   updateSelectedTagsDisplay();
   
   // Update hidden input
-  document.getElementById('tags').value = selectedTagsArray.join(',');
+  getElementByIdSafe('tags').value = selectedTagsArray.join(',');
   
   // Clear input
   tagInput.value = '';
-  document.getElementById('tagInputSuggestions').classList.remove('show');
+  getElementByIdSafe('tagInputSuggestions').classList.remove('show');
 }
 
 function removeTag(tagName) {
   selectedTagsArray = selectedTagsArray.filter(t => t !== tagName);
   updateSelectedTagsDisplay();
-  document.getElementById('tags').value = selectedTagsArray.join(',');
+  getElementByIdSafe('tags').value = selectedTagsArray.join(',');
 }
 // Make global for onclick handlers
 window.removeTag = removeTag;
 
 function updateSelectedTagsDisplay() {
-  const container = document.getElementById('selectedTags');
+  const container = getElementByIdSafe('selectedTags');
   if (!container) return;
   
   if (selectedTagsArray.length === 0) {
     container.innerHTML = '';
     // IMPORTANT: Also clear the hidden input field!
-    document.getElementById('tags').value = '';
+    getElementByIdSafe('tags').value = '';
     return;
   }
   
@@ -2913,7 +2911,7 @@ function updateSelectedTagsDisplay() {
   `).join('');
   
   // Update hidden input with current tags
-  document.getElementById('tags').value = selectedTagsArray.join(',');
+  getElementByIdSafe('tags').value = selectedTagsArray.join(',');
 }
 
 // Initialize tag input when DOM is ready
@@ -2937,7 +2935,7 @@ function populateTagsForEdit(tagsString) {
     selectedTagsArray = tagsString.split(',').map(t => t.trim()).filter(t => t);
   }
   updateSelectedTagsDisplay();
-  document.getElementById('tags').value = selectedTagsArray.join(',');
+  getElementByIdSafe('tags').value = selectedTagsArray.join(',');
 }
 
 // Settings Management
@@ -2954,8 +2952,8 @@ function populateTagsForEdit(tagsString) {
 
 // Toggle image section in quote modal
 function toggleImageSection() {
-  const imageSection = document.getElementById('imageSection');
-  const toggleIcon = document.getElementById('imageToggleIcon');
+  const imageSection = getElementByIdSafe('imageSection');
+  const toggleIcon = getElementByIdSafe('imageToggleIcon');
   
   if (imageSection.style.display === 'none' || !imageSection.style.display) {
     imageSection.style.display = 'block';
@@ -2970,7 +2968,7 @@ window.toggleImageSection = toggleImageSection;
 
 // Update image indicator in modal
 function updateImageIndicator() {
-  const indicator = document.getElementById('imageIndicator');
+  const indicator = getElementByIdSafe('imageIndicator');
   const hasAttachment = currentQuoteImage || currentQuoteImageFull;
   
   if (indicator) {
@@ -3045,7 +3043,7 @@ function setupMetadataSearchListeners() {
   
   // Add listeners to checkboxes
   metadataCheckboxes.forEach(id => {
-    const checkbox = document.getElementById(id);
+    const checkbox = getElementByIdSafe(id);
     if (checkbox && !checkbox.hasAttribute('data-listener')) {
       checkbox.addEventListener('change', () => {
         currentPage = 1;
@@ -3058,7 +3056,7 @@ function setupMetadataSearchListeners() {
   
   // Add listeners to dropdowns
   metadataSelects.forEach(id => {
-    const select = document.getElementById(id);
+    const select = getElementByIdSafe(id);
     if (select && !select.hasAttribute('data-listener')) {
       select.addEventListener('change', () => {
         currentPage = 1;

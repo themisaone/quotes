@@ -18,22 +18,32 @@
  * - Requires callbacks: loadQuotes, loadTotalCount, setCurrentPage, switchView
  */
 
+// Import constants for consistent IDs
+import { 
+  FILTER_IDS, 
+  CONTAINER_IDS,
+  getElementValue,
+  setElementValue,
+  getElementByIdSafe
+} from '../constants.js';
+
 // ============= CONSTANTS =============
 
 const DEBOUNCE_DELAY_MS = 300;
 const VIEW_SWITCH_DELAY_MS = 50;
 
+// Using constants from constants.js instead of hardcoded IDs
 const SEARCH_INPUT_IDS = [
-  'searchQuote',
-  'searchAuthor',
-  'searchSource',
-  'searchTags',  // Tags field has autocomplete but also needs search
-  'searchScore'
+  FILTER_IDS.SEARCH_QUOTE,
+  FILTER_IDS.SEARCH_AUTHOR,
+  FILTER_IDS.SEARCH_SOURCE,
+  FILTER_IDS.SEARCH_TAGS,
+  FILTER_IDS.SEARCH_SCORE
 ];
 
 const SEARCH_FIELD_IDS = [
   ...SEARCH_INPUT_IDS,
-  'searchTags'
+  FILTER_IDS.SEARCH_TAGS
 ];
 
 // ============= STATE =============
@@ -58,9 +68,8 @@ function createYearOption(year) {
  */
 async function populateTrainingYears() {
   try {
-    const yearSelect = document.getElementById('trainingYearFilter');
+    const yearSelect = getElementByIdSafe(FILTER_IDS.YEAR_FILTER, 'populateTrainingYears');
     if (!yearSelect) {
-      console.log("⚠️ Year select element not found!");
       return;
     }
     
@@ -115,8 +124,8 @@ function updateMonthFilterState(yearValue, monthFilter) {
  * Setup year filter event handlers
  */
 function setupYearFilter() {
-  const trainingYearFilter = document.getElementById('trainingYearFilter');
-  const trainingMonthFilter = document.getElementById('trainingMonthFilter');
+  const trainingYearFilter = getElementByIdSafe(FILTER_IDS.YEAR_FILTER, 'setupYearFilter');
+  const trainingMonthFilter = getElementByIdSafe(FILTER_IDS.MONTH_FILTER, 'setupYearFilter');
 
   if (!trainingYearFilter) return;
 
@@ -140,7 +149,7 @@ function setupYearFilter() {
  * Setup month filter event handlers
  */
 function setupMonthFilter() {
-  const trainingMonthFilter = document.getElementById('trainingMonthFilter');
+  const trainingMonthFilter = getElementByIdSafe(FILTER_IDS.MONTH_FILTER, 'setupMonthFilter');
 
   if (!trainingMonthFilter) return;
 
@@ -175,7 +184,7 @@ function debounceSearch() {
  */
 function setupTextSearchInputs() {
   SEARCH_INPUT_IDS.forEach(id => {
-    const element = document.getElementById(id);
+    const element = getElementByIdSafe(id, 'setupTextSearchInputs');
     if (element) {
       element.addEventListener('input', debounceSearch);
     }
@@ -203,7 +212,7 @@ function applyFilterAndSwitchView(viewName, filterFieldId, filterValue, logConte
   clearOtherFilters(filterFieldId);
   
   // Set target filter
-  const filterField = document.getElementById(filterFieldId);
+  const filterField = getElementByIdSafe(filterFieldId, 'activateFilter');
   if (filterField) {
     filterField.value = filterValue;
   }
@@ -248,7 +257,7 @@ export function filterBySource(sourceName) {
 function clearOtherFilters(keepField) {
   SEARCH_FIELD_IDS.forEach(id => {
     if (id !== keepField) {
-      const element = document.getElementById(id);
+      const element = getElementByIdSafe(id, 'clearOtherFilters');
       if (element) {
         element.value = "";
       }
@@ -275,7 +284,7 @@ function updateMenuActiveState(view) {
  * @returns {string} Value or empty string
  */
 function getInputValue(elementId) {
-  return document.getElementById(elementId)?.value || "";
+  return getElementByIdSafe(elementId, 'getInputValue')?.value || "";
 }
 
 /**
@@ -298,8 +307,8 @@ export function getSearchValues() {
  */
 export function getTrainingFilters() {
   return {
-    year: getInputValue("trainingYearFilter"),
-    month: getInputValue("trainingMonthFilter")
+    year: getElementValue(FILTER_IDS.YEAR_FILTER),
+    month: getElementValue(FILTER_IDS.MONTH_FILTER)
   };
 }
 
@@ -308,7 +317,7 @@ export function getTrainingFilters() {
  * @param {string} elementId - ID of the element to clear
  */
 function clearInputField(elementId) {
-  const element = document.getElementById(elementId);
+  const element = getElementByIdSafe(elementId, 'clearInputField');
   if (element) {
     element.value = "";
   }
@@ -321,10 +330,10 @@ export function clearSearchFields() {
   // Clear search inputs
   SEARCH_FIELD_IDS.forEach(clearInputField);
 
-  // Clear year/month filters
-  clearInputField('trainingYearFilter');
+  // Clear year/month filters using constants
+  setElementValue(FILTER_IDS.YEAR_FILTER, '');
   
-  const monthFilter = document.getElementById('trainingMonthFilter');
+  const monthFilter = getElementByIdSafe(FILTER_IDS.MONTH_FILTER, 'clearSearchFields');
   if (monthFilter) {
     monthFilter.value = "";
     monthFilter.disabled = true;

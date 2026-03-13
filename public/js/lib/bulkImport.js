@@ -11,6 +11,8 @@
  * - Error handling and user feedback
  */
 
+import { getElementByIdSafe } from '../constants.js';
+
 // ============================================
 // Constants
 // ============================================
@@ -110,13 +112,13 @@ export function initializeBulkImport(callbacks = {}) {
  * Initialize all DOM element references
  */
 function initializeDOMElements() {
-  bulkModal = document.getElementById(ELEMENT_IDS.MODAL);
-  bulkForm = document.getElementById(ELEMENT_IDS.FORM);
-  bulkAuthorInput = document.getElementById(ELEMENT_IDS.AUTHOR_INPUT);
-  bulkSourceInput = document.getElementById(ELEMENT_IDS.SOURCE_INPUT);
-  bulkQuotesInput = document.getElementById(ELEMENT_IDS.QUOTES_INPUT);
-  bulkAuthorSuggestions = document.getElementById(ELEMENT_IDS.AUTHOR_SUGGESTIONS);
-  bulkSourceSuggestions = document.getElementById(ELEMENT_IDS.SOURCE_SUGGESTIONS);
+  bulkModal = getElementByIdSafe(ELEMENT_IDS.MODAL);
+  bulkForm = getElementByIdSafe(ELEMENT_IDS.FORM);
+  bulkAuthorInput = getElementByIdSafe(ELEMENT_IDS.AUTHOR_INPUT);
+  bulkSourceInput = getElementByIdSafe(ELEMENT_IDS.SOURCE_INPUT);
+  bulkQuotesInput = getElementByIdSafe(ELEMENT_IDS.QUOTES_INPUT);
+  bulkAuthorSuggestions = getElementByIdSafe(ELEMENT_IDS.AUTHOR_SUGGESTIONS);
+  bulkSourceSuggestions = getElementByIdSafe(ELEMENT_IDS.SOURCE_SUGGESTIONS);
 }
 
 /**
@@ -124,10 +126,10 @@ function initializeDOMElements() {
  * @param {Object} callbacks - Callback functions
  */
 function setupEventListeners(callbacks) {
-  const addBulkBtn = document.getElementById(ELEMENT_IDS.ADD_BUTTON);
-  const addBulkBtnTablet = document.getElementById(ELEMENT_IDS.ADD_BUTTON_TABLET);
+  const addBulkBtn = getElementByIdSafe(ELEMENT_IDS.ADD_BUTTON);
+  const addBulkBtnTablet = getElementByIdSafe(ELEMENT_IDS.ADD_BUTTON_TABLET);
   const closeBulkModal = document.querySelector(SELECTORS.CLOSE_BUTTON);
-  const cancelBulkBtn = document.getElementById(ELEMENT_IDS.CANCEL_BUTTON);
+  const cancelBulkBtn = getElementByIdSafe(ELEMENT_IDS.CANCEL_BUTTON);
 
   addEventListenerIfExists(addBulkBtn, 'click', openBulkModal);
   addEventListenerIfExists(addBulkBtnTablet, 'click', openBulkModal);
@@ -304,7 +306,7 @@ function getInputValue(input) {
  * @returns {string} Source type value
  */
 function getSourceTypeValue() {
-  return document.getElementById(ELEMENT_IDS.SOURCE_TYPE).value;
+  return getElementByIdSafe(ELEMENT_IDS.SOURCE_TYPE).value;
 }
 
 /**
