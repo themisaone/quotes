@@ -32,10 +32,11 @@ async function checkTagTablesExist(forceRecheck = false) {
 /**
  * Get or create tags and return their IDs
  * @param {Array<string>} tagNames - Array of tag names
+ * @param {string} noteType - Note type (quote, note, joke, puzzle, training)
  * @param {Object} client - Database client (for transactions)
  * @returns {Promise<Array<number>>} - Array of tag IDs
  */
-async function getOrCreateTagIds(tagNames, client = pool) {
+async function getOrCreateTagIds(tagNames, noteType = 'quote', client = pool) {
   if (!tagNames || tagNames.length === 0) {
     return [];
   }
@@ -52,13 +53,34 @@ async function getOrCreateTagIds(tagNames, client = pool) {
     if (!trimmedTag) continue;
 
     try {
-      const result = await client.query(
-        `INSERT INTO tags (name) 
-         VALUES ($1) 
-         ON CONFLICT (name) DO UPDATE SET name = tags.name
-         RETURNING id`,
-        [trimmedTag]
-      );
+      // Check if type column exists
+      const hasTypeColumn = await client.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.columns 
+          WHERE table_name = 'tags' AND column_name = 'type'
+        )
+      `);
+
+      let result;
+      if (hasTypeColumn.rows[0].exists) {
+        // New schema with type column - unique constraint is on (name, type)
+        result = await client.query(
+          `INSERT INTO tags (name, type) 
+           VALUES ($1, $2) 
+           ON CONFLICT (name, type) DO UPDATE SET name = tags.name
+           RETURNING id`,
+          [trimmedTag, noteType]
+        );
+      } else {
+        // Old schema without type column - unique constraint is on name only
+        result = await client.query(
+          `INSERT INTO tags (name) 
+           VALUES ($1) 
+           ON CONFLICT (name) DO UPDATE SET name = tags.name
+           RETURNING id`,
+          [trimmedTag]
+        );
+      }
       tagIds.push(result.rows[0].id);
     } catch (error) {
       console.error("Error creating tag:", trimmedTag, error);

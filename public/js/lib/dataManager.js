@@ -145,12 +145,13 @@ function generateBackupConfirmationMessage(currentNoteTypeFilter, typeLabel) {
 /**
  * Generate confirmation message for import
  */
-function generateImportConfirmationMessage(backupData, replaceExisting) {
+function generateImportConfirmationMessage(backupData) {
   return `About to import:\n\n` +
+         `• ${backupData.counts.quotes} quotes/notes\n` +
          `• ${backupData.counts.authors} authors\n` +
          `• ${backupData.counts.sources} sources\n` +
-         `• ${backupData.counts.quotes} quotes\n\n` +
-         `Mode: ${replaceExisting ? "Replace existing entries" : "Skip duplicates"}\n\n` +
+         `• ${backupData.counts.tags} tags\n\n` +
+         `Duplicates will be automatically skipped.\n\n` +
          `This may take a while. Continue?`;
 }
 
@@ -161,10 +162,13 @@ function generateImportSuccessHtml(stats) {
   return `
     <div style="background: #d1fae5; padding: 15px; border-radius: 8px; margin-top: 10px;">
       <h4 style="margin-top: 0; color: #065f46;">✅ Import Completed!</h4>
-      <p><strong>Authors:</strong> ${stats.authors.created} created, ${stats.authors.updated} updated, ${stats.authors.skipped} skipped</p>
-      <p><strong>Sources:</strong> ${stats.sources.created} created, ${stats.sources.updated} updated, ${stats.sources.skipped} skipped</p>
-      <p><strong>Quotes:</strong> ${stats.quotes.created} created, ${stats.quotes.updated} updated, ${stats.quotes.skipped} skipped</p>
-      ${stats.errors.length > 0 ? `<p style="color: #dc2626;"><strong>Errors:</strong> ${stats.errors.length}</p>` : ""}
+      <div style="display: grid; gap: 8px;">
+        <p style="margin: 0;"><strong>📚 Quotes/Notes:</strong> ${stats.quotes.created} imported, ${stats.quotes.skipped} skipped (duplicates)</p>
+        <p style="margin: 0;"><strong>👤 Authors:</strong> ${stats.authors.created} imported, ${stats.authors.skipped} skipped (duplicates)</p>
+        <p style="margin: 0;"><strong>📖 Sources:</strong> ${stats.sources.created} imported, ${stats.sources.skipped} skipped (duplicates)</p>
+        <p style="margin: 0;"><strong>🏷️ Tags:</strong> ${stats.tags.created} imported</p>
+      </div>
+      ${stats.errors.length > 0 ? `<p style="color: #dc2626; margin-top: 12px; margin-bottom: 0;"><strong>⚠️ Errors:</strong> ${stats.errors.length} (check console)</p>` : ""}
     </div>
   `;
 }
@@ -374,7 +378,7 @@ export async function exportToJson(config) {
 /**
  * Send import data to server
  */
-async function sendImportToServer(backupData, replaceExisting) {
+async function sendImportToServer(backupData) {
   const response = await fetch(`${API_URL}/import/json`, {
     method: "POST",
     headers: {
@@ -382,9 +386,6 @@ async function sendImportToServer(backupData, replaceExisting) {
     },
     body: JSON.stringify({
       data: backupData.data,
-      options: {
-        replaceExisting: replaceExisting,
-      },
     }),
   });
 
@@ -442,7 +443,6 @@ function resetFileInput(event, selectFileBtn) {
  * @param {HTMLElement} config.importProgress - Progress container element
  * @param {HTMLElement} config.importStatus - Status message element
  * @param {HTMLElement} config.selectFileBtn - Select file button
- * @param {HTMLElement} config.replaceExistingCheckbox - Replace existing checkbox
  * @param {HTMLElement} config.importModal - Import modal element
  * @param {Function} config.onImportComplete - Callback when import completes
  */
@@ -451,7 +451,6 @@ export async function handleImportFile(event, config) {
     importProgress,
     importStatus,
     selectFileBtn,
-    replaceExistingCheckbox,
     importModal,
     onImportComplete,
   } = config;
@@ -469,8 +468,7 @@ export async function handleImportFile(event, config) {
     validateBackupData(backupData);
 
     // Show confirmation
-    const replaceExisting = replaceExistingCheckbox.checked;
-    const message = generateImportConfirmationMessage(backupData, replaceExisting);
+    const message = generateImportConfirmationMessage(backupData);
     
     if (!confirm(message)) {
       resetFileInput(event, selectFileBtn);
@@ -483,7 +481,7 @@ export async function handleImportFile(event, config) {
     selectFileBtn.textContent = "⏳ Importing...";
 
     // Send to server and handle result
-    const result = await sendImportToServer(backupData, replaceExisting);
+    const result = await sendImportToServer(backupData);
     handleImportSuccess(result, importStatus, selectFileBtn, importModal, onImportComplete);
     event.target.value = "";
   } catch (error) {

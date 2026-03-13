@@ -193,7 +193,13 @@ async function fetchTagSuggestions(search, container, input) {
       return;
     }
 
-    const response = await fetch(`${window.API_URL}/tags`);
+    // Fetch tags filtered by current note type
+    let url = `${window.API_URL}/tags`;
+    if (window.currentNoteTypeFilter) {
+      url += `?type=${encodeURIComponent(window.currentNoteTypeFilter)}`;
+    }
+    
+    const response = await fetch(url);
     const tags = await response.json();
 
     // Filter tags that match the current tag being typed

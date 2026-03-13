@@ -1182,7 +1182,7 @@ app.post("/api/quotes", async (req, res) => {
     // Handle tags using new tag system (if tables exist)
     const tagNames = parseTagInput(tags);
     if (tagNames.length > 0) {
-      const tagIds = await getOrCreateTagIds(tagNames, client);
+      const tagIds = await getOrCreateTagIds(tagNames, note_type, client);
       if (tagIds.length > 0) {
         await associateTagsWithQuote(quoteId, tagIds, client);
       }
@@ -1435,7 +1435,7 @@ app.put("/api/quotes/:id", async (req, res) => {
       console.log("UPDATE TAGS - Input:", tagsToUpdate);
       const tagNames = parseTagInput(tagsToUpdate);
       console.log("UPDATE TAGS - Parsed tag names:", tagNames);
-      const tagIds = await getOrCreateTagIds(tagNames, client);
+      const tagIds = await getOrCreateTagIds(tagNames, note_type, client);
       console.log("UPDATE TAGS - Tag IDs:", tagIds);
       
       // Always update associations, even if empty (to clear tags)
@@ -1603,13 +1603,26 @@ app.delete("/api/quotes/:id", async (req, res) => {
 // Get all tags with quote counts
 app.get("/api/tags", async (req, res) => {
   try {
-    const result = await pool.query(`
-      SELECT t.id, t.name, COUNT(qt.quote_id)::int as quote_count
+    const { type } = req.query; // e.g., ?type=note or ?type=quote
+    
+    let query = `
+      SELECT t.id, t.name, t.type, COUNT(qt.quote_id)::int as quote_count
       FROM tags t
       LEFT JOIN quote_tags qt ON t.id = qt.tag_id
-      GROUP BY t.id, t.name
+    `;
+    
+    const params = [];
+    if (type) {
+      query += ` WHERE t.type = $1`;
+      params.push(type);
+    }
+    
+    query += `
+      GROUP BY t.id, t.name, t.type
       ORDER BY t.name ASC
-    `);
+    `;
+    
+    const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (error) {
     console.error("Error fetching tags:", error);
@@ -1863,9 +1876,26 @@ app.get("/api/export/json", async (req, res) => {
       ? await pool.query(quotesQuery, queryParams)
       : await pool.query(quotesQuery);
 
+    // Fetch tags for each quote
+    const quotesWithTags = [];
+    for (const quote of quotesResult.rows) {
+      const tagsResult = await pool.query(`
+        SELECT t.id, t.name, t.type
+        FROM tags t
+        JOIN quote_tags qt ON t.id = qt.tag_id
+        WHERE qt.quote_id = $1
+        ORDER BY t.name
+      `, [quote.id]);
+      
+      quotesWithTags.push({
+        ...quote,
+        tag_objects: tagsResult.rows
+      });
+    }
+
     // Get unique author and source IDs from the filtered quotes
-    const authorIds = [...new Set(quotesResult.rows.map(q => q.author_id).filter(id => id !== null))];
-    const sourceIds = [...new Set(quotesResult.rows.map(q => q.source_id).filter(id => id !== null))];
+    const authorIds = [...new Set(quotesWithTags.map(q => q.author_id).filter(id => id !== null))];
+    const sourceIds = [...new Set(quotesWithTags.map(q => q.source_id).filter(id => id !== null))];
     
     // Fetch only the authors and sources used by these quotes
     let authorsResult = { rows: [] };
@@ -1885,24 +1915,39 @@ app.get("/api/export/json", async (req, res) => {
       );
     }
 
+    // Get all unique tags used by these quotes
+    const allTagIds = [...new Set(quotesWithTags.flatMap(q => 
+      q.tag_objects.map(t => t.id)
+    ))];
+    
+    let tagsResult = { rows: [] };
+    if (allTagIds.length > 0) {
+      tagsResult = await pool.query(
+        "SELECT * FROM tags WHERE id = ANY($1) ORDER BY id",
+        [allTagIds]
+      );
+    }
+
     const exportData = {
-      version: "1.0",
+      version: "2.0", // Bumped version for new format with tags
       exportedAt: new Date().toISOString(),
       noteTypeFilter: note_type || 'all',
       counts: {
         authors: authorsResult.rows.length,
         sources: sourcesResult.rows.length,
-        quotes: quotesResult.rows.length,
+        tags: tagsResult.rows.length,
+        quotes: quotesWithTags.length,
       },
       data: {
         authors: authorsResult.rows,
         sources: sourcesResult.rows,
-        quotes: quotesResult.rows,
+        tags: tagsResult.rows,
+        quotes: quotesWithTags,
       },
     };
 
     console.log(
-      `Exported ${exportData.counts.authors} authors, ${exportData.counts.sources} sources, ${exportData.counts.quotes} quotes (note_type: ${note_type || 'all'})`,
+      `Exported ${exportData.counts.authors} authors, ${exportData.counts.sources} sources, ${exportData.counts.tags} tags, ${exportData.counts.quotes} quotes (note_type: ${note_type || 'all'})`,
     );
 
     res.setHeader("Content-Type", "application/json");
@@ -1936,6 +1981,7 @@ app.post("/api/import/json", async (req, res) => {
     const stats = {
       authors: { created: 0, updated: 0, skipped: 0 },
       sources: { created: 0, updated: 0, skipped: 0 },
+      tags: { created: 0, updated: 0, skipped: 0 },
       quotes: { created: 0, updated: 0, skipped: 0 },
       errors: [],
     };
@@ -2018,6 +2064,46 @@ app.post("/api/import/json", async (req, res) => {
       }
     }
 
+    // Import tags (if present in backup)
+    if (data.tags && data.tags.length > 0) {
+      console.log(`Importing ${data.tags.length} tags...`);
+      for (const tag of data.tags) {
+        try {
+          if (options?.replaceExisting) {
+            const result = await client.query(
+              `INSERT INTO tags (name, type, created_at) 
+               VALUES ($1, $2, $3) 
+               ON CONFLICT (name, type) DO UPDATE 
+               SET created_at = EXCLUDED.created_at
+               RETURNING id, (xmax = 0) as inserted`,
+              [tag.name, tag.type || 'quote', tag.created_at],
+            );
+            if (result.rows[0].inserted) {
+              stats.tags.created++;
+            } else {
+              stats.tags.updated++;
+            }
+          } else {
+            const existing = await client.query(
+              "SELECT id FROM tags WHERE name = $1 AND type = $2",
+              [tag.name, tag.type || 'quote'],
+            );
+            if (existing.rows.length > 0) {
+              stats.tags.skipped++;
+            } else {
+              await client.query(
+                "INSERT INTO tags (name, type, created_at) VALUES ($1, $2, $3)",
+                [tag.name, tag.type || 'quote', tag.created_at],
+              );
+              stats.tags.created++;
+            }
+          }
+        } catch (error) {
+          stats.errors.push(`Tag "${tag.name}" (${tag.type}): ${error.message}`);
+        }
+      }
+    }
+
     // Import quotes
     console.log(`Importing ${data.quotes.length} quotes...`);
     // Get storage threshold from settings
@@ -2049,66 +2135,72 @@ app.post("/api/import/json", async (req, res) => {
           }
         }
 
-        // Check if quote already exists (by text + author)
+        // Check if quote already exists (by ID, text, AND author - all must match)
         const existing = await client.query(
-          "SELECT id FROM quotes WHERE quote = $1 AND author_id = $2",
-          [quote.quote, authorId],
+          `SELECT id FROM quotes 
+           WHERE id = $1 
+           AND quote = $2 
+           AND author_id IS NOT DISTINCT FROM $3`,
+          [quote.id, quote.quote, authorId],
         );
 
         if (existing.rows.length > 0) {
-          if (options?.replaceExisting) {
-            const quoteId = existing.rows[0].id;
-            const noteType = quote.note_type || 'quote';
-            const storageFolder = noteType === 'training' ? 'training' : noteType === 'note' ? 'notes' : noteType === 'puzzle' ? 'puzzles' : 'quotes';
-            
-            // Process attachments through storage system (respects 1 MB threshold)
-            const processedImage = fileStorage.processForStorage(quote.image, storageFolder, quoteId, '', storageThresholdMB);
-            const processedImageFull = fileStorage.processForStorage(quote.image_full, storageFolder, quoteId, '_full', storageThresholdMB);
-            
-            await client.query(
-              `UPDATE quotes 
-               SET source_id = $1, type = $2, image = $3, image_full = $4, note = $5, note_type = $6, note_date = $7, 
-                   attachment_type = $8, updated_at = CURRENT_TIMESTAMP
-               WHERE id = $9`,
+          // Exact match found - skip it
+          stats.quotes.skipped++;
+        } else {
+          // Check if ID exists but with different content (modified quote)
+          const idExists = await client.query(
+            `SELECT id FROM quotes WHERE id = $1`,
+            [quote.id]
+          );
+          
+          let quoteId;
+          const noteType = quote.note_type || 'quote';
+          
+          if (idExists.rows.length > 0) {
+            // ID exists but content is different - this is a modified quote
+            // Insert with new auto-generated ID
+            const insertResult = await client.query(
+              `INSERT INTO quotes (quote, author_id, source_id, type, note, note_type, note_date, 
+                                   attachment_type, created_at, updated_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+               RETURNING id`,
               [
+                quote.quote,
+                authorId,
                 sourceId,
                 quote.type,
-                processedImage,
-                processedImageFull,
                 quote.note,
                 noteType,
                 quote.note_date || null,
                 quote.attachment_type || null,
-                quoteId,
+                quote.created_at || new Date(),
+                quote.updated_at || new Date(),
               ],
             );
-            stats.quotes.updated++;
+            quoteId = insertResult.rows[0].id;
           } else {
-            stats.quotes.skipped++;
+            // ID doesn't exist - use the original ID from export
+            quoteId = quote.id;
+            await client.query(
+              `INSERT INTO quotes (id, quote, author_id, source_id, type, note, note_type, note_date, 
+                                   attachment_type, created_at, updated_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+              [
+                quoteId,
+                quote.quote,
+                authorId,
+                sourceId,
+                quote.type,
+                quote.note,
+                noteType,
+                quote.note_date || null,
+                quote.attachment_type || null,
+                quote.created_at || new Date(),
+                quote.updated_at || new Date(),
+              ],
+            );
           }
-        } else {
-          // First insert without images to get the ID
-          const noteType = quote.note_type || 'quote';
-          const insertResult = await client.query(
-            `INSERT INTO quotes (quote, author_id, source_id, type, note, note_type, note_date, 
-                                 attachment_type, created_at, updated_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-             RETURNING id`,
-            [
-              quote.quote,
-              authorId,
-              sourceId,
-              quote.type,
-              quote.note,
-              noteType,
-              quote.note_date || null,
-              quote.attachment_type || null,
-              quote.created_at || new Date(),
-              quote.updated_at || new Date(),
-            ],
-          );
-          
-          const quoteId = insertResult.rows[0].id;
           const storageFolder = noteType === 'training' ? 'training' : noteType === 'note' ? 'notes' : noteType === 'puzzle' ? 'puzzles' : 'quotes';
           
           // Now process attachments with the quote ID (respects 1 MB threshold)
@@ -2121,6 +2213,29 @@ app.post("/api/import/json", async (req, res) => {
               `UPDATE quotes SET image = $1, image_full = $2 WHERE id = $3`,
               [processedImage, processedImageFull, quoteId]
             );
+          }
+          
+          // Restore tag relationships
+          if (quote.tag_objects && quote.tag_objects.length > 0) {
+            for (const tagObj of quote.tag_objects) {
+              // Find or create tag
+              const tagResult = await client.query(
+                `INSERT INTO tags (name, type) 
+                 VALUES ($1, $2) 
+                 ON CONFLICT (name, type) DO UPDATE SET name = tags.name
+                 RETURNING id`,
+                [tagObj.name, tagObj.type || noteType]
+              );
+              const tagId = tagResult.rows[0].id;
+              
+              // Create relationship
+              await client.query(
+                `INSERT INTO quote_tags (quote_id, tag_id) 
+                 VALUES ($1, $2) 
+                 ON CONFLICT DO NOTHING`,
+                [quoteId, tagId]
+              );
+            }
           }
           
           stats.quotes.created++;

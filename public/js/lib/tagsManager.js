@@ -102,8 +102,9 @@ function createTagCardHtml(tag) {
 
 /**
  * Display tags in the tags list
+ * @param {Array} tags - Array of tag objects to display
  */
-function displayTags(tags) {
+export function displayTags(tags) {
   const tagsList = getTagsListElement();
   if (!tagsList) return;
 
@@ -644,10 +645,16 @@ function setupMergeTagsOperation() {
 
 /**
  * Load all tags from API and display them
+ * @param {string|null} typeFilter - Optional type filter
  */
-export async function loadTags() {
+export async function loadTags(typeFilter = null) {
   try {
-    const response = await fetch(`${API_URL}/tags`);
+    let url = `${API_URL}/tags`;
+    if (typeFilter) {
+      url += `?type=${encodeURIComponent(typeFilter)}`;
+    }
+    
+    const response = await fetch(url);
     const tags = await response.json();
     
     exposeTagsGlobally(tags);

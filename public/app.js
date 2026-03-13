@@ -71,7 +71,8 @@ import {
 import {
   loadTags as loadTagsLib,
   filterByTag as filterByTagLib,
-  deleteTag as deleteTagLib
+  deleteTag as deleteTagLib,
+  displayTags as displayTagsLib
 } from './js/lib/tagsManager.js';
 
 import {
@@ -1877,8 +1878,8 @@ function displaySources(sources) {
 }
 
 // ============= TAGS PAGE - MIGRATED TO tagsManager.js =============
-async function loadTags() {
-  return loadTagsLib();
+async function loadTags(typeFilter = null) {
+  return loadTagsLib(typeFilter);
 }
 
 // Make global for onclick handlers (direct library access)
@@ -2305,7 +2306,6 @@ async function handleImportFile(event) {
     importProgress: document.getElementById("importProgress"),
     importStatus: document.getElementById("importStatus"),
     selectFileBtn: document.getElementById("selectFileBtn"),
-    replaceExistingCheckbox: document.getElementById("replaceExisting"),
     importModal: document.getElementById("importModal"),
     onImportComplete: () => {
       currentPage = 1;
@@ -2406,16 +2406,24 @@ window.addEventListener("DOMContentLoaded", () => {
 });
 
 // Search tags functionality
-let allTags = [];
+window.allTags = []; // Make it global so tagsManager can update it
 let currentSortBy = "name";
 
 document.addEventListener("DOMContentLoaded", () => {
   const searchInput = document.getElementById("searchSourcesInput");
   const sortByName = document.getElementById("sortTagsByName");
   const sortByCount = document.getElementById("sortTagsByCount");
+  const tagTypeFilter = document.getElementById("tagTypeFilter");
   
   if (searchInput) {
     searchInput.addEventListener("input", filterTags);
+  }
+  
+  if (tagTypeFilter) {
+    tagTypeFilter.addEventListener("change", () => {
+      const selectedType = tagTypeFilter.value || null;
+      loadTags(selectedType);
+    });
   }
   
   if (sortByName) {
@@ -2439,8 +2447,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function filterTags() {
   const searchValue = document.getElementById("searchSourcesInput")?.value.toLowerCase() || "";
+  const tagTypeFilter = document.getElementById("tagTypeFilter");
+  const selectedType = tagTypeFilter ? tagTypeFilter.value || null : null;
   
-  let filteredTags = allTags.filter(tag => 
+  // Get current tags (filtered by type from last loadTags call)
+  let filteredTags = window.allTags.filter(tag => 
     tag.name.toLowerCase().includes(searchValue)
   );
   
@@ -2454,13 +2465,14 @@ function filterTags() {
   const totalCountElement = document.getElementById("totalTagsCount");
   const filteredCountElement = document.getElementById("filteredTagsCount");
   if (totalCountElement) {
-    totalCountElement.textContent = allTags.length;
+    totalCountElement.textContent = window.allTags.length;
   }
   if (filteredCountElement) {
     filteredCountElement.textContent = filteredTags.length;
   }
   
-  displayTags(filteredTags);
+  // Use the library's display function
+  displayTagsLib(filteredTags);
 }
 
 // Tag Management for Quote Modal
