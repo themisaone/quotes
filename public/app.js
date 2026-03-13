@@ -2378,21 +2378,30 @@ function getCurrentFilters() {
     return element?.value || '';
   };
   
+  // Helper to get metadata checkbox state (checkbox + condition)
+  // Returns 'true' if checked and condition is 'has', 'false' if checked and condition is 'not'
+  const getMetadataState = (checkboxId, conditionId) => {
+    const checkbox = document.getElementById(checkboxId);
+    const condition = document.getElementById(conditionId);
+    if (!checkbox || !checkbox.checked) return '';
+    return condition?.value === 'not' ? 'false' : 'true';
+  };
+  
   return {
     note_type: currentNoteTypeFilter,
     author_id: getOptionalValue(FILTER_IDS.AUTHOR_FILTER), // Only exists in quotes view
     source_id: getOptionalValue(FILTER_IDS.SOURCE_FILTER), // Only exists in quotes view
-    search: getElementValue(FILTER_IDS.SEARCH_QUOTE, 'getCurrentFilters'),
-    tag: getElementValue(FILTER_IDS.SEARCH_TAGS, 'getCurrentFilters'),
+    search: getElementValue(FILTER_IDS.SEARCH_QUOTE),
+    tag: getElementValue(FILTER_IDS.SEARCH_TAGS),
     types: getCheckedValues(CSS_CLASSES.TYPE_CHECKBOX).join(','),
     training_types: getCheckedValues(CSS_CLASSES.TRAINING_TYPE_CHECKBOX).join(','),
     year: getOptionalValue(FILTER_IDS.YEAR_FILTER), // Only exists in training view
     month: getOptionalValue(FILTER_IDS.MONTH_FILTER), // Only exists in training view
-    score: getElementValue(FILTER_IDS.SEARCH_SCORE, 'getCurrentFilters'),
-    hasAuthor: getCheckboxState(FILTER_IDS.HAS_AUTHOR_CHECKBOX, FILTER_IDS.HAS_AUTHOR_CONDITION, 'getCurrentFilters'),
-    hasSource: getCheckboxState(FILTER_IDS.HAS_SOURCE_CHECKBOX, FILTER_IDS.HAS_SOURCE_CONDITION, 'getCurrentFilters'),
-    hasNote: getCheckboxState(FILTER_IDS.HAS_NOTE_CHECKBOX, FILTER_IDS.HAS_NOTE_CONDITION, 'getCurrentFilters'),
-    hasTags: getCheckboxState(FILTER_IDS.HAS_TAGS_CHECKBOX, FILTER_IDS.HAS_TAGS_CONDITION, 'getCurrentFilters')
+    score: getElementValue(FILTER_IDS.SEARCH_SCORE),
+    hasAuthor: getMetadataState(FILTER_IDS.HAS_AUTHOR_CHECKBOX, FILTER_IDS.HAS_AUTHOR_CONDITION),
+    hasSource: getMetadataState(FILTER_IDS.HAS_SOURCE_CHECKBOX, FILTER_IDS.HAS_SOURCE_CONDITION),
+    hasNote: getMetadataState(FILTER_IDS.HAS_NOTE_CHECKBOX, FILTER_IDS.HAS_NOTE_CONDITION),
+    hasTags: getMetadataState(FILTER_IDS.HAS_TAGS_CHECKBOX, FILTER_IDS.HAS_TAGS_CONDITION)
   };
 }
 

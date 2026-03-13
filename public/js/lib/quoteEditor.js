@@ -16,7 +16,7 @@
  * - modalRenderer.js for modal setup
  */
 
-import { FILTER_IDS, getElementByIdSafe, getElementValue } from '../constants.js';
+import { MODAL_IDS, getElementByIdSafe, getElementValue } from '../constants.js';
 
 // ============= CONSTANTS =============
 
@@ -171,32 +171,32 @@ function parseNorwegianDate(dateStr) {
  * @returns {Object} Form data object
  */
 export function collectFormData(state) {
-  const noteType = getElementValue(FILTER_IDS.NOTE_TYPE_SELECT, 'collectFormData');
+  const noteType = getElementValue(MODAL_IDS.NOTE_TYPE_SELECT);
   
   // Parse note_date for training notes
   let parsedNoteDate = null;
   if (noteType === 'training') {
-    const noteDateInput = getElementValue(FILTER_IDS.NOTE_DATE_INPUT, 'collectFormData');
+    const noteDateInput = getElementValue(MODAL_IDS.NOTE_DATE_INPUT);
     parsedNoteDate = parseNorwegianDate(noteDateInput);
   }
   
   return {
-    quote: getElementValue(FILTER_IDS.QUOTE_TEXT, 'collectFormData'),
-    author: getElementValue(FILTER_IDS.AUTHOR_INPUT, 'collectFormData'),
-    source: getElementValue(FILTER_IDS.SOURCE_INPUT, 'collectFormData'),
+    quote: getElementValue(MODAL_IDS.QUOTE_TEXT),
+    author: getElementValue(MODAL_IDS.AUTHOR_INPUT),
+    source: getElementValue(MODAL_IDS.SOURCE_INPUT),
     sourceType: noteType === 'training' 
-      ? (getElementValue(FILTER_IDS.TRAINING_TYPE_SELECT, 'collectFormData') || "ASSORTED")
-      : (getElementValue(FILTER_IDS.SOURCE_TYPE_SELECT, 'collectFormData') || "ASSORTED"),
+      ? (getElementValue(MODAL_IDS.TRAINING_TYPE_SELECT) || "ASSORTED")
+      : (getElementValue(MODAL_IDS.SOURCE_TYPE_SELECT) || "ASSORTED"),
     sourceId: window.currentSourceId || null,
-    tags: getElementValue(FILTER_IDS.TAG_INPUT, 'collectFormData'),
-    note: getElementValue(FILTER_IDS.NOTE_INPUT, 'collectFormData'),
+    tags: getElementValue(MODAL_IDS.TAG_INPUT),
+    note: getElementValue(MODAL_IDS.NOTE_INPUT),
     score: document.querySelector('input[name="quoteScore"]:checked')?.value || "0",
     image: state.currentQuoteImage,
     image_full: state.currentQuoteImageFull,
     attachment_type: state.currentAttachmentType,
     note_type: noteType,
     note_date: parsedNoteDate,
-    translation_group: getElementValue(FILTER_IDS.TRANSLATION_GROUP_INPUT, 'collectFormData').trim() || null,
+    translation_group: getElementValue(MODAL_IDS.TRANSLATION_GROUP_INPUT).trim() || null,
     storageThresholdMB: state.globalSettings?.externalStorageThreshold || 1,
   };
 }

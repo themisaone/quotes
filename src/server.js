@@ -645,17 +645,29 @@ app.get("/api/quotes/count", async (req, res) => {
       }
     }
     
-    // Year filter for training notes
+    // Year filter for training notes - filter by year TAG instead of date
     if (req.query.year) {
-      query += ` AND EXTRACT(YEAR FROM q.note_date) = $${paramCounter}`;
-      params.push(parseInt(req.query.year));
+      query += ` AND EXISTS (
+        SELECT 1 FROM quote_tags qt 
+        JOIN tags t ON qt.tag_id = t.id 
+        WHERE qt.quote_id = q.id AND t.name = $${paramCounter}
+      )`;
+      params.push(req.query.year.toString());
       paramCounter++;
     }
     
-    // Month filter for training notes (only applies if year is also set)
-    if (req.query.month && req.query.year) {
-      query += ` AND EXTRACT(MONTH FROM q.note_date) = $${paramCounter}`;
-      params.push(parseInt(req.query.month));
+    // Month filter for training notes - filter by month TAG instead of date
+    if (req.query.month) {
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                          'July', 'August', 'September', 'October', 'November', 'December'];
+      const monthName = monthNames[parseInt(req.query.month) - 1];
+      
+      query += ` AND EXISTS (
+        SELECT 1 FROM quote_tags qt 
+        JOIN tags t ON qt.tag_id = t.id 
+        WHERE qt.quote_id = q.id AND t.name = $${paramCounter}
+      )`;
+      params.push(monthName);
       paramCounter++;
     }
 
@@ -750,13 +762,17 @@ app.get("/api/quotes/count", async (req, res) => {
 });
 
 // Get available years from training notes (MUST come before /api/quotes general route)
+// Returns years from tags (4-digit tag names) instead of from note_date
 app.get("/api/quotes/training-years", async (req, res) => {
   try {
     const query = `
-      SELECT DISTINCT EXTRACT(YEAR FROM note_date) as year
-      FROM quotes
-      WHERE note_type = 'training' AND note_date IS NOT NULL
-      ORDER BY year DESC
+      SELECT DISTINCT t.name as year
+      FROM tags t
+      JOIN quote_tags qt ON t.id = qt.tag_id
+      JOIN quotes q ON qt.quote_id = q.id
+      WHERE q.note_type = 'training' 
+        AND t.name ~ '^[0-9]{4}$'
+      ORDER BY t.name DESC
     `;
     const result = await pool.query(query);
     const years = result.rows.map(row => parseInt(row.year));
@@ -952,23 +968,78 @@ app.get("/api/quotes", async (req, res) => {
       }
     }
     
-    // Year filter for training notes
+    // Year filter for training notes - filter by year TAG instead of date
     if (req.query.year) {
-      query += ` AND EXTRACT(YEAR FROM q.note_date) = $${paramCounter}`;
-      params.push(parseInt(req.query.year));
+      query += ` AND EXISTS (
+        SELECT 1 FROM quote_tags qt 
+        JOIN tags t ON qt.tag_id = t.id 
+        WHERE qt.quote_id = q.id AND t.name = $${paramCounter}
+      )`;
+      params.push(req.query.year.toString());
       paramCounter++;
     }
     
-    // Month filter for training notes (only applies if year is also set)
-    if (req.query.month && req.query.year) {
-      query += ` AND EXTRACT(MONTH FROM q.note_date) = $${paramCounter}`;
-      params.push(parseInt(req.query.month));
+    // Month filter for training notes - filter by month TAG instead of date
+    if (req.query.month) {
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                          'July', 'August', 'September', 'October', 'November', 'December'];
+      const monthName = monthNames[parseInt(req.query.month) - 1];
+      
+      query += ` AND EXISTS (
+        SELECT 1 FROM quote_tags qt 
+        JOIN tags t ON qt.tag_id = t.id 
+        WHERE qt.quote_id = q.id AND t.name = $${paramCounter}
+      )`;
+      params.push(monthName);
       paramCounter++;
     }
 
-    // Sort by note_date for training notes (newest first), otherwise by updated_at
+    // Sort by note_date for training notes (hierarchical by year/month tags, then date), otherwise by updated_at
     if (note_type === 'training') {
-      query += ` ORDER BY q.note_date DESC, q.updated_at DESC LIMIT $${paramCounter} OFFSET $${paramCounter + 1}`;
+      // Hierarchical sorting for training notes using LEFT JOIN to get tags
+      query = `
+        WITH tagged_quotes AS (
+          ${query}
+        ),
+        year_tags AS (
+          SELECT qt.quote_id, t.name as year_tag
+          FROM quote_tags qt
+          JOIN tags t ON qt.tag_id = t.id
+          WHERE t.name ~ '^[0-9]{4}$'
+        ),
+        month_tags AS (
+          SELECT qt.quote_id, t.name as month_tag,
+            CASE t.name
+              WHEN 'January' THEN 1
+              WHEN 'February' THEN 2
+              WHEN 'March' THEN 3
+              WHEN 'April' THEN 4
+              WHEN 'May' THEN 5
+              WHEN 'June' THEN 6
+              WHEN 'July' THEN 7
+              WHEN 'August' THEN 8
+              WHEN 'September' THEN 9
+              WHEN 'October' THEN 10
+              WHEN 'November' THEN 11
+              WHEN 'December' THEN 12
+            END as month_order
+          FROM quote_tags qt
+          JOIN tags t ON qt.tag_id = t.id
+          WHERE t.name IN ('January','February','March','April','May','June','July','August','September','October','November','December')
+        )
+        SELECT tq.*
+        FROM tagged_quotes tq
+        LEFT JOIN year_tags yt ON tq.id = yt.quote_id
+        LEFT JOIN month_tags mt ON tq.id = mt.quote_id
+        ORDER BY 
+          yt.year_tag DESC NULLS LAST,
+          CASE WHEN mt.month_tag IS NULL THEN 0 ELSE 1 END,
+          mt.month_order DESC,
+          CASE WHEN tq.note_date IS NULL THEN 0 ELSE 1 END,
+          EXTRACT(DAY FROM tq.note_date) DESC,
+          tq.updated_at DESC
+        LIMIT $${paramCounter} OFFSET $${paramCounter + 1}
+      `;
     } else {
       query += ` ORDER BY q.updated_at DESC LIMIT $${paramCounter} OFFSET $${paramCounter + 1}`;
     }

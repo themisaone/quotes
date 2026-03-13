@@ -1081,14 +1081,13 @@
           <!-- Training-specific fields -->
           <div class="form-row form-row-with-separator" style="margin-top: 0.5rem; display: none;" id="trainingSpecificFields">
             <div class="form-group" style="flex: 1; position: relative;">
-              <label for="noteDate">📅 Date</label>
+              <label for="noteDate">📅 Date <span style="font-size: 0.85em; color: #888;">(optional)</span></label>
               <div style="display: flex; gap: 0.5rem;">
                 <input
                   type="text"
                   id="noteDate"
-                  placeholder="dd.mm.yyyy"
-                  pattern="\d{2}\.\d{2}\.\d{4}"
-                  title="Format: dd.mm.yyyy"
+                  placeholder="dd.mm.yyyy (optional - use year/month tags instead)"
+                  title="Format: dd.mm.yyyy (optional)"
                   style="flex: 1;"
                 />
                 <input
