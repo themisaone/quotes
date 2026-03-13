@@ -163,6 +163,7 @@ export const BUTTON_IDS = {
   
   // Navigation
   BACK_BTN: 'backButton',
+  TOGGLE_ATTACHMENT_BTN: 'toggleAttachmentBtn',
   
   // Pagination (dynamic, but base IDs)
   PREV_PAGE_BTN: 'prevPageBtn',
@@ -187,6 +188,7 @@ export const CONTAINER_IDS = {
   // Modal field containers
   QUOTE_SPECIFIC_FIELDS: 'quoteSpecificFields',
   TRAINING_SPECIFIC_FIELDS: 'trainingSpecificFields',
+  ATTACHMENT_CONTAINER: 'attachmentContainer',
   
   // Pagination
   PAGINATION_CONTROLS: 'paginationControls',

@@ -436,6 +436,12 @@ export function displayImage(container, imageUrl, escapeHtmlFn) {
   if (resolved) {
     container.innerHTML = `<img src="${resolved}" alt="Preview">`;
     container.classList.add('has-image');
+    
+    // Show the X button if it exists (sibling of container)
+    const xButton = container.parentElement?.querySelector('.image-clear-x');
+    if (xButton) {
+      xButton.style.display = 'flex';
+    }
   }
 }
 
@@ -486,6 +492,12 @@ export function clearImagePreview(container, type = 'quote') {
     `;
   }
   container.classList.remove("has-image");
+  
+  // Hide the X button if it exists (sibling of container)
+  const xButton = container.parentElement?.querySelector('.image-clear-x');
+  if (xButton) {
+    xButton.style.display = 'none';
+  }
 }
 
 // ============= DOWNSCALE AND MOVE TO DB =============

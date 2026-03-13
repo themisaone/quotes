@@ -106,6 +106,8 @@ import {
 
 import {
   FILTER_IDS,
+  BUTTON_IDS,
+  CONTAINER_IDS,
   CSS_CLASSES,
   getElementByIdSafe,
   getElementValue,
@@ -938,14 +940,8 @@ function openAddModal() {
   selectedTagsArray = [];
   updateSelectedTagsDisplay();
   
-  // Reset image section (app-specific)
-  const imageSection = getElementByIdSafe('imageSection');
-  const toggleIcon = getElementByIdSafe('imageToggleIcon');
-  if (imageSection) imageSection.style.display = 'none';
-  if (toggleIcon) toggleIcon.textContent = '▶';
-  
-  // Update image indicator (app-specific)
-  updateImageIndicator();
+  // Update attachment panel visibility based on state
+  updateAttachmentPanelVisibility();
   
   // Show modal
   quoteModal.style.display = "block";
@@ -1006,14 +1002,8 @@ function openEditModal(quote) {
     clearImagePreview(quoteImagePreview, "quote");
   }
   
-  // Reset image section (app-specific)
-  const imageSection = getElementByIdSafe('imageSection');
-  const toggleIcon = getElementByIdSafe('imageToggleIcon');
-  if (imageSection) imageSection.style.display = 'none';
-  if (toggleIcon) toggleIcon.textContent = '▶';
-  
-  // Update image indicator (app-specific)
-  updateImageIndicator();
+  // Update attachment panel visibility
+  updateAttachmentPanelVisibility();
   
   // Show modal
   quoteModal.style.display = "block";
@@ -1355,13 +1345,29 @@ async function downscaleAndMoveToDb(quoteId, imageUrl, filePath, modal) {
 
 function readAttachmentFile(file, type) {
   const callbacks = {
+    onImageLoaded: (result) => {
+      if (type === "quote") {
+        currentQuoteImageFull = result.full;
+        currentQuoteImage = result.thumbnail;
+        currentAttachmentType = result.type;
+        currentAttachmentFileName = result.filename;
+        displayImage(quoteImagePreview, result.thumbnail);
+        updateAttachmentPanelVisibility(); // Update panel visibility when image loads
+      } else if (type === "author") {
+        currentAuthorImage = result.image;
+        displayImage(authorImagePreview, result.image);
+      } else if (type === "source") {
+        currentSourceImage = result.image;
+        displayImage(sourceImagePreview, result.image);
+      }
+    },
     onAttachmentLoaded: (result, icon, filename, size) => {
       currentQuoteImageFull = result.full;
       currentQuoteImage = result.thumbnail;
       currentAttachmentType = result.type;
       currentAttachmentFileName = result.filename;
       displayAttachmentPreview(quoteImagePreview, icon, filename, size);
-      updateImageIndicator();
+      updateAttachmentPanelVisibility(); // Update panel visibility when attachment loads
     }
   };
   
@@ -1377,7 +1383,7 @@ function readImageFile(file, type) {
         currentAttachmentType = result.type;
         currentAttachmentFileName = result.filename;
         displayImage(quoteImagePreview, result.thumbnail);
-        updateImageIndicator();
+        updateAttachmentPanelVisibility(); // Update panel visibility when image loads
       } else if (type === "author") {
         currentAuthorImage = result.image;
         displayImage(authorImagePreview, result.image);
@@ -1558,7 +1564,27 @@ clearQuoteImageBtn.addEventListener("click", (e) => {
   currentAttachmentFileName = "";
   clearImagePreview(quoteImagePreview, "quote");
   quoteImageFile.value = "";
-  updateImageIndicator();
+  updateAttachmentPanelVisibility(); // Update panel visibility when image is cleared
+});
+
+// Toggle attachment panel
+const toggleAttachmentBtn = getElementByIdSafe(BUTTON_IDS.TOGGLE_ATTACHMENT_BTN, 'setupEventListeners');
+if (toggleAttachmentBtn) {
+  toggleAttachmentBtn.addEventListener('click', toggleAttachmentPanel);
+}
+
+// Handle click on modal image preview - open full-size viewer if image exists, otherwise open file dialog
+quoteImagePreview.addEventListener('click', (e) => {
+  // If there's an image attached, open the viewer
+  if (currentQuoteImage || currentQuoteImageFull) {
+    e.preventDefault();
+    e.stopPropagation();
+    const imageSrc = currentQuoteImageFull || currentQuoteImage;
+    showFullImage(imageSrc, editingQuoteId, currentAttachmentType);
+  } else {
+    // No image - open file dialog
+    quoteImageFile.click();
+  }
 });
 
 // MIGRATED: Autocomplete functions (including tag autocomplete) moved to autocompleteManager.js
@@ -2975,22 +3001,57 @@ function toggleImageSection() {
 // Make global for onclick handlers
 window.toggleImageSection = toggleImageSection;
 
-// Update image indicator in modal
-function updateImageIndicator() {
-  const indicator = getElementByIdSafe('imageIndicator');
+// Manage attachment panel and toggle button visibility based on whether there's an attachment
+function updateAttachmentPanelVisibility() {
+  const container = document.getElementById(CONTAINER_IDS.ATTACHMENT_CONTAINER);
+  const toggleBtn = document.getElementById(BUTTON_IDS.TOGGLE_ATTACHMENT_BTN);
+  
+  if (!container || !toggleBtn) return;
+  
   const hasAttachment = currentQuoteImage || currentQuoteImageFull;
   
-  if (indicator) {
-    if (hasAttachment) {
-      // Show attachment type
-      const typeLabel = currentAttachmentType === 'image' ? 'image' : currentAttachmentType.toUpperCase();
-      indicator.textContent = `(has ${typeLabel})`;
-      indicator.style.color = '#059669'; // green
+  if (hasAttachment) {
+    // Has attachment: Show container, hide button (give more space to editor)
+    container.classList.remove('hidden');
+    toggleBtn.style.display = 'none';
+  } else {
+    // No attachment: Hide container by default, show button to open
+    container.classList.add('hidden');
+    toggleBtn.style.display = 'flex';
+    toggleBtn.textContent = '▶';
+    toggleBtn.classList.add('collapsed');
+    toggleBtn.title = 'Show Attachment Panel';
+  }
+}
+
+// Toggle attachment panel (horizontal collapse) - only used when no attachment exists
+function toggleAttachmentPanel() {
+  const container = document.getElementById(CONTAINER_IDS.ATTACHMENT_CONTAINER);
+  const toggleBtn = document.getElementById(BUTTON_IDS.TOGGLE_ATTACHMENT_BTN);
+  
+  if (container && toggleBtn) {
+    const isHidden = container.classList.contains('hidden');
+    
+    if (isHidden) {
+      // Show
+      container.classList.remove('hidden');
+      toggleBtn.textContent = '◀';
+      toggleBtn.classList.remove('collapsed');
+      toggleBtn.title = 'Hide Attachment Panel';
     } else {
-      indicator.textContent = '(no attachment)';
-      indicator.style.color = 'var(--text-secondary)';
+      // Hide
+      container.classList.add('hidden');
+      toggleBtn.textContent = '▶';
+      toggleBtn.classList.add('collapsed');
+      toggleBtn.title = 'Show Attachment Panel';
     }
   }
+}
+
+// Update image indicator in modal
+function updateImageIndicator() {
+  // No-op: Image indicator removed as attachment section is always visible
+  // Keeping function to avoid breaking existing calls
 }
 
 // ============= QUOTE TYPES MANAGEMENT - NOW IN settingsManager.js =============
