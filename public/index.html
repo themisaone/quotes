@@ -301,21 +301,25 @@
                     placeholder="Search in text..."
                   />
                 </div>
-                <div class="search-item" id="searchAuthorContainer">
+                <div class="search-item autocomplete-wrapper" id="searchAuthorContainer">
                   <label>✍️ Author</label>
                   <input
                     type="text"
                     id="searchAuthor"
                     placeholder="Search by author..."
+                    autocomplete="off"
                   />
+                  <div id="searchAuthorSuggestions" class="autocomplete-suggestions"></div>
                 </div>
-                <div class="search-item" id="searchSourceContainer">
+                <div class="search-item autocomplete-wrapper" id="searchSourceContainer">
                   <label>📚 Source</label>
                   <input
                     type="text"
                     id="searchSource"
                     placeholder="Search by source..."
+                    autocomplete="off"
                   />
+                  <div id="searchSourceSuggestions" class="autocomplete-suggestions"></div>
                 </div>
                 <div class="search-item autocomplete-wrapper">
                   <label>🏷️ Tags</label>

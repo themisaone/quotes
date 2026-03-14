@@ -1199,7 +1199,11 @@ label {
 .fa-dice-five,
 .fa-dice-six {
   color: #dc2626;
-  margin-right: 0.3rem;
+  margin-right: 0rem;
+  margin-bottom: 0rem;
+  vertical-align: middle;
+  line-height: 1;
+  display: inline-block;
 }
 
 /* Score display line (on its own line, like note) */
@@ -1658,24 +1662,16 @@ textarea {
   align-items: center;
   gap: 1rem;
   flex-wrap: wrap;
-}
-
-.quote-metadata-left {
-  flex: 1;
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  flex-wrap: wrap;
-  min-width: 200px;
-  padding-top: 0.75rem;
   margin-top: 0.75rem;
-  border-top: 1px solid var(--border);
 }
 
 .quote-metadata-left {
   flex: 0 1 auto;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .quote-tags-inline {
@@ -2821,6 +2817,7 @@ textarea {
 .quote-editor-group.fullscreen #quoteEditor {
   flex: 1;
   min-height: 0;
+  height: 100% !important;
   display: flex;
   flex-direction: column;
 }
@@ -2834,6 +2831,9 @@ textarea {
 .quote-editor-group.fullscreen .ql-editor {
   font-size: 1.1rem;
   line-height: 1.8;
+  min-height: 100% !important;
+  height: auto !important;
+  max-height: none !important;
 }
 
 /* Pagination Controls */

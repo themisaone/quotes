@@ -41,6 +41,8 @@ const KEYBOARD_KEYS = {
 const AUTOCOMPLETE_ENDPOINTS = {
   author: 'authors',
   source: 'sources',
+  searchAuthor: 'authors',
+  searchSource: 'sources',
   bulkAuthor: 'authors',
   bulkSource: 'sources',
   tags: 'tags'
@@ -442,6 +444,8 @@ function buildAutocompleteConfigs(config) {
     { input: config.authorInput, container: config.authorSuggestions, type: 'author' },
     { input: config.sourceInput, container: config.sourceSuggestions, type: 'source' },
     { input: config.searchTags, container: config.tagsSuggestions, type: 'tags' },
+    { input: config.searchAuthor, container: config.searchAuthorSuggestions, type: 'searchAuthor' },
+    { input: config.searchSource, container: config.searchSourceSuggestions, type: 'searchSource' },
     { input: config.bulkAuthorInput, container: config.bulkAuthorSuggestions, type: 'bulkAuthor' },
     { input: config.bulkSourceInput, container: config.bulkSourceSuggestions, type: 'bulkSource' }
   ];

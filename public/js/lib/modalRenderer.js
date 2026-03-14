@@ -43,8 +43,8 @@ function formatMetadataDisplay(createdAt, updatedAt) {
     hour12: false
   };
   
-  const createdDate = createdAt ? new Date(createdAt).toLocaleString('en-US', formatOptions) : '';
-  const updatedDate = updatedAt ? new Date(updatedAt).toLocaleString('en-US', formatOptions) : '';
+  const createdDate = createdAt ? new Date(createdAt).toLocaleString('nb-NO', formatOptions) : '';
+  const updatedDate = updatedAt ? new Date(updatedAt).toLocaleString('nb-NO', formatOptions) : '';
   
   if (!createdDate && !updatedDate) return '';
   

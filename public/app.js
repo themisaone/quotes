@@ -364,6 +364,10 @@ const searchTags = getElementByIdSafe("searchTags");
 const searchScore = getElementByIdSafe("searchScore");
 const clearBtn = getElementByIdSafe("clearBtn");
 
+// Search autocomplete suggestions
+const searchAuthorSuggestions = getElementByIdSafe("searchAuthorSuggestions");
+const searchSourceSuggestions = getElementByIdSafe("searchSourceSuggestions");
+
 // State
 let editingQuoteId = null;
 
@@ -794,6 +798,10 @@ function setupEventListeners() {
     sourceSuggestions,
     searchTags,
     tagsSuggestions,
+    searchAuthor,
+    searchAuthorSuggestions,
+    searchSource,
+    searchSourceSuggestions,
     ...getBulkImportInputs()
   });
 
