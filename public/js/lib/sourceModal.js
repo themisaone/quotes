@@ -12,7 +12,7 @@
  */
 
 import { createEntityModalManager } from './entityModal.js';
-import { getElementByIdSafe } from '../constants.js';
+import { getElementByIdSafe, BUTTON_IDS } from '../constants.js';
 
 // ============= CONFIGURATION =============
 
@@ -67,6 +67,38 @@ const sourceModalConfig = {
         .map(t => `<option value="${t.value}">${t.icon} ${t.label}</option>`)
         .join('');
     }
+  },
+  
+  // Called after modal is opened and populated
+  onModalOpen(elements, entity) {
+    console.log('🔍 Source modal opened, entity:', entity);
+    
+    // First, ensure the attachment container is visible
+    const attachmentContainer = document.getElementById('sourceAttachmentContainer');
+    if (attachmentContainer) {
+      attachmentContainer.style.display = 'block';
+      console.log('📦 Attachment container set to visible');
+    }
+    
+    // Update attachment panel visibility and clear button state
+    try {
+      const clearBtn = document.getElementById(BUTTON_IDS.CLEAR_SOURCE_IMAGE);
+      if (clearBtn) {
+        clearBtn.style.display = entity.image ? 'flex' : 'none';
+        console.log('Source modal: clear button display set to', entity.image ? 'flex' : 'none');
+      }
+    } catch (e) {
+      console.warn('Could not update clear button:', e);
+    }
+    
+    // Call the global toggle function if it exists
+    // Give it a moment for the DOM to update
+    setTimeout(() => {
+      if (window.toggleSourceAttachmentPanel) {
+        console.log('🔄 Calling toggleSourceAttachmentPanel');
+        window.toggleSourceAttachmentPanel();
+      }
+    }, 50);
   }
 };
 

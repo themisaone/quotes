@@ -424,7 +424,7 @@
                       <option value="has">Have</option>
                       <option value="not">Do NOT have</option>
                     </select>
-                    <span>🏞️ Image</span>
+                    <span>📎 Attachment</span>
                   </div>
                 </div>
               </div>
@@ -1019,7 +1019,7 @@
                       <p style="font-size: 0.75rem; margin: 0.5rem;">Click or paste (Ctrl+V)</p>
                     </div>
                   </div>
-                  <button type="button" id="clearQuoteImageX" class="image-clear-x" style="display: none;" onclick="event.stopPropagation(); document.getElementById('clearQuoteImage').click();">×</button>
+                  <button type="button" id="clearQuoteImageX" class="clear-image-btn" style="display: none;" onclick="event.stopPropagation(); document.getElementById('clearQuoteImage').click();">✕</button>
                 </div>
                 <input
                   type="file"
@@ -1126,8 +1126,8 @@
           </div>
 
           <!-- Training-specific fields -->
-          <div class="form-row form-row-with-separator" style="margin-top: 0.5rem; display: none;" id="trainingSpecificFields">
-            <div class="form-group" style="flex: 1; position: relative;">
+          <div class="form-row form-row-with-separator" style="margin-top: 0.5rem; display: none; flex-direction: row;" id="trainingSpecificFields">
+            <div class="form-group" style="flex: 1.5; position: relative; margin-bottom: 0;">
               <label for="noteDate">📅 Date <span style="font-size: 0.85em; color: #888;">(optional)</span></label>
               <div style="display: flex; gap: 0.5rem;">
                 <input
@@ -1154,7 +1154,7 @@
               </div>
             </div>
 
-            <div class="form-group" style="flex: 1;">
+            <div class="form-group" style="flex: 1; margin-bottom: 0;">
               <label for="trainingType">🏋️ Training Type</label>
               <select id="trainingType">
                 <option value="">Select type...</option>
@@ -1174,7 +1174,7 @@
       </div>
     </div>
 
-    <!-- Edit Author Modal -->
+    <!-- Edit Author Modal - v2024-03-14-fix -->
     <div id="authorModal" class="modal">
       <div class="modal-content">
         <div class="modal-header">
@@ -1188,58 +1188,67 @@
         <form id="authorForm">
           <input type="hidden" id="authorId" />
 
-          <div class="form-group">
-            <label for="authorName">Author Name *</label>
-            <input
-              type="text"
-              id="authorName"
-              required
-              placeholder="Author name"
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="authorDescription">📝 Description</label>
-            <textarea
-              id="authorDescription"
-              rows="3"
-              placeholder="Optional description or notes about this author"
-            ></textarea>
-          </div>
-
-          <div class="form-group">
-            <label for="authorImage">Author Picture</label>
-            <div class="image-upload-area-horizontal">
-              <div id="authorImagePreview" class="image-preview">
-                <div class="image-placeholder">
-                  <span>📷</span>
-                  <p>Paste image (Ctrl+V) or click to upload</p>
+          <!-- Main content area with attachment panel -->
+          <div class="attachment-container-wrapper">
+            <!-- Attachment container (collapsible) -->
+            <div id="authorAttachmentContainer" style="width: auto; max-width: 250px; flex-shrink: 0;">
+              <div style="position: relative;">
+                <div id="authorImagePreview" class="image-preview image-preview-vertical" style="height: auto; max-height: none;">
+                  <div class="image-placeholder">
+                    <span style="font-size: 3rem;">📷</span>
+                    <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem;">Click to upload</p>
+                  </div>
                 </div>
-              </div>
-              <div class="image-controls">
-                <input
-                  type="file"
-                  id="authorImageFile"
-                  accept="image/*"
-                  style="display: none"
-                />
-                <button
-                  type="button"
-                  class="btn btn-secondary"
-                  onclick="document.getElementById('authorImageFile').click()"
-                >
-                  Choose File
-                </button>
-                <button
-                  type="button"
+                <button 
+                  type="button" 
                   id="clearAuthorImage"
-                  class="btn btn-secondary"
+                  class="clear-image-btn"
+                  style="display: none;"
+                  title="Remove image"
+                  onclick="event.stopPropagation();"
                 >
-                  Clear Image
+                  ✕
                 </button>
-                <small
-                  >Image will be resized to fit 300px (longest dimension)</small
-                >
+              </div>
+              <input
+                type="file"
+                id="authorImageFile"
+                accept="image/*"
+                style="display: none"
+              />
+            </div>
+
+            <!-- Toggle button (right of attachment) -->
+            <button 
+              type="button" 
+              id="toggleAuthorAttachmentBtn"
+              class="attachment-toggle-btn"
+              title="Toggle author picture"
+            >
+              ◀
+            </button>
+
+            <!-- Form fields container -->
+            <div style="flex: 0 1 auto; display: flex; flex-direction: column; gap: 1rem; padding-left: 1rem;">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label for="authorName">👤 Author Name *</label>
+                <input
+                  type="text"
+                  id="authorName"
+                  required
+                  placeholder="Author name"
+                  style="max-width: 30ch;"
+                />
+              </div>
+
+              <div class="form-group" style="margin-bottom: 0;">
+                <label for="authorDescription">📝 Description</label>
+                <textarea
+                  id="authorDescription"
+                  rows="8"
+                  placeholder="Optional description or notes about this author"
+                  style="height: 204px; resize: vertical; max-width: 72ch; width: 72ch;"
+                ></textarea>
               </div>
             </div>
           </div>
@@ -1281,61 +1290,68 @@
         <form id="sourceForm">
           <input type="hidden" id="sourceId" />
 
-          <div class="form-group">
-            <label for="sourceName">Source Title *</label>
-            <input
-              type="text"
-              id="sourceName"
-              required
-              placeholder="Source title"
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="sourceTypeEdit">Type *</label>
-            <select id="sourceTypeEdit" required>
-              <option value="BOOK">📖 Book</option>
-              <option value="MOVIE-TV">🎬 Movies & TV</option>
-              <option value="ASSORTED">📝 Assorted</option>
-              <option value="POETRY">📜 Poetry</option>
-              <option value="LYRICS">🎵 Lyrics</option>
-              <option value="JOKES">😂 Jokes</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="sourceImage">Source Cover</label>
-            <div class="image-upload-area-horizontal">
-              <div id="sourceImagePreview" class="image-preview">
-                <div class="image-placeholder">
-                  <span>📚</span>
-                  <p>Paste image (Ctrl+V) or click to upload</p>
+          <!-- Main content area with attachment panel -->
+          <div class="attachment-container-wrapper">
+            <!-- Attachment container (collapsible) -->
+            <div id="sourceAttachmentContainer" style="width: auto; max-width: 250px; flex-shrink: 0;">
+              <div style="position: relative;">
+                <div id="sourceImagePreview" class="image-preview image-preview-vertical" style="height: auto; max-height: none;">
+                  <div class="image-placeholder">
+                    <span style="font-size: 3rem;">📚</span>
+                    <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem;">Click to upload</p>
+                  </div>
                 </div>
-              </div>
-              <div class="image-controls">
-                <input
-                  type="file"
-                  id="sourceImageFile"
-                  accept="image/*"
-                  style="display: none"
-                />
-                <button
-                  type="button"
-                  class="btn btn-secondary"
-                  onclick="document.getElementById('sourceImageFile').click()"
-                >
-                  Choose File
-                </button>
-                <button
-                  type="button"
+                <button 
+                  type="button" 
                   id="clearSourceImage"
-                  class="btn btn-secondary"
+                  class="clear-image-btn"
+                  style="display: none;"
+                  title="Remove image"
+                  onclick="event.stopPropagation();"
                 >
-                  Clear Image
+                  ✕
                 </button>
-                <small
-                  >Image will be resized to fit 300px (longest dimension)</small
-                >
+              </div>
+              <input
+                type="file"
+                id="sourceImageFile"
+                accept="image/*"
+                style="display: none"
+              />
+            </div>
+
+            <!-- Toggle button (right of attachment) -->
+            <button 
+              type="button" 
+              id="toggleSourceAttachmentBtn"
+              class="attachment-toggle-btn"
+              title="Toggle source cover"
+            >
+              ◀
+            </button>
+
+            <!-- Form fields container -->
+            <div style="flex: 0 1 auto; display: flex; flex-direction: column; gap: 1rem; padding-left: 1rem;">
+              <div class="form-group" style="margin-bottom: 0; max-width: 32ch;">
+                <label for="sourceName">📚 Source Title *</label>
+                <input
+                  type="text"
+                  id="sourceName"
+                  required
+                  placeholder="Source title"
+                />
+              </div>
+
+              <div class="form-group" style="margin-bottom: 0; max-width: 32ch;">
+                <label for="sourceTypeEdit">📑 Type *</label>
+                <select id="sourceTypeEdit" required>
+                  <option value="BOOK">📖 Book</option>
+                  <option value="MOVIE-TV">🎬 Movies & TV</option>
+                  <option value="ASSORTED">📝 Assorted</option>
+                  <option value="POETRY">📜 Poetry</option>
+                  <option value="LYRICS">🎵 Lyrics</option>
+                  <option value="JOKES">😂 Jokes</option>
+                </select>
               </div>
             </div>
           </div>

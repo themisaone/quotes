@@ -95,13 +95,25 @@ function populateFormFields(elements, entity, config) {
  * Handle entity image display
  */
 function handleImageDisplay(elements, entity, config) {
+  console.log('🖼️ handleImageDisplay called:', { 
+    hasImagePreview: !!elements.imagePreview, 
+    hasImage: !!entity.image,
+    imagePreviewId: elements.imagePreview?.id,
+    imageLength: entity.image?.length 
+  });
+  
   storeEntityImage(entity.image, config);
   
-  if (!elements.imagePreview) return;
+  if (!elements.imagePreview) {
+    console.warn('⚠️ No imagePreview element found!');
+    return;
+  }
   
   if (entity.image) {
+    console.log('✅ Calling displayImage...');
     displayImage(elements.imagePreview, entity.image);
   } else {
+    console.log('🧹 Clearing image preview...');
     clearImagePreview(elements.imagePreview, config.entityType);
   }
 }
@@ -164,6 +176,8 @@ function getFormData(config) {
   const name = getElementByIdSafe(config.nameInputId, 'getFormData').value.trim();
   const image = window[config.imageStorageKey] || null;
   
+  console.log(`📤 Getting form data for ${config.entityType}:`, { id, name, imageKey: config.imageStorageKey, imageValue: image });
+  
   const data = { id, name, image };
   
   // Get additional field data if configured
@@ -208,6 +222,14 @@ function prepareApiPayload(data, config) {
 async function updateEntityApi(entityId, data, config) {
   const payload = prepareApiPayload(data, config);
   
+  console.log(`🚀 Sending ${config.entityName} update:`, { 
+    entityId, 
+    hasImage: !!payload.image,
+    imageIsNull: payload.image === null,
+    imageLength: payload.image?.length,
+    payload 
+  });
+  
   const response = await fetch(`${API_URL}/${config.apiEndpoint}/${entityId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -215,10 +237,14 @@ async function updateEntityApi(entityId, data, config) {
   });
   
   if (!response.ok) {
+    const error = await response.text();
+    console.error(`❌ Update failed:`, error);
     throw new Error(`Failed to update ${config.entityName}`);
   }
   
-  return response.json();
+  const result = await response.json();
+  console.log(`✅ ${config.entityName} updated successfully:`, result);
+  return result;
 }
 
 /**

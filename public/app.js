@@ -519,10 +519,9 @@ function setupEventListeners() {
       updateMainTitle();
       updateSourcesFilterVisibility();
       
-      // Show/hide metadata search section based on note type and settings
+      // Show/hide metadata search section based on settings (available for all note types now)
       const metaSearchEnabled = globalSettings?.enableQuoteMetaSearches === true;
-      const shouldShowMetadata = (noteType === 'quote' || noteType === null) && metaSearchEnabled;
-      toggleMetadataSearchSection(shouldShowMetadata);
+      toggleMetadataSearchSection(metaSearchEnabled);
       
       // Clear all search filters when switching note types to avoid confusion
       clearSearchFields();
@@ -945,6 +944,13 @@ function openAddModal() {
   
   // Show modal
   quoteModal.style.display = "block";
+  
+  // Set focus to Quote text editor after modal is displayed
+  setTimeout(() => {
+    if (quillEditor) {
+      quillEditor.focus();
+    }
+  }, 100); // Small delay to ensure modal is fully rendered
 }
 
 function openEditModal(quote) {
@@ -1101,6 +1107,42 @@ async function loadTotalCount() {
 
 async function handleSubmit(e) {
   e.preventDefault();
+
+  // Check if this is a training note without year/month tags
+  const noteTypeSelect = getElementByIdSafe('noteType');
+  const currentNoteType = noteTypeSelect?.value;
+  
+  if (currentNoteType === 'training') {
+    // Get selected tags
+    const tagsValue = getElementByIdSafe('tags')?.value || '';
+    const tags = tagsValue.split(',').map(t => t.trim()).filter(t => t);
+    
+    // Check for year tag (4-digit number)
+    const hasYearTag = tags.some(tag => /^\d{4}$/.test(tag));
+    
+    // Check for month tag (month names)
+    const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 
+                        'july', 'august', 'september', 'october', 'november', 'december',
+                        'jan', 'feb', 'mar', 'apr', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+    const hasMonthTag = tags.some(tag => monthNames.includes(tag.toLowerCase()));
+    
+    // Warn if missing year or month
+    if (!hasYearTag || !hasMonthTag) {
+      const missing = [];
+      if (!hasYearTag) missing.push('YEAR');
+      if (!hasMonthTag) missing.push('MONTH');
+      
+      const proceed = confirm(
+        `⚠️ Warning: This training note is missing ${missing.join(' and ')} tag(s).\n\n` +
+        `Without these tags, it will be difficult to find later.\n\n` +
+        `Do you want to save it anyway?`
+      );
+      
+      if (!proceed) {
+        return; // Don't save, let user add tags
+      }
+    }
+  }
 
   const state = {
     editingQuoteId,
@@ -1386,10 +1428,18 @@ function readImageFile(file, type) {
         updateAttachmentPanelVisibility(); // Update panel visibility when image loads
       } else if (type === "author") {
         currentAuthorImage = result.image;
+        window.currentAuthorImage = result.image; // Keep window object in sync
         displayImage(authorImagePreview, result.image);
+        // Show clear button
+        if (clearAuthorImageBtn) clearAuthorImageBtn.style.display = 'flex';
+        toggleAuthorAttachmentPanel();
       } else if (type === "source") {
         currentSourceImage = result.image;
+        window.currentSourceImage = result.image; // Keep window object in sync
         displayImage(sourceImagePreview, result.image);
+        // Show clear button
+        if (clearSourceImageBtn) clearSourceImageBtn.style.display = 'flex';
+        toggleSourceAttachmentPanel();
       }
     }
   };
@@ -1410,10 +1460,18 @@ function handlePaste(e, type) {
         updateImageIndicator();
       } else if (type === "author") {
         currentAuthorImage = result.image;
+        window.currentAuthorImage = result.image; // Keep window object in sync
         displayImage(authorImagePreview, result.image);
+        // Show clear button
+        if (clearAuthorImageBtn) clearAuthorImageBtn.style.display = 'flex';
+        toggleAuthorAttachmentPanel();
       } else if (type === "source") {
         currentSourceImage = result.image;
+        window.currentSourceImage = result.image; // Keep window object in sync
         displayImage(sourceImagePreview, result.image);
+        // Show clear button
+        if (clearSourceImageBtn) clearSourceImageBtn.style.display = 'flex';
+        toggleSourceAttachmentPanel();
       }
     }
   };
@@ -1449,14 +1507,86 @@ function resizeImage(img, maxDimension) {
 
 // Clear Author Image
 function clearAuthorImage() {
-  currentAuthorImage = "";
+  console.log('🗑️ Clearing author image');
+  currentAuthorImage = null;
+  window.currentAuthorImage = null; // Keep window object in sync
   clearImagePreview(authorImagePreview, "author");
+  // Hide clear button
+  if (clearAuthorImageBtn) clearAuthorImageBtn.style.display = 'none';
+  toggleAuthorAttachmentPanel(); // Update panel state
 }
 
 // Clear Source Image
 function clearSourceImage() {
-  currentSourceImage = "";
+  console.log('🗑️ Clearing source image');
+  currentSourceImage = null;
+  window.currentSourceImage = null; // Keep window object in sync
   clearImagePreview(sourceImagePreview, "source");
+  // Hide clear button
+  if (clearSourceImageBtn) clearSourceImageBtn.style.display = 'none';
+  toggleSourceAttachmentPanel(); // Update panel state
+}
+
+// Toggle Author Attachment Panel
+function toggleAuthorAttachmentPanel() {
+  if (!authorAttachmentContainer || !toggleAuthorAttachmentBtn) return;
+  
+  const hasImage = authorImagePreview && authorImagePreview.querySelector('img');
+  const isOpen = authorAttachmentContainer.style.display !== 'none';
+  
+  console.log('🔄 toggleAuthorAttachmentPanel:', { 
+    hasImage: !!hasImage, 
+    isOpen,
+    containerDisplay: authorAttachmentContainer.style.display,
+    previewHasClass: authorImagePreview?.classList.contains('has-image')
+  });
+  
+  if (hasImage) {
+    // If image exists, keep panel open and hide toggle button
+    authorAttachmentContainer.style.display = 'block';
+    toggleAuthorAttachmentBtn.style.display = 'none';
+    console.log('✅ Image exists - panel open, button hidden');
+  } else {
+    // If no image, toggle panel and show/update button
+    if (isOpen) {
+      authorAttachmentContainer.style.display = 'none';
+      toggleAuthorAttachmentBtn.textContent = '▶';
+      toggleAuthorAttachmentBtn.title = 'Show author picture';
+      console.log('📦 No image, panel was open - closing it');
+    } else {
+      authorAttachmentContainer.style.display = 'block';
+      toggleAuthorAttachmentBtn.textContent = '◀';
+      toggleAuthorAttachmentBtn.title = 'Hide author picture';
+      console.log('📦 No image, panel was closed - opening it');
+    }
+    toggleAuthorAttachmentBtn.style.display = 'block';
+  }
+}
+
+// Toggle Source Attachment Panel
+function toggleSourceAttachmentPanel() {
+  if (!sourceAttachmentContainer || !toggleSourceAttachmentBtn) return;
+  
+  const hasImage = sourceImagePreview && sourceImagePreview.querySelector('img');
+  const isOpen = sourceAttachmentContainer.style.display !== 'none';
+  
+  if (hasImage) {
+    // If image exists, keep panel open and hide toggle button
+    sourceAttachmentContainer.style.display = 'block';
+    toggleSourceAttachmentBtn.style.display = 'none';
+  } else {
+    // If no image, toggle panel and show/update button
+    if (isOpen) {
+      sourceAttachmentContainer.style.display = 'none';
+      toggleSourceAttachmentBtn.textContent = '▶';
+      toggleSourceAttachmentBtn.title = 'Show source cover';
+    } else {
+      sourceAttachmentContainer.style.display = 'block';
+      toggleSourceAttachmentBtn.textContent = '◀';
+      toggleSourceAttachmentBtn.title = 'Hide source cover';
+    }
+    toggleSourceAttachmentBtn.style.display = 'block';
+  }
 }
 
 // ============= AUTHOR/SOURCE EDIT MODALS =============
@@ -1466,6 +1596,8 @@ const authorModal = getElementByIdSafe("authorModal");
 const authorImageFile = getElementByIdSafe("authorImageFile");
 const authorImagePreview = getElementByIdSafe("authorImagePreview");
 const clearAuthorImageBtn = getElementByIdSafe("clearAuthorImage");
+const toggleAuthorAttachmentBtn = getElementByIdSafe(BUTTON_IDS.TOGGLE_AUTHOR_ATTACHMENT_BTN);
+const authorAttachmentContainer = getElementByIdSafe(CONTAINER_IDS.AUTHOR_ATTACHMENT_CONTAINER);
 
 // Source Modal Elements (only those needed for image handling, autocomplete, and paste detection)
 const sourceModal = getElementByIdSafe("sourceModal");
@@ -1473,10 +1605,16 @@ const sourceTypeEdit = getElementByIdSafe("sourceTypeEdit"); // Used by autocomp
 const sourceImageFile = getElementByIdSafe("sourceImageFile");
 const sourceImagePreview = getElementByIdSafe("sourceImagePreview");
 const clearSourceImageBtn = getElementByIdSafe("clearSourceImage");
+const toggleSourceAttachmentBtn = getElementByIdSafe(BUTTON_IDS.TOGGLE_SOURCE_ATTACHMENT_BTN);
+const sourceAttachmentContainer = getElementByIdSafe(CONTAINER_IDS.SOURCE_ATTACHMENT_CONTAINER);
 
 // State for images
 let currentAuthorImage = null;
 let currentSourceImage = null;
+
+// Expose to window for entityModal.js
+window.currentAuthorImage = currentAuthorImage;
+window.currentSourceImage = currentSourceImage;
 
 // NOTE: Form elements (authorForm, authorIdInput, sourceForm, etc.) are now handled by entityModal.js
 
@@ -1490,9 +1628,32 @@ clearAuthorImageBtn.addEventListener("click", clearAuthorImage);
 sourceImageFile.addEventListener("change", handleSourceFileSelect);
 clearSourceImageBtn.addEventListener("click", clearSourceImage);
 
-// Click on preview to open file dialog
-authorImagePreview.addEventListener("click", () => authorImageFile.click());
-sourceImagePreview.addEventListener("click", () => sourceImageFile.click());
+// Toggle button handlers
+if (toggleAuthorAttachmentBtn) {
+  toggleAuthorAttachmentBtn.addEventListener("click", toggleAuthorAttachmentPanel);
+}
+if (toggleSourceAttachmentBtn) {
+  toggleSourceAttachmentBtn.addEventListener("click", toggleSourceAttachmentPanel);
+}
+
+// Click on preview to open file dialog (no full-size view for author/source)
+authorImagePreview.addEventListener("click", () => {
+  // Only open file dialog if placeholder is showing (no image loaded)
+  const hasPlaceholder = authorImagePreview.querySelector('.image-placeholder');
+  if (hasPlaceholder) {
+    authorImageFile.click();
+  }
+  // If image exists, do nothing (user must use X button to remove it first)
+});
+
+sourceImagePreview.addEventListener("click", () => {
+  // Only open file dialog if placeholder is showing (no image loaded)
+  const hasPlaceholder = sourceImagePreview.querySelector('.image-placeholder');
+  if (hasPlaceholder) {
+    sourceImageFile.click();
+  }
+  // If image exists, do nothing (user must use X button to remove it first)
+});
 
 // Paste image functionality
 document.addEventListener("paste", (e) => {
@@ -1510,6 +1671,10 @@ document.addEventListener("paste", (e) => {
 // Make library modal functions global for onclick handlers in HTML
 window.openAuthorModal = openAuthorModalLib;
 window.openSourceModal = openSourceModalLib;
+
+// Make toggle functions global for modal configs
+window.toggleAuthorAttachmentPanel = toggleAuthorAttachmentPanel;
+window.toggleSourceAttachmentPanel = toggleSourceAttachmentPanel;
 
 // NOTE: The following functions have been moved to authorModal.js and sourceModal.js:
 // - openAuthorModal() - Now handled by openAuthorModalLib
@@ -2413,7 +2578,7 @@ function getCurrentFilters() {
     return condition?.value === 'not' ? 'false' : 'true';
   };
   
-  return {
+  const filters = {
     note_type: currentNoteTypeFilter,
     author_id: getOptionalValue(FILTER_IDS.AUTHOR_FILTER), // Only exists in quotes view
     source_id: getOptionalValue(FILTER_IDS.SOURCE_FILTER), // Only exists in quotes view
@@ -2427,8 +2592,17 @@ function getCurrentFilters() {
     hasAuthor: getMetadataState(FILTER_IDS.HAS_AUTHOR_CHECKBOX, FILTER_IDS.HAS_AUTHOR_CONDITION),
     hasSource: getMetadataState(FILTER_IDS.HAS_SOURCE_CHECKBOX, FILTER_IDS.HAS_SOURCE_CONDITION),
     hasNote: getMetadataState(FILTER_IDS.HAS_NOTE_CHECKBOX, FILTER_IDS.HAS_NOTE_CONDITION),
-    hasTags: getMetadataState(FILTER_IDS.HAS_TAGS_CHECKBOX, FILTER_IDS.HAS_TAGS_CONDITION)
+    hasTags: getMetadataState(FILTER_IDS.HAS_TAGS_CHECKBOX, FILTER_IDS.HAS_TAGS_CONDITION),
+    hasImage: getMetadataState(FILTER_IDS.HAS_IMAGE_CHECKBOX, FILTER_IDS.HAS_IMAGE_CONDITION)
   };
+  
+  console.log('📊 getCurrentFilters - hasImage filter:', {
+    checkbox: document.getElementById(FILTER_IDS.HAS_IMAGE_CHECKBOX)?.checked,
+    condition: document.getElementById(FILTER_IDS.HAS_IMAGE_CONDITION)?.value,
+    result: filters.hasImage
+  });
+  
+  return filters;
 }
 
 function getFilterSummary() {
@@ -2824,7 +2998,7 @@ function initializeTagInput() {
   
   if (!tagInput || !addTagBtn) return;
   
-  // Autocomplete for tag input - match ONLY existing tags
+  // Autocomplete for tag input - match ONLY existing tags filtered by note type
   tagInput.addEventListener('input', async (e) => {
     const search = e.target.value.trim();
     
@@ -2834,7 +3008,12 @@ function initializeTagInput() {
     }
     
     try {
-      const response = await fetch(`${API_URL}/tags?search=${encodeURIComponent(search)}`);
+      // Get current note type from the modal
+      const noteTypeSelect = getElementByIdSafe('noteType');
+      const currentModalNoteType = noteTypeSelect?.value || 'quote';
+      
+      // Fetch tags filtered by type
+      const response = await fetch(`${API_URL}/tags?search=${encodeURIComponent(search)}&type=${currentModalNoteType}`);
       const tags = await response.json();
       
       if (!tags || tags.length === 0) {

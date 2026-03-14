@@ -161,9 +161,16 @@ export const BUTTON_IDS = {
   // Clear filters
   CLEAR_FILTERS_BTN: 'clearFiltersBtn',
   
+  // Clear image buttons
+  CLEAR_QUOTE_IMAGE: 'clearQuoteImageBtn',
+  CLEAR_AUTHOR_IMAGE: 'clearAuthorImage',
+  CLEAR_SOURCE_IMAGE: 'clearSourceImage',
+  
   // Navigation
   BACK_BTN: 'backButton',
   TOGGLE_ATTACHMENT_BTN: 'toggleAttachmentBtn',
+  TOGGLE_AUTHOR_ATTACHMENT_BTN: 'toggleAuthorAttachmentBtn',
+  TOGGLE_SOURCE_ATTACHMENT_BTN: 'toggleSourceAttachmentBtn',
   
   // Pagination (dynamic, but base IDs)
   PREV_PAGE_BTN: 'prevPageBtn',
@@ -189,6 +196,8 @@ export const CONTAINER_IDS = {
   QUOTE_SPECIFIC_FIELDS: 'quoteSpecificFields',
   TRAINING_SPECIFIC_FIELDS: 'trainingSpecificFields',
   ATTACHMENT_CONTAINER: 'attachmentContainer',
+  AUTHOR_ATTACHMENT_CONTAINER: 'authorAttachmentContainer',
+  SOURCE_ATTACHMENT_CONTAINER: 'sourceAttachmentContainer',
   
   // Pagination
   PAGINATION_CONTROLS: 'paginationControls',

@@ -105,7 +105,6 @@ app.put('/api/settings', (req, res) => {
     // Write to file
     fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2));
     
-    console.log('✅ Settings saved to file');
     res.json({ success: true, settings });
   } catch (error) {
     console.error('Error saving settings:', error);
@@ -269,14 +268,38 @@ app.put("/api/authors/:id", async (req, res) => {
     }
     
     // Simple update (rename and/or image update and/or description update)
+    // Note: For image, we need to allow explicit NULL to clear it
+    const updateParams = [];
+    const updateFields = [];
+    let paramCount = 1;
+    
+    if (name !== undefined && name !== null) {
+      updateFields.push(`name = $${paramCount}`);
+      updateParams.push(name.trim());
+      paramCount++;
+    }
+    
+    if (description !== undefined) {
+      updateFields.push(`description = $${paramCount}`);
+      updateParams.push(description?.trim() || '');
+      paramCount++;
+    }
+    
+    // Image: explicitly allow null to clear it
+    if (image !== undefined) {
+      updateFields.push(`image = $${paramCount}`);
+      updateParams.push(image); // Can be null to clear
+      paramCount++;
+    }
+    
+    updateParams.push(id); // WHERE clause
+    
     const result = await client.query(
       `UPDATE authors 
-       SET name = COALESCE($1, name),
-           description = COALESCE($2, description),
-           image = COALESCE($3, image)
-       WHERE id = $4
+       SET ${updateFields.join(', ')}
+       WHERE id = $${paramCount}
        RETURNING *`,
-      [name?.trim(), description?.trim() || '', image, id]
+      updateParams
     );
 
     await client.query("COMMIT");
@@ -501,13 +524,38 @@ app.put("/api/sources/:id", async (req, res) => {
     }
     
     // Simple update (rename and/or image/type update)
+    // Note: For image, we need to allow explicit NULL to clear it
+    const updateParams = [];
+    const updateFields = [];
+    let paramCount = 1;
+    
+    if (name !== undefined && name !== null) {
+      updateFields.push(`name = $${paramCount}`);
+      updateParams.push(name.trim());
+      paramCount++;
+    }
+    
+    // Image: explicitly allow null to clear it
+    if (image !== undefined) {
+      updateFields.push(`image = $${paramCount}`);
+      updateParams.push(image); // Can be null to clear
+      paramCount++;
+    }
+    
+    if (type !== undefined && type !== null) {
+      updateFields.push(`type = $${paramCount}`);
+      updateParams.push(type);
+      paramCount++;
+    }
+    
+    updateParams.push(id); // WHERE clause
+    
     const result = await client.query(
       `UPDATE sources 
-       SET name = COALESCE($1, name),
-           image = COALESCE($2, image),
-           type = COALESCE($3, type)
-       WHERE id = $4
+       SET ${updateFields.join(', ')}
+       WHERE id = $${paramCount}
        RETURNING *`,
+      updateParams
       [name?.trim(), image, type, id]
     );
 
@@ -728,9 +776,13 @@ app.get("/api/quotes/count", async (req, res) => {
     }
 
     if (hasImage === 'true') {
-      query += ` AND q.image IS NOT NULL AND q.image != ''`;
+      // Check for any attachment (all stored in image_full)
+      console.log('🔍 Filtering for HAS attachment (image_full IS NOT NULL)');
+      query += ` AND q.image_full IS NOT NULL AND q.image_full != ''`;
     } else if (hasImage === 'false') {
-      query += ` AND (q.image IS NULL OR q.image = '')`;
+      // No attachment at all
+      console.log('🔍 Filtering for NO attachment (image_full IS NULL)');
+      query += ` AND (q.image_full IS NULL OR q.image_full = '')`;
     }
 
     // Get filtered count
@@ -939,9 +991,13 @@ app.get("/api/quotes", async (req, res) => {
     }
 
     if (hasImage === 'true') {
-      query += ` AND q.image IS NOT NULL AND q.image != ''`;
+      // Check for any attachment (all stored in image_full)
+      console.log('🔍 GET /api/quotes - Filtering for HAS attachment');
+      query += ` AND q.image_full IS NOT NULL AND q.image_full != ''`;
     } else if (hasImage === 'false') {
-      query += ` AND (q.image IS NULL OR q.image = '')`;
+      // No attachment at all
+      console.log('🔍 GET /api/quotes - Filtering for NO attachment');
+      query += ` AND (q.image_full IS NULL OR q.image_full = '')`;
     }
     
     // Translation group filter
@@ -2009,7 +2065,7 @@ app.post("/api/quotes/bulk-delete", async (req, res) => {
 // Get all tags with quote counts
 app.get("/api/tags", async (req, res) => {
   try {
-    const { type } = req.query; // e.g., ?type=note or ?type=quote
+    const { type, search } = req.query; // e.g., ?type=note&search=foo
     
     let query = `
       SELECT t.id, t.name, t.type, COUNT(qt.quote_id)::int as quote_count
@@ -2018,9 +2074,23 @@ app.get("/api/tags", async (req, res) => {
     `;
     
     const params = [];
+    const conditions = [];
+    let paramCounter = 1;
+    
     if (type) {
-      query += ` WHERE t.type = $1`;
+      conditions.push(`t.type = $${paramCounter}`);
       params.push(type);
+      paramCounter++;
+    }
+    
+    if (search) {
+      conditions.push(`t.name ILIKE $${paramCounter}`);
+      params.push(`%${search}%`);
+      paramCounter++;
+    }
+    
+    if (conditions.length > 0) {
+      query += ` WHERE ` + conditions.join(' AND ');
     }
     
     query += `

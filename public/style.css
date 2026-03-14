@@ -838,9 +838,18 @@ h2 {
 /* Narrower modals for author and source */
 #authorModal .modal-content,
 #sourceModal .modal-content {
-  width: fit-content;
-  max-width: 90vw;
-  min-width: 500px;
+  width: auto; /* Let content determine width */
+  max-width: 90vw; /* Don't exceed viewport */
+  min-width: 550px; /* Minimum sensible width */
+}
+
+/* Attachment container wrapper - horizontal layout */
+.attachment-container-wrapper {
+  display: flex;
+  flex-direction: row;
+  gap: 1rem; /* Spacing between image panel and form fields */
+  align-items: flex-start;
+  padding: 1rem 0rem 0rem 0rem;
 }
 
 /* Dark green modal header */
@@ -1931,6 +1940,7 @@ textarea {
 }
 
 .image-preview {
+  position: relative; /* For absolute positioned children (X button) */
   width: 300px;
   height: auto;
   min-height: 200px;
@@ -1949,24 +1959,25 @@ textarea {
 
 /* Vertical image preview - for side-by-side layout - matches card thumbnail size */
 .image-preview-vertical {
-  width: auto; /* Allow natural width, up to max */
+  width: auto; /* Auto width like Quote modal */
   max-width: 250px;
   height: 240px;
   min-height: 240px;
   max-height: 240px;
-  cursor: pointer; /* Indicate clickability */
-  overflow: hidden; /* Ensure content doesn't overflow */
+  cursor: pointer;
+  overflow: hidden;
   display: flex;
-  align-items: flex-start; /* Align to top, no padding */
-  justify-content: center;
-  padding: 0; /* No padding */
-  margin: 0; /* No margin */
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: 0;
+  margin: 0;
 }
 
 .image-preview-vertical img {
   width: auto;
   max-width: 250px;
-  height: 100%;
+  height: auto; /* Allow flexible height for portrait images */
+  max-height: 100%; /* Respect parent height if set */
   object-fit: contain;
   display: block;
   margin: 0; /* No margin on image */
@@ -1982,6 +1993,7 @@ textarea {
 .image-preview-vertical:not(.has-image) {
   width: 250px; /* Full width for placeholder */
   align-items: center; /* Center placeholder vertically */
+  justify-content: center; /* Center placeholder horizontally */
 }
 
 .image-preview-large {
@@ -2080,6 +2092,35 @@ textarea {
   transform: scale(1.1);
 }
 
+/* Clear image button (for author/source modals) - simpler, subtle design */
+.clear-image-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 3px;
+  font-size: 16px;
+  font-weight: bold;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.clear-image-btn:hover {
+  background: rgba(220, 0, 0, 0.9);
+  border-color: white;
+  transform: scale(1.05);
+}
+
 /* Attachment toggle button */
 .attachment-toggle-btn {
   background: var(--card-bg);
@@ -2131,7 +2172,7 @@ textarea {
 
 /* Toggle button gets right margin when visible */
 .attachment-toggle-btn:not(.hidden) {
-  margin-right: 1rem; /* Space between button and quote editor */
+  margin-right: 0rem; /* Space between button and quote editor */
 }
 
 .image-upload-area button {

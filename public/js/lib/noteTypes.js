@@ -163,13 +163,13 @@ export function updateModalFieldVisibility(noteType) {
   // Author/Source fields (only for quotes) - all contained in quoteSpecificFields
   const quoteFields = getElementByIdSafe(CONTAINER_IDS.QUOTE_SPECIFIC_FIELDS, 'updateModalFieldVisibility');
   if (quoteFields) {
-    quoteFields.style.display = hasAuthorField(noteType) ? 'block' : 'none';
+    quoteFields.style.display = hasAuthorField(noteType) ? 'flex' : 'none';
   }
   
-  // Training-specific fields
+  // Training-specific fields - use flex for horizontal layout
   const trainingFields = getElementByIdSafe(CONTAINER_IDS.TRAINING_SPECIFIC_FIELDS, 'updateModalFieldVisibility');
   if (trainingFields) {
-    trainingFields.style.display = hasDateField(noteType) ? 'block' : 'none';
+    trainingFields.style.display = hasDateField(noteType) ? 'flex' : 'none';
   }
 }
 

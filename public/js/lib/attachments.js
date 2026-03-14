@@ -430,17 +430,39 @@ export function handlePasteEvent(e, type, state, callbacks) {
  * Display image in container
  */
 export function displayImage(container, imageUrl, escapeHtmlFn) {
-  if (!container) return;
+  console.log('🖼️ displayImage called:', { containerId: container?.id, hasUrl: !!imageUrl });
+  
+  if (!container) {
+    console.warn('⚠️ displayImage: no container');
+    return;
+  }
   
   const resolved = resolveAttachmentUrl(imageUrl);
+  console.log('🔗 Resolved URL:', resolved ? 'yes' : 'no');
+  
   if (resolved) {
     container.innerHTML = `<img src="${resolved}" alt="Preview">`;
     container.classList.add('has-image');
     
+    // Log what we just set
+    const img = container.querySelector('img');
+    console.log('✅ Image HTML set:', {
+      hasImgTag: !!img,
+      imgSrc: img?.src?.substring(0, 50),
+      containerWidth: container.offsetWidth,
+      containerHeight: container.offsetHeight,
+      imgWidth: img?.width,
+      imgHeight: img?.height
+    });
+    
     // Show the X button if it exists (sibling of container)
-    const xButton = container.parentElement?.querySelector('.image-clear-x');
+    // Support both .image-clear-x and .clear-image-btn
+    const xButton = container.parentElement?.querySelector('.image-clear-x, .clear-image-btn');
     if (xButton) {
       xButton.style.display = 'flex';
+      console.log('✅ X button shown');
+    } else {
+      console.warn('⚠️ No X button found in parent');
     }
   }
 }
