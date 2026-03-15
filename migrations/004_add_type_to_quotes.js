@@ -25,53 +25,70 @@ async function migrate() {
   try {
     console.log("Starting migration 004: add type to quotes table...");
 
-    // Check if type column already exists in quotes
+    // Check which table exists (quotes or notes)
+    const tableCheck = await client.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_name IN ('quotes', 'notes')
+    `);
+    
+    if (tableCheck.rows.length === 0) {
+      console.log("⏭️  Skipping: Neither quotes nor notes table exists");
+      return;
+    }
+    
+    const tableName = tableCheck.rows[0].table_name;
+    console.log(`  Using table: ${tableName}`);
+
+    // Check if type column already exists
     const checkColumn = await client.query(`
-            SELECT EXISTS (
-                SELECT FROM information_schema.columns 
-                WHERE table_name = 'quotes' 
-                AND column_name = 'type'
-            )
-        `);
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns 
+        WHERE table_name = $1
+        AND column_name = 'type'
+      )
+    `, [tableName]);
 
     if (checkColumn.rows[0].exists) {
-      console.log("⏭️  Skipping: type column already exists in quotes table");
+      console.log(`⏭️  Skipping: type column already exists in ${tableName} table`);
       return;
     }
 
     await client.query("BEGIN");
 
-    // Step 1: Add type column to quotes table
-    console.log("Step 1: Adding type column to quotes...");
+    // Step 1: Add type column
+    console.log(`Step 1: Adding type column to ${tableName}...`);
     await client.query(`
-            ALTER TABLE quotes 
-            ADD COLUMN IF NOT EXISTS type VARCHAR(20) DEFAULT 'BOOK'
-        `);
+      ALTER TABLE ${tableName} 
+      ADD COLUMN IF NOT EXISTS type VARCHAR(20) DEFAULT 'BOOK'
+    `);
 
-    // Step 2: Copy type from sources to quotes where source_id exists
-    console.log("Step 2: Copying type from sources to quotes...");
+    // Step 2: Copy type from sources where source_id exists
+    console.log(`Step 2: Copying type from sources to ${tableName}...`);
     await client.query(`
-            UPDATE quotes q
-            SET type = s.type
-            FROM sources s
-            WHERE q.source_id = s.id
-        `);
+      UPDATE ${tableName} q
+      SET type = s.type
+      FROM sources s
+      WHERE q.source_id = s.id
+    `);
 
-    // Step 3: Set type to BOOK for quotes without source
-    console.log("Step 3: Setting BOOK type for quotes without source...");
+    // Step 3: Set type to BOOK for entries without source
+    console.log(`Step 3: Setting BOOK type for ${tableName} without source...`);
     await client.query(`
-            UPDATE quotes
-            SET type = 'BOOK'
-            WHERE source_id IS NULL AND type IS NULL
-        `);
+      UPDATE ${tableName}
+      SET type = 'BOOK'
+      WHERE source_id IS NULL AND type IS NULL
+    `);
 
     // Step 4: Add check constraint
     console.log("Step 4: Adding check constraint...");
+    const constraintName = tableName === 'notes' ? 'notes_type_check' : 'quotes_type_check';
     await client.query(`
-            ALTER TABLE quotes
-            ADD CONSTRAINT quotes_type_check 
-            CHECK (type IN ('BOOK', 'MOVIE', 'ASSORTED'))
-        `);
+      ALTER TABLE ${tableName}
+      ADD CONSTRAINT ${constraintName} 
+      CHECK (type IN ('BOOK', 'MOVIE', 'ASSORTED'))
+    `);
 
     await client.query("COMMIT");
     console.log("✅ Migration 004 completed successfully!");

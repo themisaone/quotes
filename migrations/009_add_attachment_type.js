@@ -11,13 +11,28 @@ module.exports = {
   async up(client) {
     console.log('Starting migration 009: Adding attachment_type to quotes...');
     
+    // Check which table exists (quotes or notes)
+    const tableCheck = await client.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_name IN ('quotes', 'notes')
+    `);
+    
+    if (tableCheck.rows.length === 0) {
+      console.log("⏭️  Skipping: Neither quotes nor notes table exists");
+      return;
+    }
+    
+    const tableName = tableCheck.rows[0].table_name;
+    
     // Check if column already exists
     const columnCheck = await client.query(`
       SELECT column_name 
       FROM information_schema.columns 
-      WHERE table_name = 'quotes' 
+      WHERE table_name = $1
       AND column_name = 'attachment_type'
-    `);
+    `, [tableName]);
     
     if (columnCheck.rows.length > 0) {
       console.log('⏭️  Skipping: attachment_type column already exists');
@@ -26,7 +41,7 @@ module.exports = {
     
     // Add attachment_type column with default 'image'
     await client.query(`
-      ALTER TABLE quotes 
+      ALTER TABLE ${tableName} 
       ADD COLUMN attachment_type VARCHAR(20) DEFAULT 'image'
     `);
     
@@ -34,7 +49,7 @@ module.exports = {
     
     // Set existing records with attachments to 'image' type
     await client.query(`
-      UPDATE quotes 
+      UPDATE ${tableName} 
       SET attachment_type = 'image' 
       WHERE image IS NOT NULL OR image_full IS NOT NULL
     `);

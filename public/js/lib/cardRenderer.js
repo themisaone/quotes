@@ -86,20 +86,20 @@ function isLongContent(htmlContent) {
 /**
  * Build score and note title line
  */
-function buildScoreAndNoteLine(quote, globalSettings) {
+function buildScoreAndNoteLine(note, globalSettings) {
   const displayScore = globalSettings?.displayScoreInCards === true;
-  const score = quote.score;
+  const score = note.score;
   const hasScore = score && parseInt(score) > 0 && displayScore;
   const scoreIcon = hasScore 
     ? `<i class="fa-solid fa-dice-${['one', 'two', 'three', 'four', 'five', 'six'][parseInt(score) - 1]}"></i>` 
     : '';
   
-  if (hasScore && quote.note) {
-    return `<div class="quote-note-title"><span>${scoreIcon}</span><span>${escapeHtml(quote.note)}</span></div>`;
+  if (hasScore && note.comment) {
+    return `<div class="quote-note-title"><span>${scoreIcon}</span><span>${escapeHtml(note.comment)}</span></div>`;
   } else if (hasScore) {
     return `<div class="quote-score-line">${scoreIcon}</div>`;
-  } else if (quote.note) {
-    return `<div class="quote-note-title"><span></span><span>${escapeHtml(quote.note)}</span></div>`;
+  } else if (note.comment) {
+    return `<div class="quote-note-title"><span></span><span>${escapeHtml(note.comment)}</span></div>`;
   }
   return '';
 }
@@ -107,10 +107,10 @@ function buildScoreAndNoteLine(quote, globalSettings) {
 /**
  * Build metadata section for Quote type
  */
-function buildQuoteMetadata(quote, noteTypeBadge, translationBadge, getQuoteTypes) {
-  const author = quote.author_name || "";
-  const source = quote.source_name || "";
-  const sourceType = quote.source_type || "BOOK";
+function buildQuoteMetadata(note, noteTypeBadge, translationBadge, getQuoteTypes) {
+  const author = note.author_name || "";
+  const source = note.source_name || "";
+  const sourceType = note.source_type || "BOOK";
   
   // Get quote types config
   let quoteTypes = [];
@@ -125,17 +125,17 @@ function buildQuoteMetadata(quote, noteTypeBadge, translationBadge, getQuoteType
   
   // Author + Source
   if (author && source) {
-    return `<div class="meta-item-combined">${noteTypeBadge}${translationBadge}<span class="type-icon-badge">${sourceIcon}</span> <span class="meta-by">by</span> <span class="meta-value clickable author-link" data-id="${quote.author_id}" data-name="${escapeHtml(author)}">${escapeHtml(author)}</span> <span class="meta-from">from</span> <span class="meta-value clickable source-link" data-id="${quote.source_id}" data-name="${escapeHtml(source)}" data-type="${sourceType}">📚 ${escapeHtml(source)}</span></div>`;
+    return `<div class="meta-item-combined">${noteTypeBadge}${translationBadge}<span class="type-icon-badge">${sourceIcon}</span> <span class="meta-by">by</span> <span class="meta-value clickable author-link" data-id="${note.author_id}" data-name="${escapeHtml(author)}">${escapeHtml(author)}</span> <span class="meta-from">from</span> <span class="meta-value clickable source-link" data-id="${note.source_id}" data-name="${escapeHtml(source)}" data-type="${sourceType}">📚 ${escapeHtml(source)}</span></div>`;
   }
   
   // Author only
   if (author) {
-    return `<div class="meta-item">${noteTypeBadge}${translationBadge}<span class="type-icon-badge">${sourceIcon}</span> <span class="meta-by">by</span> <span class="meta-value clickable author-link" data-id="${quote.author_id}" data-name="${escapeHtml(author)}">${escapeHtml(author)}</span></div>`;
+    return `<div class="meta-item">${noteTypeBadge}${translationBadge}<span class="type-icon-badge">${sourceIcon}</span> <span class="meta-by">by</span> <span class="meta-value clickable author-link" data-id="${note.author_id}" data-name="${escapeHtml(author)}">${escapeHtml(author)}</span></div>`;
   }
   
   // Source only
   if (source) {
-    return `<div class="meta-item">${noteTypeBadge}${translationBadge}<span class="meta-value clickable source-link" data-id="${quote.source_id}" data-name="${escapeHtml(source)}" data-type="${sourceType}">📚 ${escapeHtml(source)}</span></div>`;
+    return `<div class="meta-item">${noteTypeBadge}${translationBadge}<span class="meta-value clickable source-link" data-id="${note.source_id}" data-name="${escapeHtml(source)}" data-type="${sourceType}">📚 ${escapeHtml(source)}</span></div>`;
   }
   
   // Badge only
@@ -149,8 +149,8 @@ function buildQuoteMetadata(quote, noteTypeBadge, translationBadge, getQuoteType
 /**
  * Build metadata section for Training type
  */
-function buildTrainingMetadata(quote, noteTypeBadge, getTrainingTypes) {
-  const sourceType = quote.source_type || "";
+function buildTrainingMetadata(note, noteTypeBadge, getTrainingTypes) {
+  const sourceType = note.source_type || "";
   
   // Get training types config
   let trainingTypes = [];
@@ -164,7 +164,7 @@ function buildTrainingMetadata(quote, noteTypeBadge, getTrainingTypes) {
   const { icon: trainingIcon, label: trainingLabel } = getTrainingIconAndLabel(sourceType, trainingTypes);
   
   // Format date
-  const dateStr = formatTrainingDate(quote.note_date);
+  const dateStr = formatTrainingDate(note.note_date);
   
   const trainingTypeStr = sourceType && sourceType !== 'ASSORTED' 
     ? `<span class="type-icon-badge">${trainingIcon}</span> ${trainingLabel}` 
@@ -199,17 +199,17 @@ function buildGenericMetadata(noteTypeBadge) {
 /**
  * Build attachment section (image thumb or file icon)
  */
-function buildAttachmentSection(quote, imageUrl, imageFullUrl) {
-  if (!quote.image && !quote.image_full) {
+function buildAttachmentSection(note, imageUrl, imageFullUrl) {
+  if (!note.thumbnail && !note.attachment_full) {
     return '';
   }
   
-  const attachmentType = quote.attachment_type || 'image';
-  const url = quote.image_full || quote.image;
+  const attachmentType = note.attachment_type || 'image';
+  const url = note.attachment_full || note.thumbnail;
   const displayUrl = imageUrl || imageFullUrl;
   
   if (attachmentType === 'image') {
-    return `<div class="quote-image-thumb" onclick="event.stopPropagation(); showFullImage('${url}', ${quote.id}, '${attachmentType}')"><img src="${displayUrl}" alt="Quote attachment"></div>`;
+    return `<div class="quote-image-thumb" onclick="event.stopPropagation(); showFullImage('${url}', ${note.id}, '${attachmentType}')"><img src="${displayUrl}" alt="Quote attachment"></div>`;
   }
   
   // File attachment (PDF, video, document)
@@ -226,7 +226,7 @@ function buildAttachmentSection(quote, imageUrl, imageFullUrl) {
   const fileIcon = fileIcons[attachmentType] || '📁';
   const fileLabel = fileLabels[attachmentType] || 'File';
   
-  return `<div class="quote-file-thumb" onclick="event.stopPropagation(); showFullImage('${url}', ${quote.id}, '${attachmentType}')"><div class="file-icon">${fileIcon}</div><div class="file-label">${fileLabel}</div></div>`;
+  return `<div class="quote-file-thumb" onclick="event.stopPropagation(); showFullImage('${url}', ${note.id}, '${attachmentType}')"><div class="file-icon">${fileIcon}</div><div class="file-label">${fileLabel}</div></div>`;
 }
 
 /**
@@ -237,14 +237,14 @@ function buildAttachmentSection(quote, imageUrl, imageFullUrl) {
  * @param {Function} getQuoteTypes - Function that returns quote types config
  * @returns {string} HTML string for the card
  */
-export function createQuoteCard(quote, currentNoteTypeFilter, getTrainingTypes, getQuoteTypes, globalSettings) {
+export function createQuoteCard(note, currentNoteTypeFilter, getTrainingTypes, getQuoteTypes, globalSettings) {
   // Resolve attachment URLs
-  const imageUrl = quote.image ? resolveAttachmentUrl(quote.image) : null;
-  const imageFullUrl = quote.image_full ? resolveAttachmentUrl(quote.image_full) : null;
+  const imageUrl = note.thumbnail ? resolveAttachmentUrl(note.thumbnail) : null;
+  const imageFullUrl = note.attachment_full ? resolveAttachmentUrl(note.attachment_full) : null;
   
   // Build tags (make them clickable)
-  const tags = quote.tags
-    ? quote.tags
+  const tags = note.tags
+    ? note.tags
         .split(",")
         .map((tag) => {
           const trimmedTag = tag.trim();
@@ -254,48 +254,48 @@ export function createQuoteCard(quote, currentNoteTypeFilter, getTrainingTypes, 
     : "";
 
   // Check if content is long
-  const isLong = isLongContent(quote.quote);
-  const quoteId = `quote-${quote.id}`;
-  const expandBtnId = `expand-${quote.id}`;
+  const isLong = isLongContent(note.note_text);
+  const quoteId = `quote-${note.id}`;
+  const expandBtnId = `expand-${note.id}`;
 
   // Build score and note line
-  const noteScoreLine = buildScoreAndNoteLine(quote, globalSettings);
+  const noteScoreLine = buildScoreAndNoteLine(note, globalSettings);
   
   // Translation group badge
-  const translationBadge = quote.translation_group 
-    ? `<span class="translation-badge" title="Translation group: ${escapeHtml(quote.translation_group)}" onclick="event.stopPropagation(); showTranslationGroup('${escapeHtml(quote.translation_group)}')">T</span>` 
+  const translationBadge = note.translation_group 
+    ? `<span class="translation-badge" title="Translation group: ${escapeHtml(note.translation_group)}" onclick="event.stopPropagation(); showTranslationGroup('${escapeHtml(note.translation_group)}')">T</span>` 
     : '';
   
   // Note type badge
-  const noteType = quote.note_type || 'quote';
+  const noteType = note.note_type || 'quote';
   const noteTypeBadge = getNoteTypeBadgeHtml(noteType, true, currentNoteTypeFilter);
   
   // Build metadata based on note type
   let metadataContent = '';
   switch (noteType) {
     case 'quote':
-      metadataContent = buildQuoteMetadata(quote, noteTypeBadge, translationBadge, getQuoteTypes);
+      metadataContent = buildQuoteMetadata(note, noteTypeBadge, translationBadge, getQuoteTypes);
       break;
     case 'training':
-      metadataContent = buildTrainingMetadata(quote, noteTypeBadge, getTrainingTypes);
+      metadataContent = buildTrainingMetadata(note, noteTypeBadge, getTrainingTypes);
       break;
     default:
       metadataContent = buildGenericMetadata(noteTypeBadge);
   }
   
   // Build attachment section
-  const attachmentSection = buildAttachmentSection(quote, imageUrl, imageFullUrl);
+  const attachmentSection = buildAttachmentSection(note, imageUrl, imageFullUrl);
 
   // Return complete card HTML
   return `
-        <div class="quote-card ${quote.image || quote.image_full ? 'has-image' : ''}" data-quote-id="${quote.id}" style="cursor: pointer;">
+        <div class="quote-card ${note.image || note.attachment_full ? 'has-image' : ''}" data-quote-id="${note.id}" style="cursor: pointer;">
             <div class="quote-card-content">
                 <div class="quote-top-section">
                     <div class="quote-left-column">
                         ${noteScoreLine}
                         <div class="quote-text-wrapper">
-                            <div class="quote-text ${isLong ? "collapsible" : ""}" id="${quoteId}" data-expanded="false">${quote.quote}</div>
-                            ${isLong ? `<button class="expand-btn" id="${expandBtnId}" onclick="event.stopPropagation(); toggleQuoteExpand('${quote.id}')">▼ Show more</button>` : ""}
+                            <div class="quote-text ${isLong ? "collapsible" : ""}" id="${quoteId}" data-expanded="false">${note.note_text}</div>
+                            ${isLong ? `<button class="expand-btn" id="${expandBtnId}" onclick="event.stopPropagation(); toggleQuoteExpand('${note.id}')">▼ Show more</button>` : ""}
                         </div>
                     </div>
                     ${attachmentSection}

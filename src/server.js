@@ -7,9 +7,9 @@ const fileStorage = require("./fileStorage");
 const {
   checkTagTablesExist,
   getOrCreateTagIds,
-  associateTagsWithQuote,
-  getTagsForQuote,
-  getTagsForQuotes,
+  associateTagsWithNote,
+  getTagsForNote,
+  getTagsForNotes,
   parseTagInput,
 } = require("./tagHelpers");
 require("dotenv").config();
@@ -112,16 +112,16 @@ app.put('/api/settings', (req, res) => {
   }
 });
 
-// Helper function to retrieve images from hybrid storage
-function retrieveQuoteImages(quote) {
+// Helper function to retrieve thumbnails from hybrid storage
+function retrieveQuoteImages(note) {
   // Convert thumbnail to base64 (for cards - always need it)
-  if (quote.image) {
-    quote.image = fileStorage.retrieveFromStorage(quote.image);
+  if (note.thumbnail) {
+    note.thumbnail = fileStorage.retrieveFromStorage(note.thumbnail);
   }
-  // Keep image_full as-is (file: reference or base64)
+  // Keep attachment_full as-is (file: reference or base64)
   // Frontend will handle file: references by loading from /attachments/
   // This avoids sending huge base64 strings for large files!
-  return quote;
+  return note;
 }
 
 // ============= AUTHORS API =============
@@ -134,7 +134,7 @@ app.get("/api/authors", async (req, res) => {
             SELECT a.*, 
                    COUNT(q.id) as quote_count
             FROM authors a
-            LEFT JOIN quotes q ON a.id = q.author_id
+            LEFT JOIN notes q ON a.id = q.author_id
         `;
         const params = [];
 
@@ -161,7 +161,7 @@ app.get("/api/authors/:id", async (req, res) => {
       `
       SELECT a.*, COUNT(q.id) as quote_count 
       FROM authors a 
-      LEFT JOIN quotes q ON a.id = q.author_id 
+      LEFT JOIN notes q ON a.id = q.author_id 
       WHERE a.id = $1 
       GROUP BY a.id
     `,
@@ -182,7 +182,7 @@ app.get("/api/authors/:id", async (req, res) => {
 // Create or get author
 app.post("/api/authors", async (req, res) => {
   try {
-    const { name, image = "" } = req.body;
+    const { name, thumbnail = "" } = req.body;
     
     if (!name) {
       return res.status(400).json({ error: "Author name is required" });
@@ -190,11 +190,11 @@ app.post("/api/authors", async (req, res) => {
 
     // Try to insert, or return existing if already exists
     const result = await pool.query(
-      `INSERT INTO authors (name, image) 
+      `INSERT INTO authors (name, thumbnail) 
        VALUES ($1, $2) 
-       ON CONFLICT (name) DO UPDATE SET image = COALESCE(NULLIF($2, ''), authors.image)
+       ON CONFLICT (name) DO UPDATE SET thumbnail = COALESCE(NULLIF($2, ''), authors.image)
        RETURNING *`,
-      [name.trim(), image],
+      [name.trim(), thumbnail],
     );
 
     res.status(201).json(result.rows[0]);
@@ -212,17 +212,17 @@ app.put("/api/authors/:id", async (req, res) => {
     await client.query("BEGIN");
     
     const { id } = req.params;
-    let { name, description, image } = req.body;
+    let { name, description, thumbnail } = req.body;
 
     // Image is already resized on client-side, no need to process again
     // Just validate it's a data URL if provided
-    if (image && !image.startsWith("data:image")) {
-      return res.status(400).json({ error: "Invalid image format" });
+    if (thumbnail && !thumbnail.startsWith("data:thumbnail")) {
+      return res.status(400).json({ error: "Invalid thumbnail format" });
     }
 
     // Check if author exists
     const authorCheck = await client.query(
-      "SELECT id, name, image FROM authors WHERE id = $1",
+      "SELECT id, name, thumbnail FROM authors WHERE id = $1",
       [id]
     );
     
@@ -248,7 +248,7 @@ app.put("/api/authors/:id", async (req, res) => {
         
         // Move all quotes from old author to existing author
         await client.query(
-          "UPDATE quotes SET author_id = $1 WHERE author_id = $2",
+          "UPDATE notes SET author_id = $1 WHERE author_id = $2",
           [targetAuthorId, id]
         );
         
@@ -267,8 +267,8 @@ app.put("/api/authors/:id", async (req, res) => {
       }
     }
     
-    // Simple update (rename and/or image update and/or description update)
-    // Note: For image, we need to allow explicit NULL to clear it
+    // Simple update (rename and/or thumbnail update and/or description update)
+    // Note: For thumbnail, we need to allow explicit NULL to clear it
     const updateParams = [];
     const updateFields = [];
     let paramCount = 1;
@@ -286,9 +286,9 @@ app.put("/api/authors/:id", async (req, res) => {
     }
     
     // Image: explicitly allow null to clear it
-    if (image !== undefined) {
-      updateFields.push(`image = $${paramCount}`);
-      updateParams.push(image); // Can be null to clear
+    if (thumbnail !== undefined) {
+      updateFields.push(`thumbnail = $${paramCount}`);
+      updateParams.push(thumbnail); // Can be null to clear
       paramCount++;
     }
     
@@ -327,7 +327,7 @@ app.delete("/api/authors/:id", async (req, res) => {
     
     // Check if author has any quotes
     const quoteCheck = await pool.query(
-      "SELECT COUNT(*) as count FROM quotes WHERE author_id = $1",
+      "SELECT COUNT(*) as count FROM notes WHERE author_id = $1",
       [id],
     );
     
@@ -364,7 +364,7 @@ app.get("/api/sources", async (req, res) => {
                    COUNT(q.id) as quote_count,
                    (
                        SELECT a.name 
-                       FROM quotes q2 
+                       FROM notes q2 
                        JOIN authors a ON q2.author_id = a.id 
                        WHERE q2.source_id = s.id 
                        GROUP BY a.id, a.name 
@@ -373,7 +373,7 @@ app.get("/api/sources", async (req, res) => {
                    ) as primary_author_name,
                    (
                        SELECT a.id 
-                       FROM quotes q2 
+                       FROM notes q2 
                        JOIN authors a ON q2.author_id = a.id 
                        WHERE q2.source_id = s.id 
                        GROUP BY a.id 
@@ -381,7 +381,7 @@ app.get("/api/sources", async (req, res) => {
                        LIMIT 1
                    ) as primary_author_id
             FROM sources s
-            LEFT JOIN quotes q ON s.id = q.source_id
+            LEFT JOIN notes q ON s.id = q.source_id
             WHERE 1=1
         `;
         const params = [];
@@ -417,7 +417,7 @@ app.get("/api/sources/:id", async (req, res) => {
       `
       SELECT s.*, COUNT(q.id) as quote_count 
       FROM sources s 
-      LEFT JOIN quotes q ON s.id = q.source_id 
+      LEFT JOIN notes q ON s.id = q.source_id 
       WHERE s.id = $1 
       GROUP BY s.id
     `,
@@ -438,7 +438,7 @@ app.get("/api/sources/:id", async (req, res) => {
 // Create or get source
 app.post("/api/sources", async (req, res) => {
   try {
-    const { name, image = "", type = "BOOK" } = req.body;
+    const { name, thumbnail = "", type = "BOOK" } = req.body;
     
     if (!name) {
       return res.status(400).json({ error: "Source name is required" });
@@ -446,11 +446,11 @@ app.post("/api/sources", async (req, res) => {
 
     // Try to insert, or return existing if already exists
     const result = await pool.query(
-      `INSERT INTO sources (name, image, type) 
+      `INSERT INTO sources (name, thumbnail, type) 
        VALUES ($1, $2, $3) 
-       ON CONFLICT (name) DO UPDATE SET image = COALESCE(NULLIF($2, ''), sources.image), type = COALESCE(NULLIF($3, ''), sources.type)
+       ON CONFLICT (name) DO UPDATE SET thumbnail = COALESCE(NULLIF($2, ''), sources.image), type = COALESCE(NULLIF($3, ''), sources.type)
        RETURNING *`,
-      [name.trim(), image, type],
+      [name.trim(), thumbnail, type],
     );
 
     res.status(201).json(result.rows[0]);
@@ -468,17 +468,17 @@ app.put("/api/sources/:id", async (req, res) => {
     await client.query("BEGIN");
     
     const { id } = req.params;
-    let { name, image, type } = req.body;
+    let { name, thumbnail, type } = req.body;
 
     // Image is already resized on client-side, no need to process again
     // Just validate it's a data URL if provided
-    if (image && !image.startsWith("data:image")) {
-      return res.status(400).json({ error: "Invalid image format" });
+    if (thumbnail && !thumbnail.startsWith("data:thumbnail")) {
+      return res.status(400).json({ error: "Invalid thumbnail format" });
     }
 
     // Check if source exists
     const sourceCheck = await client.query(
-      "SELECT id, name, image, type FROM sources WHERE id = $1",
+      "SELECT id, name, thumbnail, type FROM sources WHERE id = $1",
       [id]
     );
     
@@ -504,7 +504,7 @@ app.put("/api/sources/:id", async (req, res) => {
         
         // Move all quotes from old source to existing source
         await client.query(
-          "UPDATE quotes SET source_id = $1 WHERE source_id = $2",
+          "UPDATE notes SET source_id = $1 WHERE source_id = $2",
           [targetSourceId, id]
         );
         
@@ -523,8 +523,8 @@ app.put("/api/sources/:id", async (req, res) => {
       }
     }
     
-    // Simple update (rename and/or image/type update)
-    // Note: For image, we need to allow explicit NULL to clear it
+    // Simple update (rename and/or thumbnail/type update)
+    // Note: For thumbnail, we need to allow explicit NULL to clear it
     const updateParams = [];
     const updateFields = [];
     let paramCount = 1;
@@ -536,9 +536,9 @@ app.put("/api/sources/:id", async (req, res) => {
     }
     
     // Image: explicitly allow null to clear it
-    if (image !== undefined) {
-      updateFields.push(`image = $${paramCount}`);
-      updateParams.push(image); // Can be null to clear
+    if (thumbnail !== undefined) {
+      updateFields.push(`thumbnail = $${paramCount}`);
+      updateParams.push(thumbnail); // Can be null to clear
       paramCount++;
     }
     
@@ -556,7 +556,7 @@ app.put("/api/sources/:id", async (req, res) => {
        WHERE id = $${paramCount}
        RETURNING *`,
       updateParams
-      [name?.trim(), image, type, id]
+      [name?.trim(), thumbnail, type, id]
     );
 
     await client.query("COMMIT");
@@ -584,7 +584,7 @@ app.delete("/api/sources/:id", async (req, res) => {
     
     // Check if source has any quotes
     const quoteCheck = await pool.query(
-      "SELECT COUNT(*) as count FROM quotes WHERE source_id = $1",
+      "SELECT COUNT(*) as count FROM notes WHERE source_id = $1",
       [id],
     );
     
@@ -620,7 +620,7 @@ app.get("/api/quotes/count", async (req, res) => {
     // Build filtered count query (with all filters)
     let query = `
       SELECT COUNT(*) as count
-      FROM quotes q
+      FROM notes q
       LEFT JOIN authors a ON q.author_id = a.id
       LEFT JOIN sources s ON q.source_id = s.id
       WHERE 1=1
@@ -636,7 +636,7 @@ app.get("/api/quotes/count", async (req, res) => {
     }
 
     if (quote) {
-      query += ` AND q.quote ILIKE $${paramCounter}`;
+      query += ` AND q.note_text ILIKE $${paramCounter}`;
       params.push(`%${quote}%`);
       paramCounter++;
     }
@@ -662,9 +662,9 @@ app.get("/api/quotes/count", async (req, res) => {
       
       searchTags.forEach((tag) => {
         query += ` AND EXISTS (
-          SELECT 1 FROM quote_tags qt 
+          SELECT 1 FROM note_tags qt 
           JOIN tags t ON qt.tag_id = t.id 
-          WHERE qt.quote_id = q.id AND t.name ILIKE $${paramCounter}
+          WHERE qt.note_id = q.id AND t.name ILIKE $${paramCounter}
         )`;
         params.push(`%${tag}%`);
         paramCounter++;
@@ -696,9 +696,9 @@ app.get("/api/quotes/count", async (req, res) => {
     // Year filter for training notes - filter by year TAG instead of date
     if (req.query.year) {
       query += ` AND EXISTS (
-        SELECT 1 FROM quote_tags qt 
+        SELECT 1 FROM note_tags qt 
         JOIN tags t ON qt.tag_id = t.id 
-        WHERE qt.quote_id = q.id AND t.name = $${paramCounter}
+        WHERE qt.note_id = q.id AND t.name = $${paramCounter}
       )`;
       params.push(req.query.year.toString());
       paramCounter++;
@@ -711,9 +711,9 @@ app.get("/api/quotes/count", async (req, res) => {
       const monthName = monthNames[parseInt(req.query.month) - 1];
       
       query += ` AND EXISTS (
-        SELECT 1 FROM quote_tags qt 
+        SELECT 1 FROM note_tags qt 
         JOIN tags t ON qt.tag_id = t.id 
-        WHERE qt.quote_id = q.id AND t.name = $${paramCounter}
+        WHERE qt.note_id = q.id AND t.name = $${paramCounter}
       )`;
       params.push(monthName);
       paramCounter++;
@@ -764,25 +764,25 @@ app.get("/api/quotes/count", async (req, res) => {
     }
 
     if (hasNote === 'true') {
-      query += ` AND q.note IS NOT NULL AND q.note != ''`;
+      query += ` AND q.comment IS NOT NULL AND q.comment != ''`;
     } else if (hasNote === 'false') {
-      query += ` AND (q.note IS NULL OR q.note = '')`;
+      query += ` AND (q.comment IS NULL OR q.comment = '')`;
     }
 
     if (hasTags === 'true') {
-      query += ` AND EXISTS (SELECT 1 FROM quote_tags WHERE quote_id = q.id)`;
+      query += ` AND EXISTS (SELECT 1 FROM note_tags WHERE note_id = q.id)`;
     } else if (hasTags === 'false') {
-      query += ` AND NOT EXISTS (SELECT 1 FROM quote_tags WHERE quote_id = q.id)`;
+      query += ` AND NOT EXISTS (SELECT 1 FROM note_tags WHERE note_id = q.id)`;
     }
 
     if (hasImage === 'true') {
-      // Check for any attachment (all stored in image_full)
-      console.log('🔍 Filtering for HAS attachment (image_full IS NOT NULL)');
-      query += ` AND q.image_full IS NOT NULL AND q.image_full != ''`;
+      // Check for any attachment (all stored in attachment_full)
+      console.log('🔍 Filtering for HAS attachment (attachment_full IS NOT NULL)');
+      query += ` AND q.attachment_full IS NOT NULL AND q.attachment_full != ''`;
     } else if (hasImage === 'false') {
       // No attachment at all
-      console.log('🔍 Filtering for NO attachment (image_full IS NULL)');
-      query += ` AND (q.image_full IS NULL OR q.image_full = '')`;
+      console.log('🔍 Filtering for NO attachment (attachment_full IS NULL)');
+      query += ` AND (q.attachment_full IS NULL OR q.attachment_full = '')`;
     }
 
     // Get filtered count
@@ -792,13 +792,13 @@ app.get("/api/quotes/count", async (req, res) => {
     // Get type-specific total (only note_type filter, no other filters)
     let typeTotal = null;
     if (note_type) {
-      const typeQuery = `SELECT COUNT(*) as count FROM quotes WHERE note_type = $1`;
+      const typeQuery = `SELECT COUNT(*) as count FROM notes WHERE note_type = $1`;
       const typeResult = await pool.query(typeQuery, [note_type]);
       typeTotal = parseInt(typeResult.rows[0].count);
     }
     
     // Get grand total (no filters)
-    const totalQuery = `SELECT COUNT(*) as count FROM quotes`;
+    const totalQuery = `SELECT COUNT(*) as count FROM notes`;
     const totalResult = await pool.query(totalQuery);
     const grandTotal = parseInt(totalResult.rows[0].count);
     
@@ -820,8 +820,8 @@ app.get("/api/quotes/training-years", async (req, res) => {
     const query = `
       SELECT DISTINCT t.name as year
       FROM tags t
-      JOIN quote_tags qt ON t.id = qt.tag_id
-      JOIN quotes q ON qt.quote_id = q.id
+      JOIN note_tags qt ON t.id = qt.tag_id
+      JOIN notes q ON qt.note_id = q.id
       WHERE q.note_type = 'training' 
         AND t.name ~ '^[0-9]{4}$'
       ORDER BY t.name DESC
@@ -862,7 +862,7 @@ app.get("/api/quotes", async (req, res) => {
       SELECT DISTINCT q.*, 
              a.name as author_name, a.image as author_image,
              s.name as source_name, s.image as source_image, q.type as source_type
-      FROM quotes q
+      FROM notes q
       LEFT JOIN authors a ON q.author_id = a.id
       LEFT JOIN sources s ON q.source_id = s.id
       WHERE 1=1
@@ -871,7 +871,7 @@ app.get("/api/quotes", async (req, res) => {
     let paramCounter = 1;
 
     if (quote) {
-      query += ` AND q.quote ILIKE $${paramCounter}`;
+      query += ` AND q.note_text ILIKE $${paramCounter}`;
       params.push(`%${quote}%`);
       paramCounter++;
     }
@@ -898,18 +898,18 @@ app.get("/api/quotes", async (req, res) => {
       if (searchTags.length > 0) {
         // Use the new tag system - search using JOIN
         query = query.replace(
-          "FROM quotes q",
-          `FROM quotes q
-           INNER JOIN quote_tags qt ON q.id = qt.quote_id
+          "FROM notes q",
+          `FROM notes q
+           INNER JOIN note_tags qt ON q.id = qt.note_id
            INNER JOIN tags t ON qt.tag_id = t.id`
         );
         
         // For each tag, require a match (AND logic)
         searchTags.forEach((tag) => {
           query += ` AND EXISTS (
-            SELECT 1 FROM quote_tags qt2
+            SELECT 1 FROM note_tags qt2
             INNER JOIN tags t2 ON qt2.tag_id = t2.id
-            WHERE qt2.quote_id = q.id AND t2.name ILIKE $${paramCounter}
+            WHERE qt2.note_id = q.id AND t2.name ILIKE $${paramCounter}
           )`;
         params.push(`%${tag}%`);
         paramCounter++;
@@ -979,25 +979,25 @@ app.get("/api/quotes", async (req, res) => {
     }
 
     if (hasNote === 'true') {
-      query += ` AND q.note IS NOT NULL AND q.note != ''`;
+      query += ` AND q.comment IS NOT NULL AND q.comment != ''`;
     } else if (hasNote === 'false') {
-      query += ` AND (q.note IS NULL OR q.note = '')`;
+      query += ` AND (q.comment IS NULL OR q.comment = '')`;
     }
 
     if (hasTags === 'true') {
-      query += ` AND EXISTS (SELECT 1 FROM quote_tags WHERE quote_id = q.id)`;
+      query += ` AND EXISTS (SELECT 1 FROM note_tags WHERE note_id = q.id)`;
     } else if (hasTags === 'false') {
-      query += ` AND NOT EXISTS (SELECT 1 FROM quote_tags WHERE quote_id = q.id)`;
+      query += ` AND NOT EXISTS (SELECT 1 FROM note_tags WHERE note_id = q.id)`;
     }
 
     if (hasImage === 'true') {
-      // Check for any attachment (all stored in image_full)
+      // Check for any attachment (all stored in attachment_full)
       console.log('🔍 GET /api/quotes - Filtering for HAS attachment');
-      query += ` AND q.image_full IS NOT NULL AND q.image_full != ''`;
+      query += ` AND q.attachment_full IS NOT NULL AND q.attachment_full != ''`;
     } else if (hasImage === 'false') {
       // No attachment at all
       console.log('🔍 GET /api/quotes - Filtering for NO attachment');
-      query += ` AND (q.image_full IS NULL OR q.image_full = '')`;
+      query += ` AND (q.attachment_full IS NULL OR q.attachment_full = '')`;
     }
     
     // Translation group filter
@@ -1027,9 +1027,9 @@ app.get("/api/quotes", async (req, res) => {
     // Year filter for training notes - filter by year TAG instead of date
     if (req.query.year) {
       query += ` AND EXISTS (
-        SELECT 1 FROM quote_tags qt 
+        SELECT 1 FROM note_tags qt 
         JOIN tags t ON qt.tag_id = t.id 
-        WHERE qt.quote_id = q.id AND t.name = $${paramCounter}
+        WHERE qt.note_id = q.id AND t.name = $${paramCounter}
       )`;
       params.push(req.query.year.toString());
       paramCounter++;
@@ -1042,9 +1042,9 @@ app.get("/api/quotes", async (req, res) => {
       const monthName = monthNames[parseInt(req.query.month) - 1];
       
       query += ` AND EXISTS (
-        SELECT 1 FROM quote_tags qt 
+        SELECT 1 FROM note_tags qt 
         JOIN tags t ON qt.tag_id = t.id 
-        WHERE qt.quote_id = q.id AND t.name = $${paramCounter}
+        WHERE qt.note_id = q.id AND t.name = $${paramCounter}
       )`;
       params.push(monthName);
       paramCounter++;
@@ -1058,13 +1058,13 @@ app.get("/api/quotes", async (req, res) => {
           ${query}
         ),
         year_tags AS (
-          SELECT qt.quote_id, t.name as year_tag
-          FROM quote_tags qt
+          SELECT qt.note_id, t.name as year_tag
+          FROM note_tags qt
           JOIN tags t ON qt.tag_id = t.id
           WHERE t.name ~ '^[0-9]{4}$'
         ),
         month_tags AS (
-          SELECT qt.quote_id, t.name as month_tag,
+          SELECT qt.note_id, t.name as month_tag,
             CASE t.name
               WHEN 'January' THEN 1
               WHEN 'February' THEN 2
@@ -1079,14 +1079,14 @@ app.get("/api/quotes", async (req, res) => {
               WHEN 'November' THEN 11
               WHEN 'December' THEN 12
             END as month_order
-          FROM quote_tags qt
+          FROM note_tags qt
           JOIN tags t ON qt.tag_id = t.id
           WHERE t.name IN ('January','February','March','April','May','June','July','August','September','October','November','December')
         )
         SELECT tq.*
         FROM tagged_quotes tq
-        LEFT JOIN year_tags yt ON tq.id = yt.quote_id
-        LEFT JOIN month_tags mt ON tq.id = mt.quote_id
+        LEFT JOIN year_tags yt ON tq.id = yt.note_id
+        LEFT JOIN month_tags mt ON tq.id = mt.note_id
         ORDER BY 
           yt.year_tag DESC NULLS LAST,
           CASE WHEN mt.month_tag IS NULL THEN 0 ELSE 1 END,
@@ -1109,23 +1109,23 @@ app.get("/api/quotes", async (req, res) => {
       
       if (hasNewTables) {
         const quoteIds = result.rows.map(q => q.id);
-        const tagsMap = await getTagsForQuotes(quoteIds);
+        const tagsMap = await getTagsForNotes(quoteIds);
         
-        const quotesWithTags = result.rows.map(quote => {
-          const quoteTags = tagsMap.get(quote.id) || [];
-          // Retrieve images from hybrid storage
-          const quoteWithImages = retrieveQuoteImages(quote);
+        const quotesWithTags = result.rows.map(note => {
+          const quoteTags = tagsMap.get(note.id) || [];
+          // Retrieve thumbnails from hybrid storage
+          const noteWithImages = retrieveQuoteImages(note);
           return {
-            ...quoteWithImages,
-            tags: quoteTags.length > 0 ? quoteTags.map((t) => t.name).join(", ") : (quote.tags || ""),
+            ...noteWithImages,
+            tags: quoteTags.length > 0 ? quoteTags.map((t) => t.name).join(", ") : (note.tags || ""),
             tag_objects: quoteTags,
           };
         });
         
         res.json(quotesWithTags);
       } else {
-        // Fallback: tags already in quote.tags from old column
-        // Still need to retrieve images
+        // Fallback: tags already in note.tags from old column
+        // Still need to retrieve thumbnails
         const quotesWithImages = result.rows.map(retrieveQuoteImages);
         res.json(quotesWithImages);
       }
@@ -1146,7 +1146,7 @@ app.get("/api/quotes/random", async (req, res) => {
       SELECT q.*, 
              a.name as author_name, a.image as author_image,
              s.name as source_name, s.image as source_image, q.type as source_type
-      FROM quotes q
+      FROM notes q
       LEFT JOIN authors a ON q.author_id = a.id
       LEFT JOIN sources s ON q.source_id = s.id
       WHERE q.note_type = 'quote'
@@ -1162,8 +1162,8 @@ app.get("/api/quotes/random", async (req, res) => {
     // Add tags to response
     const hasNewTables = await checkTagTablesExist();
     if (hasNewTables) {
-      const quoteTags = await getTagsForQuote(result.rows[0].id);
-      // Retrieve images from hybrid storage
+      const quoteTags = await getTagsForNote(result.rows[0].id);
+      // Retrieve thumbnails from hybrid storage
       const quoteWithImages = retrieveQuoteImages(result.rows[0]);
       const quoteWithTags = {
         ...quoteWithImages,
@@ -1172,7 +1172,7 @@ app.get("/api/quotes/random", async (req, res) => {
       };
       res.json(quoteWithTags);
     } else {
-      // Fallback: use tags from old column, but still retrieve images
+      // Fallback: use tags from old column, but still retrieve thumbnails
       const quoteWithImages = retrieveQuoteImages(result.rows[0]);
       res.json(quoteWithImages);
     }
@@ -1191,7 +1191,7 @@ app.get("/api/quotes/:id", async (req, res) => {
       SELECT q.*, 
              a.name as author_name, a.image as author_image,
              s.name as source_name, s.image as source_image, q.type as source_type
-      FROM quotes q
+      FROM notes q
       LEFT JOIN authors a ON q.author_id = a.id
       LEFT JOIN sources s ON q.source_id = s.id
       WHERE q.id = $1
@@ -1206,8 +1206,8 @@ app.get("/api/quotes/:id", async (req, res) => {
     // Add tags to response
     const hasNewTables = await checkTagTablesExist();
     if (hasNewTables) {
-      const quoteTags = await getTagsForQuote(id);
-      // Retrieve images from hybrid storage
+      const quoteTags = await getTagsForNote(id);
+      // Retrieve thumbnails from hybrid storage
       const quoteWithImages = retrieveQuoteImages(result.rows[0]);
       const quoteWithTags = {
         ...quoteWithImages,
@@ -1216,7 +1216,7 @@ app.get("/api/quotes/:id", async (req, res) => {
       };
       res.json(quoteWithTags);
     } else {
-      // Fallback: use tags from old column, but still retrieve images
+      // Fallback: use tags from old column, but still retrieve thumbnails
       const quoteWithImages = retrieveQuoteImages(result.rows[0]);
       res.json(quoteWithImages);
     }
@@ -1234,15 +1234,15 @@ app.post("/api/quotes", async (req, res) => {
     await client.query("BEGIN");
 
     const {
-      quote,
+      note_text,
       author,
       source,
       sourceType = "BOOK",
       tags = "",
-      image = "",
-      image_full = "",
-      attachment_type = "image",
-      note = "",
+      thumbnail = "",
+      attachment_full = "",
+      attachment_type = "thumbnail",
+      comment = "",
       score = null,
       note_type = "quote",
       note_date = null,
@@ -1250,7 +1250,7 @@ app.post("/api/quotes", async (req, res) => {
       storageThresholdMB = 1, // From frontend settings
     } = req.body;
     
-    if (!quote) {
+    if (!note_text) {
       return res.status(400).json({ error: "Quote text is required" });
     }
 
@@ -1284,25 +1284,25 @@ app.post("/api/quotes", async (req, res) => {
     // Create the quote - still store tags column for backward compatibility
     // Insert the quote first to get ID
     const result = await client.query(
-      `INSERT INTO quotes (quote, author_id, source_id, note, type, score, note_type, note_date, translation_group) 
+      `INSERT INTO notes (note_text, author_id, source_id, comment, type, score, note_type, note_date, translation_group) 
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
        RETURNING *`,
-      [quote, authorId, sourceId, note, sourceType, score, note_type, note_date, translation_group],
+      [note_text, authorId, sourceId, comment, sourceType, score, note_type, note_date, translation_group],
     );
 
     const quoteId = result.rows[0].id;
 
     // Process attachments with hybrid storage using user's threshold
-    const processedImage = fileStorage.processForStorage(image, 'quotes', quoteId, '', storageThresholdMB);
-    const processedImageFull = fileStorage.processForStorage(image_full, 'quotes', quoteId, '_full', storageThresholdMB);
+    const processedImage = fileStorage.processForStorage(thumbnail, 'quotes', quoteId, '', storageThresholdMB);
+    const processedImageFull = fileStorage.processForStorage(attachment_full, 'quotes', quoteId, '_full', storageThresholdMB);
 
     console.log(`📦 Quote ${quoteId} attachment processing (type: ${attachment_type}, threshold: ${storageThresholdMB} MB):`);
-    console.log(`   Thumbnail: ${image ? `${(image.length/1024).toFixed(0)}KB` : 'none'} → ${processedImage ? (processedImage.startsWith('file:') ? processedImage : `${(processedImage.length/1024).toFixed(0)}KB base64`) : 'none'}`);
-    console.log(`   Full: ${image_full ? `${(image_full.length/1024/1024).toFixed(2)}MB` : 'none'} → ${processedImageFull ? (processedImageFull.startsWith('file:') ? processedImageFull : `${(processedImageFull.length/1024).toFixed(0)}KB base64`) : 'none'}`);
+    console.log(`   Thumbnail: ${thumbnail ? `${(thumbnail.length/1024).toFixed(0)}KB` : 'none'} → ${processedImage ? (processedImage.startsWith('file:') ? processedImage : `${(processedImage.length/1024).toFixed(0)}KB base64`) : 'none'}`);
+    console.log(`   Full: ${attachment_full ? `${(attachment_full.length/1024/1024).toFixed(2)}MB` : 'none'} → ${processedImageFull ? (processedImageFull.startsWith('file:') ? processedImageFull : `${(processedImageFull.length/1024).toFixed(0)}KB base64`) : 'none'}`);
 
     // Update quote with processed attachments and attachment type
     await client.query(
-      `UPDATE quotes SET image = $1, image_full = $2, attachment_type = $3 WHERE id = $4`,
+      `UPDATE notes SET thumbnail = $1, attachment_full = $2, attachment_type = $3 WHERE id = $4`,
       [processedImage, processedImageFull, attachment_type, quoteId]
     );
 
@@ -1311,7 +1311,7 @@ app.post("/api/quotes", async (req, res) => {
     if (tagNames.length > 0) {
       const tagIds = await getOrCreateTagIds(tagNames, note_type, client);
       if (tagIds.length > 0) {
-        await associateTagsWithQuote(quoteId, tagIds, client);
+        await associateTagsWithNote(quoteId, tagIds, client);
       }
     }
 
@@ -1323,7 +1323,7 @@ app.post("/api/quotes", async (req, res) => {
       SELECT q.*, 
              a.name as author_name, a.image as author_image,
              s.name as source_name, s.image as source_image, q.type as source_type
-      FROM quotes q
+      FROM notes q
       LEFT JOIN authors a ON q.author_id = a.id
       LEFT JOIN sources s ON q.source_id = s.id
       WHERE q.id = $1
@@ -1332,8 +1332,8 @@ app.post("/api/quotes", async (req, res) => {
     );
 
     // Add tags to response
-    const quoteTags = await getTagsForQuote(quoteId);
-    // Retrieve images from hybrid storage
+    const quoteTags = await getTagsForNote(quoteId);
+    // Retrieve thumbnails from hybrid storage
     const quoteWithImages = retrieveQuoteImages(completeQuote.rows[0]);
     const quoteWithTags = {
       ...quoteWithImages,
@@ -1359,16 +1359,16 @@ app.put("/api/quotes/:id", async (req, res) => {
     
     const { id } = req.params;
     const {
-      quote,
+      note_text,
       author,
       source,
       sourceType,
       sourceId,
       tags,
-      image,
-      image_full,
+      thumbnail,
+      attachment_full,
       attachment_type,
-      note,
+      comment,
       score,
       note_type,
       note_date,
@@ -1426,9 +1426,9 @@ app.put("/api/quotes/:id", async (req, res) => {
     const params = [];
     let paramCounter = 1;
 
-    if (quote !== undefined) {
-      updateFields.push(`quote = $${paramCounter}`);
-      params.push(quote);
+    if (note_text !== undefined) {
+      updateFields.push(`note_text = $${paramCounter}`);
+      params.push(note_text);
       paramCounter++;
     }
 
@@ -1450,34 +1450,34 @@ app.put("/api/quotes/:id", async (req, res) => {
       tagsToUpdate = tags;
     }
 
-    // Process images through hybrid storage if provided
-    if (image !== undefined && image) {
-      const processedImage = fileStorage.processForStorage(image, 'quotes', id, '', storageThresholdMB);
-      updateFields.push(`image = $${paramCounter}`);
+    // Process thumbnails through hybrid storage if provided
+    if (thumbnail !== undefined && thumbnail) {
+      const processedImage = fileStorage.processForStorage(thumbnail, 'quotes', id, '', storageThresholdMB);
+      updateFields.push(`thumbnail = $${paramCounter}`);
       params.push(processedImage);
       paramCounter++;
-    } else if (image !== undefined) {
-      // Empty string means clear the image
-      updateFields.push(`image = $${paramCounter}`);
-      params.push(image);
+    } else if (thumbnail !== undefined) {
+      // Empty string means clear the thumbnail
+      updateFields.push(`thumbnail = $${paramCounter}`);
+      params.push(thumbnail);
       paramCounter++;
     }
 
-    if (image_full !== undefined && image_full) {
-      const processedImageFull = fileStorage.processForStorage(image_full, 'quotes', id, '_full', storageThresholdMB);
-      updateFields.push(`image_full = $${paramCounter}`);
+    if (attachment_full !== undefined && attachment_full) {
+      const processedImageFull = fileStorage.processForStorage(attachment_full, 'quotes', id, '_full', storageThresholdMB);
+      updateFields.push(`attachment_full = $${paramCounter}`);
       params.push(processedImageFull);
       paramCounter++;
-    } else if (image_full !== undefined) {
-      // Empty string means clear the image
-      updateFields.push(`image_full = $${paramCounter}`);
-      params.push(image_full);
+    } else if (attachment_full !== undefined) {
+      // Empty string means clear the thumbnail
+      updateFields.push(`attachment_full = $${paramCounter}`);
+      params.push(attachment_full);
       paramCounter++;
     }
 
-    if (note !== undefined) {
-      updateFields.push(`note = $${paramCounter}`);
-      params.push(note);
+    if (comment !== undefined) {
+      updateFields.push(`comment = $${paramCounter}`);
+      params.push(comment);
       paramCounter++;
     }
 
@@ -1516,7 +1516,7 @@ app.put("/api/quotes/:id", async (req, res) => {
     if (translation_group !== undefined) {
       // First, get the current translation_group value
       const currentQuote = await client.query(
-        'SELECT translation_group FROM quotes WHERE id = $1',
+        'SELECT translation_group FROM notes WHERE id = $1',
         [id]
       );
       
@@ -1527,7 +1527,7 @@ app.put("/api/quotes/:id", async (req, res) => {
         if (oldTranslationGroup && oldTranslationGroup !== translation_group) {
           console.log(`Renaming translation group "${oldTranslationGroup}" to "${translation_group}" for all quotes in group`);
           await client.query(
-            `UPDATE quotes 
+            `UPDATE notes 
              SET translation_group = $1 
              WHERE translation_group = $2`,
             [translation_group, oldTranslationGroup]
@@ -1549,7 +1549,7 @@ app.put("/api/quotes/:id", async (req, res) => {
 
     params.push(id);
     const result = await client.query(
-      `UPDATE quotes SET ${updateFields.join(", ")} WHERE id = $${paramCounter} RETURNING *`,
+      `UPDATE notes SET ${updateFields.join(", ")} WHERE id = $${paramCounter} RETURNING *`,
       params,
     );
 
@@ -1567,13 +1567,13 @@ app.put("/api/quotes/:id", async (req, res) => {
       
       // Always update associations, even if empty (to clear tags)
       if (tagIds.length > 0) {
-        await associateTagsWithQuote(id, tagIds, client);
+        await associateTagsWithNote(id, tagIds, client);
         console.log("UPDATE TAGS - Associated tags with quote");
       } else {
         // Clear all tag associations if no tags provided
         const hasNewTables = await checkTagTablesExist();
         if (hasNewTables) {
-          await client.query("DELETE FROM quote_tags WHERE quote_id = $1", [id]);
+          await client.query("DELETE FROM note_tags WHERE note_id = $1", [id]);
           console.log("UPDATE TAGS - Cleared all tag associations");
         }
       }
@@ -1587,7 +1587,7 @@ app.put("/api/quotes/:id", async (req, res) => {
       SELECT q.*, 
              a.name as author_name, a.image as author_image,
              s.name as source_name, s.image as source_image, q.type as source_type
-      FROM quotes q
+      FROM notes q
       LEFT JOIN authors a ON q.author_id = a.id
       LEFT JOIN sources s ON q.source_id = s.id
       WHERE q.id = $1
@@ -1598,8 +1598,8 @@ app.put("/api/quotes/:id", async (req, res) => {
     // Add tags to response
     const hasNewTables = await checkTagTablesExist();
     if (hasNewTables) {
-      const quoteTags = await getTagsForQuote(id);
-      // Retrieve images from hybrid storage
+      const quoteTags = await getTagsForNote(id);
+      // Retrieve thumbnails from hybrid storage
       const quoteWithImages = retrieveQuoteImages(completeQuote.rows[0]);
       const quoteWithTags = {
         ...quoteWithImages,
@@ -1608,7 +1608,7 @@ app.put("/api/quotes/:id", async (req, res) => {
       };
       res.json(quoteWithTags);
     } else {
-      // Fallback: use tags from old column, but still retrieve images
+      // Fallback: use tags from old column, but still retrieve thumbnails
       const quoteWithImages = retrieveQuoteImages(completeQuote.rows[0]);
       res.json(quoteWithImages);
     }
@@ -1621,25 +1621,25 @@ app.put("/api/quotes/:id", async (req, res) => {
   }
 });
 
-// Downscale and move image from external storage to DB
-app.post("/api/quotes/:id/downscale-image", async (req, res) => {
+// Downscale and move thumbnail from external storage to DB
+app.post("/api/quotes/:id/downscale-thumbnail", async (req, res) => {
   try {
     const { id } = req.params;
-    const { image, image_full, oldFilePath } = req.body;
+    const { thumbnail, attachment_full, oldFilePath } = req.body;
     
-    console.log(`📦 Downscaling and moving external image to DB for quote ${id}`);
+    console.log(`📦 Downscaling and moving external thumbnail to DB for quote ${id}`);
     console.log(`   Old file: ${oldFilePath}`);
-    console.log(`   New size: ${(image_full.length / 1024).toFixed(0)} KB`);
+    console.log(`   New size: ${(attachment_full.length / 1024).toFixed(0)} KB`);
     
-    // Update quote with new base64 images (no need to process, already downscaled)
+    // Update quote with new base64 thumbnails (no need to process, already downscaled)
     await pool.query(
-      `UPDATE quotes SET image = $1, image_full = $2 WHERE id = $3`,
-      [image, image_full, id]
+      `UPDATE notes SET thumbnail = $1, attachment_full = $2 WHERE id = $3`,
+      [thumbnail, attachment_full, id]
     );
     
     // Delete old files from attachments
     if (oldFilePath) {
-      // Delete the full-size image
+      // Delete the full-size thumbnail
       fileStorage.deleteFromFilesystem(oldFilePath);
       
       // Also delete the thumbnail if it exists
@@ -1649,8 +1649,8 @@ app.post("/api/quotes/:id/downscale-image", async (req, res) => {
     
     res.json({ success: true });
   } catch (error) {
-    console.error("Error downscaling image:", error);
-    res.status(500).json({ error: "Failed to downscale image" });
+    console.error("Error downscaling thumbnail:", error);
+    res.status(500).json({ error: "Failed to downscale thumbnail" });
   }
 });
 
@@ -1661,7 +1661,7 @@ app.get("/api/quotes/:id/translations", async (req, res) => {
     
     // First, get the translation_group of this quote
     const quoteResult = await pool.query(
-      "SELECT translation_group, language FROM quotes WHERE id = $1",
+      "SELECT translation_group, language FROM notes WHERE id = $1",
       [id]
     );
     
@@ -1678,10 +1678,10 @@ app.get("/api/quotes/:id/translations", async (req, res) => {
     
     // Get all quotes in the same translation group (except this one)
     const result = await pool.query(
-      `SELECT q.id, q.quote, q.language, q.type,
+      `SELECT q.id, q.note_text, q.language, q.type,
               a.name as author_name,
               s.name as source_name
-       FROM quotes q
+       FROM notes q
        LEFT JOIN authors a ON q.author_id = a.id
        LEFT JOIN sources s ON q.source_id = s.id
        WHERE q.translation_group = $1 AND q.id != $2
@@ -1701,20 +1701,20 @@ app.delete("/api/quotes/:id", async (req, res) => {
   try {
     const { id } = req.params;
     
-    // First, fetch the quote to get image references
-    const quote = await pool.query("SELECT image, image_full FROM quotes WHERE id = $1", [id]);
+    // First, fetch the note to get thumbnail references
+    const noteResult = await pool.query("SELECT thumbnail, attachment_full FROM notes WHERE id = $1", [id]);
     
-    if (quote.rows.length === 0) {
+    if (noteResult.rows.length === 0) {
       return res.status(404).json({ error: "Quote not found" });
     }
     
     // Delete external files if they exist (no-op if base64)
-    fileStorage.deleteAttachment(quote.rows[0].image);
-    fileStorage.deleteAttachment(quote.rows[0].image_full);
+    fileStorage.deleteAttachment(noteResult.rows[0].thumbnail);
+    fileStorage.deleteAttachment(noteResult.rows[0].attachment_full);
     
     // Delete the quote from database
     const result = await pool.query(
-      "DELETE FROM quotes WHERE id = $1 RETURNING *",
+      "DELETE FROM notes WHERE id = $1 RETURNING *",
       [id],
     );
 
@@ -1748,7 +1748,7 @@ app.post("/api/quotes/bulk-count", async (req, res) => {
 
 // Helper function to build quote filter query (reuses logic from GET /api/quotes)
 function buildFilterQuery(filters) {
-  let query = `FROM quotes q`;
+  let query = `FROM notes q`;
   const params = [];
   let paramCounter = 1;
   
@@ -1777,7 +1777,7 @@ function buildFilterQuery(filters) {
   
   // Search query
   if (filters.search) {
-    query += ` AND (q.quote ILIKE $${paramCounter} OR q.note ILIKE $${paramCounter})`;
+    query += ` AND (q.note_text ILIKE $${paramCounter} OR q.comment ILIKE $${paramCounter})`;
     params.push(`%${filters.search}%`);
     paramCounter++;
   }
@@ -1787,9 +1787,9 @@ function buildFilterQuery(filters) {
     const searchTags = filters.tag.split(',').map(t => t.trim()).filter(t => t);
     searchTags.forEach((tag) => {
       query += ` AND EXISTS (
-        SELECT 1 FROM quote_tags qt 
+        SELECT 1 FROM note_tags qt 
         JOIN tags t ON qt.tag_id = t.id 
-        WHERE qt.quote_id = q.id AND t.name ILIKE $${paramCounter}
+        WHERE qt.note_id = q.id AND t.name ILIKE $${paramCounter}
       )`;
       params.push(`%${tag}%`);
       paramCounter++;
@@ -1868,15 +1868,15 @@ function buildFilterQuery(filters) {
   }
   
   if (filters.hasNote === 'true') {
-    query += ` AND q.note IS NOT NULL AND q.note != ''`;
+    query += ` AND q.comment IS NOT NULL AND q.comment != ''`;
   } else if (filters.hasNote === 'false') {
-    query += ` AND (q.note IS NULL OR q.note = '')`;
+    query += ` AND (q.comment IS NULL OR q.comment = '')`;
   }
   
   if (filters.hasTags === 'true') {
-    query += ` AND EXISTS (SELECT 1 FROM quote_tags WHERE quote_id = q.id)`;
+    query += ` AND EXISTS (SELECT 1 FROM note_tags WHERE note_id = q.id)`;
   } else if (filters.hasTags === 'false') {
-    query += ` AND NOT EXISTS (SELECT 1 FROM quote_tags WHERE quote_id = q.id)`;
+    query += ` AND NOT EXISTS (SELECT 1 FROM note_tags WHERE note_id = q.id)`;
   }
   
   return { query, params };
@@ -1921,7 +1921,7 @@ app.post("/api/quotes/bulk-tag", async (req, res) => {
     let taggedCount = 0;
     for (const quoteId of quoteIds) {
       const insertResult = await client.query(
-        `INSERT INTO quote_tags (quote_id, tag_id) 
+        `INSERT INTO note_tags (note_id, tag_id) 
          VALUES ($1, $2) 
          ON CONFLICT DO NOTHING
          RETURNING *`,
@@ -1989,8 +1989,8 @@ app.post("/api/quotes/bulk-untag", async (req, res) => {
     
     // Remove tag from all filtered quotes
     const deleteResult = await client.query(
-      `DELETE FROM quote_tags 
-       WHERE tag_id = $1 AND quote_id = ANY($2)
+      `DELETE FROM note_tags 
+       WHERE tag_id = $1 AND note_id = ANY($2)
        RETURNING *`,
       [tagId, quoteIds]
     );
@@ -2022,7 +2022,7 @@ app.post("/api/quotes/bulk-delete", async (req, res) => {
     
     // Build filter query to get matching quotes
     const { query, params } = buildFilterQuery(filters);
-    const fullQuery = `SELECT q.id, q.image, q.image_full ${query}`;
+    const fullQuery = `SELECT q.id, q.thumbnail, q.attachment_full ${query}`;
     
     const quotesResult = await client.query(fullQuery, params);
     
@@ -2031,16 +2031,16 @@ app.post("/api/quotes/bulk-delete", async (req, res) => {
       return res.json({ count: 0, message: "No quotes match the current filters" });
     }
     
-    // Delete external files for each quote
-    for (const quote of quotesResult.rows) {
-      fileStorage.deleteAttachment(quote.image);
-      fileStorage.deleteAttachment(quote.image_full);
+    // Delete external files for each note
+    for (const note of quotesResult.rows) {
+      fileStorage.deleteAttachment(note.thumbnail);
+      fileStorage.deleteAttachment(note.attachment_full);
     }
     
     // Delete all matching quotes
     const quoteIds = quotesResult.rows.map(r => r.id);
     const deleteResult = await client.query(
-      `DELETE FROM quotes WHERE id = ANY($1)`,
+      `DELETE FROM notes WHERE id = ANY($1)`,
       [quoteIds]
     );
     
@@ -2068,9 +2068,9 @@ app.get("/api/tags", async (req, res) => {
     const { type, search } = req.query; // e.g., ?type=note&search=foo
     
     let query = `
-      SELECT t.id, t.name, t.type, COUNT(qt.quote_id)::int as quote_count
+      SELECT t.id, t.name, t.type, COUNT(qt.note_id)::int as quote_count
       FROM tags t
-      LEFT JOIN quote_tags qt ON t.id = qt.tag_id
+      LEFT JOIN note_tags qt ON t.id = qt.tag_id
     `;
     
     const params = [];
@@ -2170,11 +2170,11 @@ app.put("/api/tags/:id", async (req, res) => {
       
       // Move all quote associations from old tag to existing tag
       await client.query(`
-        INSERT INTO quote_tags (quote_id, tag_id)
-        SELECT quote_id, $1
-        FROM quote_tags
+        INSERT INTO note_tags (note_id, tag_id)
+        SELECT note_id, $1
+        FROM note_tags
         WHERE tag_id = $2
-        ON CONFLICT (quote_id, tag_id) DO NOTHING
+        ON CONFLICT (note_id, tag_id) DO NOTHING
       `, [targetTagId, id]);
       
       // Delete the old tag (cascade will remove old associations)
@@ -2224,12 +2224,12 @@ app.delete("/api/tags/:id", async (req, res) => {
     
     // Get quotes that have this tag before deleting
     const quotesWithTag = await client.query(
-      "SELECT quote_id FROM quote_tags WHERE tag_id = $1",
+      "SELECT note_id FROM note_tags WHERE tag_id = $1",
       [id]
     );
-    const affectedQuoteIds = quotesWithTag.rows.map(row => row.quote_id);
+    const affectedQuoteIds = quotesWithTag.rows.map(row => row.note_id);
     
-    // Delete the tag (CASCADE will remove quote_tags entries)
+    // Delete the tag (CASCADE will remove note_tags entries)
     const result = await client.query(
       "DELETE FROM tags WHERE id = $1 RETURNING name",
       [id]
@@ -2244,8 +2244,8 @@ app.delete("/api/tags/:id", async (req, res) => {
     for (const quoteId of affectedQuoteIds) {
       const remainingTags = await client.query(
         `SELECT t.name FROM tags t 
-         JOIN quote_tags qt ON t.id = qt.tag_id 
-         WHERE qt.quote_id = $1 
+         JOIN note_tags qt ON t.id = qt.tag_id 
+         WHERE qt.note_id = $1 
          ORDER BY t.name`,
         [quoteId]
       );
@@ -2297,12 +2297,12 @@ app.post("/api/tags/bulk-add", async (req, res) => {
     
     // Add target tag to all quotes that have source tag (if not already present)
     const result = await client.query(`
-      INSERT INTO quote_tags (quote_id, tag_id)
-      SELECT qt.quote_id, $1
-      FROM quote_tags qt
+      INSERT INTO note_tags (note_id, tag_id)
+      SELECT qt.note_id, $1
+      FROM note_tags qt
       WHERE qt.tag_id = $2
-      ON CONFLICT (quote_id, tag_id) DO NOTHING
-      RETURNING quote_id
+      ON CONFLICT (note_id, tag_id) DO NOTHING
+      RETURNING note_id
     `, [targetTagId, sourceTagId]);
     
     const affectedCount = result.rows.length;
@@ -2341,7 +2341,7 @@ app.get("/api/export/json", async (req, res) => {
       SELECT q.*, 
              a.name as author_name, 
              s.name as source_name
-      FROM quotes q
+      FROM notes q
       LEFT JOIN authors a ON q.author_id = a.id
       LEFT JOIN sources s ON q.source_id = s.id
       ${noteTypeFilter}
@@ -2352,19 +2352,19 @@ app.get("/api/export/json", async (req, res) => {
       ? await pool.query(quotesQuery, queryParams)
       : await pool.query(quotesQuery);
 
-    // Fetch tags for each quote
+    // Fetch tags for each note
     const quotesWithTags = [];
-    for (const quote of quotesResult.rows) {
+    for (const note of quotesResult.rows) {
       const tagsResult = await pool.query(`
         SELECT t.id, t.name, t.type
         FROM tags t
-        JOIN quote_tags qt ON t.id = qt.tag_id
-        WHERE qt.quote_id = $1
+        JOIN note_tags qt ON t.id = qt.tag_id
+        WHERE qt.note_id = $1
         ORDER BY t.name
-      `, [quote.id]);
+      `, [note.id]);
       
       quotesWithTags.push({
-        ...quote,
+        ...note,
         tag_objects: tagsResult.rows
       });
     }
@@ -2469,12 +2469,12 @@ app.post("/api/import/json", async (req, res) => {
         if (options?.replaceExisting) {
           // Replace: upsert by name
           const result = await client.query(
-            `INSERT INTO authors (name, image) 
+            `INSERT INTO authors (name, thumbnail) 
              VALUES ($1, $2) 
              ON CONFLICT (name) DO UPDATE 
-             SET image = EXCLUDED.image
+             SET thumbnail = EXCLUDED.thumbnail
              RETURNING id, (xmax = 0) as inserted`,
-            [author.name, author.image],
+            [author.name, author.thumbnail],
           );
           if (result.rows[0].inserted) {
             stats.authors.created++;
@@ -2491,8 +2491,8 @@ app.post("/api/import/json", async (req, res) => {
             stats.authors.skipped++;
           } else {
             await client.query(
-              "INSERT INTO authors (name, image) VALUES ($1, $2)",
-              [author.name, author.image],
+              "INSERT INTO authors (name, thumbnail) VALUES ($1, $2)",
+              [author.name, author.thumbnail],
             );
             stats.authors.created++;
           }
@@ -2508,12 +2508,12 @@ app.post("/api/import/json", async (req, res) => {
       try {
         if (options?.replaceExisting) {
           const result = await client.query(
-            `INSERT INTO sources (name, type, image) 
+            `INSERT INTO sources (name, type, thumbnail) 
              VALUES ($1, $2, $3) 
              ON CONFLICT (name) DO UPDATE 
-             SET type = EXCLUDED.type, image = EXCLUDED.image
+             SET type = EXCLUDED.type, thumbnail = EXCLUDED.thumbnail
              RETURNING id, (xmax = 0) as inserted`,
-            [source.name, source.type, source.image],
+            [source.name, source.type, source.thumbnail],
           );
           if (result.rows[0].inserted) {
             stats.sources.created++;
@@ -2529,8 +2529,8 @@ app.post("/api/import/json", async (req, res) => {
             stats.sources.skipped++;
           } else {
             await client.query(
-              "INSERT INTO sources (name, type, image) VALUES ($1, $2, $3)",
-              [source.name, source.type, source.image],
+              "INSERT INTO sources (name, type, thumbnail) VALUES ($1, $2, $3)",
+              [source.name, source.type, source.thumbnail],
             );
             stats.sources.created++;
           }
@@ -2585,14 +2585,14 @@ app.post("/api/import/json", async (req, res) => {
     // Get storage threshold from settings
     const storageThresholdMB = options?.storageThresholdMB || 1;
     
-    for (const quote of data.quotes) {
+    for (const note of data.quotes) {
       try {
         // Get author_id
         let authorId = null;
-        if (quote.author_name) {
+        if (note.author_name) {
           const authorResult = await client.query(
             "SELECT id FROM authors WHERE name = $1",
-            [quote.author_name],
+            [note.author_name],
           );
           if (authorResult.rows.length > 0) {
             authorId = authorResult.rows[0].id;
@@ -2601,99 +2601,99 @@ app.post("/api/import/json", async (req, res) => {
 
         // Get source_id
         let sourceId = null;
-        if (quote.source_name) {
+        if (note.source_name) {
           const sourceResult = await client.query(
             "SELECT id FROM sources WHERE name = $1",
-            [quote.source_name],
+            [note.source_name],
           );
           if (sourceResult.rows.length > 0) {
             sourceId = sourceResult.rows[0].id;
           }
         }
 
-        // Check if quote already exists (by ID, text, AND author - all must match)
+        // Check if note already exists (by ID, text, AND author - all must match)
         const existing = await client.query(
-          `SELECT id FROM quotes 
+          `SELECT id FROM notes 
            WHERE id = $1 
-           AND quote = $2 
+           AND note_text = $2 
            AND author_id IS NOT DISTINCT FROM $3`,
-          [quote.id, quote.quote, authorId],
+          [note.id, note.note_text, authorId],
         );
 
         if (existing.rows.length > 0) {
           // Exact match found - skip it
           stats.quotes.skipped++;
         } else {
-          // Check if ID exists but with different content (modified quote)
+          // Check if ID exists but with different content (modified note)
           const idExists = await client.query(
-            `SELECT id FROM quotes WHERE id = $1`,
-            [quote.id]
+            `SELECT id FROM notes WHERE id = $1`,
+            [note.id]
           );
           
           let quoteId;
-          const noteType = quote.note_type || 'quote';
+          const noteType = note.note_type || 'quote';
           
           if (idExists.rows.length > 0) {
             // ID exists but content is different - this is a modified quote
             // Insert with new auto-generated ID
             const insertResult = await client.query(
-              `INSERT INTO quotes (quote, author_id, source_id, type, note, note_type, note_date, 
+              `INSERT INTO notes (note_text, author_id, source_id, type, comment, note_type, note_date, 
                                    attachment_type, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
                RETURNING id`,
               [
-                quote.quote,
+                note.note_text,
                 authorId,
                 sourceId,
-                quote.type,
-                quote.note,
+                note.type,
+                note.comment,
                 noteType,
-                quote.note_date || null,
-                quote.attachment_type || null,
-                quote.created_at || new Date(),
-                quote.updated_at || new Date(),
+                note.note_date || null,
+                note.attachment_type || null,
+                note.created_at || new Date(),
+                note.updated_at || new Date(),
               ],
             );
             quoteId = insertResult.rows[0].id;
           } else {
             // ID doesn't exist - use the original ID from export
-            quoteId = quote.id;
+            quoteId = note.id;
             await client.query(
-              `INSERT INTO quotes (id, quote, author_id, source_id, type, note, note_type, note_date, 
+              `INSERT INTO notes (id, note_text, author_id, source_id, type, comment, note_type, note_date, 
                                    attachment_type, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
               [
                 quoteId,
-                quote.quote,
+                note.note_text,
                 authorId,
                 sourceId,
-                quote.type,
-                quote.note,
+                note.type,
+                note.comment,
                 noteType,
-                quote.note_date || null,
-                quote.attachment_type || null,
-                quote.created_at || new Date(),
-                quote.updated_at || new Date(),
+                note.note_date || null,
+                note.attachment_type || null,
+                note.created_at || new Date(),
+                note.updated_at || new Date(),
               ],
             );
           }
           const storageFolder = noteType === 'training' ? 'training' : noteType === 'note' ? 'notes' : noteType === 'puzzle' ? 'puzzles' : 'quotes';
           
-          // Now process attachments with the quote ID (respects 1 MB threshold)
-          const processedImage = fileStorage.processForStorage(quote.image, storageFolder, quoteId, '', storageThresholdMB);
-          const processedImageFull = fileStorage.processForStorage(quote.image_full, storageFolder, quoteId, '_full', storageThresholdMB);
+          // Now process attachments with the note ID (respects 1 MB threshold)
+          const processedImage = fileStorage.processForStorage(note.thumbnail, storageFolder, quoteId, '', storageThresholdMB);
+          const processedImageFull = fileStorage.processForStorage(note.attachment_full, storageFolder, quoteId, '_full', storageThresholdMB);
           
           // Update with processed attachment references
           if (processedImage || processedImageFull) {
             await client.query(
-              `UPDATE quotes SET image = $1, image_full = $2 WHERE id = $3`,
+              `UPDATE notes SET thumbnail = $1, attachment_full = $2 WHERE id = $3`,
               [processedImage, processedImageFull, quoteId]
             );
           }
           
           // Restore tag relationships
-          if (quote.tag_objects && quote.tag_objects.length > 0) {
-            for (const tagObj of quote.tag_objects) {
+          if (note.tag_objects && note.tag_objects.length > 0) {
+            for (const tagObj of note.tag_objects) {
               // Find or create tag
               const tagResult = await client.query(
                 `INSERT INTO tags (name, type) 
@@ -2706,7 +2706,7 @@ app.post("/api/import/json", async (req, res) => {
               
               // Create relationship
               await client.query(
-                `INSERT INTO quote_tags (quote_id, tag_id) 
+                `INSERT INTO note_tags (note_id, tag_id) 
                  VALUES ($1, $2) 
                  ON CONFLICT DO NOTHING`,
                 [quoteId, tagId]
@@ -2718,7 +2718,7 @@ app.post("/api/import/json", async (req, res) => {
         }
       } catch (error) {
         stats.errors.push(
-          `Quote "${quote.quote.substring(0, 50)}...": ${error.message}`,
+          `Note "${note.note_text.substring(0, 50)}...": ${error.message}`,
         );
       }
     }
@@ -2758,29 +2758,29 @@ app.post("/api/export/pdf", async (req, res) => {
     // Import puppeteer
     const puppeteer = require("puppeteer");
 
-    // Group quotes by author
+    // Group notes by author
     const groupedByAuthor = {};
-    quotes.forEach((quote) => {
-      const authorKey = quote.author_name || "Unknown Author";
+    quotes.forEach((note) => {
+      const authorKey = note.author_name || "Unknown Author";
       if (!groupedByAuthor[authorKey]) {
         groupedByAuthor[authorKey] = {
           authorName: authorKey,
-          authorImage: quote.author_image,
+          authorImage: note.author_image,
           sources: {},
         };
       }
 
-      const sourceKey = quote.source_name || "No Source";
+      const sourceKey = note.source_name || "No Source";
       if (!groupedByAuthor[authorKey].sources[sourceKey]) {
         groupedByAuthor[authorKey].sources[sourceKey] = {
           sourceName: sourceKey,
-          sourceType: quote.source_type || "BOOK",
-          sourceImage: quote.source_image,
+          sourceType: note.source_type || "BOOK",
+          sourceImage: note.source_image,
           quotes: [],
         };
       }
 
-      groupedByAuthor[authorKey].sources[sourceKey].quotes.push(quote);
+      groupedByAuthor[authorKey].sources[sourceKey].quotes.push(note);
     });
 
     // Generate HTML for PDF
@@ -2880,16 +2880,16 @@ function generatePdfHtml(groupedByAuthor, filters) {
           </div>
       `;
 
-      source.quotes.forEach((quote) => {
-        // Use thumbnail (image) instead of full size
-        const quoteImage = quote.image || quote.image_full;
+      source.quotes.forEach((note) => {
+        // Use thumbnail (thumbnail) instead of full size
+        const quoteImage = note.thumbnail || note.attachment_full;
         
         authorsHtml += `
           <div style="margin-bottom: 15px; padding: 12px; background: #f9fafb; border-left: 3px solid #3b82f6; border-radius: 3px; display: flex; gap: 12px;">
             ${quoteImage ? `<div style="flex-shrink: 0;"><img src="${quoteImage}" style="width: 120px; height: auto; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"></div>` : ''}
             <div style="flex: 1;">
-              <div style="margin: 0 0 8px 0; font-style: italic; color: #1f2937; line-height: 1.5; font-size: 11pt;">${quote.quote}</div>
-              ${quote.tags ? `<p style="margin: 4px 0 0 0; font-size: 9pt; color: #6b7280;">Tags: ${escapeHtml(quote.tags)}</p>` : ""}
+              <div style="margin: 0 0 8px 0; font-style: italic; color: #1f2937; line-height: 1.5; font-size: 11pt;">${note.note_text}</div>
+              ${note.tags ? `<p style="margin: 4px 0 0 0; font-size: 9pt; color: #6b7280;">Tags: ${escapeHtml(note.tags)}</p>` : ""}
             </div>
           </div>
         `;

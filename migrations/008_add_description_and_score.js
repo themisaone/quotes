@@ -14,6 +14,22 @@ async function migrate() {
 
   try {
     console.log("Starting migration 008: Adding description to authors and score to quotes...");
+    
+    // Check which table exists (quotes or notes)
+    const tableCheck = await client.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_name IN ('quotes', 'notes')
+    `);
+    
+    if (tableCheck.rows.length === 0) {
+      console.log("⏭️  Skipping: Neither quotes nor notes table exists");
+      return;
+    }
+    
+    const tableName = tableCheck.rows[0].table_name;
+    
     await client.query("BEGIN");
 
     // Add description field to authors table
@@ -23,14 +39,14 @@ async function migrate() {
       ADD COLUMN IF NOT EXISTS description TEXT DEFAULT ''
     `);
     
-    // Add score field to quotes table as TEXT
-    console.log("  - Adding score field to quotes table...");
+    // Add score field to notes/quotes table as TEXT
+    console.log(`  - Adding score field to ${tableName} table...`);
     await client.query(`
-      ALTER TABLE quotes 
+      ALTER TABLE ${tableName} 
       ADD COLUMN IF NOT EXISTS score TEXT DEFAULT NULL
     `);
 
-    console.log("✅ Migration 008 completed: Added description (authors) and score (quotes) fields!");
+    console.log(`✅ Migration 008 completed: Added description (authors) and score (${tableName}) fields!`);
     await client.query("COMMIT");
   } catch (error) {
     await client.query("ROLLBACK");

@@ -14,12 +14,28 @@ async function migrate() {
 
   try {
     console.log("Starting migration 006: Drop old tags column...");
+    
+    // Check which table exists (quotes or notes)
+    const tableCheck = await client.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_name IN ('quotes', 'notes')
+    `);
+    
+    if (tableCheck.rows.length === 0) {
+      console.log("⏭️  Skipping: Neither quotes nor notes table exists");
+      return;
+    }
+    
+    const tableName = tableCheck.rows[0].table_name;
+    
     await client.query("BEGIN");
 
-    // Drop the old tags column from quotes table
-    console.log("Dropping old 'tags' column from quotes table...");
+    // Drop the old tags column
+    console.log(`Dropping old 'tags' column from ${tableName} table...`);
     await client.query(`
-      ALTER TABLE quotes DROP COLUMN IF EXISTS tags;
+      ALTER TABLE ${tableName} DROP COLUMN IF EXISTS tags;
     `);
 
     console.log("Migration 006 completed successfully!");

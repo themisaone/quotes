@@ -136,6 +136,49 @@ export function populateTrainingTypeFilterCheckboxes(getTrainingTypes) {
   });
 }
 
+/**
+ * Populate combined note types/sources for "All Notes" view
+ */
+export function populateCombinedTypeFilterCheckboxes(getQuoteTypes, getTrainingTypes) {
+  const quoteTypes = getQuoteTypes();
+  const trainingTypes = getTrainingTypes();
+  const container = document.querySelector(SELECTORS.trainingTypeOptions);
+  
+  if (!container) return;
+  
+  // Store current checked states
+  const checkedStates = getCheckboxStates(container);
+  
+  // Clear and rebuild
+  container.innerHTML = '';
+  
+  // Add quote source types first
+  const quoteSectionLabel = document.createElement('div');
+  quoteSectionLabel.className = 'type-filter-section-label';
+  quoteSectionLabel.textContent = '📚 Quote Sources';
+  quoteSectionLabel.style.cssText = 'padding: 0.5rem 1rem; font-weight: 600; font-size: 0.85rem; color: var(--text-secondary); border-bottom: 1px solid var(--border); margin-bottom: 0.5rem;';
+  container.appendChild(quoteSectionLabel);
+  
+  quoteTypes.forEach(type => {
+    const checkboxId = `filterQuote${type.value.replace(/-/g, '')}`;
+    const isChecked = checkedStates[checkboxId] !== false;
+    container.appendChild(createTypeCheckbox(checkboxId, type, isChecked));
+  });
+  
+  // Add training types
+  const trainingSectionLabel = document.createElement('div');
+  trainingSectionLabel.className = 'type-filter-section-label';
+  trainingSectionLabel.textContent = '🏋️ Training Types';
+  trainingSectionLabel.style.cssText = 'padding: 0.5rem 1rem; font-weight: 600; font-size: 0.85rem; color: var(--text-secondary); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin-top: 0.5rem; margin-bottom: 0.5rem;';
+  container.appendChild(trainingSectionLabel);
+  
+  trainingTypes.forEach(type => {
+    const checkboxId = `filterTraining${type.value}`;
+    const isChecked = checkedStates[checkboxId] !== false;
+    container.appendChild(createTypeCheckbox(checkboxId, type, isChecked));
+  });
+}
+
 // ============= FILTER CLEARING =============
 
 /**
@@ -165,23 +208,44 @@ function setElementVisibility(elementId, shouldShow) {
 
 /**
  * Update visibility of type filter dropdowns based on current view
+ * @param {string} currentNoteTypeFilter - Current note type ('quote', 'training', null for all)
+ * @param {Function} getQuoteTypes - Function to get quote types
+ * @param {Function} getTrainingTypes - Function to get training types
  */
-export function updateSourcesFilterVisibility(currentNoteTypeFilter) {
-  // Show quote sources for quotes and "all notes" view
-  const showQuoteSources = currentNoteTypeFilter === 'quote' || currentNoteTypeFilter === null;
+export function updateSourcesFilterVisibility(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes) {
+  const isAllNotesView = currentNoteTypeFilter === null;
+  
+  // Show quote sources for quotes view only (not all notes)
+  const showQuoteSources = currentNoteTypeFilter === 'quote';
   setElementVisibility(ELEMENT_IDS.sourcesFilterContainer, showQuoteSources);
   
-  // Show training types only for training view
-  const showTrainingTypes = currentNoteTypeFilter === 'training';
+  // Show training types for training view OR all notes view (combined)
+  const showTrainingTypes = currentNoteTypeFilter === 'training' || isAllNotesView;
   setElementVisibility(ELEMENT_IDS.trainingTypesFilterContainer, showTrainingTypes);
   
-  // Hide Author/Source search fields for non-quote views
-  setElementVisibility('searchAuthorContainer', showQuoteSources);
-  setElementVisibility('searchSourceContainer', showQuoteSources);
+  // Update the training types dropdown label based on view
+  updateTrainingTypesDropdownLabel(isAllNotesView);
   
-  // Show/hide Year/Month filters for training view
-  setElementVisibility('trainingYearContainer', showTrainingTypes);
-  setElementVisibility('trainingMonthContainer', showTrainingTypes);
+  // Repopulate the training dropdown based on view
+  if (showTrainingTypes && getQuoteTypes && getTrainingTypes) {
+    if (isAllNotesView) {
+      // Combined view: show both quote sources and training types
+      populateCombinedTypeFilterCheckboxes(getQuoteTypes, getTrainingTypes);
+    } else {
+      // Training view: show only training types
+      populateTrainingTypeFilterCheckboxes(getTrainingTypes);
+    }
+  }
+  
+  // Hide Author/Source search fields for non-quote views
+  const showAuthorSource = currentNoteTypeFilter === 'quote' || isAllNotesView;
+  setElementVisibility('searchAuthorContainer', showAuthorSource);
+  setElementVisibility('searchSourceContainer', showAuthorSource);
+  
+  // Show/hide Year/Month filters for training view only (not all notes)
+  const showTrainingDateFilters = currentNoteTypeFilter === 'training';
+  setElementVisibility('trainingYearContainer', showTrainingDateFilters);
+  setElementVisibility('trainingMonthContainer', showTrainingDateFilters);
   
   // Update search header title based on note type
   updateSearchHeaderTitle(currentNoteTypeFilter);
@@ -204,6 +268,23 @@ function updateSearchHeaderTitle(currentNoteTypeFilter) {
   
   const title = titles[currentNoteTypeFilter] || titles[null];
   searchHeaderTitle.textContent = title;
+}
+
+/**
+ * Update the training types dropdown label based on view
+ */
+function updateTrainingTypesDropdownLabel(isAllNotesView) {
+  const toggleBtn = getElementByIdSafe('trainingTypeFilterToggle', 'updateTrainingTypesDropdownLabel');
+  if (!toggleBtn) return;
+  
+  const labelSpan = toggleBtn.querySelector('span:first-child');
+  if (!labelSpan) return;
+  
+  if (isAllNotesView) {
+    labelSpan.textContent = '📚 Select Note Types/Sources';
+  } else {
+    labelSpan.textContent = '🏋️ Select Training Types';
+  }
 }
 
 // ============= DROPDOWN HANDLERS =============

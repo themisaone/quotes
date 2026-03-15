@@ -345,7 +345,7 @@ const sourceInput = getElementByIdSafe("source");
 const authorSuggestions = getElementByIdSafe("authorSuggestions");
 const sourceSuggestions = getElementByIdSafe("sourceSuggestions");
 const tagsSuggestions = getElementByIdSafe("tagsSuggestions");
-const noteInput = getElementByIdSafe("note");
+const noteInput = getElementByIdSafe("comment");
 const quoteImageFile = getElementByIdSafe("quoteImageFile");
 const quoteImagePreview = getElementByIdSafe("quoteImagePreview");
 const clearQuoteImageBtn = getElementByIdSafe("clearQuoteImage");
@@ -864,7 +864,7 @@ function updateAddButtonText() {
 
 // Wrapper for filterManager library
 function updateSourcesFilterVisibility() {
-  updateSourcesFilterVisibilityLib2(currentNoteTypeFilter);
+  updateSourcesFilterVisibilityLib2(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes);
 }
 
 // Wrapper with app-specific additions
@@ -1344,7 +1344,7 @@ function toggleQuoteExpand(quoteId) {
     fetch(`${API_URL}/quotes/${quoteId}`)
       .then((res) => res.json())
       .then((quote) => {
-        window.fullQuotes[quoteId] = quote.quote;
+        window.fullQuotes[quoteId] = quote.note_text;
         doToggle();
       });
   } else {

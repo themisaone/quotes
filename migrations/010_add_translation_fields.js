@@ -23,15 +23,30 @@ async function migrate() {
   try {
     console.log('Starting migration 010: Adding translation fields to quotes...');
     
+    // Check which table exists (quotes or notes)
+    const tableCheck = await client.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_name IN ('quotes', 'notes')
+    `);
+    
+    if (tableCheck.rows.length === 0) {
+      console.log("⏭️  Skipping: Neither quotes nor notes table exists");
+      return;
+    }
+    
+    const tableName = tableCheck.rows[0].table_name;
+    
     await client.query("BEGIN");
     
     // Check if columns already exist
     const columnCheck = await client.query(`
       SELECT column_name 
       FROM information_schema.columns 
-      WHERE table_name = 'quotes' 
+      WHERE table_name = $1 
       AND column_name IN ('translation_group', 'language')
-    `);
+    `, [tableName]);
     
     const existingColumns = columnCheck.rows.map(row => row.column_name);
     
@@ -44,7 +59,7 @@ async function migrate() {
     // Add translation_group column (optional, for grouping translations)
     if (!existingColumns.includes('translation_group')) {
       await client.query(`
-        ALTER TABLE quotes 
+        ALTER TABLE ${tableName} 
         ADD COLUMN translation_group VARCHAR(100)
       `);
       console.log('  - Added translation_group column');
@@ -53,7 +68,7 @@ async function migrate() {
     // Add language column (optional, ISO 639-1 language codes: en, no, sr, etc.)
     if (!existingColumns.includes('language')) {
       await client.query(`
-        ALTER TABLE quotes 
+        ALTER TABLE ${tableName} 
         ADD COLUMN language VARCHAR(10)
       `);
       console.log('  - Added language column');
@@ -61,8 +76,8 @@ async function migrate() {
     
     // Create index for faster translation group queries
     await client.query(`
-      CREATE INDEX IF NOT EXISTS idx_quotes_translation_group 
-      ON quotes(translation_group) 
+      CREATE INDEX IF NOT EXISTS idx_${tableName}_translation_group 
+      ON ${tableName}(translation_group) 
       WHERE translation_group IS NOT NULL
     `);
     console.log('  - Created index on translation_group');

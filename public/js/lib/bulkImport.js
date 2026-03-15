@@ -374,12 +374,12 @@ function parseQuotes(quotesText) {
 }
 
 /**
- * Trim whitespace from quote
- * @param {string} quote - Quote text
- * @returns {string} Trimmed quote
+ * Trim whitespace from note
+ * @param {string} note - Note text
+ * @returns {string} Trimmed note
  */
-function trimQuote(quote) {
-  return quote.trim();
+function trimQuote(note) {
+  return note.trim();
 }
 
 /**

@@ -18,7 +18,7 @@ async function checkTagTablesExist(forceRecheck = false) {
     const result = await pool.query(`
       SELECT 
         (SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'tags')) AND
-        (SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'quote_tags')) 
+        (SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'note_tags')) 
         AS exists
     `);
     tablesExistCache = result.rows[0].exists;
@@ -91,12 +91,12 @@ async function getOrCreateTagIds(tagNames, noteType = 'quote', client = pool) {
 }
 
 /**
- * Associate tags with a quote
- * @param {number} quoteId - Quote ID
+ * Associate tags with a note
+ * @param {number} noteId - Note ID
  * @param {Array<number>} tagIds - Array of tag IDs
  * @param {Object} client - Database client (for transactions)
  */
-async function associateTagsWithQuote(quoteId, tagIds, client = pool) {
+async function associateTagsWithNote(noteId, tagIds, client = pool) {
   if (!tagIds || tagIds.length === 0) {
     return;
   }
@@ -106,26 +106,26 @@ async function associateTagsWithQuote(quoteId, tagIds, client = pool) {
     return; // Skip if tables don't exist yet
   }
 
-  // First, remove all existing associations for this quote
-  await client.query("DELETE FROM quote_tags WHERE quote_id = $1", [quoteId]);
+  // First, remove all existing associations for this note
+  await client.query("DELETE FROM note_tags WHERE note_id = $1", [noteId]);
 
   // Then create new associations
   for (const tagId of tagIds) {
     await client.query(
-      `INSERT INTO quote_tags (quote_id, tag_id) 
+      `INSERT INTO note_tags (note_id, tag_id) 
        VALUES ($1, $2) 
        ON CONFLICT DO NOTHING`,
-      [quoteId, tagId]
+      [noteId, tagId]
     );
   }
 }
 
 /**
- * Get tags for a quote
- * @param {number} quoteId - Quote ID
+ * Get tags for a note
+ * @param {number} noteId - Note ID
  * @returns {Promise<Array<{id: number, name: string}>>}
  */
-async function getTagsForQuote(quoteId) {
+async function getTagsForNote(noteId) {
   const hasNewTables = await checkTagTablesExist();
   if (!hasNewTables) {
     return []; // Return empty if tables don't exist yet
@@ -134,21 +134,21 @@ async function getTagsForQuote(quoteId) {
   const result = await pool.query(
     `SELECT t.id, t.name
      FROM tags t
-     JOIN quote_tags qt ON t.id = qt.tag_id
-     WHERE qt.quote_id = $1
+     JOIN note_tags nt ON t.id = nt.tag_id
+     WHERE nt.note_id = $1
      ORDER BY t.name`,
-    [quoteId]
+    [noteId]
   );
   return result.rows;
 }
 
 /**
- * Get tags for multiple quotes (efficient batch query)
- * @param {Array<number>} quoteIds - Array of quote IDs
+ * Get tags for multiple notes (efficient batch query)
+ * @param {Array<number>} noteIds - Array of note IDs
  * @returns {Promise<Map<number, Array<{id: number, name: string}>>>}
  */
-async function getTagsForQuotes(quoteIds) {
-  if (!quoteIds || quoteIds.length === 0) {
+async function getTagsForNotes(noteIds) {
+  if (!noteIds || noteIds.length === 0) {
     return new Map();
   }
 
@@ -158,20 +158,20 @@ async function getTagsForQuotes(quoteIds) {
   }
 
   const result = await pool.query(
-    `SELECT qt.quote_id, t.id, t.name
+    `SELECT nt.note_id, t.id, t.name
      FROM tags t
-     JOIN quote_tags qt ON t.id = qt.tag_id
-     WHERE qt.quote_id = ANY($1)
-     ORDER BY qt.quote_id, t.name`,
-    [quoteIds]
+     JOIN note_tags nt ON t.id = nt.tag_id
+     WHERE nt.note_id = ANY($1)
+     ORDER BY nt.note_id, t.name`,
+    [noteIds]
   );
 
   const tagsMap = new Map();
   for (const row of result.rows) {
-    if (!tagsMap.has(row.quote_id)) {
-      tagsMap.set(row.quote_id, []);
+    if (!tagsMap.has(row.note_id)) {
+      tagsMap.set(row.note_id, []);
     }
-    tagsMap.get(row.quote_id).push({ id: row.id, name: row.name });
+    tagsMap.get(row.note_id).push({ id: row.id, name: row.name });
   }
 
   return tagsMap;
@@ -202,8 +202,8 @@ function parseTagInput(tagsInput) {
 module.exports = {
   checkTagTablesExist,
   getOrCreateTagIds,
-  associateTagsWithQuote,
-  getTagsForQuote,
-  getTagsForQuotes,
+  associateTagsWithNote,
+  getTagsForNote,
+  getTagsForNotes,
   parseTagInput,
 };

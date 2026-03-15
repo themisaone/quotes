@@ -40,6 +40,23 @@ async function migrate() {
       console.log("⏭️  Skipping: tags table already exists");
       return;
     }
+    
+    // Check which table exists (quotes or notes)
+    const tableCheck = await client.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_name IN ('quotes', 'notes')
+    `);
+    
+    if (tableCheck.rows.length === 0) {
+      console.log("⏭️  Skipping: Neither quotes nor notes table exists");
+      return;
+    }
+    
+    const tableName = tableCheck.rows[0].table_name;
+    const junctionTableName = tableName === 'notes' ? 'note_tags' : 'quote_tags';
+    const foreignKeyColumn = tableName === 'notes' ? 'note_id' : 'quote_id';
 
     await client.query("BEGIN");
 
@@ -54,40 +71,40 @@ async function migrate() {
     `);
     console.log("✅ Tags table created");
 
-    // Step 2: Create quote_tags junction table
-    console.log("Step 2: Creating quote_tags junction table...");
+    // Step 2: Create junction table (note_tags or quote_tags)
+    console.log(`Step 2: Creating ${junctionTableName} junction table...`);
     await client.query(`
-      CREATE TABLE quote_tags (
-        quote_id INTEGER REFERENCES quotes(id) ON DELETE CASCADE,
+      CREATE TABLE ${junctionTableName} (
+        ${foreignKeyColumn} INTEGER REFERENCES ${tableName}(id) ON DELETE CASCADE,
         tag_id INTEGER REFERENCES tags(id) ON DELETE CASCADE,
         created_at TIMESTAMP DEFAULT NOW(),
-        PRIMARY KEY (quote_id, tag_id)
+        PRIMARY KEY (${foreignKeyColumn}, tag_id)
       )
     `);
-    console.log("✅ Quote_tags junction table created");
+    console.log(`✅ ${junctionTableName} junction table created`);
 
-    // Step 3: Extract all existing tags from quotes
-    console.log("Step 3: Extracting existing tags from quotes...");
+    // Step 3: Extract all existing tags
+    console.log(`Step 3: Extracting existing tags from ${tableName}...`);
     const quotesResult = await client.query(
-      "SELECT id, tags FROM quotes WHERE tags IS NOT NULL AND tags != ''"
+      `SELECT id, tags FROM ${tableName} WHERE tags IS NOT NULL AND tags != ''`
     );
 
     const tagSet = new Set();
-    const quoteTagsMap = new Map(); // quote_id -> [tag_names]
+    const quoteTagsMap = new Map(); // id -> [tag_names]
 
-    for (const quote of quotesResult.rows) {
-      if (quote.tags && quote.tags.trim()) {
-        const tags = quote.tags
+    for (const note of quotesResult.rows) {
+      if (note.tags && note.tags.trim()) {
+        const tags = note.tags
           .split(",")
           .map((t) => t.trim())
           .filter((t) => t.length > 0);
 
-        quoteTagsMap.set(quote.id, tags);
+        quoteTagsMap.set(note.id, tags);
         tags.forEach((tag) => tagSet.add(tag));
       }
     }
 
-    console.log(`   Found ${tagSet.size} unique tags across ${quotesResult.rows.length} quotes`);
+    console.log(`   Found ${tagSet.size} unique tags across ${quotesResult.rows.length} ${tableName}`);
 
     // Step 4: Insert unique tags into tags table
     console.log("Step 4: Inserting tags into tags table...");
@@ -102,8 +119,8 @@ async function migrate() {
     }
     console.log(`✅ Inserted ${tagSet.size} tags`);
 
-    // Step 5: Populate quote_tags junction table
-    console.log("Step 5: Populating quote_tags junction table...");
+    // Step 5: Populate junction table
+    console.log(`Step 5: Populating ${junctionTableName} junction table...`);
     let relationshipsCreated = 0;
 
     for (const [quoteId, tagNames] of quoteTagsMap.entries()) {
@@ -111,14 +128,14 @@ async function migrate() {
         const tagId = tagIdMap.get(tagName);
         if (tagId) {
           await client.query(
-            "INSERT INTO quote_tags (quote_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+            `INSERT INTO ${junctionTableName} (${foreignKeyColumn}, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
             [quoteId, tagId]
           );
           relationshipsCreated++;
         }
       }
     }
-    console.log(`✅ Created ${relationshipsCreated} quote-tag relationships`);
+    console.log(`✅ Created ${relationshipsCreated} ${tableName}-tag relationships`);
 
     // Step 6: Create indexes for performance
     console.log("Step 6: Creating indexes...");
@@ -126,10 +143,10 @@ async function migrate() {
       "CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name)"
     );
     await client.query(
-      "CREATE INDEX IF NOT EXISTS idx_quote_tags_quote_id ON quote_tags(quote_id)"
+      `CREATE INDEX IF NOT EXISTS idx_${junctionTableName}_${foreignKeyColumn} ON ${junctionTableName}(${foreignKeyColumn})`
     );
     await client.query(
-      "CREATE INDEX IF NOT EXISTS idx_quote_tags_tag_id ON quote_tags(tag_id)"
+      `CREATE INDEX IF NOT EXISTS idx_${junctionTableName}_tag_id ON ${junctionTableName}(tag_id)`
     );
     console.log("✅ Indexes created");
 
@@ -138,11 +155,11 @@ async function migrate() {
     console.log("✅ Migration 005 completed successfully!");
     console.log("\n📊 Summary:");
     console.log(`   - Unique tags: ${tagSet.size}`);
-    console.log(`   - Quotes with tags: ${quotesResult.rows.length}`);
+    console.log(`   - ${tableName} with tags: ${quotesResult.rows.length}`);
     console.log(`   - Tag relationships: ${relationshipsCreated}`);
     console.log("\n⚠️  Note: The old 'tags' column is preserved for safety.");
     console.log("   You can drop it later after verification:");
-    console.log("   ALTER TABLE quotes DROP COLUMN tags;\n");
+    console.log(`   ALTER TABLE ${tableName} DROP COLUMN tags;\n`);
   } catch (error) {
     await client.query("ROLLBACK");
     console.error("❌ Migration 005 failed:", error.message);

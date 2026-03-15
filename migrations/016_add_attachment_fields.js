@@ -23,20 +23,35 @@ async function migrate() {
   try {
     console.log('Starting migration 016: Verifying attachment fields...');
     
+    // Check which table exists (quotes or notes)
+    const tableCheck = await client.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_name IN ('quotes', 'notes')
+    `);
+    
+    if (tableCheck.rows.length === 0) {
+      console.log("⏭️  Skipping: Neither quotes nor notes table exists");
+      return;
+    }
+    
+    const tableName = tableCheck.rows[0].table_name;
+    
     await client.query("BEGIN");
     
     // Check if attachment_type column exists (should be from migration 009)
     const typeColumnCheck = await client.query(`
       SELECT column_name 
       FROM information_schema.columns 
-      WHERE table_name = 'quotes' 
+      WHERE table_name = $1
         AND column_name = 'attachment_type'
-    `);
+    `, [tableName]);
     
     if (typeColumnCheck.rows.length === 0) {
       // Add it if somehow missing
       await client.query(`
-        ALTER TABLE quotes 
+        ALTER TABLE ${tableName} 
         ADD COLUMN attachment_type VARCHAR(50)
       `);
       console.log('  - Added attachment_type column');

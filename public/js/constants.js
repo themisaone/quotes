@@ -74,7 +74,7 @@ export const MODAL_IDS = {
   SOURCE_SUGGESTIONS: 'sourceSuggestions',
   TAG_INPUT: 'tags', // Changed from 'tagInput' to match actual HTML
   TAG_SUGGESTIONS: 'tagInputSuggestions',
-  NOTE_INPUT: 'note', // Changed from 'noteInput' to match actual HTML
+  COMMENT_INPUT: 'comment', // Changed from 'noteInput' to match actual HTML (was 'note')
   NOTE_TYPE_SELECT: 'noteType', // Added for note type dropdown
   SCORE_INPUT: 'scoreInput',
   NOTE_DATE_INPUT: 'noteDate', // Changed from 'noteDateInput' to match actual HTML

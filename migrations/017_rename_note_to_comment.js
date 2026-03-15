@@ -1,5 +1,8 @@
 /**
- * Migration 011: Remove language column (not needed - using translation_group only)
+ * Migration 017: Rename 'note' column to 'comment'
+ * 
+ * The 'note' column stores optional comments/descriptions for quotes.
+ * Renaming to 'comment' for better clarity.
  */
 
 const { Pool } = require("pg");
@@ -18,7 +21,7 @@ async function migrate() {
   const client = await pool.connect();
 
   try {
-    console.log('Starting migration 011: Removing language column...');
+    console.log("Starting migration 017: Rename 'note' to 'comment'...");
     
     // Check which table exists (quotes or notes)
     const tableCheck = await client.query(`
@@ -35,51 +38,62 @@ async function migrate() {
     
     const tableName = tableCheck.rows[0].table_name;
     
-    await client.query("BEGIN");
-    
-    // Check if column exists
-    const columnCheck = await client.query(`
+    // Check if 'comment' column already exists
+    const commentCheck = await client.query(`
       SELECT column_name 
       FROM information_schema.columns 
       WHERE table_name = $1
-      AND column_name = 'language'
+        AND column_name = 'comment'
     `, [tableName]);
     
-    if (columnCheck.rows.length === 0) {
-      console.log('⏭️  Skipping: language column does not exist');
-      await client.query("COMMIT");
+    if (commentCheck.rows.length > 0) {
+      console.log("⏭️  Skipping: 'comment' column already exists");
       return;
     }
     
-    // Drop the language column
+    // Check if 'note' column exists
+    const noteCheck = await client.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = $1
+        AND column_name = 'note'
+    `, [tableName]);
+    
+    if (noteCheck.rows.length === 0) {
+      console.log("⏭️  Skipping: 'note' column does not exist");
+      return;
+    }
+    
+    await client.query("BEGIN");
+    
+    // Rename the column
+    console.log(`  - Renaming 'note' to 'comment' in ${tableName} table...`);
     await client.query(`
       ALTER TABLE ${tableName} 
-      DROP COLUMN language
+      RENAME COLUMN note TO comment
     `);
-    console.log('  - Removed language column');
     
     await client.query("COMMIT");
     
-    console.log('✅ Migration 011 completed: Language column removed!');
-    console.log('   Using translation_group for linking quotes only');
+    console.log("✅ Migration 017 completed: 'note' renamed to 'comment'!");
   } catch (error) {
     await client.query("ROLLBACK");
+    console.error("❌ Migration 017 failed:", error.message);
     throw error;
   } finally {
     client.release();
-    await pool.end();
   }
 }
 
-// Run if executed directly
+// Run if called directly
 if (require.main === module) {
   migrate()
     .then(() => {
-      console.log("Migration completed successfully");
+      pool.end();
       process.exit(0);
     })
     .catch((error) => {
-      console.error("Migration failed:", error);
+      pool.end();
       process.exit(1);
     });
 }

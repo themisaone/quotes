@@ -24,6 +24,21 @@ async function migrate() {
 
     await client.query("BEGIN");
 
+    // Check if tables already exist (either old or new names)
+    const tableCheck = await client.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_name IN ('quotes', 'notes')
+    `);
+    
+    if (tableCheck.rows.length > 0) {
+      const existingTable = tableCheck.rows[0].table_name;
+      console.log(`⏭️  Skipping: Schema already exists (found '${existingTable}' table)`);
+      await client.query("COMMIT");
+      return;
+    }
+
     // Create authors table
     console.log("Creating authors table...");
     await client.query(`
@@ -46,10 +61,10 @@ async function migrate() {
       )
     `);
 
-    // Create quotes table with all current fields
-    console.log("Creating quotes table...");
+    // Create notes table (new name, was 'quotes')
+    console.log("Creating notes table...");
     await client.query(`
-      CREATE TABLE IF NOT EXISTS quotes (
+      CREATE TABLE IF NOT EXISTS notes (
         id SERIAL PRIMARY KEY,
         quote TEXT NOT NULL,
         author_id INTEGER REFERENCES authors(id),
@@ -75,36 +90,36 @@ async function migrate() {
       )
     `);
 
-    // Create quote_tags junction table
-    console.log("Creating quote_tags junction table...");
+    // Create note_tags junction table (new name, was 'quote_tags')
+    console.log("Creating note_tags junction table...");
     await client.query(`
-      CREATE TABLE IF NOT EXISTS quote_tags (
-        quote_id INTEGER REFERENCES quotes(id) ON DELETE CASCADE,
+      CREATE TABLE IF NOT EXISTS note_tags (
+        note_id INTEGER REFERENCES notes(id) ON DELETE CASCADE,
         tag_id INTEGER REFERENCES tags(id) ON DELETE CASCADE,
         created_at TIMESTAMP DEFAULT NOW(),
-        PRIMARY KEY (quote_id, tag_id)
+        PRIMARY KEY (note_id, tag_id)
       )
     `);
 
     // Create indexes for better query performance
     console.log("Creating indexes...");
     await client.query(`
-      CREATE INDEX IF NOT EXISTS idx_quotes_author_id ON quotes(author_id)
+      CREATE INDEX IF NOT EXISTS idx_notes_author_id ON notes(author_id)
     `);
     await client.query(`
-      CREATE INDEX IF NOT EXISTS idx_quotes_source_id ON quotes(source_id)
+      CREATE INDEX IF NOT EXISTS idx_notes_source_id ON notes(source_id)
     `);
     await client.query(`
-      CREATE INDEX IF NOT EXISTS idx_quotes_created_at ON quotes(created_at DESC)
+      CREATE INDEX IF NOT EXISTS idx_notes_created_at ON notes(created_at DESC)
     `);
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name)
     `);
     await client.query(`
-      CREATE INDEX IF NOT EXISTS idx_quote_tags_quote_id ON quote_tags(quote_id)
+      CREATE INDEX IF NOT EXISTS idx_note_tags_note_id ON note_tags(note_id)
     `);
     await client.query(`
-      CREATE INDEX IF NOT EXISTS idx_quote_tags_tag_id ON quote_tags(tag_id)
+      CREATE INDEX IF NOT EXISTS idx_note_tags_tag_id ON note_tags(tag_id)
     `);
 
     await client.query("COMMIT");

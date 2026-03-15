@@ -101,12 +101,12 @@ export function setDefaultQuoteFields(elements) {
 /**
  * Set fields for Quote type (edit mode)
  */
-export function setQuoteFields(quote, elements) {
+export function setQuoteFields(note, elements) {
   const { authorInput, sourceInput, sourceTypeSelect } = elements;
   
-  if (authorInput) authorInput.value = quote.author_name || "";
-  if (sourceInput) sourceInput.value = quote.source_name || "";
-  if (sourceTypeSelect) sourceTypeSelect.value = quote.source_type || "BOOK";
+  if (authorInput) authorInput.value = note.author_name || "";
+  if (sourceInput) sourceInput.value = note.source_name || "";
+  if (sourceTypeSelect) sourceTypeSelect.value = note.source_type || "BOOK";
 }
 
 /**
@@ -122,21 +122,21 @@ export function setDefaultTrainingFields(elements) {
 /**
  * Set fields for Training type (edit mode)
  */
-export function setTrainingFields(quote, elements) {
+export function setTrainingFields(note, elements) {
   const { trainingTypeSelect, noteDateInput, noteDatePicker } = elements;
   
   if (trainingTypeSelect) {
-    trainingTypeSelect.value = quote.source_type || "";
+    trainingTypeSelect.value = note.source_type || "";
   }
   
-  if (quote.note_date && noteDateInput && noteDatePicker) {
-    const dateForDisplay = formatDateForDisplay(quote.note_date);
-    const dateForPicker = formatDateForPicker(quote.note_date);
+  if (note.note_date && noteDateInput && noteDatePicker) {
+    const dateForDisplay = formatDateForDisplay(note.note_date);
+    const dateForPicker = formatDateForPicker(note.note_date);
     
     noteDateInput.value = dateForDisplay;
     noteDatePicker.value = dateForPicker;
     
-    console.log('🔍 Debug - note_date from DB:', quote.note_date);
+    console.log('🔍 Debug - note_date from DB:', note.note_date);
     console.log('🔍 Debug - formatted for display (dd.mm.yyyy):', dateForDisplay);
     console.log('🔍 Debug - formatted for picker (yyyy-mm-dd):', dateForPicker);
   }
@@ -155,16 +155,16 @@ export function clearTypeSpecificFields(elements) {
 /**
  * Set common fields (used by all note types)
  */
-export function setCommonFields(quote, elements, quillEditor) {
+export function setCommonFields(note, elements, quillEditor) {
   const { quoteTextInput, noteInput, noteTypeSelect, scoreRadios, translationGroupInput } = elements;
   
   // Set quote text in Quill editor
   if (quillEditor) {
-    if (quote.quote) {
-      if (quote.quote.includes('<')) {
-        quillEditor.root.innerHTML = quote.quote;
+    if (note.note_text) {
+      if (note.note_text.includes('<')) {
+        quillEditor.root.innerHTML = note.note_text;
       } else {
-        quillEditor.setText(quote.quote);
+        quillEditor.setText(note.note_text);
       }
     } else {
       quillEditor.setText('');
@@ -172,19 +172,19 @@ export function setCommonFields(quote, elements, quillEditor) {
   }
   
   if (quoteTextInput) {
-    quoteTextInput.value = quote.quote || '';
+    quoteTextInput.value = note.note_text || '';
   }
   
   if (noteInput) {
-    noteInput.value = quote.note || "";
+    noteInput.value = note.comment || "";
   }
   
   if (noteTypeSelect) {
-    noteTypeSelect.value = quote.note_type || "quote";
+    noteTypeSelect.value = note.note_type || "quote";
   }
   
   // Set score radio button
-  const scoreValue = quote.score || "0";
+  const scoreValue = note.score || "0";
   if (scoreRadios) {
     const scoreRadio = document.querySelector(`input[name="quoteScore"][value="${scoreValue}"]`);
     if (scoreRadio) {
@@ -193,7 +193,7 @@ export function setCommonFields(quote, elements, quillEditor) {
   }
   
   if (translationGroupInput) {
-    translationGroupInput.value = quote.translation_group || "";
+    translationGroupInput.value = note.translation_group || "";
   }
 }
 
@@ -247,10 +247,10 @@ export function configureDeleteButton(isEditMode, noteType, deleteBtn) {
 /**
  * Show/hide metadata section
  */
-export function displayMetadata(quote, metadataElement) {
+export function displayMetadata(note, metadataElement) {
   if (!metadataElement) return;
   
-  const metadata = formatMetadataDisplay(quote.created_at, quote.updated_at);
+  const metadata = formatMetadataDisplay(note.created_at, note.updated_at);
   
   if (metadata) {
     metadataElement.innerHTML = metadata;
@@ -341,11 +341,11 @@ export function setupAddModal(noteType, currentNoteTypeFilter, elements, quillEd
  * @param {Function} populateTagsForEdit - Function to populate tags
  * @returns {Object} - State object for the modal
  */
-export function setupEditModal(quote, elements, quillEditor, updateFieldVisibility, updateModalLabels, populateTagsForEdit) {
-  console.log('🎨 ModalRenderer - Setting up EDIT modal for:', quote.note_type);
+export function setupEditModal(note, elements, quillEditor, updateFieldVisibility, updateModalLabels, populateTagsForEdit) {
+  console.log('🎨 ModalRenderer - Setting up EDIT modal for:', note.note_type);
   
   const { modalTitle, quoteIdInput } = elements;
-  const noteType = quote.note_type || 'quote';
+  const noteType = note.note_type || 'quote';
   const typeLabel = getNoteTypeConfig(noteType).label;
   
   // Set modal title
@@ -360,25 +360,25 @@ export function setupEditModal(quote, elements, quillEditor, updateFieldVisibili
   
   // Set the hidden quoteId input
   if (quoteIdInput) {
-    quoteIdInput.value = quote.id;
+    quoteIdInput.value = note.id;
   }
   
   // Display metadata
-  displayMetadata(quote, elements.metadataElement);
+  displayMetadata(note, elements.metadataElement);
   
   // Set common fields
-  setCommonFields(quote, elements, quillEditor);
+  setCommonFields(note, elements, quillEditor);
   
   // Set type-specific fields
   if (noteType === 'quote') {
-    setQuoteFields(quote, elements);
+    setQuoteFields(note, elements);
   } else if (noteType === 'training') {
-    setTrainingFields(quote, elements);
+    setTrainingFields(note, elements);
   }
   
   // Populate tags
   if (populateTagsForEdit) {
-    populateTagsForEdit(quote.tags || "");
+    populateTagsForEdit(note.tags || "");
   }
   
   // Update field visibility
@@ -390,11 +390,11 @@ export function setupEditModal(quote, elements, quillEditor, updateFieldVisibili
   configureDeleteButton(true, noteType, elements.deleteBtn);
   
   return {
-    editingQuoteId: quote.id,
-    currentQuoteImage: quote.image || "",
-    currentQuoteImageFull: quote.image_full || "",
-    currentAttachmentType: quote.attachment_type || "image",
-    currentAttachmentFileName: quote.attachment_filename || "",
-    currentSourceId: quote.source_id || null
+    editingQuoteId: note.id,
+    currentQuoteImage: note.thumbnail || "",
+    currentQuoteImageFull: note.attachment_full || "",
+    currentAttachmentType: note.attachment_type || "image",
+    currentAttachmentFileName: note.attachment_filename || "",
+    currentSourceId: note.source_id || null
   };
 }

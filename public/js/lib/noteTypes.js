@@ -75,11 +75,11 @@ export function getModalTitle(noteType, isEdit = false) {
  * Get field label based on note type
  */
 export function getMainTextLabel(noteType) {
-  return noteType === 'quote' ? 'Quote*' : 'Text*';
+  return noteType === 'quote' ? 'Note text*' : 'Text*';
 }
 
 export function getCommentLabel(noteType) {
-  return 'Comment (Optional)'; // Same for all types
+  return 'Comment'; // Same for all types
 }
 
 export function getAttachmentLabel(noteType) {

@@ -5,8 +5,8 @@
  * 
  * PURPOSE:
  * This is a BACKUP migration script used ONCE to migrate from
- * the old tag system (comma-separated strings in quotes.tags)
- * to the new normalized system (separate 'tags' and 'quote_tags' tables).
+ * the old tag system (comma-separated strings in notes.tags)
+ * to the new normalized system (separate 'tags' and 'note_tags' tables).
  * 
  * USAGE:
  * This script was run once during the migration and is kept here
@@ -18,16 +18,16 @@
  * 
  * WHAT IT DOES:
  * 1. Creates 'tags' table (id, name) if it doesn't exist
- * 2. Creates 'quote_tags' junction table (quote_id, tag_id) if it doesn't exist
- * 3. Parses all comma-separated tags from quotes.tags column
+ * 2. Creates 'note_tags' junction table (note_id, tag_id) if it doesn't exist
+ * 3. Parses all comma-separated tags from notes.tags column
  * 4. Inserts unique tags into 'tags' table
- * 5. Creates relationships in 'quote_tags' table
+ * 5. Creates relationships in 'note_tags' table
  * 6. Does NOT drop the old 'tags' column (preserved for safety)
  * 
  * SAFETY:
  * - Uses transactions (rolls back on error)
  * - Idempotent (can be run multiple times safely)
- * - Preserves original data in quotes.tags column
+ * - Preserves original data in notes.tags column
  * 
  * STATUS: ✅ COMPLETED - No longer part of active codebase
  * ============================================================
@@ -54,40 +54,40 @@ async function migrateTags() {
     `);
     console.log("✅ Tags table created\n");
 
-    // Step 2: Create quote_tags junction table
-    console.log("2️⃣ Creating quote_tags junction table...");
+    // Step 2: Create note_tags junction table
+    console.log("2️⃣ Creating note_tags junction table...");
     await client.query(`
-      CREATE TABLE IF NOT EXISTS quote_tags (
-        quote_id INTEGER REFERENCES quotes(id) ON DELETE CASCADE,
+      CREATE TABLE IF NOT EXISTS note_tags (
+        note_id INTEGER REFERENCES notes(id) ON DELETE CASCADE,
         tag_id INTEGER REFERENCES tags(id) ON DELETE CASCADE,
         created_at TIMESTAMP DEFAULT NOW(),
-        PRIMARY KEY (quote_id, tag_id)
+        PRIMARY KEY (note_id, tag_id)
       )
     `);
-    console.log("✅ Quote_tags junction table created\n");
+    console.log("✅ Note_tags junction table created\n");
 
-    // Step 3: Extract all existing tags from quotes
-    console.log("3️⃣ Extracting existing tags from quotes...");
-    const quotesResult = await client.query(
-      "SELECT id, tags FROM quotes WHERE tags IS NOT NULL AND tags != ''"
+    // Step 3: Extract all existing tags from notes
+    console.log("3️⃣ Extracting existing tags from notes...");
+    const notesResult = await client.query(
+      "SELECT id, tags FROM notes WHERE tags IS NOT NULL AND tags != ''"
     );
 
     const tagSet = new Set();
-    const quoteTagsMap = new Map(); // quote_id -> [tag_names]
+    const noteTagsMap = new Map(); // note_id -> [tag_names]
 
-    for (const quote of quotesResult.rows) {
-      if (quote.tags && quote.tags.trim()) {
-        const tags = quote.tags
+    for (const note of notesResult.rows) {
+      if (note.tags && note.tags.trim()) {
+        const tags = note.tags
           .split(",")
           .map((t) => t.trim())
           .filter((t) => t.length > 0);
 
-        quoteTagsMap.set(quote.id, tags);
+        noteTagsMap.set(note.id, tags);
         tags.forEach((tag) => tagSet.add(tag));
       }
     }
 
-    console.log(`   Found ${tagSet.size} unique tags across ${quotesResult.rows.length} quotes\n`);
+    console.log(`   Found ${tagSet.size} unique tags across ${notesResult.rows.length} notes\n`);
 
     // Step 4: Insert unique tags into tags table
     console.log("4️⃣ Inserting tags into tags table...");
@@ -102,23 +102,23 @@ async function migrateTags() {
     }
     console.log(`✅ Inserted ${tagSet.size} tags\n`);
 
-    // Step 5: Populate quote_tags junction table
-    console.log("5️⃣ Populating quote_tags junction table...");
+    // Step 5: Populate note_tags junction table
+    console.log("5️⃣ Populating note_tags junction table...");
     let relationshipsCreated = 0;
 
-    for (const [quoteId, tagNames] of quoteTagsMap.entries()) {
+    for (const [noteId, tagNames] of noteTagsMap.entries()) {
       for (const tagName of tagNames) {
         const tagId = tagIdMap.get(tagName);
         if (tagId) {
           await client.query(
-            "INSERT INTO quote_tags (quote_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
-            [quoteId, tagId]
+            "INSERT INTO note_tags (note_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+            [noteId, tagId]
           );
           relationshipsCreated++;
         }
       }
     }
-    console.log(`✅ Created ${relationshipsCreated} quote-tag relationships\n`);
+    console.log(`✅ Created ${relationshipsCreated} note-tag relationships\n`);
 
     // Step 6: Create indexes for performance
     console.log("6️⃣ Creating indexes...");
@@ -126,10 +126,10 @@ async function migrateTags() {
       "CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name)"
     );
     await client.query(
-      "CREATE INDEX IF NOT EXISTS idx_quote_tags_quote_id ON quote_tags(quote_id)"
+      "CREATE INDEX IF NOT EXISTS idx_note_tags_note_id ON note_tags(note_id)"
     );
     await client.query(
-      "CREATE INDEX IF NOT EXISTS idx_quote_tags_tag_id ON quote_tags(tag_id)"
+      "CREATE INDEX IF NOT EXISTS idx_note_tags_tag_id ON note_tags(tag_id)"
     );
     console.log("✅ Indexes created\n");
 
@@ -138,11 +138,11 @@ async function migrateTags() {
     console.log("🎉 Migration completed successfully!");
     console.log("\n📊 Summary:");
     console.log(`   - Unique tags: ${tagSet.size}`);
-    console.log(`   - Quotes with tags: ${quotesResult.rows.length}`);
+    console.log(`   - Notes with tags: ${notesResult.rows.length}`);
     console.log(`   - Tag relationships: ${relationshipsCreated}`);
-    console.log("\n⚠️  Note: The old 'tags' column in quotes table is preserved for now.");
+    console.log("\n⚠️  Note: The old 'tags' column in notes table is preserved for now.");
     console.log("   You can drop it later after verifying everything works:");
-    console.log("   ALTER TABLE quotes DROP COLUMN tags;\n");
+    console.log("   ALTER TABLE notes DROP COLUMN tags;\n");
   } catch (error) {
     await client.query("ROLLBACK");
     console.error("❌ Migration failed:", error);

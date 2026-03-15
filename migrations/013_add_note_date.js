@@ -23,11 +23,11 @@ async function migrate() {
     
     await client.query("BEGIN");
     
-    // Check if note_date column already exists
+    // Check if note_date column already exists (on either quotes or notes table)
     const columnCheck = await client.query(`
       SELECT column_name 
       FROM information_schema.columns 
-      WHERE table_name = 'quotes' 
+      WHERE (table_name = 'quotes' OR table_name = 'notes')
       AND column_name = 'note_date'
     `);
     
@@ -37,17 +37,32 @@ async function migrate() {
       return;
     }
     
+    // Determine which table name to use (quotes or notes)
+    const tableCheck = await client.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_name IN ('quotes', 'notes')
+      AND table_schema = 'public'
+    `);
+    
+    const tableName = tableCheck.rows.find(r => r.table_name === 'notes') 
+      ? 'notes' 
+      : 'quotes';
+    
+    console.log(`  Using table: ${tableName}`);
+    
     // Add note_date column (DATE type, nullable)
     await client.query(`
-      ALTER TABLE quotes
+      ALTER TABLE ${tableName}
       ADD COLUMN note_date DATE
     `);
     
     console.log('  ✓ Added note_date column');
     
-    // Add index for date queries
+    // Add index for date queries (with IF NOT EXISTS)
+    const indexName = tableName === 'notes' ? 'idx_notes_note_date' : 'idx_quotes_note_date';
     await client.query(`
-      CREATE INDEX idx_quotes_note_date ON quotes(note_date)
+      CREATE INDEX IF NOT EXISTS ${indexName} ON ${tableName}(note_date)
       WHERE note_date IS NOT NULL
     `);
     

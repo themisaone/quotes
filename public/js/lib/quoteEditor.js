@@ -181,7 +181,7 @@ export function collectFormData(state) {
   }
   
   return {
-    quote: getElementValue(MODAL_IDS.QUOTE_TEXT),
+    note_text: getElementValue(MODAL_IDS.QUOTE_TEXT),
     author: getElementValue(MODAL_IDS.AUTHOR_INPUT),
     source: getElementValue(MODAL_IDS.SOURCE_INPUT),
     sourceType: noteType === 'training' 
@@ -189,10 +189,10 @@ export function collectFormData(state) {
       : (getElementValue(MODAL_IDS.SOURCE_TYPE_SELECT) || "ASSORTED"),
     sourceId: window.currentSourceId || null,
     tags: getElementValue(MODAL_IDS.TAG_INPUT),
-    note: getElementValue(MODAL_IDS.NOTE_INPUT),
+    comment: getElementValue(MODAL_IDS.COMMENT_INPUT),
     score: document.querySelector('input[name="quoteScore"]:checked')?.value || "0",
-    image: state.currentQuoteImage,
-    image_full: state.currentQuoteImageFull,
+    thumbnail: state.currentQuoteImage,
+    attachment_full: state.currentQuoteImageFull,
     attachment_type: state.currentAttachmentType,
     note_type: noteType,
     note_date: parsedNoteDate,
@@ -243,15 +243,15 @@ export async function handleFormSubmit(e, config) {
       if (callbacks.onError) {
         callbacks.onError(errorMsg);
       } else {
-        alert("Failed to save quote: " + errorMsg);
+        alert("Failed to save note: " + errorMsg);
       }
     }
   } catch (error) {
-    console.error("Error saving quote:", error);
+    console.error("Error saving note:", error);
     if (callbacks.onError) {
       callbacks.onError(error.message);
     } else {
-      alert("Failed to save quote. Please try again.");
+      alert("Failed to save note. Please try again.");
     }
   }
 }
@@ -280,7 +280,7 @@ export async function deleteQuote(id, apiUrl, callbacks) {
         callbacks.onSuccess();
       }
     } else {
-      const errorMsg = "Failed to delete quote";
+      const errorMsg = "Failed to delete note";
       if (callbacks.onError) {
         callbacks.onError(errorMsg);
       } else {
@@ -288,11 +288,11 @@ export async function deleteQuote(id, apiUrl, callbacks) {
       }
     }
   } catch (error) {
-    console.error("Error deleting quote:", error);
+    console.error("Error deleting note:", error);
     if (callbacks.onError) {
       callbacks.onError(error.message);
     } else {
-      alert("Failed to delete quote. Please try again.");
+      alert("Failed to delete note. Please try again.");
     }
   }
 }

@@ -14,20 +14,37 @@ async function migrate() {
 
   try {
     console.log("Starting migration 015: Remove rigid type constraint...");
+    
+    // Check which table exists (quotes or notes)
+    const tableCheck = await client.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_name IN ('quotes', 'notes')
+    `);
+    
+    if (tableCheck.rows.length === 0) {
+      console.log("⏭️  Skipping: Neither quotes nor notes table exists");
+      return;
+    }
+    
+    const tableName = tableCheck.rows[0].table_name;
+    const constraintName = tableName === 'notes' ? 'notes_type_check' : 'quotes_type_check';
+    
     await client.query("BEGIN");
 
     // Check if constraint exists
     const constraintCheck = await client.query(`
       SELECT conname 
       FROM pg_constraint 
-      WHERE conname = 'quotes_type_check' 
-        AND conrelid = 'quotes'::regclass
-    `);
+      WHERE conname = $1 
+        AND conrelid = $2::regclass
+    `, [constraintName, tableName]);
 
     if (constraintCheck.rows.length > 0) {
       console.log("  - Dropping rigid type constraint...");
       await client.query(`
-        ALTER TABLE quotes DROP CONSTRAINT IF EXISTS quotes_type_check;
+        ALTER TABLE ${tableName} DROP CONSTRAINT IF EXISTS ${constraintName};
       `);
       console.log("✅ Migration 015 completed: Type constraint removed!");
       console.log("   You can now freely add/remove training types in settings.json");

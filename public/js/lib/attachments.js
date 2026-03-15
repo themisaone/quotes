@@ -379,7 +379,7 @@ export async function readImageFile(file, type, state, callbacks) {
           const resizedBase64 = resizeImage(img, AUTHOR_SOURCE_IMAGE_SIZE);
           
           result = {
-            image: resizedBase64,
+            thumbnail: resizedBase64,
             type,
             filename: file.name
           };
@@ -566,8 +566,8 @@ export async function downscaleAndMoveToDb(quoteId, imageUrl, filePath, modal, a
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        image: thumbnail240,
-        image_full: resized1024,
+        thumbnail: thumbnail240,
+        attachment_full: resized1024,
         oldFilePath: filePath
       })
     });
