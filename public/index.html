@@ -298,7 +298,8 @@
                   <input
                     type="text"
                     id="searchQuote"
-                    placeholder="Search in text..."
+                    placeholder="Search text (word1 && word2 for AND, word1 || word2 for OR)..."
+                    title="Use spaces around operators: 'term1 && term2' (both required), 'term1 || term2' (either required)"
                   />
                 </div>
                 <div class="search-item autocomplete-wrapper" id="searchAuthorContainer">
@@ -326,7 +327,8 @@
                   <input
                     type="text"
                     id="searchTags"
-                    placeholder="Search by tags..."
+                    placeholder="Search tags (tag1 && tag2 for AND, tag1 || tag2 for OR)..."
+                    title="Use spaces around operators: 'tag1 && tag2' (both required), 'tag1 || tag2' (either required)"
                     autocomplete="off"
                   />
                   <div
@@ -1511,7 +1513,7 @@ Quote number three..."
 
     <!-- Bulk Operations Modal -->
     <div id="bulkOperationsModal" class="modal">
-      <div class="modal-content">
+      <div class="modal-content" style="width: 700px !important; max-width: 95vw !important;">
         <div class="modal-header">
           <div class="modal-header-left">
             <span class="modal-header-icon">⚡</span>

@@ -612,6 +612,161 @@ app.delete("/api/sources/:id", async (req, res) => {
 
 // ============= QUOTES API =============
 
+/**
+ * Parse search query with AND/OR operators
+ * Supports:
+ * - "term1 && term2" = AND search (both terms must be present)
+ * - "term1 || term2" = OR search (at least one term must be present)
+ * - "term" = simple search (no operator)
+ * Note: Operators must have spaces around them to avoid conflicts with content containing | or &
+ * @param {string} searchQuery - The search query
+ * @returns {Object} - { operator: 'AND'|'OR'|'SIMPLE', terms: string[] }
+ */
+function parseSearchQuery(searchQuery) {
+  if (!searchQuery) return { operator: 'SIMPLE', terms: [] };
+  
+  // Check for AND operator (&&) with spaces around it
+  if (searchQuery.includes(' && ')) {
+    const terms = searchQuery.split(' && ').map(t => t.trim()).filter(t => t);
+    return { operator: 'AND', terms };
+  }
+  
+  // Check for OR operator (||) with spaces around it
+  if (searchQuery.includes(' || ')) {
+    const terms = searchQuery.split(' || ').map(t => t.trim()).filter(t => t);
+    return { operator: 'OR', terms };
+  }
+  
+  // Simple search (no operator)
+  return { operator: 'SIMPLE', terms: [searchQuery.trim()] };
+}
+
+/**
+ * Build SQL condition for text search with operators
+ * @param {string} searchQuery - The search query
+ * @param {string} columnName - The column to search (e.g., 'q.note_text')
+ * @param {number} paramCounter - Current parameter counter
+ * @param {Array} params - Parameters array to push to
+ * @returns {Object} - { condition: string, newParamCounter: number }
+ */
+function buildTextSearchCondition(searchQuery, columnName, paramCounter, params) {
+  const { operator, terms } = parseSearchQuery(searchQuery);
+  
+  if (terms.length === 0) {
+    return { condition: '', newParamCounter: paramCounter };
+  }
+  
+  if (operator === 'SIMPLE') {
+    // Simple ILIKE search
+    params.push(`%${terms[0]}%`);
+    return {
+      condition: ` AND ${columnName} ILIKE $${paramCounter}`,
+      newParamCounter: paramCounter + 1
+    };
+  }
+  
+  if (operator === 'AND') {
+    // All terms must be present
+    const conditions = terms.map((term) => {
+      params.push(`%${term}%`);
+      const condition = `${columnName} ILIKE $${paramCounter}`;
+      paramCounter++;
+      return condition;
+    });
+    return {
+      condition: ` AND (${conditions.join(' AND ')})`,
+      newParamCounter: paramCounter
+    };
+  }
+  
+  if (operator === 'OR') {
+    // At least one term must be present
+    const conditions = terms.map((term) => {
+      params.push(`%${term}%`);
+      const condition = `${columnName} ILIKE $${paramCounter}`;
+      paramCounter++;
+      return condition;
+    });
+    return {
+      condition: ` AND (${conditions.join(' OR ')})`,
+      newParamCounter: paramCounter
+    };
+  }
+  
+  return { condition: '', newParamCounter: paramCounter };
+}
+
+/**
+ * Build SQL condition for tag search with operators
+ * @param {string} searchQuery - The search query
+ * @param {number} paramCounter - Current parameter counter
+ * @param {Array} params - Parameters array to push to
+ * @returns {Object} - { condition: string, newParamCounter: number }
+ */
+function buildTagSearchCondition(searchQuery, paramCounter, params) {
+  const { operator, terms } = parseSearchQuery(searchQuery);
+  
+  if (terms.length === 0) {
+    return { condition: '', newParamCounter: paramCounter };
+  }
+  
+  if (operator === 'SIMPLE') {
+    // Simple tag search (legacy: comma-separated = AND)
+    const searchTags = terms[0].split(',').map(t => t.trim()).filter(t => t);
+    const conditions = searchTags.map((tag) => {
+      params.push(`%${tag}%`);
+      const condition = ` AND EXISTS (
+        SELECT 1 FROM note_tags qt 
+        JOIN tags t ON qt.tag_id = t.id 
+        WHERE qt.note_id = q.id AND t.name ILIKE $${paramCounter}
+      )`;
+      paramCounter++;
+      return condition;
+    });
+    return {
+      condition: conditions.join(''),
+      newParamCounter: paramCounter
+    };
+  }
+  
+  if (operator === 'AND') {
+    // All tags must be present
+    const conditions = terms.map((tag) => {
+      params.push(`%${tag}%`);
+      const condition = ` AND EXISTS (
+        SELECT 1 FROM note_tags qt 
+        JOIN tags t ON qt.tag_id = t.id 
+        WHERE qt.note_id = q.id AND t.name ILIKE $${paramCounter}
+      )`;
+      paramCounter++;
+      return condition;
+    });
+    return {
+      condition: conditions.join(''),
+      newParamCounter: paramCounter
+    };
+  }
+  
+  if (operator === 'OR') {
+    // At least one tag must be present
+    terms.forEach(tag => {
+      params.push(`%${tag}%`);
+    });
+    const placeholders = terms.map((_, i) => `$${paramCounter + i}`).join(', ');
+    const condition = ` AND EXISTS (
+      SELECT 1 FROM note_tags qt 
+      JOIN tags t ON qt.tag_id = t.id 
+      WHERE qt.note_id = q.id AND t.name ILIKE ANY(ARRAY[${placeholders}])
+    )`;
+    return {
+      condition,
+      newParamCounter: paramCounter + terms.length
+    };
+  }
+  
+  return { condition: '', newParamCounter: paramCounter };
+}
+
 // Get total quote count
 app.get("/api/quotes/count", async (req, res) => {
   try {
@@ -635,10 +790,11 @@ app.get("/api/quotes/count", async (req, res) => {
       paramCounter++;
     }
 
+    // Text search with AND/OR operators
     if (quote) {
-      query += ` AND q.note_text ILIKE $${paramCounter}`;
-      params.push(`%${quote}%`);
-      paramCounter++;
+      const { condition, newParamCounter } = buildTextSearchCondition(quote, 'q.note_text', paramCounter, params);
+      query += condition;
+      paramCounter = newParamCounter;
     }
 
     if (author) {
@@ -653,22 +809,11 @@ app.get("/api/quotes/count", async (req, res) => {
       paramCounter++;
     }
 
+    // Tag search with AND/OR operators
     if (tags) {
-      // Split tags by comma and search for each individually (AND logic)
-      const searchTags = tags
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter((tag) => tag);
-      
-      searchTags.forEach((tag) => {
-        query += ` AND EXISTS (
-          SELECT 1 FROM note_tags qt 
-          JOIN tags t ON qt.tag_id = t.id 
-          WHERE qt.note_id = q.id AND t.name ILIKE $${paramCounter}
-        )`;
-        params.push(`%${tag}%`);
-        paramCounter++;
-      });
+      const { condition, newParamCounter } = buildTagSearchCondition(tags, paramCounter, params);
+      query += condition;
+      paramCounter = newParamCounter;
     }
     
     // Filter by types if provided (quote source types)
@@ -870,10 +1015,11 @@ app.get("/api/quotes", async (req, res) => {
     const params = [];
     let paramCounter = 1;
 
+    // Text search with AND/OR operators
     if (quote) {
-      query += ` AND q.note_text ILIKE $${paramCounter}`;
-      params.push(`%${quote}%`);
-      paramCounter++;
+      const { condition, newParamCounter } = buildTextSearchCondition(quote, 'q.note_text', paramCounter, params);
+      query += condition;
+      paramCounter = newParamCounter;
     }
 
     if (author) {
@@ -888,33 +1034,11 @@ app.get("/api/quotes", async (req, res) => {
       paramCounter++;
     }
 
+    // Tag search with AND/OR operators
     if (tags) {
-      const searchTags = tags
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter((tag) => tag);
-      console.log("Searching for tags:", searchTags); // Debug log
-      
-      if (searchTags.length > 0) {
-        // Use the new tag system - search using JOIN
-        query = query.replace(
-          "FROM notes q",
-          `FROM notes q
-           INNER JOIN note_tags qt ON q.id = qt.note_id
-           INNER JOIN tags t ON qt.tag_id = t.id`
-        );
-        
-        // For each tag, require a match (AND logic)
-        searchTags.forEach((tag) => {
-          query += ` AND EXISTS (
-            SELECT 1 FROM note_tags qt2
-            INNER JOIN tags t2 ON qt2.tag_id = t2.id
-            WHERE qt2.note_id = q.id AND t2.name ILIKE $${paramCounter}
-          )`;
-        params.push(`%${tag}%`);
-        paramCounter++;
-      });
-      }
+      const { condition, newParamCounter } = buildTagSearchCondition(tags, paramCounter, params);
+      query += condition;
+      paramCounter = newParamCounter;
     }
 
     if (date) {

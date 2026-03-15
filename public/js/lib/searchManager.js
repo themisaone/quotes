@@ -362,4 +362,5 @@ export function initializeSearchHandlers(callbacksParam) {
 export function registerGlobalSearchFunctions() {
   window.filterByAuthor = filterByAuthor;
   window.filterBySource = filterBySource;
+  window.debounceSearch = debounceSearch;
 }
