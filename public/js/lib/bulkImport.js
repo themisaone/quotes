@@ -553,7 +553,7 @@ async function submitSingleQuote(quoteText, formData) {
  */
 function buildQuotePayload(quoteText, formData) {
   return {
-    quote: quoteText,
+    note_text: quoteText,
     author: formData.author,
     source: formData.source,
     sourceType: formData.sourceType,
