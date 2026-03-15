@@ -58,10 +58,10 @@
       "label": "Overview/DOC"
     }
   ],
-  "downscaleQuoteImages": false,
+  "downscaleQuoteImages": true,
   "externalStorageThreshold": 1,
   "compactMode": false,
-  "enableTagOperations": false,
+  "enableTagOperations": true,
   "enableQuoteMetaSearches": false,
   "displayQuotesByRealSize": true,
   "displayImageQuotesLong": false,
@@ -76,6 +76,7 @@
     "activeCounter": "#dc2626",
     "totalCounter": "#047857",
     "menu": "#2c3e50",
-    "appBg": "#f8fafc"
+    "appBg": "#f8fafc",
+    "modalFooter": "#d4d4d4"
   }
 }

@@ -1305,6 +1305,63 @@ textarea {
   margin-top: 1.5rem; /* Add spacing before button row */
 }
 
+/* Author modal - yellowish footer bar with buttons */
+#authorModal .form-actions {
+  background: #fde68a; /* Lighter yellowish color (amber-200) */
+  margin: 1.5rem -2rem -2rem -2rem; /* Extend to modal edges */
+  padding: 1rem 2rem; /* Match modal body padding */
+  border-radius: 0 0 12px 12px; /* Round bottom corners */
+}
+
+/* Source modal - yellowish footer bar with buttons */
+#sourceModal .form-actions {
+  background: #fde68a; /* Lighter yellowish color (amber-200) */
+  margin: 1.5rem -2rem -2rem -2rem; /* Extend to modal edges */
+  padding: 1rem 2rem; /* Match modal body padding */
+  border-radius: 0 0 12px 12px; /* Round bottom corners */
+}
+
+/* Quote/Note modal - yellowish footer bar with buttons */
+#quoteModal .form-actions {
+  background: #fde68a; /* Lighter yellowish color (amber-200) */
+  margin: 1.5rem -2rem -2rem -2rem; /* Extend to modal edges */
+  padding: 1rem 2rem; /* Match modal body padding */
+  border-radius: 0 0 12px 12px; /* Round bottom corners */
+}
+
+/* Author modal - white cancel button */
+#authorModal .form-actions .btn-secondary {
+  background: white;
+  color: #374151; /* Dark gray text */
+  border: 1px solid #d1d5db; /* Light gray border */
+}
+
+#authorModal .form-actions .btn-secondary:hover {
+  background: #f9fafb; /* Very light gray on hover */
+}
+
+/* Source modal - white cancel button */
+#sourceModal .form-actions .btn-secondary {
+  background: white;
+  color: #374151; /* Dark gray text */
+  border: 1px solid #d1d5db; /* Light gray border */
+}
+
+#sourceModal .form-actions .btn-secondary:hover {
+  background: #f9fafb; /* Very light gray on hover */
+}
+
+/* Quote/Note modal - white cancel button */
+#quoteModal .form-actions .btn-secondary {
+  background: white;
+  color: #374151; /* Dark gray text */
+  border: 1px solid #d1d5db; /* Light gray border */
+}
+
+#quoteModal .form-actions .btn-secondary:hover {
+  background: #f9fafb; /* Very light gray on hover */
+}
+
 /* Search Section */
 .search-section {
   background: var(--surface);

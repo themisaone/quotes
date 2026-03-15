@@ -281,7 +281,7 @@ export async function exportToPdf(config) {
 
   try {
     const typeLabel = getTypeLabel(currentNoteTypeFilter);
-    const originalText = setButtonLoading(exportBtn, "⏳ Generating PDF...");
+    const originalText = exportBtn ? setButtonLoading(exportBtn, "⏳ Generating PDF...") : null;
 
     // Build filter parameters and fetch quotes
     const params = buildFilterParams(
@@ -298,7 +298,7 @@ export async function exportToPdf(config) {
 
     if (allQuotes.length === 0) {
       alert(`No ${typeLabel.toLowerCase()} to export!`);
-      resetButton(exportBtn, originalText);
+      if (exportBtn) resetButton(exportBtn, originalText);
       return;
     }
 
@@ -310,12 +310,14 @@ export async function exportToPdf(config) {
     const filename = generateFilename(filePrefix, 'pdf');
     downloadBlob(pdfBlob, filename);
 
-    resetButton(exportBtn, originalText);
+    if (exportBtn) resetButton(exportBtn, originalText);
   } catch (error) {
     console.error("Error exporting PDF:", error);
     alert("Failed to export PDF. Please try again.");
-    exportBtn.textContent = "📄 Export to PDF";
-    exportBtn.disabled = false;
+    if (exportBtn) {
+      exportBtn.textContent = "📄 Export to PDF";
+      exportBtn.disabled = false;
+    }
   }
 }
 

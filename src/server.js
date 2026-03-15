@@ -72,7 +72,8 @@ app.get('/api/settings', (req, res) => {
         activeCounter: '#dc2626',
         totalCounter: '#047857',
         menu: '#2c3e50',
-        appBg: '#f8fafc'
+        appBg: '#f8fafc',
+        modalFooter: '#fde68a'
       }
     };
     
@@ -222,7 +223,7 @@ app.put("/api/authors/:id", async (req, res) => {
 
     // Check if author exists
     const authorCheck = await client.query(
-      "SELECT id, name, thumbnail FROM authors WHERE id = $1",
+      "SELECT id, name, image FROM authors WHERE id = $1",
       [id]
     );
     
@@ -287,7 +288,7 @@ app.put("/api/authors/:id", async (req, res) => {
     
     // Image: explicitly allow null to clear it
     if (thumbnail !== undefined) {
-      updateFields.push(`thumbnail = $${paramCount}`);
+      updateFields.push(`image = $${paramCount}`);
       updateParams.push(thumbnail); // Can be null to clear
       paramCount++;
     }
@@ -478,7 +479,7 @@ app.put("/api/sources/:id", async (req, res) => {
 
     // Check if source exists
     const sourceCheck = await client.query(
-      "SELECT id, name, thumbnail, type FROM sources WHERE id = $1",
+      "SELECT id, name, image, type FROM sources WHERE id = $1",
       [id]
     );
     
@@ -537,7 +538,7 @@ app.put("/api/sources/:id", async (req, res) => {
     
     // Image: explicitly allow null to clear it
     if (thumbnail !== undefined) {
-      updateFields.push(`thumbnail = $${paramCount}`);
+      updateFields.push(`image = $${paramCount}`);
       updateParams.push(thumbnail); // Can be null to clear
       paramCount++;
     }

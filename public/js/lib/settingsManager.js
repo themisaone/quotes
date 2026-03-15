@@ -240,6 +240,7 @@ function applySettingsToUI() {
     if (globalSettings.colors.totalCounter) applyTotalCounterColor(globalSettings.colors.totalCounter);
     if (globalSettings.colors.menu) applyMenuColor(globalSettings.colors.menu);
     if (globalSettings.colors.appBg) applyAppBgColor(globalSettings.colors.appBg);
+    if (globalSettings.colors.modalFooter) applyModalFooterColor(globalSettings.colors.modalFooter);
   }
   
   // Apply colors to color picker inputs
@@ -252,7 +253,8 @@ function applySettingsToUI() {
     { id: 'activeCounterColor', colorKey: 'activeCounter' },
     { id: 'totalCounterColor', colorKey: 'totalCounter' },
     { id: 'menuColor', colorKey: 'menu' },
-    { id: 'appBgColor', colorKey: 'appBg' }
+    { id: 'appBgColor', colorKey: 'appBg' },
+    { id: 'modalFooterColor', colorKey: 'modalFooter' }
   ];
   
   colorInputMappings.forEach(({ id, colorKey }) => {
@@ -285,6 +287,7 @@ export function applyColorToCSS(colorType, colorValue) {
     case 'totalCounter': applyTotalCounterColor(colorValue); break;
     case 'menu': applyMenuColor(colorValue); break;
     case 'appBg': applyAppBgColor(colorValue); break;
+    case 'modalFooter': applyModalFooterColor(colorValue); break;
   }
 }
 
@@ -708,6 +711,20 @@ function applyAppBgColor(color) {
   document.body.style.background = `linear-gradient(135deg, ${darkerColor} 0%, ${color} 50%, ${lighterColor} 100%)`;
 }
 
+function applyModalFooterColor(color) {
+  // Apply to Author, Source, and Quote/Note modal footers
+  const style = document.getElementById('modalFooterStyle') || document.createElement('style');
+  style.id = 'modalFooterStyle';
+  style.textContent = `
+    #authorModal .form-actions { background: ${color} !important; }
+    #sourceModal .form-actions { background: ${color} !important; }
+    #quoteModal .form-actions { background: ${color} !important; }
+  `;
+  if (!style.parentNode) {
+    document.head.appendChild(style);
+  }
+}
+
 // Export color functions for external use
 export {
   lightenColor,
@@ -721,6 +738,7 @@ export {
   applyTotalCounterColor,
   applyMenuColor,
   applyAppBgColor,
+  applyModalFooterColor,
 };
 
 // ============= UI TOGGLE HELPERS =============
@@ -943,6 +961,7 @@ function initializeColorCustomization() {
     { id: 'totalCounter', default: '#047857', apply: applyTotalCounterColor },
     { id: 'menu', default: '#2c3e50', apply: applyMenuColor },
     { id: 'appBg', default: '#f8fafc', apply: applyAppBgColor },
+    { id: 'modalFooter', default: '#fde68a', apply: applyModalFooterColor },
   ];
   
   colorConfigs.forEach(config => {
