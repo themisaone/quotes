@@ -1851,11 +1851,12 @@ textarea {
   max-height: 100% !important;
   height: 100% !important;
   width: 100% !important;
-  max-width: 100%;
+  max-width: 100%; /* Default, controlled by JavaScript via settings */
   overflow-y: auto !important; /* Force scrollbar when content exceeds height */
   overflow-x: hidden;
   overflow-wrap: break-word;
   word-wrap: break-word;
+  white-space: pre-wrap; /* Preserve line breaks and wrap text */
   font-size: 1rem !important;
   line-height: 1.6 !important;
   box-sizing: border-box;
@@ -4572,7 +4573,7 @@ textarea {
   background: white;
   cursor: pointer;
   font-size: 0.85rem;
-  min-width: 115px;
+  min-width: 110px;
   width: auto;
   flex-shrink: 0;
 }

@@ -166,9 +166,17 @@ async function migrateLocalStorageToFile() {
     migratedSettings.displayScoreInCards = localStorage.getItem('displayScoreInCards') === 'true';
   }
   
+  if (localStorage.getItem('enableWordWrap') !== null) {
+    migratedSettings.enableWordWrap = localStorage.getItem('enableWordWrap') === 'true';
+  }
+  
   // Numeric settings
   if (localStorage.getItem('externalStorageThreshold')) {
     migratedSettings.externalStorageThreshold = parseFloat(localStorage.getItem('externalStorageThreshold'));
+  }
+  
+  if (localStorage.getItem('wordWrapChars')) {
+    migratedSettings.wordWrapChars = parseInt(localStorage.getItem('wordWrapChars')) || 66;
   }
   
   // Colors
@@ -213,7 +221,8 @@ function applySettingsToUI() {
     { id: 'displayImageQuotesLong', setting: 'displayImageQuotesLong' },
     { id: 'showLongQuotesExpanded', setting: 'showLongQuotesExpanded' },
     { id: 'displayScoreInCards', setting: 'displayScoreInCards' },
-    { id: 'downscaleQuoteImages', setting: 'downscaleQuoteImages' }
+    { id: 'downscaleQuoteImages', setting: 'downscaleQuoteImages' },
+    { id: 'enableWordWrap', setting: 'enableWordWrap' }
   ];
   
   checkboxMappings.forEach(({ id, setting }) => {
@@ -725,6 +734,62 @@ function applyModalFooterColor(color) {
   }
 }
 
+/**
+ * Apply word wrap to the Quill editor
+ * @param {boolean} enabled - Whether word wrap is enabled
+ * @param {number} chars - Number of characters to wrap at
+ */
+function applyWordWrap(enabled, chars) {
+  const style = document.getElementById('wordWrapStyle') || document.createElement('style');
+  style.id = 'wordWrapStyle';
+  
+  if (enabled) {
+    // Limit max-width but keep text left-aligned
+    style.textContent = `
+      .ql-editor {
+        max-width: 100% !important;
+        width: 100% !important;
+        white-space: pre-wrap !important;
+        box-sizing: border-box !important;
+      }
+      .ql-editor > * {
+        max-width: ${chars}ch !important;
+        margin-left: 0 !important;
+        margin-right: auto !important;
+      }
+      .ql-editor > p,
+      .ql-editor > h1,
+      .ql-editor > h2,
+      .ql-editor > h3,
+      .ql-editor > ul,
+      .ql-editor > ol,
+      .ql-editor > blockquote,
+      .ql-editor > pre {
+        max-width: ${chars}ch !important;
+        margin-left: 0 !important;
+        margin-right: auto !important;
+      }
+    `;
+  } else {
+    style.textContent = `
+      .ql-editor {
+        max-width: 100% !important;
+        width: 100% !important;
+        white-space: pre-wrap !important;
+      }
+      .ql-editor > * {
+        max-width: 100% !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+      }
+    `;
+  }
+  
+  if (!style.parentNode) {
+    document.head.appendChild(style);
+  }
+}
+
 // Export color functions for external use
 export {
   lightenColor,
@@ -933,6 +998,40 @@ export function initializeSettings(callbacks = {}) {
       updateSetting('displayScoreInCards', isEnabled);
       // Reload quotes to apply the setting
       if (loadQuotes) loadQuotes();
+    });
+  }
+  
+  // Word Wrap setting
+  const enableWordWrapCheckbox = getElementByIdSafe('enableWordWrap');
+  const wordWrapCharsInput = getElementByIdSafe('wordWrapChars');
+  
+  if (enableWordWrapCheckbox) {
+    const wordWrapEnabled = globalSettings?.enableWordWrap !== false;
+    enableWordWrapCheckbox.checked = wordWrapEnabled;
+    
+    const wordWrapChars = globalSettings?.wordWrapChars || 66;
+    if (wordWrapCharsInput) {
+      wordWrapCharsInput.value = wordWrapChars;
+    }
+    
+    // Apply initial word wrap
+    applyWordWrap(wordWrapEnabled, wordWrapChars);
+    
+    // Listen for checkbox changes
+    enableWordWrapCheckbox.addEventListener('change', (e) => {
+      const isEnabled = e.target.checked;
+      updateSetting('enableWordWrap', isEnabled);
+      const chars = wordWrapCharsInput ? parseInt(wordWrapCharsInput.value) || 66 : 66;
+      applyWordWrap(isEnabled, chars);
+    });
+  }
+  
+  if (wordWrapCharsInput) {
+    wordWrapCharsInput.addEventListener('change', (e) => {
+      const chars = parseInt(e.target.value) || 66;
+      updateSetting('wordWrapChars', chars);
+      const isEnabled = enableWordWrapCheckbox ? enableWordWrapCheckbox.checked : true;
+      applyWordWrap(isEnabled, chars);
     });
   }
   

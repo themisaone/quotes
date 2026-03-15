@@ -63,6 +63,8 @@ app.get('/api/settings', (req, res) => {
       displayImageQuotesLong: false,
       showLongQuotesExpanded: false,
       displayScoreInCards: false,
+      enableWordWrap: true,
+      wordWrapChars: 66,
       colors: {
         button: '#1e40af',
         header: '#166534',
