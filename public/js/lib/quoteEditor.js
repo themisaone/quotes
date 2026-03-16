@@ -196,7 +196,8 @@ export function collectFormData(state) {
     attachment_type: state.currentAttachmentType,
     note_type: noteType,
     note_date: parsedNoteDate,
-    translation_group: getElementValue(MODAL_IDS.TRANSLATION_GROUP_INPUT).trim() || null,
+    translation_group: getElementValue(MODAL_IDS.TRANSLATION_GROUP_INPUT).trim() || 
+                       getElementValue('quoteTranslationGroup').trim() || null,
     storageThresholdMB: state.globalSettings?.externalStorageThreshold || 1,
   };
 }

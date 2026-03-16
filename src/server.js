@@ -2399,28 +2399,44 @@ app.post("/api/tags/bulk-add", async (req, res) => {
   try {
     await client.query("BEGIN");
     
-    const { sourceTagId, targetTagId } = req.body;
+    const { sourceTagName, targetTagName } = req.body;
     
-    if (!sourceTagId || !targetTagId) {
-      return res.status(400).json({ error: "Both source and target tag IDs are required" });
+    if (!sourceTagName || !targetTagName) {
+      return res.status(400).json({ error: "Both source and target tag names are required" });
     }
     
-    if (sourceTagId === targetTagId) {
+    if (sourceTagName.toLowerCase() === targetTagName.toLowerCase()) {
       return res.status(400).json({ error: "Source and target tags cannot be the same" });
     }
     
-    // Get tag names for response
-    const tagsInfo = await client.query(
-      "SELECT id, name FROM tags WHERE id = ANY($1)",
-      [[sourceTagId, targetTagId]]
+    // Find or create source tag
+    let sourceTag = await client.query(
+      "SELECT id, name FROM tags WHERE LOWER(name) = LOWER($1)",
+      [sourceTagName]
     );
     
-    if (tagsInfo.rows.length !== 2) {
-      return res.status(404).json({ error: "One or both tags not found" });
+    if (sourceTag.rows.length === 0) {
+      return res.status(404).json({ error: `Source tag "${sourceTagName}" not found` });
     }
     
-    const sourceTag = tagsInfo.rows.find(t => t.id == sourceTagId);
-    const targetTag = tagsInfo.rows.find(t => t.id == targetTagId);
+    sourceTag = sourceTag.rows[0];
+    
+    // Find or create target tag
+    let targetTag = await client.query(
+      "SELECT id, name FROM tags WHERE LOWER(name) = LOWER($1)",
+      [targetTagName]
+    );
+    
+    if (targetTag.rows.length === 0) {
+      // Create the target tag if it doesn't exist
+      const newTag = await client.query(
+        "INSERT INTO tags (name) VALUES ($1) RETURNING id, name",
+        [targetTagName]
+      );
+      targetTag = newTag.rows[0];
+    } else {
+      targetTag = targetTag.rows[0];
+    }
     
     // Add target tag to all quotes that have source tag (if not already present)
     const result = await client.query(`
@@ -2430,7 +2446,7 @@ app.post("/api/tags/bulk-add", async (req, res) => {
       WHERE qt.tag_id = $2
       ON CONFLICT (note_id, tag_id) DO NOTHING
       RETURNING note_id
-    `, [targetTagId, sourceTagId]);
+    `, [targetTag.id, sourceTag.id]);
     
     const affectedCount = result.rows.length;
     
@@ -2441,7 +2457,7 @@ app.post("/api/tags/bulk-add", async (req, res) => {
       affectedCount,
       sourceTag: sourceTag.name,
       targetTag: targetTag.name,
-      message: `Added tag "${targetTag.name}" to ${affectedCount} quote(s) that have tag "${sourceTag.name}"`
+      message: `Added tag "${targetTag.name}" to ${affectedCount} note(s) that have tag "${sourceTag.name}"`
     });
   } catch (error) {
     await client.query("ROLLBACK");
@@ -2739,28 +2755,38 @@ app.post("/api/import/json", async (req, res) => {
         }
 
         // Check if note already exists (by ID, text, AND author - all must match)
-        const existing = await client.query(
-          `SELECT id FROM notes 
-           WHERE id = $1 
-           AND note_text = $2 
-           AND author_id IS NOT DISTINCT FROM $3`,
-          [note.id, note.note_text, authorId],
-        );
+        // Only check if the note has an ID (from backup/restore, not ENEX imports)
+        let existing = { rows: [] };
+        if (note.id !== null && note.id !== undefined) {
+          existing = await client.query(
+            `SELECT id FROM notes 
+             WHERE id = $1 
+             AND note_text = $2 
+             AND author_id IS NOT DISTINCT FROM $3`,
+            [note.id, note.note_text, authorId],
+          );
+        }
 
         if (existing.rows.length > 0) {
           // Exact match found - skip it
           stats.quotes.skipped++;
         } else {
           // Check if ID exists but with different content (modified note)
-          const idExists = await client.query(
-            `SELECT id FROM notes WHERE id = $1`,
-            [note.id]
-          );
+          let idExists = { rows: [] };
+          if (note.id !== null && note.id !== undefined) {
+            idExists = await client.query(
+              `SELECT id FROM notes WHERE id = $1`,
+              [note.id]
+            );
+          }
           
           let quoteId;
           const noteType = note.note_type || 'quote';
           
-          if (idExists.rows.length > 0) {
+          // Check if this import has an ID (from backup/restore) or not (from ENEX/new imports)
+          const hasId = note.id !== null && note.id !== undefined;
+          
+          if (hasId && idExists.rows.length > 0) {
             // ID exists but content is different - this is a modified quote
             // Insert with new auto-generated ID
             const insertResult = await client.query(
@@ -2782,7 +2808,7 @@ app.post("/api/import/json", async (req, res) => {
               ],
             );
             quoteId = insertResult.rows[0].id;
-          } else {
+          } else if (hasId && idExists.rows.length === 0) {
             // ID doesn't exist - use the original ID from export
             quoteId = note.id;
             await client.query(
@@ -2803,6 +2829,27 @@ app.post("/api/import/json", async (req, res) => {
                 note.updated_at || new Date(),
               ],
             );
+          } else {
+            // No ID provided (e.g., ENEX import) - let database auto-generate ID
+            const insertResult = await client.query(
+              `INSERT INTO notes (note_text, author_id, source_id, type, comment, note_type, note_date, 
+                                   attachment_type, created_at, updated_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+               RETURNING id`,
+              [
+                note.note_text,
+                authorId,
+                sourceId,
+                note.type,
+                note.comment,
+                noteType,
+                note.note_date || null,
+                note.attachment_type || null,
+                note.created_at || new Date(),
+                note.updated_at || new Date(),
+              ],
+            );
+            quoteId = insertResult.rows[0].id;
           }
           const storageFolder = noteType === 'training' ? 'training' : noteType === 'note' ? 'notes' : noteType === 'puzzle' ? 'puzzles' : 'quotes';
           

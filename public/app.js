@@ -883,9 +883,9 @@ function updateFieldVisibility() {
     quoteSpecificFields.style.display = isQuote ? 'flex' : 'none';
   }
   
-  if (translationGroupContainer) {
-    translationGroupContainer.style.display = isQuote ? 'block' : 'none';
-  }
+  // Group field is inside trainingSpecificFields, so it's automatically shown for trainings
+  // For quotes, we need to show it separately - but for now, Group is only for trainings
+  // (If needed for quotes in future, we can add a separate field in quoteSpecificFields)
   
   // Update labels using library
   updateModalLabels(noteType);

@@ -92,73 +92,69 @@ function getTextContent(xmlString, tagName) {
   return match ? match[1].trim() : null;
 }
 
-// Extract resource (attachment) from note
-function extractResource(noteXml) {
-  // Count total resources
-  const allResources = noteXml.match(/<resource>/g);
-  const resourceCount = allResources ? allResources.length : 0;
+// Extract all resources (attachments) from note
+function extractAllResources(noteXml) {
+  const resourceMatches = noteXml.match(/<resource>([\s\S]*?)<\/resource>/g);
+  if (!resourceMatches) return [];
   
-  // Only extract the first resource (app only supports one attachment per note)
-  const resourceMatch = noteXml.match(/<resource>([\s\S]*?)<\/resource>/);
-  if (!resourceMatch) return null;
+  const resources = [];
   
-  const resourceXml = resourceMatch[1];
+  resourceMatches.forEach((resourceXml, index) => {
+    // Extract base64 data
+    const dataMatch = resourceXml.match(/<data encoding="base64">([\s\S]*?)<\/data>/);
+    if (!dataMatch) return;
+    
+    // Clean up the base64 data (remove newlines and whitespace)
+    const base64Data = dataMatch[1].replace(/\s+/g, '');
+    
+    // Calculate file size (base64 is ~33% larger than original)
+    const base64Size = base64Data.length;
+    const actualSize = (base64Size * 3) / 4; // Approximate original file size
+    const sizeKB = (actualSize / 1024).toFixed(2);
+    const sizeMB = (actualSize / (1024 * 1024)).toFixed(2);
+    const sizeDisplay = actualSize > 1024 * 1024 ? `${sizeMB} MB` : `${sizeKB} KB`;
+    
+    // Extract MIME type
+    const mimeType = getTextContent(resourceXml, 'mime');
+    
+    // Extract filename (just for console logging)
+    const filename = getTextContent(resourceXml, 'file-name');
+    
+    if (!base64Data || !mimeType) return;
+    
+    console.log(`   📎 Found attachment ${index + 1}: ${filename || 'unnamed'} (${mimeType}) - ${sizeDisplay}`);
+    
+    // Warn if file is very large
+    if (actualSize > 50 * 1024 * 1024) {
+      console.log(`   ⚠️  WARNING: Large file! This may cause import issues (>${sizeMB} MB)`);
+    }
+    
+    // Determine attachment type based on MIME type
+    let attachmentType = 'other';
+    if (mimeType.startsWith('image/')) {
+      attachmentType = 'image';
+    } else if (mimeType === 'application/pdf') {
+      attachmentType = 'pdf';
+    } else if (mimeType.startsWith('video/')) {
+      attachmentType = 'video';
+    } else if (mimeType.includes('spreadsheet') || mimeType.includes('excel') || filename?.match(/\.(xlsx?|csv)$/i)) {
+      attachmentType = 'document';
+    } else if (mimeType.includes('word') || mimeType.includes('document') || filename?.match(/\.(docx?|txt|rtf)$/i)) {
+      attachmentType = 'document';
+    }
+    
+    // Format as data URL for the image field (compatible with the app's attachment system)
+    const dataUrl = `data:${mimeType};base64,${base64Data}`;
+    
+    resources.push({
+      dataUrl,
+      attachmentType,
+      filename: filename || `attachment-${index + 1}`,
+      sizeMB: parseFloat(sizeMB)
+    });
+  });
   
-  // Extract base64 data
-  const dataMatch = resourceXml.match(/<data encoding="base64">([\s\S]*?)<\/data>/);
-  if (!dataMatch) return null;
-  
-  // Clean up the base64 data (remove newlines and whitespace)
-  const base64Data = dataMatch[1].replace(/\s+/g, '');
-  
-  // Calculate file size (base64 is ~33% larger than original)
-  const base64Size = base64Data.length;
-  const actualSize = (base64Size * 3) / 4; // Approximate original file size
-  const sizeKB = (actualSize / 1024).toFixed(2);
-  const sizeMB = (actualSize / (1024 * 1024)).toFixed(2);
-  const sizeDisplay = actualSize > 1024 * 1024 ? `${sizeMB} MB` : `${sizeKB} KB`;
-  
-  // Extract MIME type
-  const mimeType = getTextContent(resourceXml, 'mime');
-  
-  // Extract filename (just for console logging)
-  const filename = getTextContent(resourceXml, 'file-name');
-  
-  if (!base64Data || !mimeType) return null;
-  
-  console.log(`   📎 Found attachment: ${filename || 'unnamed'} (${mimeType}) - ${sizeDisplay}`);
-  
-  // Warn if multiple attachments exist
-  if (resourceCount > 1) {
-    console.log(`   ⚠️  WARNING: Note has ${resourceCount} attachments, only the first one will be imported!`);
-  }
-  
-  // Warn if file is very large
-  if (actualSize > 50 * 1024 * 1024) {
-    console.log(`   ⚠️  WARNING: Large file! This may cause import issues (>${sizeMB} MB)`);
-  }
-  
-  // Determine attachment type based on MIME type
-  let attachmentType = 'other';
-  if (mimeType.startsWith('image/')) {
-    attachmentType = 'image';
-  } else if (mimeType === 'application/pdf') {
-    attachmentType = 'pdf';
-  } else if (mimeType.startsWith('video/')) {
-    attachmentType = 'video';
-  } else if (mimeType.includes('spreadsheet') || mimeType.includes('excel') || filename?.match(/\.(xlsx?|csv)$/i)) {
-    attachmentType = 'document';
-  } else if (mimeType.includes('word') || mimeType.includes('document') || filename?.match(/\.(docx?|txt|rtf)$/i)) {
-    attachmentType = 'document';
-  }
-  
-  // Format as data URL for the image field (compatible with the app's attachment system)
-  const dataUrl = `data:${mimeType};base64,${base64Data}`;
-  
-  return {
-    dataUrl,
-    attachmentType
-  };
+  return resources;
 }
 
 // Parse the ENEX file
@@ -208,45 +204,110 @@ function parseEnex(enexPath, trainingType = 'WEIGHTS', maxAttachmentSizeMB = 0) 
     }
     
     // Extract attachment/resource if present
-    const resourceData = extractResource(noteXml);
+    const resources = extractAllResources(noteXml);
     
-    // Check if attachment is too large
-    if (maxAttachmentSizeMB > 0 && resourceData) {
-      const attachmentSizeMB = (resourceData.dataUrl.length * 3 / 4) / (1024 * 1024);
-      if (attachmentSizeMB > maxAttachmentSizeMB) {
-        console.warn(`⚠️  Skipping note ${index + 1}: Attachment too large (${attachmentSizeMB.toFixed(2)} MB > ${maxAttachmentSizeMB} MB limit)`);
+    // Check if any attachment is too large
+    if (maxAttachmentSizeMB > 0 && resources.length > 0) {
+      const tooLargeResource = resources.find(r => r.sizeMB > maxAttachmentSizeMB);
+      if (tooLargeResource) {
+        console.warn(`⚠️  Skipping note ${index + 1}: Attachment too large (${tooLargeResource.sizeMB.toFixed(2)} MB > ${maxAttachmentSizeMB} MB limit)`);
         largeAttachments.push({
           title,
           date: noteDate,
-          size: attachmentSizeMB.toFixed(2)
+          size: tooLargeResource.sizeMB.toFixed(2)
         });
         skippedLargeAttachments++;
         return;
       }
     }
     
-    // Create note object compatible with the import system
-    // IMPORTANT: This format must match what the server expects in /api/import/json
-    const note = {
-      quote: htmlContent,              // Main content (HTML)
-      note_type: 'training',           // Type of note: 'training', 'quote', 'note', 'puzzle'
-      note_date: noteDate,             // Date in YYYY-MM-DD format
-      type: trainingType,              // Training type: WEIGHTS, CARDIO, FLEXIBILITY, SPORTS
-      note: title,                     // Additional note/comment (original Evernote title)
-      author_name: null,               // Not used for training notes
-      source_name: null,               // Not used for training notes
-      // For images: use same data for both (app may downscale image for thumbnail)
-      // For PDFs/docs: only use image_full, leave image as null (no thumbnail needed)
-      image: resourceData && resourceData.attachmentType === 'image' ? resourceData.dataUrl : null,
-      image_full: resourceData ? resourceData.dataUrl : null,      // Full attachment data
-      storage_type: resourceData ? 'base64' : null,                // Indicate base64 storage
-      attachment_type: resourceData ? resourceData.attachmentType : null,  // Type: image, pdf, document, video, other
-      created_at: new Date(noteDate).toISOString(),
-      updated_at: new Date().toISOString()
-    };
+    // If no attachments, create a single note
+    if (resources.length === 0) {
+      const note = {
+        note_text: htmlContent,
+        note_type: 'training',
+        note_date: noteDate,
+        type: trainingType,
+        comment: title,
+        author_name: null,
+        source_name: null,
+        thumbnail: null,
+        attachment_full: null,
+        storage_type: null,
+        attachment_type: null,
+        created_at: new Date(noteDate).toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      notes.push(note);
+      console.log(`✓ Parsed note ${index + 1}: ${noteDate} - ${title}`);
+      return;
+    }
     
-    notes.push(note);
-    console.log(`✓ Parsed note ${index + 1}: ${noteDate} - ${title}`);
+    // If one attachment, create a single note (original behavior)
+    if (resources.length === 1) {
+      const resourceData = resources[0];
+      const note = {
+        note_text: htmlContent,
+        note_type: 'training',
+        note_date: noteDate,
+        type: trainingType,
+        comment: title,
+        author_name: null,
+        source_name: null,
+        thumbnail: resourceData.attachmentType === 'image' ? resourceData.dataUrl : null,
+        attachment_full: resourceData.dataUrl,
+        storage_type: 'base64',
+        attachment_type: resourceData.attachmentType,
+        created_at: new Date(noteDate).toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      notes.push(note);
+      console.log(`✓ Parsed note ${index + 1}: ${noteDate} - ${title}`);
+      return;
+    }
+    
+    // Multiple attachments: Create multiple notes
+    console.log(`   💡 Note has ${resources.length} attachments - creating ${resources.length} separate notes`);
+    
+    resources.forEach((resourceData, attachmentIndex) => {
+      // First attachment gets the original title and content
+      // Additional attachments get modified title and empty content
+      const isFirstAttachment = attachmentIndex === 0;
+      const noteTitle = isFirstAttachment 
+        ? title 
+        : `${title} - ADDITIONAL ATTACHMENT (${attachmentIndex})`;
+      const noteContent = isFirstAttachment 
+        ? htmlContent 
+        : `<p><em>Additional attachment from: ${title}</em></p>`;
+      
+      const note = {
+        note_text: noteContent,
+        note_type: 'training',
+        note_date: noteDate,
+        type: trainingType,
+        comment: noteTitle,
+        author_name: null,
+        source_name: null,
+        thumbnail: resourceData.attachmentType === 'image' ? resourceData.dataUrl : null,
+        attachment_full: resourceData.dataUrl,
+        storage_type: 'base64',
+        attachment_type: resourceData.attachmentType,
+        created_at: new Date(noteDate).toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      notes.push(note);
+      
+      if (isFirstAttachment) {
+        console.log(`   ✓ Created main note with attachment: ${resourceData.filename}`);
+      } else {
+        console.log(`   ✓ Created additional note (${attachmentIndex}) with attachment: ${resourceData.filename}`);
+      }
+    });
+    
+    console.log(`✓ Parsed note ${index + 1}: ${noteDate} - ${title} (${resources.length} notes created)`);
   });
   
   console.log(`\n📊 Summary:`);

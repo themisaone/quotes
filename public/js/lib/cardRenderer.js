@@ -149,7 +149,7 @@ function buildQuoteMetadata(note, noteTypeBadge, translationBadge, getQuoteTypes
 /**
  * Build metadata section for Training type
  */
-function buildTrainingMetadata(note, noteTypeBadge, getTrainingTypes) {
+function buildTrainingMetadata(note, noteTypeBadge, translationBadge, getTrainingTypes) {
   const sourceType = note.source_type || "";
   
   // Get training types config
@@ -172,21 +172,21 @@ function buildTrainingMetadata(note, noteTypeBadge, getTrainingTypes) {
   
   // Date + Training Type
   if (dateStr && trainingTypeStr) {
-    return `<div class="meta-item-combined">${noteTypeBadge}${trainingTypeStr} <span class="meta-from">•</span> <span class="meta-value">📅 ${dateStr}</span></div>`;
+    return `<div class="meta-item-combined">${noteTypeBadge}${translationBadge}${trainingTypeStr} <span class="meta-from">•</span> <span class="meta-value">📅 ${dateStr}</span></div>`;
   }
   
   // Date only
   if (dateStr) {
-    return `<div class="meta-item">${noteTypeBadge}<span class="meta-value">📅 ${dateStr}</span></div>`;
+    return `<div class="meta-item">${noteTypeBadge}${translationBadge}<span class="meta-value">📅 ${dateStr}</span></div>`;
   }
   
   // Training Type only
   if (trainingTypeStr) {
-    return `<div class="meta-item">${noteTypeBadge}${trainingTypeStr}</div>`;
+    return `<div class="meta-item">${noteTypeBadge}${translationBadge}${trainingTypeStr}</div>`;
   }
   
   // Badge only
-  return `<div class="meta-item">${noteTypeBadge}</div>`;
+  return `<div class="meta-item">${noteTypeBadge}${translationBadge}</div>`;
 }
 
 /**
@@ -277,7 +277,7 @@ export function createQuoteCard(note, currentNoteTypeFilter, getTrainingTypes, g
       metadataContent = buildQuoteMetadata(note, noteTypeBadge, translationBadge, getQuoteTypes);
       break;
     case 'training':
-      metadataContent = buildTrainingMetadata(note, noteTypeBadge, getTrainingTypes);
+      metadataContent = buildTrainingMetadata(note, noteTypeBadge, translationBadge, getTrainingTypes);
       break;
     default:
       metadataContent = buildGenericMetadata(noteTypeBadge);
