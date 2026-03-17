@@ -1,0 +1,16 @@
+{
+  "name": "Dark",
+  "description": "Dark charcoal background with purple/violet accents. Easy on the eyes at night.",
+  "colors": {
+    "button": "#7c3aed",
+    "header": "#6d28d9",
+    "tag": "#5b21b6",
+    "delete": "#dc2626",
+    "cancel": "#6b7280",
+    "activeCounter": "#a855f7",
+    "totalCounter": "#8b5cf6",
+    "menu": "#1e1b2e",
+    "appBg": "#111827",
+    "modalFooter": "#2d2b3d"
+  }
+}

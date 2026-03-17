@@ -58,6 +58,42 @@
       "label": "Overview/DOC"
     }
   ],
+  "noteTypes": [
+    {
+      "value": "quote",
+      "label": "Quotes",
+      "icon": "💬",
+      "behavior": "quote",
+      "core": true
+    },
+    {
+      "value": "note",
+      "label": "Notes",
+      "icon": "📝",
+      "behavior": "generic",
+      "core": true
+    },
+    {
+      "value": "training",
+      "label": "Training",
+      "icon": "💪",
+      "behavior": "training",
+      "core": true
+    },
+    {
+      "value": "puzzle",
+      "label": "Puzzles",
+      "icon": "🧩",
+      "behavior": "generic",
+      "core": true
+    },
+    {
+      "value": "historical",
+      "label": "Historical",
+      "icon": "📜",
+      "behavior": "generic"
+    }
+  ],
   "downscaleQuoteImages": true,
   "externalStorageThreshold": 1,
   "compactMode": false,
@@ -68,16 +104,16 @@
   "showLongQuotesExpanded": false,
   "displayScoreInCards": true,
   "colors": {
-    "button": "#1e40af",
-    "header": "#166534",
-    "tag": "#2d6a4f",
-    "delete": "#ef4444",
-    "cancel": "#6b7280",
-    "activeCounter": "#dc2626",
-    "totalCounter": "#047857",
-    "menu": "#2c3e50",
-    "appBg": "#f8fafc",
-    "modalFooter": "#d4d4d4"
+    "button": "#b45309",
+    "header": "#92400e",
+    "tag": "#78350f",
+    "delete": "#dc2626",
+    "cancel": "#78716c",
+    "activeCounter": "#d97706",
+    "totalCounter": "#b45309",
+    "menu": "#292524",
+    "appBg": "#fdf8f0",
+    "modalFooter": "#fde68a"
   },
   "wordWrapChars": 82,
   "enableWordWrap": true

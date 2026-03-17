@@ -1,0 +1,16 @@
+{
+  "name": "Rose Gold",
+  "description": "Soft pinks and warm rose tones with a dark rose menu. Elegant and distinctive.",
+  "colors": {
+    "button": "#be185d",
+    "header": "#9d174d",
+    "tag": "#831843",
+    "delete": "#dc2626",
+    "cancel": "#9ca3af",
+    "activeCounter": "#ec4899",
+    "totalCounter": "#db2777",
+    "menu": "#4c0519",
+    "appBg": "#fff1f2",
+    "modalFooter": "#fecdd3"
+  }
+}

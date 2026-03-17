@@ -1,31 +1,58 @@
 const fs = require('fs');
 const path = require('path');
 
+// ─── Load configured note types from settings.json ─────────────────────────
+
+function loadNoteTypes() {
+  const settingsPath = path.join(__dirname, '..', 'config', 'settings.json');
+  try {
+    const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+    if (Array.isArray(settings.noteTypes)) {
+      return settings.noteTypes.map(t => t.value.toLowerCase());
+    }
+  } catch (e) {
+    // settings.json missing or unreadable — fall back to built-in list
+  }
+  return ['quote', 'note', 'training', 'puzzle', 'historical'];
+}
+
+function loadTrainingSubTypes() {
+  const settingsPath = path.join(__dirname, '..', 'config', 'settings.json');
+  try {
+    const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+    if (Array.isArray(settings.trainingTypes)) {
+      return settings.trainingTypes.map(t => t.value.toUpperCase());
+    }
+  } catch (e) {}
+  return ['WEIGHTS', 'CARDIO', 'MIX', 'HOME', 'OVERVIEW/DOC'];
+}
+
 /**
  * Parse ENEX file and convert to JSON format compatible with the notes import system
- * 
- * This script parses Evernote ENEX export files and converts them to a format
- * that can be directly imported using the "Restore Data" feature.
- * 
- * Usage: node scripts/parse-enex.js <enex-file> [output-json-file] [training-type] [batch-size] [max-attachment-mb]
- * 
- * Examples:
- *   node scripts/parse-enex.js 2026.enex training-2026.json
- *   node scripts/parse-enex.js 2026.enex training-2026.json CARDIO
- *   node scripts/parse-enex.js 2026.enex training-2026.json WEIGHTS 50
- *   node scripts/parse-enex.js large.enex output.json WEIGHTS 100 10  (skip attachments > 10 MB)
- * 
+ *
+ * Usage:
+ *   node scripts/parse-enex.js <enex-file> [output-json] [note_type] [sub_type] [batch-size] [max-mb]
+ *
  * Parameters:
- *   - batch-size: Number of notes per file (default: 0 = no splitting)
- *                 Use this for large ENEX files to avoid server size limits
- *   - max-attachment-mb: Skip notes with attachments larger than this (default: 0 = no limit)
- *                        Useful to exclude huge PDF/video files
- * 
- * Default training type: WEIGHTS
- * Available training types: WEIGHTS, CARDIO, FLEXIBILITY, SPORTS
+ *   note_type   - lowercase note type: training, historical, note, puzzle  (default: training)
+ *   sub_type    - optional sub-type, only used for training: WEIGHTS, CARDIO, MIX, ...
+ *   batch-size  - split output into files of N notes each (default: 0 = no split)
+ *   max-mb      - skip notes with attachments larger than this (default: 0 = no limit)
+ *
+ * Examples:
+ *   node scripts/parse-enex.js 2026.enex weights.json training WEIGHTS
+ *   node scripts/parse-enex.js hist.enex  hist.json   historical
+ *   node scripts/parse-enex.js big.enex   out.json    training WEIGHTS --split-mb=20
+ *   node scripts/parse-enex.js big.enex   out.json    training WEIGHTS --split-mb=20 --skip-mb=50
+ *
+ * Notes for non-training types (historical, note, puzzle, etc.):
+ *   - Date in title is optional (notes without a date are NOT skipped)
+ *   - Falls back to the ENEX <created> timestamp if no date in title
+ *   - No note_date or training sub-type fields are written
  */
 
-// Helper to parse HTML entities
+// ─── Helpers ───────────────────────────────────────────────────────────────
+
 function decodeHtml(html) {
   return html
     .replace(/&amp;/g, '&')
@@ -35,101 +62,83 @@ function decodeHtml(html) {
     .replace(/&apos;/g, "'");
 }
 
-// Helper to convert ENML/HTML to plain text or simple HTML
 function enmlToHtml(enml) {
   if (!enml) return '';
-  
-  // Extract content from CDATA
+
   const cdataMatch = enml.match(/<!\[CDATA\[([\s\S]*?)\]\]>/);
   if (!cdataMatch) return '';
-  
+
   let content = cdataMatch[1];
-  
-  // Remove the XML declaration and DOCTYPE
+
   content = content.replace(/<\?xml[^>]*\?>/g, '');
   content = content.replace(/<!DOCTYPE[^>]*>/g, '');
-  
-  // Remove the <en-note> wrapper
   content = content.replace(/<en-note[^>]*>/g, '').replace(/<\/en-note>/g, '');
-  
-  // Remove the style display:none div (Evernote metadata)
   content = content.replace(/<div style="display:none;[^"]*">[\s\S]*?<\/div>/g, '');
-  
-  // Convert <br/> to proper HTML breaks
   content = content.replace(/<br\s*\/?>/g, '<br>');
-  
-  // Clean up empty tags and unnecessary attributes
   content = content.replace(/<div[^>]*>\s*<br>\s*<\/div>/g, '<p><br></p>');
   content = content.replace(/<div([^>]*)>/g, '<p>');
   content = content.replace(/<\/div>/g, '</p>');
-  
-  // Clean up multiple consecutive <br> tags in paragraphs
   content = content.replace(/<p>\s*<br>\s*<\/p>/g, '<p><br></p>');
-  
-  // Remove empty spans with special attributes
   content = content.replace(/<span[^>]*--en-markholder[^>]*>[\s\S]*?<\/span>/g, '');
-  
-  // Decode HTML entities
   content = decodeHtml(content);
-  
+
   return content.trim();
 }
 
-// Parse date from title (e.g., "2026.01.29 Torsdag" or "2026.01.26")
-function parseDate(title) {
+// Parse date from title: "2026.01.29 Torsdag" → "2026-01-29"
+function parseDateFromTitle(title) {
   const match = title.match(/(\d{4})\.(\d{2})\.(\d{2})/);
   if (match) {
     const [_, year, month, day] = match;
-    return `${year}-${month}-${day}`; // ISO format for database
+    return `${year}-${month}-${day}`;
   }
   return null;
 }
 
-// Extract text content from XML node
+// Parse date from ENEX <created> tag: "20260129T120000Z" → "2026-01-29"
+function parseDateFromCreated(created) {
+  if (!created) return null;
+  const match = created.match(/^(\d{4})(\d{2})(\d{2})/);
+  if (match) {
+    const [_, year, month, day] = match;
+    return `${year}-${month}-${day}`;
+  }
+  return null;
+}
+
 function getTextContent(xmlString, tagName) {
   const regex = new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)<\\/${tagName}>`, 'i');
   const match = xmlString.match(regex);
   return match ? match[1].trim() : null;
 }
 
-// Extract all resources (attachments) from note
 function extractAllResources(noteXml) {
   const resourceMatches = noteXml.match(/<resource>([\s\S]*?)<\/resource>/g);
   if (!resourceMatches) return [];
-  
+
   const resources = [];
-  
+
   resourceMatches.forEach((resourceXml, index) => {
-    // Extract base64 data
     const dataMatch = resourceXml.match(/<data encoding="base64">([\s\S]*?)<\/data>/);
     if (!dataMatch) return;
-    
-    // Clean up the base64 data (remove newlines and whitespace)
+
     const base64Data = dataMatch[1].replace(/\s+/g, '');
-    
-    // Calculate file size (base64 is ~33% larger than original)
-    const base64Size = base64Data.length;
-    const actualSize = (base64Size * 3) / 4; // Approximate original file size
+    const actualSize = (base64Data.length * 3) / 4;
     const sizeKB = (actualSize / 1024).toFixed(2);
     const sizeMB = (actualSize / (1024 * 1024)).toFixed(2);
     const sizeDisplay = actualSize > 1024 * 1024 ? `${sizeMB} MB` : `${sizeKB} KB`;
-    
-    // Extract MIME type
+
     const mimeType = getTextContent(resourceXml, 'mime');
-    
-    // Extract filename (just for console logging)
     const filename = getTextContent(resourceXml, 'file-name');
-    
+
     if (!base64Data || !mimeType) return;
-    
+
     console.log(`   📎 Found attachment ${index + 1}: ${filename || 'unnamed'} (${mimeType}) - ${sizeDisplay}`);
-    
-    // Warn if file is very large
+
     if (actualSize > 50 * 1024 * 1024) {
-      console.log(`   ⚠️  WARNING: Large file! This may cause import issues (>${sizeMB} MB)`);
+      console.log(`   ⚠️  WARNING: Very large file (${sizeMB} MB) — may cause import issues`);
     }
-    
-    // Determine attachment type based on MIME type
+
     let attachmentType = 'other';
     if (mimeType.startsWith('image/')) {
       attachmentType = 'image';
@@ -142,10 +151,9 @@ function extractAllResources(noteXml) {
     } else if (mimeType.includes('word') || mimeType.includes('document') || filename?.match(/\.(docx?|txt|rtf)$/i)) {
       attachmentType = 'document';
     }
-    
-    // Format as data URL for the image field (compatible with the app's attachment system)
+
     const dataUrl = `data:${mimeType};base64,${base64Data}`;
-    
+
     resources.push({
       dataUrl,
       attachmentType,
@@ -153,312 +161,354 @@ function extractAllResources(noteXml) {
       sizeMB: parseFloat(sizeMB)
     });
   });
-  
+
   return resources;
 }
 
-// Parse the ENEX file
-function parseEnex(enexPath, trainingType = 'WEIGHTS', maxAttachmentSizeMB = 0) {
+// ─── Resolve note_type and sub-type from CLI arguments ─────────────────────
+
+/**
+ * @param {string|null} noteTypeArg  - e.g. "training", "historical", "note"
+ * @param {string|null} subTypeArg   - e.g. "WEIGHTS", "CARDIO" (only for training)
+ */
+function resolveType(noteTypeArg, subTypeArg) {
+  const noteType = (noteTypeArg || 'training').toLowerCase();
+  const isTraining = noteType === 'training';
+  const subType = isTraining ? (subTypeArg ? subTypeArg.toUpperCase() : 'WEIGHTS') : null;
+  return { noteType, subType, isTraining };
+}
+
+// ─── Core parser ───────────────────────────────────────────────────────────
+
+function parseEnex(enexPath, noteTypeArg, subTypeArg, maxAttachmentSizeMB = 0) {
+  const { noteType, subType, isTraining } = resolveType(noteTypeArg, subTypeArg);
+
   console.log(`📖 Reading ENEX file: ${enexPath}`);
-  console.log(`🏋️  Default training type: ${trainingType}`);
+  if (isTraining) {
+    console.log(`🏋️  Note type: training  /  Sub-type: ${subType}`);
+  } else {
+    console.log(`📋 Note type: ${noteType}  (no sub-type)`);
+  }
   if (maxAttachmentSizeMB > 0) {
     console.log(`⚠️  Will skip notes with attachments > ${maxAttachmentSizeMB} MB`);
   }
-  
+  console.log('');
+
   const content = fs.readFileSync(enexPath, 'utf-8');
-  
-  // Split by <note> tags
   const noteMatches = content.match(/<note>[\s\S]*?<\/note>/g);
-  
+
   if (!noteMatches) {
     console.error('❌ No notes found in ENEX file');
     return [];
   }
-  
+
   console.log(`✅ Found ${noteMatches.length} notes in ENEX file\n`);
-  
+
   const notes = [];
   let skipped = 0;
   let skippedLargeAttachments = 0;
   const largeAttachments = [];
-  
+
   noteMatches.forEach((noteXml, index) => {
-    const title = getTextContent(noteXml, 'title');
+    const title = getTextContent(noteXml, 'title') || `Note ${index + 1}`;
     const contentXml = getTextContent(noteXml, 'content');
     const created = getTextContent(noteXml, 'created');
-    
-    const noteDate = parseDate(title);
-    
-    if (!noteDate) {
-      console.warn(`⚠️  Skipping note ${index + 1}: Could not parse date from title "${title}"`);
+
+    // Date handling
+    const dateFromTitle = parseDateFromTitle(title);
+    const dateFromCreated = parseDateFromCreated(created);
+    const noteDate = dateFromTitle || dateFromCreated;
+
+    // For training, date is required (it's how training entries are identified)
+    if (isTraining && !dateFromTitle) {
+      console.warn(`⚠️  Skipping note ${index + 1}: No date in title "${title}" (required for training)`);
       skipped++;
       return;
     }
-    
+
     const htmlContent = enmlToHtml(contentXml);
-    
     if (!htmlContent) {
-      console.warn(`⚠️  Skipping note ${index + 1}: Empty content for date ${noteDate}`);
+      console.warn(`⚠️  Skipping note ${index + 1}: Empty content — "${title}"`);
       skipped++;
       return;
     }
-    
-    // Extract attachment/resource if present
+
     const resources = extractAllResources(noteXml);
-    
-    // Check if any attachment is too large
+
     if (maxAttachmentSizeMB > 0 && resources.length > 0) {
-      const tooLargeResource = resources.find(r => r.sizeMB > maxAttachmentSizeMB);
-      if (tooLargeResource) {
-        console.warn(`⚠️  Skipping note ${index + 1}: Attachment too large (${tooLargeResource.sizeMB.toFixed(2)} MB > ${maxAttachmentSizeMB} MB limit)`);
-        largeAttachments.push({
-          title,
-          date: noteDate,
-          size: tooLargeResource.sizeMB.toFixed(2)
-        });
+      const tooLarge = resources.find(r => r.sizeMB > maxAttachmentSizeMB);
+      if (tooLarge) {
+        console.warn(`⚠️  Skipping note ${index + 1}: Attachment too large (${tooLarge.sizeMB.toFixed(2)} MB > ${maxAttachmentSizeMB} MB limit)`);
+        largeAttachments.push({ title, date: noteDate || 'unknown', size: tooLarge.sizeMB.toFixed(2) });
         skippedLargeAttachments++;
         return;
       }
     }
-    
-    // If no attachments, create a single note
+
+    // Build the base note object
+    const baseNote = isTraining
+      ? {
+          note_text: htmlContent,
+          note_type: 'training',
+          note_date: noteDate,
+          type: subType,
+          comment: title,
+          author_name: null,
+          source_name: null,
+          created_at: noteDate ? new Date(noteDate).toISOString() : new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      : {
+          note_text: htmlContent,
+          note_type: noteType,
+          comment: title,
+          author_name: null,
+          source_name: null,
+          created_at: noteDate ? new Date(noteDate).toISOString() : (created ? parseEnexDate(created) : new Date().toISOString()),
+          updated_at: new Date().toISOString()
+        };
+
+    const attachmentDefaults = {
+      thumbnail: null,
+      attachment_full: null,
+      storage_type: null,
+      attachment_type: null
+    };
+
     if (resources.length === 0) {
-      const note = {
-        note_text: htmlContent,
-        note_type: 'training',
-        note_date: noteDate,
-        type: trainingType,
-        comment: title,
-        author_name: null,
-        source_name: null,
-        thumbnail: null,
-        attachment_full: null,
-        storage_type: null,
-        attachment_type: null,
-        created_at: new Date(noteDate).toISOString(),
-        updated_at: new Date().toISOString()
-      };
-      
-      notes.push(note);
-      console.log(`✓ Parsed note ${index + 1}: ${noteDate} - ${title}`);
+      notes.push({ ...attachmentDefaults, ...baseNote });
+      console.log(`✓ Note ${index + 1}: "${title}"${noteDate ? ` [${noteDate}]` : ''}`);
       return;
     }
-    
-    // If one attachment, create a single note (original behavior)
+
     if (resources.length === 1) {
-      const resourceData = resources[0];
-      const note = {
-        note_text: htmlContent,
-        note_type: 'training',
-        note_date: noteDate,
-        type: trainingType,
-        comment: title,
-        author_name: null,
-        source_name: null,
-        thumbnail: resourceData.attachmentType === 'image' ? resourceData.dataUrl : null,
-        attachment_full: resourceData.dataUrl,
+      const r = resources[0];
+      notes.push({
+        ...baseNote,
+        thumbnail: r.attachmentType === 'image' ? r.dataUrl : null,
+        attachment_full: r.dataUrl,
         storage_type: 'base64',
-        attachment_type: resourceData.attachmentType,
-        created_at: new Date(noteDate).toISOString(),
-        updated_at: new Date().toISOString()
-      };
-      
-      notes.push(note);
-      console.log(`✓ Parsed note ${index + 1}: ${noteDate} - ${title}`);
+        attachment_type: r.attachmentType
+      });
+      console.log(`✓ Note ${index + 1}: "${title}"${noteDate ? ` [${noteDate}]` : ''} + 1 attachment`);
       return;
     }
-    
-    // Multiple attachments: Create multiple notes
-    console.log(`   💡 Note has ${resources.length} attachments - creating ${resources.length} separate notes`);
-    
-    resources.forEach((resourceData, attachmentIndex) => {
-      // First attachment gets the original title and content
-      // Additional attachments get modified title and empty content
-      const isFirstAttachment = attachmentIndex === 0;
-      const noteTitle = isFirstAttachment 
-        ? title 
-        : `${title} - ADDITIONAL ATTACHMENT (${attachmentIndex})`;
-      const noteContent = isFirstAttachment 
-        ? htmlContent 
-        : `<p><em>Additional attachment from: ${title}</em></p>`;
-      
-      const note = {
-        note_text: noteContent,
-        note_type: 'training',
-        note_date: noteDate,
-        type: trainingType,
-        comment: noteTitle,
-        author_name: null,
-        source_name: null,
-        thumbnail: resourceData.attachmentType === 'image' ? resourceData.dataUrl : null,
-        attachment_full: resourceData.dataUrl,
+
+    // Multiple attachments → one note per attachment
+    console.log(`   💡 ${resources.length} attachments — creating ${resources.length} notes`);
+    resources.forEach((r, ai) => {
+      const isFirst = ai === 0;
+      notes.push({
+        ...baseNote,
+        note_text: isFirst ? htmlContent : `<p><em>Additional attachment from: ${title}</em></p>`,
+        comment: isFirst ? title : `${title} — attachment ${ai + 1}`,
+        thumbnail: r.attachmentType === 'image' ? r.dataUrl : null,
+        attachment_full: r.dataUrl,
         storage_type: 'base64',
-        attachment_type: resourceData.attachmentType,
-        created_at: new Date(noteDate).toISOString(),
-        updated_at: new Date().toISOString()
-      };
-      
-      notes.push(note);
-      
-      if (isFirstAttachment) {
-        console.log(`   ✓ Created main note with attachment: ${resourceData.filename}`);
-      } else {
-        console.log(`   ✓ Created additional note (${attachmentIndex}) with attachment: ${resourceData.filename}`);
-      }
+        attachment_type: r.attachmentType
+      });
     });
-    
-    console.log(`✓ Parsed note ${index + 1}: ${noteDate} - ${title} (${resources.length} notes created)`);
+    console.log(`✓ Note ${index + 1}: "${title}"${noteDate ? ` [${noteDate}]` : ''} → ${resources.length} notes`);
   });
-  
+
   console.log(`\n📊 Summary:`);
-  console.log(`   - Total notes found: ${noteMatches.length}`);
-  console.log(`   - Successfully parsed: ${notes.length}`);
-  console.log(`   - Skipped (no date/empty): ${skipped}`);
+  console.log(`   Total found   : ${noteMatches.length}`);
+  console.log(`   Parsed OK     : ${notes.length}`);
+  console.log(`   Skipped       : ${skipped}`);
   if (skippedLargeAttachments > 0) {
-    console.log(`   - Skipped (large attachments): ${skippedLargeAttachments}`);
-    console.log(`\n📎 Large attachments that were skipped:`);
-    largeAttachments.forEach(att => {
-      console.log(`      • ${att.date}: ${att.title} (${att.size} MB)`);
-    });
+    console.log(`   Skipped (size): ${skippedLargeAttachments}`);
+    console.log(`\n   📎 Skipped due to size:`);
+    largeAttachments.forEach(a => console.log(`      • [${a.date}] ${a.title} (${a.size} MB)`));
   }
-  
+
   return notes;
 }
 
-// Main execution
+// Full ISO timestamp from ENEX created string "20260129T120000Z"
+function parseEnexDate(created) {
+  if (!created) return new Date().toISOString();
+  const m = created.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z?$/);
+  if (m) {
+    return new Date(`${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}Z`).toISOString();
+  }
+  return new Date().toISOString();
+}
+
+// ─── Argument parser ───────────────────────────────────────────────────────
+
+/**
+ * Split argv into positional args and named flags.
+ * Named flags: --split-mb=30  --skip-mb=10
+ * Returns { positional: [...], flags: { 'split-mb': 30, 'skip-mb': 10 } }
+ */
+function parseArgs(argv) {
+  const positional = [];
+  const flags = {};
+  for (const arg of argv) {
+    const m = arg.match(/^--([a-z-]+)=(.+)$/);
+    if (m) {
+      flags[m[1]] = m[2];
+    } else if (!arg.startsWith('--')) {
+      positional.push(arg);
+    } else {
+      // boolean flag (--flag), not needed yet
+      flags[arg.slice(2)] = true;
+    }
+  }
+  return { positional, flags };
+}
+
+// ─── Size-based splitting ──────────────────────────────────────────────────
+
+/**
+ * Split a flat array of notes into batches where each batch's JSON is ≤ maxBytes.
+ * Each note is serialized individually so we know its exact contribution.
+ * A single note that exceeds maxBytes on its own goes into its own file with a warning.
+ */
+function splitBySize(notes, maxBytes) {
+  const batches = [];
+  let current = [];
+  let currentSize = 0;
+
+  // Overhead of the wrapper JSON structure (approximate, conservative)
+  const WRAPPER_OVERHEAD = 200;
+
+  for (const note of notes) {
+    const noteJson = JSON.stringify(note);
+    const noteSize = Buffer.byteLength(noteJson, 'utf-8');
+
+    // If adding this note would exceed the limit, flush current batch first
+    if (current.length > 0 && currentSize + noteSize + WRAPPER_OVERHEAD > maxBytes) {
+      batches.push(current);
+      current = [];
+      currentSize = 0;
+    }
+
+    if (noteSize + WRAPPER_OVERHEAD > maxBytes && current.length === 0) {
+      // Single note is too large — warn but still include it alone
+      const mb = (noteSize / (1024 * 1024)).toFixed(1);
+      console.warn(`   ⚠️  Note alone is ${mb} MB (exceeds split threshold) — placed in its own file`);
+    }
+
+    current.push(note);
+    currentSize += noteSize + 2; // +2 for comma + newline in JSON array
+  }
+
+  if (current.length > 0) batches.push(current);
+  return batches;
+}
+
+// ─── Main ──────────────────────────────────────────────────────────────────
+
 function main() {
-  const args = process.argv.slice(2);
-  
+  const { positional: args, flags } = parseArgs(process.argv.slice(2));
+
+  const DEFAULT_SPLIT_MB = 30;
+
   if (args.length === 0) {
-    console.error('❌ Usage: node scripts/parse-enex.js <enex-file> [output-json-file] [training-type] [batch-size] [max-attachment-mb]');
-    console.error('');
-    console.error('Examples:');
-    console.error('   node scripts/parse-enex.js 2026.enex training-2026.json');
-    console.error('   node scripts/parse-enex.js 2026.enex training-2026.json CARDIO');
-    console.error('   node scripts/parse-enex.js 2026.enex training-2026.json WEIGHTS 50');
-    console.error('   node scripts/parse-enex.js 2016.enex output.json WEIGHTS 20 10  (skip attachments > 10 MB)');
-    console.error('');
-    console.error('Parameters:');
-    console.error('   batch-size: Split into multiple files (e.g., 50 notes per file)');
-    console.error('               Use this for large ENEX files to avoid server limits');
-    console.error('   max-attachment-mb: Skip notes with attachments > this size (MB)');
-    console.error('                      Useful to exclude huge PDF/video files');
-    console.error('');
-    console.error('Available training types: WEIGHTS, CARDIO, FLEXIBILITY, SPORTS');
-    console.error('Default: WEIGHTS');
+    console.log('Usage: node scripts/parse-enex.js <enex-file> [output] [note_type] [sub_type] [--split-mb=N] [--skip-mb=N]');
+    console.log('');
+    console.log('Positional:');
+    console.log('  note_type    lowercase: training  historical  note  puzzle  (default: training)');
+    console.log('  sub_type     training only: WEIGHTS  CARDIO  MIX  ...      (default: WEIGHTS)');
+    console.log('');
+    console.log('Named flags:');
+    console.log(`  --split-mb=N   auto-split output when file exceeds N MB    (default: ${DEFAULT_SPLIT_MB})`);
+    console.log('  --skip-mb=N    skip notes whose attachment is larger than N MB (default: off)');
+    console.log('');
+    console.log('Examples:');
+    console.log('  node scripts/parse-enex.js 2026.enex weights.json training WEIGHTS');
+    console.log('  node scripts/parse-enex.js hist.enex  hist.json   historical');
+    console.log('  node scripts/parse-enex.js big.enex   out.json    training WEIGHTS --split-mb=20');
+    console.log('  node scripts/parse-enex.js big.enex   out.json    training WEIGHTS --split-mb=20 --skip-mb=50');
     process.exit(1);
   }
-  
-  const enexPath = args[0];
-  const outputPath = args[1] || enexPath.replace('.enex', '-import.json');
-  const trainingType = (args[2] || 'WEIGHTS').toUpperCase();
-  const batchSize = args[3] ? parseInt(args[3]) : 0;
-  const maxAttachmentMB = args[4] ? parseInt(args[4]) : 0;
-  
-  // Validate training type
-  const validTypes = ['WEIGHTS', 'CARDIO', 'FLEXIBILITY', 'SPORTS'];
-  if (!validTypes.includes(trainingType)) {
-    console.error(`❌ Invalid training type: ${trainingType}`);
-    console.error(`   Valid types: ${validTypes.join(', ')}`);
-    process.exit(1);
-  }
-  
+
+  const enexPath       = args[0];
+  const outputPath     = args[1] || enexPath.replace('.enex', '-import.json');
+  const noteTypeArg    = args[2] || 'training';
+  const subTypeArg     = args[3] || null;
+  const splitMB        = flags['split-mb']  ? parseFloat(flags['split-mb'])  : DEFAULT_SPLIT_MB;
+  const maxAttachmentMB= flags['skip-mb']   ? parseFloat(flags['skip-mb'])   : 0;
+
   if (!fs.existsSync(enexPath)) {
     console.error(`❌ File not found: ${enexPath}`);
     process.exit(1);
   }
-  
+
+  const validNoteTypes = loadNoteTypes();
+  const normalizedNoteType = noteTypeArg.toLowerCase();
+  if (!validNoteTypes.includes(normalizedNoteType)) {
+    console.error(`❌ Unknown note type: "${normalizedNoteType}"`);
+    console.error(`   Valid types: ${validNoteTypes.join(', ')}`);
+    console.error(`   (Configured in config/settings.json)`);
+    process.exit(1);
+  }
+
+  const { noteType, subType, isTraining } = resolveType(noteTypeArg, subTypeArg);
+
+  if (isTraining && subTypeArg) {
+    const validSubTypes = loadTrainingSubTypes();
+    if (!validSubTypes.includes(subTypeArg.toUpperCase())) {
+      console.error(`❌ Unknown training sub-type: "${subTypeArg.toUpperCase()}"`);
+      console.error(`   Valid sub-types: ${validSubTypes.join(', ')}`);
+      console.error(`   (Configured in config/settings.json)`);
+      process.exit(1);
+    }
+  }
+
   try {
-    const notes = parseEnex(enexPath, trainingType, maxAttachmentMB);
-    
+    const notes = parseEnex(enexPath, noteTypeArg, subTypeArg, maxAttachmentMB);
+
     if (notes.length === 0) {
       console.error('❌ No notes were successfully parsed');
       process.exit(1);
     }
-    
-    // Determine if we need to split into multiple files
-    const shouldSplit = batchSize > 0 && notes.length > batchSize;
-    
-    if (shouldSplit) {
-      // Split into batches
-      const batches = [];
-      for (let i = 0; i < notes.length; i += batchSize) {
-        batches.push(notes.slice(i, i + batchSize));
-      }
-      
-      console.log(`\n📦 Splitting into ${batches.length} files (${batchSize} notes each)...\n`);
-      
-      const outputFiles = [];
-      const baseOutputPath = outputPath.replace(/\.json$/, '');
-      
-      batches.forEach((batch, index) => {
-        const batchNumber = index + 1;
-        const batchOutputPath = `${baseOutputPath}-part${batchNumber}.json`;
-        
-        const importData = {
-          data: {
-            quotes: batch,
-            authors: [],
-            sources: [],
-            tags: []
-          },
-          counts: {
-            quotes: batch.length,
-            authors: 0,
-            sources: 0,
-            tags: 0
-          }
-        };
-        
-        fs.writeFileSync(batchOutputPath, JSON.stringify(importData, null, 2), 'utf-8');
-        const fileSize = (fs.statSync(batchOutputPath).size / 1024).toFixed(2);
-        console.log(`   ✅ Part ${batchNumber}: ${batch.length} notes → ${batchOutputPath} (${fileSize} KB)`);
-        outputFiles.push(batchOutputPath);
-      });
-      
-      console.log(`\n✅ Successfully created ${batches.length} JSON files!`);
-      console.log(`   Total notes: ${notes.length}`);
-      console.log(`\n📋 Next steps:`);
-      console.log(`   1. Import each file separately using "Restore Data"`);
-      console.log(`   2. Files to import:`);
-      outputFiles.forEach((file, index) => {
-        console.log(`      ${index + 1}. ${file}`);
-      });
-      console.log(`\n💡 All notes are set to training type: ${trainingType}`);
-      
-    } else {
-      // Single file output (original behavior)
-      const importData = {
-        data: {
-          quotes: notes,
-          authors: [],
-          sources: [],
-          tags: []
-        },
-        counts: {
-          quotes: notes.length,
-          authors: 0,
-          sources: 0,
-          tags: 0
-        }
-      };
-      
+
+    const splitBytes = splitMB * 1024 * 1024;
+    const batches = splitBySize(notes, splitBytes);
+    const baseOutputPath = outputPath.replace(/\.json$/, '');
+
+    const makeImportData = (batch) => ({
+      data: { quotes: batch, authors: [], sources: [], tags: [] },
+      counts: { quotes: batch.length, authors: 0, sources: 0, tags: 0 }
+    });
+
+    if (batches.length === 1) {
+      // Single file — use the exact output path the user specified
+      const importData = makeImportData(batches[0]);
       fs.writeFileSync(outputPath, JSON.stringify(importData, null, 2), 'utf-8');
-      
-      console.log(`\n✅ Successfully created JSON file: ${outputPath}`);
-      console.log(`   File size: ${(fs.statSync(outputPath).size / 1024).toFixed(2)} KB`);
+      const mb = (fs.statSync(outputPath).size / (1024 * 1024)).toFixed(2);
+
+      console.log(`\n✅ Created: ${outputPath}  (${mb} MB)`);
       console.log(`\n📋 Next steps:`);
-      console.log(`   1. Review the file (optional): cat ${outputPath} | less`);
-      console.log(`   2. Open your Notes app in the browser`);
-      console.log(`   3. Click "Restore Data" (📥) in the left menu`);
-      console.log(`   4. Select this file: ${outputPath}`);
-      console.log(`   5. Click to import`);
-      console.log(`\n💡 All notes are set to training type: ${trainingType}`);
-      console.log(`   You can edit individual notes after import if needed.`);
+      console.log(`   1. Open the app in the browser`);
+      console.log(`   2. Click "Import Notes" (📥) in the left menu`);
+      console.log(`   3. Select: ${outputPath}`);
+      console.log(`\n   All notes → ${isTraining ? `training / ${subType}` : noteType}`);
+
+    } else {
+      // Multiple files — suffix with -part1, -part2, ...
+      console.log(`\n📦 Auto-split into ${batches.length} files (limit: ${splitMB} MB each)\n`);
+
+      const outputFiles = [];
+      batches.forEach((batch, i) => {
+        const batchPath = `${baseOutputPath}-part${i + 1}.json`;
+        const importData = makeImportData(batch);
+        fs.writeFileSync(batchPath, JSON.stringify(importData, null, 2), 'utf-8');
+        const mb = (fs.statSync(batchPath).size / (1024 * 1024)).toFixed(2);
+        console.log(`   ✅ Part ${i + 1}: ${batch.length} notes → ${batchPath}  (${mb} MB)`);
+        outputFiles.push(batchPath);
+      });
+
+      console.log(`\n✅ Done — ${notes.length} notes across ${batches.length} files`);
+      console.log(`\n📋 Import each file separately via "Import Notes" (📥) in the app:`);
+      outputFiles.forEach((f, i) => console.log(`   ${i + 1}. ${f}`));
+      console.log(`\n   All notes → ${isTraining ? `training / ${subType}` : noteType}`);
     }
-    
+
   } catch (error) {
-    console.error('❌ Error parsing ENEX file:', error.message);
+    console.error('❌ Error:', error.message);
     console.error(error.stack);
     process.exit(1);
   }

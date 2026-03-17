@@ -10,7 +10,7 @@
  */
 
 import { API_URL } from './api.js';
-import { NOTE_TYPES } from './noteTypes.js';
+import { getNoteTypeConfig } from './noteTypes.js';
 
 // ============= CONSTANTS =============
 
@@ -82,7 +82,7 @@ function buildFiltersObject(searchFields, currentNoteTypeFilter) {
   const filters = {};
   
   if (currentNoteTypeFilter) {
-    const typeLabel = NOTE_TYPES[currentNoteTypeFilter]?.label || 'Notes';
+    const typeLabel = getNoteTypeConfig(currentNoteTypeFilter)?.label || 'Notes';
     filters.noteType = typeLabel;
   }
   
@@ -102,7 +102,7 @@ function buildFiltersObject(searchFields, currentNoteTypeFilter) {
  */
 function getTypeLabel(currentNoteTypeFilter) {
   return currentNoteTypeFilter 
-    ? NOTE_TYPES[currentNoteTypeFilter]?.label || 'Notes' 
+    ? getNoteTypeConfig(currentNoteTypeFilter)?.label || 'Notes' 
     : 'All Notes';
 }
 

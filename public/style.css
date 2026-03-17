@@ -1955,6 +1955,25 @@ textarea {
   margin: 0.5em 0 !important;
 }
 
+/* Inline images inside Quill editor */
+.ql-editor img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  margin: 0.4rem 0;
+  display: block;
+  cursor: pointer;
+}
+
+/* Inline images inside rendered note cards */
+.quote-text img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  margin: 0.4rem 0;
+  display: block;
+}
+
 .quote-tags-section {
   display: flex;
   flex-wrap: wrap;
@@ -4798,6 +4817,16 @@ textarea {
 .quote-type-actions {
   display: flex;
   gap: 0.5rem;
+}
+
+.note-type-behavior-badge {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  background: #e2e8f0;
+  color: #475569;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .btn-icon-small {

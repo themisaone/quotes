@@ -24,6 +24,8 @@ import {
 
 import {
   getNoteTypeConfig,
+  getNoteTypes,
+  initNoteTypes,
   updateModalFieldVisibility,
   updateModalLabels,
   updateAddButtonText as updateAddButtonTextLib
@@ -49,8 +51,10 @@ import {
   getGlobalSettings,
   getQuoteTypes,
   getTrainingTypes,
+  getNoteTypesSettings,
   renderQuoteTypesList,
   renderTrainingTypesList,
+  renderNoteTypesList,
   setupTypeManagementListeners,
   toggleMetadataSearchSection,
   applyQuoteSizingMode,
@@ -371,12 +375,109 @@ const searchSourceSuggestions = getElementByIdSafe("searchSourceSuggestions");
 // State
 let editingQuoteId = null;
 
+/**
+ * Build the note-type filter buttons in the left menu from the dynamic noteTypes list.
+ * Inserts <li> elements before #noteTypeSeparator.
+ * Also re-attaches click handlers so Settings changes take effect without a reload.
+ */
+function generateNoteTypeMenu() {
+  const separator = document.getElementById('noteTypeSeparator');
+  if (!separator) return;
+  const ul = separator.parentNode;
+
+  // Remove any previously generated items
+  ul.querySelectorAll('.note-type-filter-li').forEach(li => li.remove());
+
+  const types = getNoteTypes();
+  types.forEach(type => {
+    const li = document.createElement('li');
+    li.className = 'note-type-filter-li';
+    li.innerHTML = `<button class="menu-item note-type-filter" data-note-type="${type.value}">
+      <span class="menu-icon">${type.icon}</span><span class="menu-text"> ${type.label}</span>
+    </button>`;
+    ul.insertBefore(li, separator);
+
+    li.querySelector('button').addEventListener('click', () => {
+      const noteType = type.value;
+      currentNoteTypeFilter = noteType;
+      window.currentNoteTypeFilter = noteType;
+      currentPage = 1;
+      setLibCurrentPage(1);
+
+      switchView('quotes');
+      saveCurrentView();
+      updateUrlHash();
+
+      document.querySelectorAll('.note-type-filter').forEach(btn => btn.classList.remove('active'));
+      li.querySelector('button').classList.add('active');
+      document.querySelectorAll('.menu-item[data-view]').forEach(btn => btn.classList.remove('active'));
+
+      updateAddButtonText();
+      updateMainTitle();
+      updateSourcesFilterVisibility();
+
+      const metaSearchEnabled = globalSettings?.enableQuoteMetaSearches === true;
+      toggleMetadataSearchSection(metaSearchEnabled);
+      clearSearchFields();
+
+      loadQuotes();
+      loadTotalCount();
+    });
+  });
+
+  // Re-apply active state if a type is already selected
+  if (currentNoteTypeFilter) {
+    ul.querySelectorAll('.note-type-filter').forEach(btn => {
+      if (btn.dataset.noteType === currentNoteTypeFilter) btn.classList.add('active');
+    });
+  }
+
+  // Also populate the "Add Note" type popup
+  const noteTypePopup = document.getElementById('noteTypePopup');
+  if (noteTypePopup) {
+    noteTypePopup.innerHTML = types.map(type =>
+      `<button class="note-type-menu-item" data-type="${type.value}">${type.icon} ${type.label}</button>`
+    ).join('');
+
+    noteTypePopup.querySelectorAll('.note-type-menu-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const noteType = item.dataset.type;
+        currentNoteTypeFilter = noteType;
+        window.currentNoteTypeFilter = noteType;
+        noteTypePopup.style.display = 'none';
+        openAddModal();
+        setTimeout(() => {
+          currentNoteTypeFilter = null;
+          window.currentNoteTypeFilter = null;
+        }, 100);
+      });
+    });
+  }
+
+  // Populate the Tags view type filter dropdown
+  const tagTypeFilter = document.getElementById('tagTypeFilter');
+  if (tagTypeFilter) {
+    // Keep the "All Types" option, replace the rest
+    tagTypeFilter.innerHTML = `<option value="">🏷️ All Types</option>` +
+      types.map(type => `<option value="${type.value}">${type.icon} ${type.label}</option>`).join('');
+  }
+}
+
 // Initialize
 document.addEventListener("DOMContentLoaded", async () => {
   // Load settings from file first (using settingsManager library)
   await loadSettings();
   globalSettings = getGlobalSettings(); // Sync local reference
-  
+
+  // Initialize dynamic note types from settings
+  if (globalSettings && globalSettings.noteTypes) {
+    initNoteTypes(globalSettings.noteTypes);
+  }
+
+  // Generate note type menu items dynamically
+  generateNoteTypeMenu();
+
   // Initialize quote types in dropdowns
   populateTypeDropdowns();
   
@@ -471,22 +572,7 @@ function setupEventListeners() {
     }
   });
   
-  // Handle popup menu item clicks
-  document.querySelectorAll('.note-type-menu-item').forEach(item => {
-    item.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const noteType = item.dataset.type;
-      currentNoteTypeFilter = noteType;
-      window.currentNoteTypeFilter = noteType; // Sync with global
-      noteTypePopup.style.display = 'none';
-      openAddModal();
-      // Reset filter after opening modal so next click shows popup again
-      setTimeout(() => { 
-        currentNoteTypeFilter = null;
-        window.currentNoteTypeFilter = null;
-      }, 100);
-    });
-  });
+  // Note type popup item clicks are handled by generateNoteTypeMenu().
   
   // Note type change handler (removed from modal, but keep for edit mode)
   const noteTypeSelect = getElementByIdSafe("noteType");
@@ -494,47 +580,7 @@ function setupEventListeners() {
     noteTypeSelect.addEventListener("change", updateFieldVisibility);
   }
   
-  // Note type filter buttons in menu
-  const noteTypeFilters = document.querySelectorAll('.note-type-filter');
-  noteTypeFilters.forEach(button => {
-    button.addEventListener('click', () => {
-      const noteType = button.dataset.noteType;
-      currentNoteTypeFilter = noteType;
-      window.currentNoteTypeFilter = noteType; // Sync with global
-      currentPage = 1;
-      setLibCurrentPage(1);
-      
-      // FIRST: Switch to quotes view if not already there
-      switchView('quotes');
-      
-      // Save view and update URL
-      saveCurrentView();
-      updateUrlHash();
-      
-      // Update active state for note type filters ONLY
-      document.querySelectorAll('.note-type-filter').forEach(btn => btn.classList.remove('active'));
-      button.classList.add('active');
-      
-      // Remove active state from view navigation items (data-view)
-      document.querySelectorAll('.menu-item[data-view]').forEach(btn => btn.classList.remove('active'));
-      
-      // Update UI elements
-      updateAddButtonText();
-      updateMainTitle();
-      updateSourcesFilterVisibility();
-      
-      // Show/hide metadata search section based on settings (available for all note types now)
-      const metaSearchEnabled = globalSettings?.enableQuoteMetaSearches === true;
-      toggleMetadataSearchSection(metaSearchEnabled);
-      
-      // Clear all search filters when switching note types to avoid confusion
-      clearSearchFields();
-      
-      // Load filtered quotes
-      loadQuotes();
-      loadTotalCount();
-    });
-  });
+  // Note type filter buttons are generated by generateNoteTypeMenu() above.
   
   closeModal.addEventListener("click", closeQuoteModal);
   cancelBtn.addEventListener("click", closeQuoteModal);
@@ -1881,7 +1927,9 @@ function switchView(view) {
       toggleTagOperationsPanel,
       renderQuoteTypesList,
       renderTrainingTypesList,
+      renderNoteTypesList: () => renderNoteTypesList(generateNoteTypeMenu),
       setupTypeManagementListeners,
+      rebuildNoteTypeMenu: generateNoteTypeMenu,
       populateTypeDropdowns,
       populateTypeFilterCheckboxes: () => populateTypeFilterCheckboxesLib(getQuoteTypes),
       populateTrainingTypeFilterCheckboxes: () => populateTrainingTypeFilterCheckboxesLib(getTrainingTypes)

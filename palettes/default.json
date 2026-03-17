@@ -1,0 +1,16 @@
+{
+  "name": "Default",
+  "description": "The original green/blue palette that ships with the app.",
+  "colors": {
+    "button": "#1e40af",
+    "header": "#166534",
+    "tag": "#2d6a4f",
+    "delete": "#ef4444",
+    "cancel": "#6b7280",
+    "activeCounter": "#dc2626",
+    "totalCounter": "#047857",
+    "menu": "#2c3e50",
+    "appBg": "#f8fafc",
+    "modalFooter": "#d4d4d4"
+  }
+}

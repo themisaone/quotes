@@ -48,27 +48,8 @@
             </button>
           </li>
           <li class="menu-separator"></li>
-          <li>
-            <button class="menu-item note-type-filter" data-note-type="quote">
-              <span class="menu-icon">📖</span><span class="menu-text"> Quotes</span>
-            </button>
-          </li>
-          <li>
-            <button class="menu-item note-type-filter" data-note-type="note">
-              <span class="menu-icon">📄</span><span class="menu-text"> Notes</span>
-            </button>
-          </li>
-          <li>
-            <button class="menu-item note-type-filter" data-note-type="puzzle">
-              <span class="menu-icon">🧩</span><span class="menu-text"> Puzzles</span>
-            </button>
-          </li>
-          <li>
-            <button class="menu-item note-type-filter" data-note-type="training">
-              <span class="menu-icon">💪</span><span class="menu-text"> Training</span>
-            </button>
-          </li>
-          <li class="menu-separator"></li>
+          <!-- Note type menu items — generated dynamically by generateNoteTypeMenu() in app.js -->
+          <li id="noteTypeSeparator" class="menu-separator"></li>
           <li>
             <button class="menu-item" data-view="authors"><span class="menu-icon">✍️</span><span class="menu-text"> Authors</span></button>
           </li>
@@ -222,12 +203,8 @@
                 </button>
                 
                 <!-- Popup menu for note type selection (only shown on "All Notes") -->
-                <div id="noteTypePopup" class="note-type-popup" style="display: none;">
-                  <button class="note-type-menu-item" data-type="quote">📖 Quote</button>
-                  <button class="note-type-menu-item" data-type="note">📄 Simple Note</button>
-                  <button class="note-type-menu-item" data-type="training">💪 Training</button>
-                  <button class="note-type-menu-item" data-type="puzzle">🧩 Logical Puzzle</button>
-                </div>
+                <!-- Buttons populated dynamically by generateNoteTypeMenu() in app.js -->
+                <div id="noteTypePopup" class="note-type-popup" style="display: none;"></div>
               </div>
             </header>
 
@@ -712,10 +689,7 @@
                 <div class="form-group" style="margin: 0;">
                   <select id="tagTypeFilter" class="training-date-select tag-type-select">
                     <option value="">🏷️ All Types</option>
-                    <option value="quote">📖 Quotes</option>
-                    <option value="note">📄 Notes</option>
-                    <option value="puzzle">🧩 Puzzles</option>
-                    <option value="training">💪 Trainings</option>
+                    <!-- Options populated dynamically by generateNoteTypeMenu() in app.js -->
                   </select>
                 </div>
               </div>
@@ -939,6 +913,23 @@
               </div>
             </div>
             
+            <!-- Note Types -->
+            <div class="settings-section" style="margin-top: 1.5rem;">
+              <h2>📋 Note Types</h2>
+              <p class="setting-description" style="margin-bottom: 1rem;">
+                Manage the note types available in the menu (Quotes, Notes, Training, etc.).
+                Core types cannot be deleted. New types always use "generic" behavior (like Notes/Puzzles).
+              </p>
+              <div class="setting-item">
+                <div id="noteTypesList" class="quote-types-list">
+                  <!-- Populated by JavaScript -->
+                </div>
+                <button type="button" id="addNoteTypeBtn" class="btn btn-secondary" style="margin-top: 0.5rem;">
+                  ➕ Add Note Type
+                </button>
+              </div>
+            </div>
+
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
               <!-- Quote Types Column -->
               <div class="settings-section">

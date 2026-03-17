@@ -25,6 +25,7 @@
 
 import { clearSearchFields } from './searchManager.js';
 import { getElementByIdSafe } from '../constants.js';
+import { getNoteTypeConfig } from './noteTypes.js';
 
 // ============= CONSTANTS =============
 
@@ -246,13 +247,15 @@ export function updateSourcesFilterVisibility(currentNoteTypeFilter, getQuoteTyp
     }
   }
   
-  // Hide Author/Source search fields for non-quote views
-  const showAuthorSource = currentNoteTypeFilter === 'quote' || isAllNotesView;
+  // Hide Author/Source search fields — only shown for "quote" behavior or All Notes view
+  const quoteBehavior = currentNoteTypeFilter !== null && getNoteTypeConfig(currentNoteTypeFilter).behavior === 'quote';
+  const showAuthorSource = quoteBehavior || isAllNotesView;
   setElementVisibility('searchAuthorContainer', showAuthorSource);
   setElementVisibility('searchSourceContainer', showAuthorSource);
-  
-  // Show/hide Year/Month filters for training view only (not all notes)
-  const showTrainingDateFilters = currentNoteTypeFilter === 'training';
+
+  // Show/hide Year/Month filters for training behavior only (not all notes)
+  const trainingBehavior = currentNoteTypeFilter !== null && getNoteTypeConfig(currentNoteTypeFilter).behavior === 'training';
+  const showTrainingDateFilters = trainingBehavior;
   setElementVisibility('trainingYearContainer', showTrainingDateFilters);
   setElementVisibility('trainingMonthContainer', showTrainingDateFilters);
   
@@ -273,11 +276,14 @@ function updateSearchGridLayout(noteType) {
   const grid = document.querySelector('.search-grid');
   if (!grid) return;
   grid.classList.remove('layout-notes', 'layout-training');
-  if (noteType === 'note' || noteType === 'puzzle' || noteType === 'joke') {
+  if (!noteType) return; // "All Notes" — default 3-col layout
+  const behavior = getNoteTypeConfig(noteType).behavior || 'generic';
+  if (behavior === 'generic') {
     grid.classList.add('layout-notes');
-  } else if (noteType === 'training') {
+  } else if (behavior === 'training') {
     grid.classList.add('layout-training');
   }
+  // behavior === 'quote' → default grid (no extra class needed)
 }
 
 /**

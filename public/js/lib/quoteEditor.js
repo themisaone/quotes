@@ -17,6 +17,7 @@
  */
 
 import { MODAL_IDS, getElementByIdSafe, getElementValue } from '../constants.js';
+import { downscaleImage } from './attachments.js';
 
 // ============= CONSTANTS =============
 
@@ -24,8 +25,12 @@ const QUILL_TOOLBAR_CONFIG = [
   ['bold', 'italic', 'underline'],
   [{ 'header': [1, 2, 3, false] }],
   [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+  ['image'],
   ['clean']
 ];
+
+// Max dimension (px) for images inserted inline into Quill
+const INLINE_IMAGE_MAX_PX = 1200;
 
 const QUILL_PLACEHOLDER = 'Enter the quote text...';
 
@@ -37,6 +42,93 @@ const KEYBOARD_SHORTCUTS = {
 // ============= STATE =============
 
 let quillEditorInstance = null;
+
+// ============= HELPERS =============
+
+function _readFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * Show a small size-picker dialog and resolve with the chosen max dimension.
+ * Resolves with null if cancelled.
+ */
+function _showImageSizeDialog() {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+      position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 99999;
+    `;
+
+    const box = document.createElement('div');
+    box.style.cssText = `
+      background: #fff; border-radius: 10px; padding: 1.5rem 2rem;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.25); min-width: 260px; text-align: center;
+    `;
+
+    box.innerHTML = `
+      <p style="margin: 0 0 1rem; font-weight: 600; font-size: 1rem; color: #1e293b;">
+        📐 Image size (longest side)
+      </p>
+    `;
+
+    const sizes = [300, 500, 1200];
+    const btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display: flex; gap: 0.6rem; justify-content: center; margin-bottom: 0.9rem;';
+
+    sizes.forEach(px => {
+      const btn = document.createElement('button');
+      btn.textContent = `${px}px`;
+      btn.style.cssText = `
+        padding: 0.5rem 1rem; border: none; border-radius: 6px;
+        background: #1e40af; color: #fff; font-size: 0.9rem;
+        cursor: pointer; font-weight: 500;
+      `;
+      btn.onmouseenter = () => btn.style.background = '#1d4ed8';
+      btn.onmouseleave = () => btn.style.background = '#1e40af';
+      btn.onclick = () => { document.body.removeChild(overlay); resolve(px); };
+      btnRow.appendChild(btn);
+    });
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.style.cssText = `
+      padding: 0.4rem 1rem; border: 1px solid #cbd5e1; border-radius: 6px;
+      background: #f1f5f9; color: #475569; font-size: 0.85rem; cursor: pointer;
+    `;
+    cancelBtn.onclick = () => { document.body.removeChild(overlay); resolve(null); };
+
+    box.appendChild(btnRow);
+    box.appendChild(cancelBtn);
+    overlay.appendChild(box);
+    overlay.onclick = (e) => { if (e.target === overlay) { document.body.removeChild(overlay); resolve(null); } };
+    document.body.appendChild(overlay);
+  });
+}
+
+/**
+ * Downscale base64 image to chosen size and insert into Quill at current cursor.
+ */
+async function _insertInlineImage(base64) {
+  const maxPx = await _showImageSizeDialog();
+  if (maxPx === null) return; // cancelled
+  try {
+    const downscaled = await downscaleImage(base64, maxPx, maxPx);
+    const range = quillEditorInstance.getSelection(true);
+    const idx = range ? range.index : quillEditorInstance.getLength();
+    quillEditorInstance.insertEmbed(idx, 'image', downscaled);
+    quillEditorInstance.setSelection(idx + 1);
+  } catch (err) {
+    console.error('Error inserting inline image:', err);
+  }
+}
 
 // ============= QUILL EDITOR INITIALIZATION =============
 
@@ -68,7 +160,36 @@ export function initializeQuillEditor(editorSelector = '#quoteEditor', hiddenInp
       hiddenInput.value = html;
     }
   });
-  
+
+  // Custom image toolbar handler — opens file picker, shows size dialog, inserts inline
+  const toolbar = quillEditorInstance.getModule('toolbar');
+  toolbar.addHandler('image', () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async () => {
+      const file = input.files[0];
+      if (!file) return;
+      const base64 = await _readFileAsBase64(file);
+      await _insertInlineImage(base64);
+    };
+    input.click();
+  });
+
+  // Intercept clipboard paste — show size dialog before embedding
+  quillEditorInstance.root.addEventListener('paste', async (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const base64 = await _readFileAsBase64(item.getAsFile());
+        await _insertInlineImage(base64);
+        break;
+      }
+    }
+  });
+
   // Setup fullscreen editor toggle
   setupFullscreenEditor();
   

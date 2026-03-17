@@ -525,7 +525,7 @@ function saveTrainingTypesAndRefresh(types, populateTrainingTypeFilterCheckboxes
 /**
  * Setup event listeners for type management buttons
  */
-export function setupTypeManagementListeners(populateTypeDropdowns, populateTypeFilterCheckboxes, populateTrainingTypeFilterCheckboxes) {
+export function setupTypeManagementListeners(populateTypeDropdowns, populateTypeFilterCheckboxes, populateTrainingTypeFilterCheckboxes, rebuildNoteTypeMenuFn) {
   // Quote Types - Add button
   const addQuoteTypeBtn = getElementByIdSafe('addQuoteTypeBtn');
   if (addQuoteTypeBtn) {
@@ -561,6 +561,127 @@ export function setupTypeManagementListeners(populateTypeDropdowns, populateType
       saveTrainingTypesAndRefresh(types, populateTrainingTypeFilterCheckboxes);
     });
   }
+
+  // Note Types - handled by setupNoteTypeManagementListeners (called separately)
+  if (rebuildNoteTypeMenuFn) {
+    setupNoteTypeManagementListeners(rebuildNoteTypeMenuFn);
+  }
+}
+
+// ============= TYPE MANAGEMENT - NOTE TYPES =============
+
+/**
+ * Get note types from settings
+ */
+export function getNoteTypesSettings() {
+  if (!globalSettings) {
+    throw new Error('Settings not loaded. Please refresh the page.');
+  }
+  if (!globalSettings.noteTypes || !Array.isArray(globalSettings.noteTypes)) {
+    // Return sensible defaults if not configured yet
+    return [
+      { value: 'quote',    label: 'Quotes',   icon: '💬', behavior: 'quote',    core: true },
+      { value: 'note',     label: 'Notes',    icon: '📝', behavior: 'generic',  core: true },
+      { value: 'training', label: 'Training', icon: '💪', behavior: 'training', core: true },
+      { value: 'puzzle',   label: 'Puzzles',  icon: '🧩', behavior: 'generic',  core: true },
+    ];
+  }
+  return globalSettings.noteTypes;
+}
+
+/**
+ * Render note types list in settings UI
+ */
+export function renderNoteTypesList(rebuildMenuFn) {
+  const container = getElementByIdSafe('noteTypesList', 'renderNoteTypesList');
+  if (!container) return;
+
+  const types = getNoteTypesSettings();
+
+  const behaviorBadge = (b) => {
+    const badges = { quote: '📖 Quote', training: '🏋️ Training', generic: '📄 Generic' };
+    return `<span class="note-type-behavior-badge" title="Behavior determines which fields are shown">${badges[b] || b}</span>`;
+  };
+
+  container.innerHTML = types.map((type, index) => `
+    <div class="quote-type-item" data-index="${index}">
+      <input type="text" class="note-type-icon-input" value="${type.icon}" placeholder="📝" maxlength="2" ${type.core ? 'title="Core type — icon only editable"' : ''} />
+      <input type="text" class="note-type-label-input" value="${type.label}" placeholder="My Type" />
+      ${behaviorBadge(type.behavior || 'generic')}
+      <div class="quote-type-actions">
+        ${!type.core ? `<button class="btn-icon-small btn-delete-type" title="Delete Type">🗑️</button>` : ''}
+      </div>
+    </div>
+  `).join('');
+
+  container.querySelectorAll('.quote-type-item').forEach((item, index) => {
+    const iconInput = item.querySelector('.note-type-icon-input');
+    const labelInput = item.querySelector('.note-type-label-input');
+    const deleteBtn = item.querySelector('.btn-delete-type');
+
+    const updateType = () => {
+      const current = getNoteTypesSettings();
+      current[index] = {
+        ...current[index],
+        icon: iconInput.value || '📝',
+        label: labelInput.value || 'Custom',
+      };
+      saveNoteTypesAndRefresh(current, rebuildMenuFn);
+    };
+
+    iconInput.addEventListener('change', updateType);
+    labelInput.addEventListener('change', updateType);
+
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', () => {
+        const current = getNoteTypesSettings();
+        if (confirm(`Delete note type "${current[index].label}"?\nExisting notes of this type will still exist in the database but won't appear in the menu.`)) {
+          current.splice(index, 1);
+          saveNoteTypesAndRefresh(current, rebuildMenuFn);
+        }
+      });
+    }
+  });
+}
+
+function saveNoteTypesAndRefresh(types, rebuildMenuFn) {
+  if (globalSettings) {
+    globalSettings.noteTypes = types;
+    saveSettings(globalSettings).then(success => {
+      if (success) {
+        // Re-init the dynamic noteTypes module
+        import('./noteTypes.js').then(({ initNoteTypes }) => {
+          initNoteTypes(types);
+          renderNoteTypesList(rebuildMenuFn);
+          if (rebuildMenuFn) rebuildMenuFn();
+          console.log('✅ Note types updated');
+        });
+      }
+    });
+  }
+}
+
+/**
+ * Setup Add Note Type button listener
+ */
+export function setupNoteTypeManagementListeners(rebuildMenuFn) {
+  const addNoteTypeBtn = getElementByIdSafe('addNoteTypeBtn');
+  if (!addNoteTypeBtn) return;
+
+  const newBtn = addNoteTypeBtn.cloneNode(true);
+  addNoteTypeBtn.parentNode.replaceChild(newBtn, addNoteTypeBtn);
+
+  newBtn.addEventListener('click', () => {
+    const types = getNoteTypesSettings();
+    const base = 'custom';
+    let value = base;
+    let n = 1;
+    while (types.find(t => t.value === value)) {
+      value = `${base}${n++}`;
+    }
+    types.push({ icon: '📌', value, label: 'Custom Type', behavior: 'generic' });
+    saveNoteTypesAndRefresh(types, rebuildMenuFn);
+  });
 }
 
 // ============= COLOR MANAGEMENT =============
@@ -856,7 +977,9 @@ export function initializeSettings(callbacks = {}) {
     loadQuotes,
     populateTypeDropdowns,
     populateTypeFilterCheckboxes,
-    populateTrainingTypeFilterCheckboxes
+    populateTrainingTypeFilterCheckboxes,
+    rebuildNoteTypeMenu,
+    renderNoteTypesList: renderNoteTypesListCb,
   } = callbacks;
 
   const enableTagOpsCheckbox = getElementByIdSafe('enableTagOperations');
@@ -1041,7 +1164,8 @@ export function initializeSettings(callbacks = {}) {
   // Initialize type management
   renderQuoteTypesList(populateTypeDropdowns, populateTypeFilterCheckboxes);
   renderTrainingTypesList(populateTrainingTypeFilterCheckboxes);
-  setupTypeManagementListeners(populateTypeDropdowns, populateTypeFilterCheckboxes, populateTrainingTypeFilterCheckboxes);
+  if (renderNoteTypesListCb) renderNoteTypesListCb();
+  setupTypeManagementListeners(populateTypeDropdowns, populateTypeFilterCheckboxes, populateTrainingTypeFilterCheckboxes, rebuildNoteTypeMenu);
 }
 
 /**
@@ -1049,7 +1173,78 @@ export function initializeSettings(callbacks = {}) {
  * (Extracted to keep initializeSettings more readable)
  */
 function initializeColorCustomization() {
-  // Color pickers and their controls
+  // ── Save / Load palette buttons ──────────────────────────────────────────
+  const savePaletteBtn  = getElementByIdSafe('savePaletteBtn');
+  const loadPaletteBtn  = getElementByIdSafe('loadPaletteBtn');
+  const paletteFileInput = getElementByIdSafe('paletteFileInput');
+
+  if (savePaletteBtn) {
+    savePaletteBtn.addEventListener('click', () => {
+      const colors = globalSettings?.colors || {};
+      const palette = {
+        name: 'My Palette',
+        exportedAt: new Date().toISOString(),
+        colors
+      };
+      const blob = new Blob([JSON.stringify(palette, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `palette-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  }
+
+  if (loadPaletteBtn && paletteFileInput) {
+    loadPaletteBtn.addEventListener('click', () => paletteFileInput.click());
+
+    paletteFileInput.addEventListener('change', (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const palette = JSON.parse(ev.target.result);
+          if (!palette.colors || typeof palette.colors !== 'object') {
+            alert('Invalid palette file — missing "colors" object.');
+            return;
+          }
+
+          // Apply each color by setting the picker value and firing its 'input' event.
+          // The existing event listener in initializeColorCustomization() will then call
+          // the correct apply() function (CSS variables) AND updateSetting() for us.
+          const validKeys = ['button','header','tag','delete','cancel','activeCounter','totalCounter','menu','appBg','modalFooter'];
+          let applied = 0;
+          for (const key of validKeys) {
+            const color = palette.colors[key];
+            if (!color) continue;
+            const picker = document.getElementById(`${key}Color`);
+            const text   = document.getElementById(`${key}ColorText`);
+            if (picker) {
+              picker.value = color;
+              picker.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            if (text) text.value = color;
+            applied++;
+          }
+
+          const name = palette.name ? `"${palette.name}"` : 'palette';
+          // Show brief confirmation; settings are already saved by the dispatched events
+          setTimeout(() => {
+            alert(`✅ Loaded ${name} — ${applied} colors applied.`);
+          }, 50);
+        } catch {
+          alert('Could not read palette file — make sure it is a valid JSON file.');
+        }
+        paletteFileInput.value = '';
+      };
+      reader.readAsText(file);
+    });
+  }
+
+  // ── Color pickers and their controls ────────────────────────────────────
   const colorConfigs = [
     { id: 'button', default: '#1e40af', apply: applyButtonColor },
     { id: 'header', default: '#166534', apply: applyHeaderColor },

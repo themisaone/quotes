@@ -1,0 +1,16 @@
+{
+  "name": "Nordic",
+  "description": "Muted steel blues and slate greys inspired by Scandinavian design. Calm and minimal.",
+  "colors": {
+    "button": "#2563eb",
+    "header": "#334155",
+    "tag": "#475569",
+    "delete": "#dc2626",
+    "cancel": "#94a3b8",
+    "activeCounter": "#3b82f6",
+    "totalCounter": "#0ea5e9",
+    "menu": "#1e293b",
+    "appBg": "#f1f5f9",
+    "modalFooter": "#cbd5e1"
+  }
+}

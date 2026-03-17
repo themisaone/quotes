@@ -54,6 +54,12 @@ app.get('/api/settings', (req, res) => {
         { value: 'JOKES', label: 'Jokes', icon: '😂' },
         { value: 'ASSORTED', label: 'Assorted', icon: '📝' }
       ],
+      noteTypes: [
+        { value: 'quote',    label: 'Quotes',   icon: '💬', behavior: 'quote',    core: true },
+        { value: 'note',     label: 'Notes',    icon: '📝', behavior: 'generic',  core: true },
+        { value: 'training', label: 'Training', icon: '💪', behavior: 'training', core: true },
+        { value: 'puzzle',   label: 'Puzzles',  icon: '🧩', behavior: 'generic',  core: true }
+      ],
       downscaleQuoteImages: true,
       externalStorageThreshold: 1,
       compactMode: false,
@@ -1420,8 +1426,9 @@ app.post("/api/quotes", async (req, res) => {
     const quoteId = result.rows[0].id;
 
     // Process attachments with hybrid storage using user's threshold
-    const processedImage = fileStorage.processForStorage(thumbnail, 'quotes', quoteId, '', storageThresholdMB);
-    const processedImageFull = fileStorage.processForStorage(attachment_full, 'quotes', quoteId, '_full', storageThresholdMB);
+    const storageFolder = note_type || 'quote';
+    const processedImage = fileStorage.processForStorage(thumbnail, storageFolder, quoteId, '', storageThresholdMB);
+    const processedImageFull = fileStorage.processForStorage(attachment_full, storageFolder, quoteId, '_full', storageThresholdMB);
 
     console.log(`📦 Quote ${quoteId} attachment processing (type: ${attachment_type}, threshold: ${storageThresholdMB} MB):`);
     console.log(`   Thumbnail: ${thumbnail ? `${(thumbnail.length/1024).toFixed(0)}KB` : 'none'} → ${processedImage ? (processedImage.startsWith('file:') ? processedImage : `${(processedImage.length/1024).toFixed(0)}KB base64`) : 'none'}`);
@@ -1578,8 +1585,9 @@ app.put("/api/quotes/:id", async (req, res) => {
     }
 
     // Process thumbnails through hybrid storage if provided
+    const updateStorageFolder = note_type || 'quote';
     if (thumbnail !== undefined && thumbnail) {
-      const processedImage = fileStorage.processForStorage(thumbnail, 'quotes', id, '', storageThresholdMB);
+      const processedImage = fileStorage.processForStorage(thumbnail, updateStorageFolder, id, '', storageThresholdMB);
       updateFields.push(`thumbnail = $${paramCounter}`);
       params.push(processedImage);
       paramCounter++;
@@ -1591,7 +1599,7 @@ app.put("/api/quotes/:id", async (req, res) => {
     }
 
     if (attachment_full !== undefined && attachment_full) {
-      const processedImageFull = fileStorage.processForStorage(attachment_full, 'quotes', id, '_full', storageThresholdMB);
+      const processedImageFull = fileStorage.processForStorage(attachment_full, updateStorageFolder, id, '_full', storageThresholdMB);
       updateFields.push(`attachment_full = $${paramCounter}`);
       params.push(processedImageFull);
       paramCounter++;
@@ -2851,7 +2859,9 @@ app.post("/api/import/json", async (req, res) => {
             );
             quoteId = insertResult.rows[0].id;
           }
-          const storageFolder = noteType === 'training' ? 'training' : noteType === 'note' ? 'notes' : noteType === 'puzzle' ? 'puzzles' : 'quotes';
+          // Use note_type directly as the storage folder name so any new type
+          // (historical, puzzle, custom, ...) automatically gets its own directory.
+          const storageFolder = noteType || 'quotes';
           
           // Now process attachments with the note ID (respects 1 MB threshold)
           const processedImage = fileStorage.processForStorage(note.thumbnail, storageFolder, quoteId, '', storageThresholdMB);
