@@ -185,7 +185,7 @@ export function collectFormData(state) {
     author: getElementValue(MODAL_IDS.AUTHOR_INPUT),
     source: getElementValue(MODAL_IDS.SOURCE_INPUT),
     sourceType: noteType === 'training' 
-      ? (getElementValue(MODAL_IDS.TRAINING_TYPE_SELECT) || "ASSORTED")
+      ? getElementValue(MODAL_IDS.TRAINING_TYPE_SELECT)
       : (getElementValue(MODAL_IDS.SOURCE_TYPE_SELECT) || "ASSORTED"),
     sourceId: window.currentSourceId || null,
     tags: getElementValue(MODAL_IDS.TAG_INPUT),
@@ -215,6 +215,21 @@ export async function handleFormSubmit(e, config) {
 
   const { apiUrl, state, callbacks } = config;
   const quoteData = collectFormData(state);
+
+  // Validate training type is selected
+  if (quoteData.note_type === 'training' && !quoteData.sourceType) {
+    const select = document.getElementById('trainingType');
+    if (select) {
+      select.style.outline = '2px solid #e74c3c';
+      select.style.borderColor = '#e74c3c';
+      setTimeout(() => {
+        select.style.outline = '';
+        select.style.borderColor = '';
+      }, 3000);
+    }
+    alert('⚠️ Please select a Training Type before saving.');
+    return;
+  }
 
   console.log("Submitting quote data:", quoteData);
 

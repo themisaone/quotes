@@ -32,7 +32,7 @@ import { getNoteTypeConfig } from './noteTypes.js';
 /**
  * Format metadata display (created/updated timestamps)
  */
-function formatMetadataDisplay(createdAt, updatedAt) {
+function formatMetadataDisplay(createdAt, updatedAt, id) {
   const formatOptions = {
     year: 'numeric',
     month: 'numeric',
@@ -49,6 +49,7 @@ function formatMetadataDisplay(createdAt, updatedAt) {
   if (!createdDate && !updatedDate) return '';
   
   const parts = [];
+  if (id) parts.push(`#${id}`);
   if (createdDate) parts.push(`Created: ${createdDate}`);
   if (updatedDate) parts.push(`Updated: ${updatedDate}`);
   
@@ -116,7 +117,7 @@ export function setDefaultTrainingFields(elements) {
   const { noteDateInput, trainingTypeSelect } = elements;
   
   if (noteDateInput) noteDateInput.value = "";
-  if (trainingTypeSelect) trainingTypeSelect.value = "";
+  if (trainingTypeSelect) trainingTypeSelect.value = "WEIGHTS";
 }
 
 /**
@@ -256,7 +257,7 @@ export function configureDeleteButton(isEditMode, noteType, deleteBtn) {
 export function displayMetadata(note, metadataElement) {
   if (!metadataElement) return;
   
-  const metadata = formatMetadataDisplay(note.created_at, note.updated_at);
+  const metadata = formatMetadataDisplay(note.created_at, note.updated_at, note.id);
   
   if (metadata) {
     metadataElement.innerHTML = metadata;
@@ -293,7 +294,7 @@ export function setupAddModal(noteType, currentNoteTypeFilter, elements, quillEd
   
   // Set modal title
   if (modalTitle) {
-    modalTitle.textContent = `Add New ${typeInfo.label}`;
+    modalTitle.textContent = `Add ${typeInfo.label}`;
   }
   
   // Update field labels

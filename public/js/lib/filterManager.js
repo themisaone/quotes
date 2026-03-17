@@ -202,7 +202,16 @@ export function clearFilters(callbacks) {
 function setElementVisibility(elementId, shouldShow) {
   const element = getElementByIdSafe(elementId, 'setElementVisibility');
   if (element) {
-    element.style.display = shouldShow ? 'block' : 'none';
+    if (!shouldShow) {
+      element.style.display = 'none';
+    } else {
+      // Restore to CSS-defined display value rather than hardcoding 'block'
+      element.style.display = '';
+      const computed = getComputedStyle(element).display;
+      if (computed === 'none') {
+        element.style.display = 'block';
+      }
+    }
   }
 }
 
@@ -247,8 +256,28 @@ export function updateSourcesFilterVisibility(currentNoteTypeFilter, getQuoteTyp
   setElementVisibility('trainingYearContainer', showTrainingDateFilters);
   setElementVisibility('trainingMonthContainer', showTrainingDateFilters);
   
+  // Apply the correct search grid layout for this note type
+  updateSearchGridLayout(currentNoteTypeFilter);
+  
   // Update search header title based on note type
   updateSearchHeaderTitle(currentNoteTypeFilter);
+}
+
+/**
+ * Apply the correct CSS layout class to the search grid based on note type.
+ * - quote / null (all notes): default 3-col layout (Text+Author+Source / Tags+Score+Clear)
+ * - note / puzzle / joke:     2-col layout (Text+Clear / Tags+Score)
+ * - training:                 3-col layout (Text+Year+Month / Tags+Score+Clear)
+ */
+function updateSearchGridLayout(noteType) {
+  const grid = document.querySelector('.search-grid');
+  if (!grid) return;
+  grid.classList.remove('layout-notes', 'layout-training');
+  if (noteType === 'note' || noteType === 'puzzle' || noteType === 'joke') {
+    grid.classList.add('layout-notes');
+  } else if (noteType === 'training') {
+    grid.classList.add('layout-training');
+  }
 }
 
 /**

@@ -891,9 +891,13 @@ function updateFieldVisibility() {
   updateModalLabels(noteType);
   
   // Update modal title based on type
-  if (!editingQuoteId) {
+  // Check the hidden input (already set by setupEditModal before this callback fires)
+  // rather than the module-level editingQuoteId which is set only after setupEditModal returns
+  const quoteIdInput = document.getElementById('quoteId');
+  const isEditing = quoteIdInput && quoteIdInput.value;
+  if (!isEditing) {
     const typeInfo = getNoteTypeConfig(noteType);
-    modalTitle.textContent = `Add New ${typeInfo.label}`;
+    modalTitle.textContent = `Add ${typeInfo.label}`;
   }
 }
 

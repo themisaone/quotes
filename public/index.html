@@ -293,7 +293,7 @@
               </div>
 
               <div class="search-grid">
-                <div class="search-item">
+                <div class="search-item" id="searchTextContainer">
                   <label>💬 Text</label>
                   <input
                     type="text"
@@ -322,7 +322,7 @@
                   />
                   <div id="searchSourceSuggestions" class="autocomplete-suggestions"></div>
                 </div>
-                <div class="search-item autocomplete-wrapper">
+                <div class="search-item autocomplete-wrapper" id="searchTagsContainer">
                   <label>🏷️ Tags</label>
                   <input
                     type="text"
@@ -366,19 +366,16 @@
                   </select>
                 </div>
                 
-                <div class="search-item">
-                  <label>⭐ Score</label>
+                <div class="search-item" id="searchScoreContainer">
+                  <label><i class="fa-solid fa-dice-five" style="color:#e74c3c;"></i> Score</label>
                   <input
                     type="text"
                     id="searchScore"
                     placeholder="5, 5+, or 3-5..."
                   />
                 </div>
-                <div class="search-item" style="flex: 0 0 auto; min-width: auto;">
-                  <label>&nbsp;</label>
-                  <button id="clearBtn" class="btn btn-primary">
-                    Clear
-                  </button>
+                <div class="search-item" id="searchClearContainer">
+                  <button id="clearBtn" class="btn btn-primary">Clear</button>
                 </div>
               </div>
               
@@ -483,11 +480,12 @@
 
               <!-- Search and Sort Controls -->
               <div class="sources-controls">
-                <div class="search-box">
+                <div class="search-box search-box-inline">
+                  <label for="searchAuthorName">👤 Authors</label>
                   <input
                     type="text"
                     id="searchAuthorName"
-                    placeholder="🔍 Search authors..."
+                    placeholder="Search authors..."
                   />
                 </div>
                 <div class="sort-controls">
@@ -592,11 +590,12 @@
 
               <!-- Search and Sort Controls -->
               <div class="sources-controls">
-                <div class="search-box">
+                <div class="search-box search-box-inline">
+                  <label for="searchSourceName">📚 Sources</label>
                   <input
                     type="text"
                     id="searchSourceName"
-                    placeholder="🔍 Search sources..."
+                    placeholder="Search sources..."
                   />
                 </div>
                 <div class="sort-controls">
@@ -721,14 +720,15 @@
                 </div>
               </div>
               <div class="search-tags-content">
-                <div style="display: flex; flex-direction: column; flex: 1; max-width: 400px;">
-                  <label for="searchSourcesInput" style="margin-bottom: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">🏷️ Tag name</label>
+                <div style="display: flex; flex-direction: row; align-items: center; gap: 0.75rem; flex: 1; max-width: 400px;">
+                  <label for="searchSourcesInput" style="margin-bottom: 0; color: var(--text-secondary); font-size: 0.9rem; white-space: nowrap; flex-shrink: 0;">🏷️ Tags</label>
                   <input 
                     type="text" 
                     id="searchSourcesInput" 
                     class="search-tags-input" 
                     placeholder="Search tags..." 
                     autocomplete="off"
+                    style="flex: 1;"
                   />
                 </div>
                 <div class="search-tags-sort" style="align-self: flex-end;">
@@ -997,7 +997,7 @@
           <div class="form-group quote-editor-group">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
               <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <label for="quoteText" style="margin-bottom: 0;"><span id="quoteTextLabel">💬 Quote *</span></label>
+                <label for="quoteText" style="margin-bottom: 0;"><span id="quoteTextLabel">📝 Note text *</span></label>
                 <button type="button" id="toggleFullscreenEditor" class="btn-icon" title="Fullscreen Editor" style="padding: 0.25rem 0.5rem; font-size: 0.9rem;">
                   ⛶
                 </button>
@@ -1077,8 +1077,8 @@
           </div>
 
           <div class="form-row form-row-with-separator">
-            <div class="form-group" style="flex: 1;">
-              <label for="note"><span id="noteLabel">💬 Comment</span></label>
+            <div class="form-group form-group-inline" style="flex: 1;">
+              <label for="note"><span id="noteLabel">💭 Comment</span></label>
               <input
                 type="text"
                 id="comment"
@@ -1087,78 +1087,84 @@
             </div>
 
             <div class="form-group" style="flex: 1;">
-              <label for="tagInput">🏷️ Tags</label>
-              <div style="display: flex; gap: 0.5rem; align-items: flex-start;">
-                <div class="autocomplete-wrapper" style="flex: 1;">
+              <div class="form-group-inline">
+                <label for="tagInput">🏷️ Tags</label>
+                <div class="autocomplete-wrapper" style="flex: 1; min-width: 0;">
                   <input type="text" id="tagInput" placeholder="Type tag name..." autocomplete="off" />
                   <div id="tagInputSuggestions" class="autocomplete-suggestions"></div>
                 </div>
-                <button type="button" id="addTagBtn" class="btn btn-primary" style="white-space: nowrap;">+ Add Tag</button>
+                <button type="button" id="addTagBtn" class="btn btn-primary" style="white-space: nowrap; flex-shrink: 0;">+ Add Tag</button>
               </div>
-              <div id="selectedTags" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem;"></div>
+              <div id="selectedTags" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;"></div>
               <input type="hidden" id="tags" />
             </div>
           </div>
 
-          <div class="form-row form-row-with-separator" style="margin-top: 0.5rem;" id="quoteSpecificFields">
-            <div class="form-group" style="flex: 2;">
-              <label for="author">✍️ Author</label>
-              <div class="autocomplete-wrapper">
-                <input
-                  type="text"
-                  id="author"
-                  placeholder="Author name"
-                  autocomplete="off"
-                />
-                <div id="authorSuggestions" class="autocomplete-suggestions"></div>
+          <div class="form-row-with-separator" style="margin-top: 0.5rem; flex-direction: column; gap: 0.6rem;" id="quoteSpecificFields">
+            <!-- Row 1: Author + Source -->
+            <div class="form-row" style="margin-bottom: 0.6rem;">
+              <div class="form-group form-group-inline" style="flex: 1;">
+                <label for="author">✍️ Author</label>
+                <div class="autocomplete-wrapper">
+                  <input
+                    type="text"
+                    id="author"
+                    placeholder="Author name"
+                    autocomplete="off"
+                  />
+                  <div id="authorSuggestions" class="autocomplete-suggestions"></div>
+                </div>
+              </div>
+
+              <div class="form-group form-group-inline" style="flex: 1;">
+                <label for="source">📚 Source</label>
+                <div class="autocomplete-wrapper">
+                  <input
+                    type="text"
+                    id="source"
+                    placeholder="Source title"
+                    autocomplete="off"
+                  />
+                  <div id="sourceSuggestions" class="autocomplete-suggestions"></div>
+                </div>
               </div>
             </div>
 
-            <div class="form-group" style="flex: 2;">
-              <label for="source">📚 Source</label>
-              <div class="autocomplete-wrapper">
+            <!-- Row 2: Type + Group -->
+            <div class="form-row">
+              <div class="form-group form-group-inline" style="flex: 1;">
+                <label for="sourceType">📑 Type</label>
+                <select id="sourceType">
+                  <option value="BOOK">📖 Book</option>
+                  <option value="MOVIE-TV">🎬 Movies & TV</option>
+                  <option value="ASSORTED">📝 Assorted</option>
+                  <option value="POETRY">📜 Poetry</option>
+                  <option value="LYRICS">🎵 Lyrics</option>
+                  <option value="JOKES">😂 Jokes</option>
+                </select>
+              </div>
+
+              <div class="form-group form-group-inline" style="flex: 1;" id="quoteGroupContainer">
+                <label for="quoteTranslationGroup">🔗 Group</label>
                 <input
                   type="text"
-                  id="source"
-                  placeholder="Source title"
-                  autocomplete="off"
+                  id="quoteTranslationGroup"
+                  placeholder="Group (optional)"
+                  title="Enter a group name to link related notes together"
                 />
-                <div id="sourceSuggestions" class="autocomplete-suggestions"></div>
               </div>
-            </div>
-
-            <div class="form-group" style="flex: 1.3;">
-              <label for="sourceType">📑 Type</label>
-              <select id="sourceType">
-                <option value="BOOK">📖 Book</option>
-                <option value="MOVIE-TV">🎬 Movies & TV</option>
-                <option value="ASSORTED">📝 Assorted</option>
-                <option value="POETRY">📜 Poetry</option>
-                <option value="LYRICS">🎵 Lyrics</option>
-                <option value="JOKES">😂 Jokes</option>
-              </select>
-            </div>
-            
-            <div class="form-group" style="flex: 1.5;" id="quoteGroupContainer">
-              <label for="quoteTranslationGroup">🔗 Group</label>
-              <input
-                type="text"
-                id="quoteTranslationGroup"
-                placeholder="Group (optional)"
-                title="Enter a group name to link related notes together"
-              />
             </div>
           </div>
 
           <!-- Training-specific fields -->
           <div class="form-row form-row-with-separator" style="margin-top: 0.5rem; display: none; flex-direction: row;" id="trainingSpecificFields">
-            <div class="form-group" style="flex: 1.5; position: relative; margin-bottom: 0;">
-              <label for="noteDate">📅 Date <span style="font-size: 0.85em; color: #888;">(optional)</span></label>
+            <div class="form-group" style="flex: 1; position: relative; margin-bottom: 0;">
+              <label for="noteDate">📅 Date</label>
               <div style="display: flex; gap: 0.5rem;">
                 <input
                   type="text"
                   id="noteDate"
-                  placeholder="dd.mm.yyyy (optional - use year/month tags instead)"
+                  placeholder="dd.mm.yyyy"
                   title="Format: dd.mm.yyyy (optional)"
                   style="flex: 1;"
                 />
@@ -1171,7 +1177,7 @@
                   type="button" 
                   id="openDatePickerBtn"
                   onclick="document.getElementById('noteDatePicker').showPicker()"
-                  style="padding: 0.5rem; background: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center;"
+                  style="padding: 0.5rem; background: #ced1d6; border: none; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center;"
                   title="Open date picker"
                 >
                   📅

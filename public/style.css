@@ -205,6 +205,24 @@ header h1 {
   max-width: 400px;
 }
 
+.search-box-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.search-box-inline label {
+  margin-bottom: 0;
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-weight: 500;
+}
+
+.search-box-inline input {
+  flex: 1;
+  min-width: 0;
+}
+
 .search-box input {
   width: 100%;
   padding: 0.75rem;
@@ -759,7 +777,7 @@ h2 {
   min-width: auto;
   transition: all 0.2s;
   border-radius: 8px;
-  height: 44px;
+  height: 30px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1113,6 +1131,33 @@ label {
   color: var(--text-primary);
 }
 
+/* Inline label + input layout (label left, input right on same line) */
+.form-group-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.form-group-inline label {
+  display: block;
+  margin-bottom: 0;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 5.75rem;
+}
+
+.form-group-inline input[type="text"],
+.form-group-inline input[type="date"],
+.form-group-inline select {
+  flex: 1;
+  min-width: 0;
+}
+
+.form-group-inline .autocomplete-wrapper {
+  flex: 1;
+  min-width: 0;
+}
+
 /* Score radio buttons in modal */
 .score-radio-group {
   display: flex;
@@ -1373,21 +1418,61 @@ textarea {
 
 .search-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr 1fr auto;
-  gap: 1rem;
-  align-items: end;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+/* Notes / Puzzles / Jokes: Text+Clear on row 1, Tags+Score on row 2 */
+.search-grid.layout-notes {
+  grid-template-columns: 2fr auto;
+}
+.search-grid.layout-notes #searchTextContainer { grid-column: 1; grid-row: 1; }
+.search-grid.layout-notes #searchClearContainer { grid-column: 2; grid-row: 1; }
+.search-grid.layout-notes #searchTagsContainer  { grid-column: 1; grid-row: 2; }
+.search-grid.layout-notes #searchScoreContainer { grid-column: 2; grid-row: 2; }
+
+/* Training: Text+Year+Month on row 1, Tags+Score+Clear on row 2 */
+.search-grid.layout-training {
+  grid-template-columns: 2fr 1fr 1fr;
+}
+.search-grid.layout-training #searchTextContainer    { grid-column: 1; grid-row: 1; }
+.search-grid.layout-training #trainingYearContainer  { grid-column: 2; grid-row: 1; }
+.search-grid.layout-training #trainingMonthContainer { grid-column: 3; grid-row: 1; }
+.search-grid.layout-training #searchTagsContainer    { grid-column: 1; grid-row: 2; }
+.search-grid.layout-training #searchScoreContainer   { grid-column: 2; grid-row: 2; }
+.search-grid.layout-training #searchClearContainer   { grid-column: 3; grid-row: 2; }
+
+.search-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .search-item label {
   font-size: 0.875rem;
   display: block;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 4.5rem;
+}
+
+.search-item input[type="text"],
+.search-item select {
+  flex: 1;
+  min-width: 0;
+}
+
+.search-item .autocomplete-wrapper {
+  flex: 1;
+  min-width: 0;
 }
 
 .search-item button {
   width: auto;
   min-height: 38px;
-  justify-self: end;
+  flex-shrink: 0;
 }
 
 /* Quotes List */
@@ -1887,15 +1972,17 @@ textarea {
 }
 
 .expand-btn {
-  display: inline-block;
+  display: block;
   background: none;
   border: none;
   color: var(--primary-color);
   font-size: 0.875rem;
   cursor: pointer;
-  padding: 0.25rem 0;
-  margin-top: 0.5rem;
-  margin-bottom: 0.5rem;
+  padding: 0.1rem 0;
+  margin-top: 0.3rem;
+  margin-bottom: 0.1rem;
+  margin-left: auto;
+  margin-right: 0.75rem;
   font-weight: 500;
   transition: color 0.2s;
 }
@@ -4113,12 +4200,13 @@ textarea {
   
   .search-item input {
     padding: 0.5rem !important;
-    font-size: 11px !important;  /* Was 14px, now 20% smaller */
+    font-size: 11px !important;
   }
   
   .search-item label {
-    margin-bottom: 0.1rem !important;
-    font-size: 0.7rem !important;  /* Was 0.875rem, now 20% smaller */
+    margin-bottom: 0 !important;
+    font-size: 0.7rem !important;
+    min-width: 3rem !important;
   }
   
   /* Make Clear Filters button span full width */

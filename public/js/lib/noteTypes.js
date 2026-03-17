@@ -68,18 +68,18 @@ export function hasTrainingTypeField(noteType) {
  */
 export function getModalTitle(noteType, isEdit = false) {
   const config = getNoteTypeConfig(noteType);
-  return `${isEdit ? 'Edit' : 'Add New'} ${config.label}`;
+  return `${isEdit ? 'Edit' : 'Add'} ${config.label}`;
 }
 
 /**
  * Get field label based on note type
  */
 export function getMainTextLabel(noteType) {
-  return noteType === 'quote' ? 'Note text*' : 'Text*';
+  return noteType === 'quote' ? '📝 Note text *' : '📝 Text *';
 }
 
 export function getCommentLabel(noteType) {
-  return 'Comment'; // Same for all types
+  return '💭 Comment';
 }
 
 export function getAttachmentLabel(noteType) {
@@ -273,10 +273,10 @@ function showHideQuoteSearchFields(isQuoteView) {
   const searchSourceContainer = getElementByIdSafe('searchSourceContainer');
   
   if (searchAuthorContainer) {
-    searchAuthorContainer.style.display = isQuoteView ? 'block' : 'none';
+    searchAuthorContainer.style.display = isQuoteView ? 'flex' : 'none';
   }
   if (searchSourceContainer) {
-    searchSourceContainer.style.display = isQuoteView ? 'block' : 'none';
+    searchSourceContainer.style.display = isQuoteView ? 'flex' : 'none';
   }
 }
 
