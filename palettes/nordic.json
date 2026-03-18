@@ -2,15 +2,20 @@
   "name": "Nordic",
   "description": "Muted steel blues and slate greys inspired by Scandinavian design. Calm and minimal.",
   "colors": {
-    "button": "#2563eb",
-    "header": "#334155",
-    "tag": "#475569",
-    "delete": "#dc2626",
-    "cancel": "#94a3b8",
-    "activeCounter": "#3b82f6",
-    "totalCounter": "#0ea5e9",
-    "menu": "#1e293b",
-    "appBg": "#f1f5f9",
-    "modalFooter": "#cbd5e1"
+    "appBg":         "#f1f5f9",
+    "menu":          "#1e293b",
+    "card":          "#ffffff",
+    "cardHover":     "#dbeafe",
+    "inputBg":       "#f8fafc",
+    "inputBorder":   "#94a3b8",
+    "textColor":     "#0f172a",
+    "header":        "#1e3a5f",
+    "modalFooter":   "#bfdbfe",
+    "button":        "#1d4ed8",
+    "delete":        "#dc2626",
+    "cancel":        "#64748b",
+    "tag":           "#334155",
+    "activeCounter": "#2563eb",
+    "totalCounter":  "#0369a1"
   }
 }

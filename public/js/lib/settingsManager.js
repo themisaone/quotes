@@ -287,16 +287,21 @@ export function applyColorToCSS(colorType, colorValue) {
   
   // Apply to UI
   switch (colorType) {
-    case 'button': applyButtonColor(colorValue); break;
-    case 'header': applyHeaderColor(colorValue); break;
-    case 'tag': applyTagColor(colorValue); break;
-    case 'delete': applyDeleteColor(colorValue); break;
-    case 'cancel': applyCancelColor(colorValue); break;
+    case 'button':        applyButtonColor(colorValue); break;
+    case 'header':        applyHeaderColor(colorValue); break;
+    case 'tag':           applyTagColor(colorValue); break;
+    case 'delete':        applyDeleteColor(colorValue); break;
+    case 'cancel':        applyCancelColor(colorValue); break;
     case 'activeCounter': applyActiveCounterColor(colorValue); break;
-    case 'totalCounter': applyTotalCounterColor(colorValue); break;
-    case 'menu': applyMenuColor(colorValue); break;
-    case 'appBg': applyAppBgColor(colorValue); break;
-    case 'modalFooter': applyModalFooterColor(colorValue); break;
+    case 'totalCounter':  applyTotalCounterColor(colorValue); break;
+    case 'menu':          applyMenuColor(colorValue); break;
+    case 'appBg':         applyAppBgColor(colorValue); break;
+    case 'modalFooter':   applyModalFooterColor(colorValue); break;
+    case 'card':          applyCardColor(colorValue); break;
+    case 'cardHover':     applyCardHoverColor(colorValue); break;
+    case 'inputBg':       applyInputBgColor(colorValue); break;
+    case 'inputBorder':   applyInputBorderColor(colorValue); break;
+    case 'textColor':     applyTextColor(colorValue); break;
   }
 }
 
@@ -841,6 +846,28 @@ function applyAppBgColor(color) {
   document.body.style.background = `linear-gradient(135deg, ${darkerColor} 0%, ${color} 50%, ${lighterColor} 100%)`;
 }
 
+function applyCardColor(color) {
+  document.documentElement.style.setProperty('--surface', color);
+}
+
+function applyCardHoverColor(color) {
+  document.documentElement.style.setProperty('--card-hover-bg', color);
+}
+
+function applyInputBgColor(color) {
+  document.documentElement.style.setProperty('--input-bg', color);
+}
+
+function applyInputBorderColor(color) {
+  document.documentElement.style.setProperty('--input-border', color);
+  document.documentElement.style.setProperty('--border', color);
+}
+
+function applyTextColor(color) {
+  document.documentElement.style.setProperty('--text-primary', color);
+  document.documentElement.style.setProperty('--text-secondary', lightenColor(color, 30));
+}
+
 function applyModalFooterColor(color) {
   // Apply to Author, Source, and Quote/Note modal footers
   const style = document.getElementById('modalFooterStyle') || document.createElement('style');
@@ -1246,16 +1273,21 @@ function initializeColorCustomization() {
 
   // ── Color pickers and their controls ────────────────────────────────────
   const colorConfigs = [
-    { id: 'button', default: '#1e40af', apply: applyButtonColor },
-    { id: 'header', default: '#166534', apply: applyHeaderColor },
-    { id: 'tag', default: '#2d6a4f', apply: applyTagColor },
-    { id: 'delete', default: '#ef4444', apply: applyDeleteColor },
-    { id: 'cancel', default: '#6b7280', apply: applyCancelColor },
-    { id: 'activeCounter', default: '#dc2626', apply: applyActiveCounterColor },
+    { id: 'appBg',        default: '#f8fafc', apply: applyAppBgColor },
+    { id: 'menu',         default: '#2c3e50', apply: applyMenuColor },
+    { id: 'card',         default: '#ffffff', apply: applyCardColor },
+    { id: 'cardHover',    default: '#f0fff4', apply: applyCardHoverColor },
+    { id: 'inputBg',      default: '#ffffff', apply: applyInputBgColor },
+    { id: 'inputBorder',  default: '#e2e8f0', apply: applyInputBorderColor },
+    { id: 'textColor',    default: '#1e293b', apply: applyTextColor },
+    { id: 'header',       default: '#166534', apply: applyHeaderColor },
+    { id: 'modalFooter',  default: '#d4d4d4', apply: applyModalFooterColor },
+    { id: 'button',       default: '#1e40af', apply: applyButtonColor },
+    { id: 'delete',       default: '#ef4444', apply: applyDeleteColor },
+    { id: 'cancel',       default: '#6b7280', apply: applyCancelColor },
+    { id: 'tag',          default: '#2d6a4f', apply: applyTagColor },
+    { id: 'activeCounter',default: '#dc2626', apply: applyActiveCounterColor },
     { id: 'totalCounter', default: '#047857', apply: applyTotalCounterColor },
-    { id: 'menu', default: '#2c3e50', apply: applyMenuColor },
-    { id: 'appBg', default: '#f8fafc', apply: applyAppBgColor },
-    { id: 'modalFooter', default: '#fde68a', apply: applyModalFooterColor },
   ];
   
   colorConfigs.forEach(config => {

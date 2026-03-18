@@ -2,15 +2,20 @@
   "name": "Warm Earth",
   "description": "Terracotta, amber and warm brown tones. Cozy, book-like feel.",
   "colors": {
-    "button": "#b45309",
-    "header": "#92400e",
-    "tag": "#78350f",
-    "delete": "#dc2626",
-    "cancel": "#78716c",
+    "appBg":         "#fdf8f0",
+    "menu":          "#1c1410",
+    "card":          "#fffcf5",
+    "cardHover":     "#fef5e4",
+    "inputBg":       "#fffcf5",
+    "inputBorder":   "#c4a882",
+    "textColor":     "#1c1410",
+    "header":        "#78350f",
+    "modalFooter":   "#fde68a",
+    "button":        "#b45309",
+    "delete":        "#dc2626",
+    "cancel":        "#78716c",
+    "tag":           "#92400e",
     "activeCounter": "#d97706",
-    "totalCounter": "#b45309",
-    "menu": "#292524",
-    "appBg": "#fdf8f0",
-    "modalFooter": "#fde68a"
+    "totalCounter":  "#b45309"
   }
 }

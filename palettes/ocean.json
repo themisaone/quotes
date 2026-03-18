@@ -2,15 +2,20 @@
   "name": "Ocean",
   "description": "Deep navy menu, cyan/teal accents, very light blue background. Clean and modern.",
   "colors": {
-    "button": "#0284c7",
-    "header": "#0e7490",
-    "tag": "#0f766e",
-    "delete": "#e11d48",
-    "cancel": "#64748b",
+    "appBg":         "#f0f9ff",
+    "menu":          "#0f172a",
+    "card":          "#ffffff",
+    "cardHover":     "#e0f2fe",
+    "inputBg":       "#f8fcff",
+    "inputBorder":   "#7dd3fc",
+    "textColor":     "#0c1a2e",
+    "header":        "#0e7490",
+    "modalFooter":   "#bae6fd",
+    "button":        "#0284c7",
+    "delete":        "#e11d48",
+    "cancel":        "#64748b",
+    "tag":           "#0f766e",
     "activeCounter": "#0891b2",
-    "totalCounter": "#0d9488",
-    "menu": "#0f172a",
-    "appBg": "#f0f9ff",
-    "modalFooter": "#bae6fd"
+    "totalCounter":  "#0d9488"
   }
 }

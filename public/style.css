@@ -10,6 +10,9 @@
   --secondary-color: #64748b;
   --background: #f8fafc;
   --surface: #ffffff;
+  --card-hover-bg: #f0fff4;
+  --input-bg: #ffffff;
+  --input-border: #e2e8f0;
   --text-primary: #1e293b;
   --text-secondary: #64748b;
   --border: #e2e8f0;
@@ -1315,12 +1318,13 @@ textarea,
 select {
   width: 100%;
   padding: 0.5rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--input-border);
   border-radius: 8px;
   font-size: 1rem;
   font-family: inherit;
   transition: all 0.2s;
-  background-color: var(--surface);
+  background-color: var(--input-bg);
+  color: var(--text-primary);
 }
 
 #quoteText {
@@ -1594,7 +1598,7 @@ textarea {
 }
 
 .quote-card:hover {
-  background: #f0fff4;
+  background: var(--card-hover-bg);
   border-color: var(--border);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   transform: translateY(-2px);

@@ -2,15 +2,20 @@
   "name": "Dark",
   "description": "Dark charcoal background with purple/violet accents. Easy on the eyes at night.",
   "colors": {
-    "button": "#7c3aed",
-    "header": "#6d28d9",
-    "tag": "#5b21b6",
-    "delete": "#dc2626",
-    "cancel": "#6b7280",
-    "activeCounter": "#a855f7",
-    "totalCounter": "#8b5cf6",
-    "menu": "#1e1b2e",
-    "appBg": "#111827",
-    "modalFooter": "#2d2b3d"
+    "appBg":         "#0d1117",
+    "menu":          "#161b22",
+    "card":          "#1c2128",
+    "cardHover":     "#262c36",
+    "inputBg":       "#161b22",
+    "inputBorder":   "#30363d",
+    "textColor":     "#e6edf3",
+    "header":        "#5b21b6",
+    "modalFooter":   "#21262d",
+    "button":        "#7c3aed",
+    "delete":        "#f85149",
+    "cancel":        "#8b949e",
+    "tag":           "#4c1d95",
+    "activeCounter": "#c084fc",
+    "totalCounter":  "#a78bfa"
   }
 }
