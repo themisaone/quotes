@@ -190,10 +190,10 @@ function buildTrainingMetadata(note, noteTypeBadge, translationBadge, getTrainin
 }
 
 /**
- * Build metadata section for generic note types (note, puzzle)
+ * Build metadata section for generic note types (note, puzzle, historical)
  */
-function buildGenericMetadata(noteTypeBadge) {
-  return `<div class="meta-item">${noteTypeBadge}</div>`;
+function buildGenericMetadata(noteTypeBadge, translationBadge) {
+  return `<div class="meta-item">${noteTypeBadge}${translationBadge}</div>`;
 }
 
 /**
@@ -263,7 +263,7 @@ export function createQuoteCard(note, currentNoteTypeFilter, getTrainingTypes, g
   
   // Translation group badge
   const translationBadge = note.translation_group 
-    ? `<span class="translation-badge" title="Translation group: ${escapeHtml(note.translation_group)}" onclick="event.stopPropagation(); showTranslationGroup('${escapeHtml(note.translation_group)}')">T</span>` 
+    ? `<span class="translation-badge" title="Group: ${escapeHtml(note.translation_group)}" onclick="event.stopPropagation(); showTranslationGroup('${escapeHtml(note.translation_group)}')">G</span>` 
     : '';
   
   // Note type badge
@@ -280,7 +280,7 @@ export function createQuoteCard(note, currentNoteTypeFilter, getTrainingTypes, g
       metadataContent = buildTrainingMetadata(note, noteTypeBadge, translationBadge, getTrainingTypes);
       break;
     default:
-      metadataContent = buildGenericMetadata(noteTypeBadge);
+      metadataContent = buildGenericMetadata(noteTypeBadge, translationBadge);
   }
   
   // Build attachment section

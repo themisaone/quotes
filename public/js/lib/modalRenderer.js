@@ -163,7 +163,10 @@ export function setCommonFields(note, elements, quillEditor) {
   if (quillEditor) {
     if (note.note_text) {
       if (note.note_text.includes('<')) {
-        quillEditor.root.innerHTML = note.note_text;
+        // Use dangerouslyPasteHTML so Quill converts HTML → Delta properly.
+        // Direct root.innerHTML assignment causes Quill's MutationObserver to
+        // sanitize away unsupported tags (e.g. <font>) and leaves the editor empty.
+        quillEditor.clipboard.dangerouslyPasteHTML(note.note_text);
       } else {
         quillEditor.setText(note.note_text);
       }

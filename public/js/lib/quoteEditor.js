@@ -18,6 +18,7 @@
 
 import { MODAL_IDS, getElementByIdSafe, getElementValue } from '../constants.js';
 import { downscaleImage } from './attachments.js';
+import { getNoteTypeConfig } from './noteTypes.js';
 
 // ============= CONSTANTS =============
 
@@ -287,6 +288,20 @@ function parseNorwegianDate(dateStr) {
 // ============= FORM DATA COLLECTION =============
 
 /**
+ * Read the group input that is actually visible for the given note type.
+ * Using || across all three inputs fails when the user clears the visible one,
+ * because the hidden inputs still hold the old value from when the modal opened.
+ */
+function _readGroupInput(noteType) {
+  const behavior = getNoteTypeConfig(noteType)?.behavior;
+  const raw = behavior === 'generic'
+    ? getElementValue('genericTranslationGroup')
+    : (getElementValue(MODAL_IDS.TRANSLATION_GROUP_INPUT) ||
+       getElementValue('quoteTranslationGroup'));
+  return raw.trim() || null;
+}
+
+/**
  * Collect form data for quote submission
  * @param {Object} state - Current application state
  * @returns {Object} Form data object
@@ -317,9 +332,7 @@ export function collectFormData(state) {
     attachment_type: state.currentAttachmentType,
     note_type: noteType,
     note_date: parsedNoteDate,
-    translation_group: getElementValue(MODAL_IDS.TRANSLATION_GROUP_INPUT).trim() || 
-                       getElementValue('quoteTranslationGroup').trim() ||
-                       getElementValue('genericTranslationGroup').trim() || null,
+    translation_group: _readGroupInput(noteType),
     storageThresholdMB: state.globalSettings?.externalStorageThreshold || 1,
   };
 }

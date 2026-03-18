@@ -664,12 +664,18 @@ function buildTextSearchCondition(searchQuery, columnName, paramCounter, params)
   if (terms.length === 0) {
     return { condition: '', newParamCounter: paramCounter };
   }
+
+  // columnName may be a string or an array of columns to search with OR
+  const columns = Array.isArray(columnName) ? columnName : [columnName];
+  // Build a per-term match: one param, checked against all columns with OR
+  const termMatch = (n) => columns.length === 1
+    ? `${columns[0]} ILIKE $${n}`
+    : `(${columns.map(c => `${c} ILIKE $${n}`).join(' OR ')})`;
   
   if (operator === 'SIMPLE') {
-    // Simple ILIKE search
     params.push(`%${terms[0]}%`);
     return {
-      condition: ` AND ${columnName} ILIKE $${paramCounter}`,
+      condition: ` AND ${termMatch(paramCounter)}`,
       newParamCounter: paramCounter + 1
     };
   }
@@ -678,7 +684,7 @@ function buildTextSearchCondition(searchQuery, columnName, paramCounter, params)
     // All terms must be present
     const conditions = terms.map((term) => {
       params.push(`%${term}%`);
-      const condition = `${columnName} ILIKE $${paramCounter}`;
+      const condition = termMatch(paramCounter);
       paramCounter++;
       return condition;
     });
@@ -692,7 +698,7 @@ function buildTextSearchCondition(searchQuery, columnName, paramCounter, params)
     // At least one term must be present
     const conditions = terms.map((term) => {
       params.push(`%${term}%`);
-      const condition = `${columnName} ILIKE $${paramCounter}`;
+      const condition = termMatch(paramCounter);
       paramCounter++;
       return condition;
     });
@@ -1027,9 +1033,9 @@ app.get("/api/quotes", async (req, res) => {
     const params = [];
     let paramCounter = 1;
 
-    // Text search with AND/OR operators
+    // Text search with AND/OR operators — searches note_text and comment
     if (quote) {
-      const { condition, newParamCounter } = buildTextSearchCondition(quote, 'q.note_text', paramCounter, params);
+      const { condition, newParamCounter } = buildTextSearchCondition(quote, ['q.note_text', 'q.comment'], paramCounter, params);
       query += condition;
       paramCounter = newParamCounter;
     }

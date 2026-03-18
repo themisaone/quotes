@@ -82,7 +82,7 @@
     },
     {
       "value": "puzzle",
-      "label": "Puzzles",
+      "label": "Brain",
       "icon": "🧩",
       "behavior": "generic",
       "core": true
@@ -104,7 +104,7 @@
   "showLongQuotesExpanded": false,
   "displayScoreInCards": true,
   "colors": {
-    "button": "#1e40af",
+    "button": "#3c4e60",
     "header": "#166534",
     "tag": "#2d6a4f",
     "delete": "#ef4444",
@@ -113,7 +113,7 @@
     "totalCounter": "#047857",
     "menu": "#2c3e50",
     "appBg": "#f8fafc",
-    "modalFooter": "#fde68a",
+    "modalFooter": "#ece7d5",
     "inputBg": "#fffdfb"
   },
   "wordWrapChars": 82,
