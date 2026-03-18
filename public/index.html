@@ -202,6 +202,11 @@
                   <span id="addNoteBtnTextTablet">+ Add Note</span>
                 </button>
                 
+                <!-- Select mode toggle -->
+                <button id="selectModeBtn" class="btn btn-select-mode desktop-text" title="Enter selection mode to manually pick notes for bulk operations">
+                  ☑ Select
+                </button>
+
                 <!-- Popup menu for note type selection (only shown on "All Notes") -->
                 <!-- Buttons populated dynamically by generateNoteTypeMenu() in app.js -->
                 <div id="noteTypePopup" class="note-type-popup" style="display: none;"></div>
@@ -407,6 +412,19 @@
                     <span>📎 Attachment</span>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            <!-- Selection Bar (visible when notes are selected) -->
+            <div id="selectionBar" class="selection-bar" style="display: none;">
+              <div class="selection-bar-left">
+                <span class="selection-count-badge" id="selectionCount">0</span>
+                <span class="selection-bar-label">notes selected</span>
+              </div>
+              <div class="selection-bar-right">
+                <button id="selectAllPageBtn" class="btn-sel-action">Select page</button>
+                <button id="clearSelectionBtn" class="btn-sel-action btn-sel-clear">✕ Clear</button>
+                <button id="bulkTagSelectedBtn" class="btn-sel-action btn-sel-primary">⚡ Bulk Ops →</button>
               </div>
             </div>
 
@@ -1581,42 +1599,63 @@ Quote number three..."
         <div class="modal-header">
           <div class="modal-header-left">
             <span class="modal-header-icon">⚡</span>
-            <h2>Bulk Operations on Filtered Data</h2>
+            <h2>Bulk Operations</h2>
           </div>
           <span class="close" id="closeBulkOpsModal">&times;</span>
         </div>
         <div class="modal-body">
+
+          <!-- Scope toggle (shown only when notes are manually selected) -->
+          <div id="bulkOpsScopeRow" style="display: none; margin-bottom: 16px;">
+            <div style="font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; margin-bottom: 8px;">Apply to</div>
+            <div style="display: flex; gap: 8px;">
+              <button id="bulkScopeFiltered" class="bulk-scope-btn bulk-scope-active">
+                🔍 All filtered — <span id="bulkScopeFilteredCount">...</span>
+              </button>
+              <button id="bulkScopeSelected" class="bulk-scope-btn">
+                ☑ Selected only — <span id="bulkScopeSelectedCount">0</span>
+              </button>
+            </div>
+          </div>
+
           <div id="bulkOpsFilterSummary" style="background: #f3f4f6; padding: 12px; border-radius: 6px; margin-bottom: 20px;">
             <p style="margin: 0; font-weight: 500;">
-              Currently filtered: <span id="bulkOpsCount" style="font-size: 1.2rem; color: #2563eb;">...</span> quotes
+              <span id="bulkOpsScopeLabel">Currently filtered:</span> <span id="bulkOpsCount" style="font-size: 1.2rem; color: #2563eb;">...</span> notes
             </p>
             <p id="bulkOpsFilters" style="margin: 5px 0 0 0; font-size: 0.9rem; color: #6b7280;"></p>
           </div>
 
           <div style="display: grid; gap: 12px;">
-            <!-- Tag All Operation -->
+            <!-- Tag All Operation (multi-tag) -->
             <div id="bulkTagSection" style="border: 2px solid #e5e7eb; border-radius: 8px; padding: 16px;">
               <div style="display: flex; align-items: center; margin-bottom: 12px;">
                 <span style="font-size: 1.5rem; margin-right: 12px;">🏷️</span>
                 <div style="flex: 1;">
-                  <div style="font-weight: 600; font-size: 1rem;">Tag All With...</div>
-                  <div style="font-size: 0.85rem; opacity: 0.8; margin-top: 2px;">Add the same tag to all filtered quotes</div>
+                  <div style="font-weight: 600; font-size: 1rem;">Add Tags</div>
+                  <div style="font-size: 0.85rem; opacity: 0.8; margin-top: 2px;">Build a list of tags, then apply them all at once</div>
                 </div>
               </div>
+              <!-- Tag input row -->
               <div style="display: flex; gap: 8px; position: relative;">
                 <div style="flex: 1; position: relative;">
-                  <input 
-                    type="text" 
-                    id="bulkTagInput" 
-                    placeholder="Enter tag name..." 
+                  <input
+                    type="text"
+                    id="bulkTagInput"
+                    placeholder="Type a tag name and press Enter or + Add…"
                     style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem;"
                   />
                   <div id="bulkTagSuggestions" class="autocomplete-suggestions" style="position: absolute; top: 100%; left: 0; right: 0; z-index: 1000;"></div>
                 </div>
-                <button id="bulkTagExecuteBtn" class="btn btn-primary" style="white-space: nowrap; padding: 10px 16px; min-width: 180px; font-size: 0.95rem;">
-                  Apply Tag To All
+                <button id="bulkTagAddBtn" class="btn btn-secondary" style="white-space: nowrap; padding: 10px 14px; font-size: 0.95rem;">
+                  + Add
                 </button>
               </div>
+              <!-- Tag badge list -->
+              <div id="bulkTagBadges" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; min-height: 0;"></div>
+              <!-- Apply button (hidden until at least one tag is queued) -->
+              <button id="bulkTagExecuteBtn" class="btn btn-primary" style="display: none; width: 100%; margin-top: 12px; padding: 10px 16px; font-size: 0.95rem;">
+                Apply Tags to Notes
+              </button>
             </div>
 
             <!-- Remove Tag Operation -->

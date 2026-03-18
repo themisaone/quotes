@@ -256,6 +256,12 @@ function syncCurrentPage(newPage) {
 let totalQuotes = 0;
 let filteredQuotes = 0; // Track filtered count for pagination
 
+// ============= MANUAL SELECTION STATE =============
+let selectionMode = false;
+let selectedNoteIds = new Set();
+// 'filtered' | 'selected' — which scope the bulk ops modal targets
+let bulkOpsScope = 'filtered';
+
 // ============= VIEW STATE MANAGEMENT =============
 
 // Save current view to localStorage
@@ -666,17 +672,49 @@ function setupEventListeners() {
     importFileInput.addEventListener("change", handleImportFile);
   }
 
+  // Select mode button
+  const selectModeBtn = getElementByIdSafe("selectModeBtn");
+  if (selectModeBtn) {
+    selectModeBtn.addEventListener("click", toggleSelectionMode);
+  }
+
+  // Selection bar buttons
+  const clearSelectionBtn = getElementByIdSafe("clearSelectionBtn");
+  if (clearSelectionBtn) {
+    clearSelectionBtn.addEventListener("click", () => {
+      clearSelection();
+      if (selectionMode) toggleSelectionMode(); // also exit select mode
+    });
+  }
+
+  const selectAllPageBtn = getElementByIdSafe("selectAllPageBtn");
+  if (selectAllPageBtn) {
+    selectAllPageBtn.addEventListener("click", selectAllOnPage);
+  }
+
+  const bulkTagSelectedBtn = getElementByIdSafe("bulkTagSelectedBtn");
+  if (bulkTagSelectedBtn) {
+    bulkTagSelectedBtn.addEventListener("click", () => {
+      bulkOpsScope = 'selected';
+      openBulkOperationsModal();
+    });
+  }
+
   // Bulk operations modal
   const bulkOperationsBtn = getElementByIdSafe("bulkOperationsBtn");
   const closeBulkOpsModal = getElementByIdSafe("closeBulkOpsModal");
   const cancelBulkOpsBtn = getElementByIdSafe("cancelBulkOpsBtn");
   const bulkTagExecuteBtn = getElementByIdSafe("bulkTagExecuteBtn");
+  const bulkTagAddBtn = getElementByIdSafe("bulkTagAddBtn");
   const bulkUntagExecuteBtn = getElementByIdSafe("bulkUntagExecuteBtn");
   const bulkExportPdfBtn = getElementByIdSafe("bulkExportPdfBtn");
   const bulkDeleteBtn = getElementByIdSafe("bulkDeleteBtn");
 
   if (bulkOperationsBtn) {
-    bulkOperationsBtn.addEventListener("click", openBulkOperationsModal);
+    bulkOperationsBtn.addEventListener("click", () => {
+      bulkOpsScope = 'filtered'; // menu button always starts with filter scope
+      openBulkOperationsModal();
+    });
   }
 
   if (closeBulkOpsModal) {
@@ -685,6 +723,33 @@ function setupEventListeners() {
 
   if (cancelBulkOpsBtn) {
     cancelBulkOpsBtn.addEventListener("click", closeBulkOperationsModal);
+  }
+
+  // Scope toggle buttons inside bulk ops modal
+  const bulkScopeFiltered = document.getElementById('bulkScopeFiltered');
+  const bulkScopeSelected = document.getElementById('bulkScopeSelected');
+  if (bulkScopeFiltered) {
+    bulkScopeFiltered.addEventListener('click', () => {
+      bulkOpsScope = 'filtered';
+      openBulkOperationsModal();
+    });
+  }
+  if (bulkScopeSelected) {
+    bulkScopeSelected.addEventListener('click', () => {
+      bulkOpsScope = 'selected';
+      openBulkOperationsModal();
+    });
+  }
+
+  if (bulkTagAddBtn) {
+    bulkTagAddBtn.addEventListener("click", addBulkTagFromInput);
+  }
+
+  const bulkTagInputEl = document.getElementById("bulkTagInput");
+  if (bulkTagInputEl) {
+    bulkTagInputEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); addBulkTagFromInput(); }
+    });
   }
 
   if (bulkTagExecuteBtn) {
@@ -1138,6 +1203,15 @@ async function loadQuotes() {
   
   // Display quotes using app wrapper (which adds click handlers)
   displayQuotes(quotes);
+
+  // Re-apply selection highlights after DOM rebuild
+  if (selectedNoteIds.size > 0) {
+    document.querySelectorAll('.quote-card').forEach(card => {
+      if (selectedNoteIds.has(parseInt(card.dataset.quoteId, 10))) {
+        card.classList.add('selected');
+      }
+    });
+  }
   
   // Update pagination controls after loading quotes
   updatePaginationControls();
@@ -1332,6 +1406,15 @@ function displayQuotes(quotes) {
           e.target.closest('.source-link') || 
           e.target.closest('.expand-btn') ||
           e.target.closest('.quote-image-thumb')) {
+        return;
+      }
+
+      // Ctrl/Cmd+Click or selection mode → toggle selection
+      if (selectionMode || e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        clearTimeout(clickTimer);
+        clickCount = 0;
+        toggleNoteSelection(card, card.dataset.quoteId);
         return;
       }
       
@@ -2619,6 +2702,66 @@ async function handleImportFile(event) {
   });
 }
 
+// ============= MANUAL SELECTION =============
+
+function toggleSelectionMode() {
+  selectionMode = !selectionMode;
+  document.body.classList.toggle('selection-mode', selectionMode);
+  const btn = document.getElementById('selectModeBtn');
+  if (btn) {
+    btn.classList.toggle('active', selectionMode);
+    btn.textContent = selectionMode ? '✕ Exit Select' : '☑ Select';
+  }
+  if (!selectionMode) {
+    clearSelection();
+  }
+}
+
+function toggleNoteSelection(card, noteId) {
+  const id = parseInt(noteId, 10);
+  if (selectedNoteIds.has(id)) {
+    selectedNoteIds.delete(id);
+    card.classList.remove('selected');
+  } else {
+    selectedNoteIds.add(id);
+    card.classList.add('selected');
+  }
+  updateSelectionBar();
+}
+
+function selectAllOnPage() {
+  document.querySelectorAll('.quote-card').forEach(card => {
+    const id = parseInt(card.dataset.quoteId, 10);
+    if (id) {
+      selectedNoteIds.add(id);
+      card.classList.add('selected');
+    }
+  });
+  updateSelectionBar();
+}
+
+function clearSelection() {
+  selectedNoteIds.clear();
+  document.querySelectorAll('.quote-card.selected').forEach(c => c.classList.remove('selected'));
+  updateSelectionBar();
+}
+
+function updateSelectionBar() {
+  const bar = document.getElementById('selectionBar');
+  const countEl = document.getElementById('selectionCount');
+  if (!bar) return;
+  const count = selectedNoteIds.size;
+  if (count > 0) {
+    bar.style.display = 'flex';
+    if (countEl) countEl.textContent = count;
+  } else {
+    bar.style.display = 'none';
+  }
+  // Keep bulk-scope-selected count in sync if modal is open
+  const selCount = document.getElementById('bulkScopeSelectedCount');
+  if (selCount) selCount.textContent = count;
+}
+
 // ============= BULK OPERATIONS =============
 
 function getCurrentFilters() {
@@ -2696,38 +2839,53 @@ async function openBulkOperationsModal() {
   const modal = getElementByIdSafe("bulkOperationsModal");
   const countElement = getElementByIdSafe("bulkOpsCount");
   const filtersElement = getElementByIdSafe("bulkOpsFilters");
+  const scopeRow = document.getElementById('bulkOpsScopeRow');
+  const scopeLabel = document.getElementById('bulkOpsScopeLabel');
   
-  // Show modal first
   modal.style.display = "block";
-  
-  // Show loading state
   countElement.textContent = "...";
-  filtersElement.textContent = "Loading...";
-  
+  filtersElement.textContent = "";
+
+  // Show/hide scope toggle based on whether there are selected notes
+  const hasSelection = selectedNoteIds.size > 0;
+  if (scopeRow) scopeRow.style.display = hasSelection ? 'block' : 'none';
+
+  // Populate scope button counts
+  const selCountEl = document.getElementById('bulkScopeSelectedCount');
+  if (selCountEl) selCountEl.textContent = selectedNoteIds.size;
+
+  // Sync scope button active states
+  _syncScopeBtns();
+
   try {
-    // Fetch actual filtered count from server
-    const filters = getCurrentFilters();
+    if (bulkOpsScope === 'selected') {
+      // Selected scope — count is already known
+      countElement.textContent = selectedNoteIds.size;
+      if (scopeLabel) scopeLabel.textContent = 'Selected notes:';
+      if (filtersElement) filtersElement.textContent = `${selectedNoteIds.size} notes manually selected`;
+    } else {
+      // Filter scope — fetch from server
+      if (scopeLabel) scopeLabel.textContent = 'Currently filtered:';
+      const filters = getCurrentFilters();
+      const response = await fetch(`${API_URL}/quotes/bulk-count`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filters })
+      });
+      const result = await response.json();
+      countElement.textContent = result.count || 0;
+      // Keep scope filtered count in sync
+      const filtCountEl = document.getElementById('bulkScopeFilteredCount');
+      if (filtCountEl) filtCountEl.textContent = result.count || 0;
+      if (filtersElement) filtersElement.textContent = getFilterSummary();
+    }
     
-    const response = await fetch(`${API_URL}/quotes/bulk-count`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ filters })
-    });
-    
-    const result = await response.json();
-    
-    // Update count with actual filtered count
-    countElement.textContent = result.count || 0;
-    filtersElement.textContent = getFilterSummary();
-    
-    // Setup autocomplete for tag input
+    // Setup autocomplete
     const bulkTagInput = getElementByIdSafe("bulkTagInput");
     const bulkTagSuggestions = getElementByIdSafe("bulkTagSuggestions");
     if (bulkTagInput && bulkTagSuggestions) {
       setupAutocompleteInput(bulkTagInput, bulkTagSuggestions, 'tags', currentNoteTypeFilter);
     }
-    
-    // Setup autocomplete for untag input
     const bulkUntagInput = getElementByIdSafe("bulkUntagInput");
     const bulkUntagSuggestions = getElementByIdSafe("bulkUntagSuggestions");
     if (bulkUntagInput && bulkUntagSuggestions) {
@@ -2737,58 +2895,143 @@ async function openBulkOperationsModal() {
   } catch (error) {
     console.error("Error fetching filtered count:", error);
     countElement.textContent = "Error";
-    filtersElement.textContent = "Failed to load filter info";
   }
+}
+
+function _syncScopeBtns() {
+  const btnFiltered = document.getElementById('bulkScopeFiltered');
+  const btnSelected = document.getElementById('bulkScopeSelected');
+  if (btnFiltered) btnFiltered.classList.toggle('bulk-scope-active', bulkOpsScope === 'filtered');
+  if (btnSelected) btnSelected.classList.toggle('bulk-scope-active', bulkOpsScope === 'selected');
 }
 
 function closeBulkOperationsModal() {
   const modal = getElementByIdSafe("bulkOperationsModal");
   modal.style.display = "none";
+  _clearBulkTagQueue();
+}
+
+// ── Multi-tag queue for bulk tagging ──────────────────────────────────────
+let _bulkTagQueue = [];
+
+function addBulkTagFromInput() {
+  const input = document.getElementById('bulkTagInput');
+  const value = input?.value?.trim();
+  if (!value) return;
+  if (_bulkTagQueue.includes(value)) { input.value = ''; return; }
+  _bulkTagQueue.push(value);
+  input.value = '';
+  // hide autocomplete
+  const sug = document.getElementById('bulkTagSuggestions');
+  if (sug) sug.classList.remove('show');
+  _renderBulkTagBadges();
+}
+
+function _removeBulkTag(name) {
+  _bulkTagQueue = _bulkTagQueue.filter(t => t !== name);
+  _renderBulkTagBadges();
+}
+window._removeBulkTag = _removeBulkTag;
+
+function _renderBulkTagBadges() {
+  const container = document.getElementById('bulkTagBadges');
+  const applyBtn  = document.getElementById('bulkTagExecuteBtn');
+  if (!container) return;
+
+  container.innerHTML = _bulkTagQueue.map(tag => `
+    <span class="bulk-tag-badge">
+      ${escapeHtml(tag)}
+      <span onclick="_removeBulkTag('${escapeHtml(tag).replace(/'/g, "\\'")}')">×</span>
+    </span>
+  `).join('');
+
+  if (applyBtn) {
+    if (_bulkTagQueue.length > 0) {
+      applyBtn.style.display = 'block';
+      applyBtn.textContent = `Apply ${_bulkTagQueue.length} tag${_bulkTagQueue.length > 1 ? 's' : ''} to Notes`;
+    } else {
+      applyBtn.style.display = 'none';
+    }
+  }
+}
+
+function _clearBulkTagQueue() {
+  _bulkTagQueue = [];
+  _renderBulkTagBadges();
+  const input = document.getElementById('bulkTagInput');
+  if (input) input.value = '';
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
+function _getBulkPayloadAndLabel() {
+  if (bulkOpsScope === 'selected' && selectedNoteIds.size > 0) {
+    return {
+      payload: { noteIds: [...selectedNoteIds], noteType: currentNoteTypeFilter || 'quote' },
+      count: selectedNoteIds.size,
+      label: 'selected notes'
+    };
+  }
+  return {
+    payload: { filters: getCurrentFilters() },
+    count: parseInt(document.getElementById('bulkOpsCount')?.textContent, 10) || 0,
+    label: 'filtered notes'
+  };
 }
 
 async function handleBulkTag() {
-  const tagInput = getElementByIdSafe("bulkTagInput");
-  const tagName = tagInput?.value?.trim();
-  
-  if (!tagName) {
-    alert("⚠️ Please enter a tag name");
+  // If there's still text in the input, add it to the queue first
+  const tagInput = document.getElementById("bulkTagInput");
+  const pendingValue = tagInput?.value?.trim();
+  if (pendingValue && !_bulkTagQueue.includes(pendingValue)) {
+    _bulkTagQueue.push(pendingValue);
+    if (tagInput) tagInput.value = '';
+    _renderBulkTagBadges();
+  }
+
+  if (_bulkTagQueue.length === 0) {
+    alert("⚠️ Please add at least one tag");
     tagInput?.focus();
     return;
   }
-  
-  const filters = getCurrentFilters();
-  const countElement = getElementByIdSafe("bulkOpsCount");
-  const count = parseInt(countElement.textContent) || 0;
-  
+
+  const { payload, count, label } = _getBulkPayloadAndLabel();
+
   if (count === 0) {
-    alert("⚠️ No quotes match the current filters");
+    alert("⚠️ No notes to tag");
     return;
   }
-  
-  if (!confirm(`Add tag "${tagName}" to ${count} filtered quotes?`)) {
+
+  const tagList = _bulkTagQueue.map(t => `"${t}"`).join(', ');
+  if (!confirm(`Add ${_bulkTagQueue.length} tag(s) — ${tagList} — to ${count} ${label}?`)) {
     return;
   }
-  
+
+  const applyBtn = document.getElementById('bulkTagExecuteBtn');
+  if (applyBtn) { applyBtn.disabled = true; applyBtn.textContent = '⏳ Applying…'; }
+
   try {
-    const response = await fetch(`${API_URL}/quotes/bulk-tag`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ filters, tagName })
-    });
-    
-    const result = await response.json();
-    
-    if (response.ok) {
-      alert(`✅ ${result.message}`);
-      tagInput.value = ''; // Clear input
-      closeBulkOperationsModal();
-      loadQuotes(); // Refresh to show new tags
-    } else {
-      alert(`❌ Error: ${result.error}`);
+    // Apply each tag in sequence
+    const results = [];
+    for (const tagName of _bulkTagQueue) {
+      const response = await fetch(`${API_URL}/quotes/bulk-tag`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...payload, tagName })
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || `Failed to apply tag "${tagName}"`);
+      results.push(`"${tagName}" → ${result.count} notes tagged`);
     }
+
+    _clearBulkTagQueue();
+    closeBulkOperationsModal();
+    loadQuotes();
+    alert(`✅ Done!\n\n${results.join('\n')}`);
   } catch (error) {
     console.error("Bulk tag error:", error);
-    alert("❌ Failed to tag quotes. Check console for details.");
+    alert(`❌ ${error.message}`);
+  } finally {
+    if (applyBtn) { applyBtn.disabled = false; _renderBulkTagBadges(); }
   }
 }
 
@@ -2802,16 +3045,14 @@ async function handleBulkUntag() {
     return;
   }
   
-  const filters = getCurrentFilters();
-  const countElement = getElementByIdSafe("bulkOpsCount");
-  const count = parseInt(countElement.textContent) || 0;
+  const { payload, count, label } = _getBulkPayloadAndLabel();
   
   if (count === 0) {
-    alert("⚠️ No quotes match the current filters");
+    alert("⚠️ No notes to untag");
     return;
   }
   
-  if (!confirm(`Remove tag "${tagName}" from ${count} filtered quotes?`)) {
+  if (!confirm(`Remove tag "${tagName}" from ${count} ${label}?`)) {
     return;
   }
   
@@ -2819,43 +3060,40 @@ async function handleBulkUntag() {
     const response = await fetch(`${API_URL}/quotes/bulk-untag`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ filters, tagName })
+      body: JSON.stringify({ ...payload, tagName })
     });
     
     const result = await response.json();
     
     if (response.ok) {
       alert(`✅ ${result.message}`);
-      untagInput.value = ''; // Clear input
+      untagInput.value = '';
       closeBulkOperationsModal();
-      loadQuotes(); // Refresh to show updated tags
+      loadQuotes();
     } else {
       alert(`❌ Error: ${result.error}`);
     }
   } catch (error) {
     console.error("Bulk untag error:", error);
-    alert("❌ Failed to remove tag from quotes. Check console for details.");
+    alert("❌ Failed to remove tag from notes. Check console for details.");
   }
 }
 
 async function handleBulkExportPdf() {
   closeBulkOperationsModal();
-  // Call exportToPdf directly instead of trying to click removed button
   await exportToPdf();
 }
 
 async function handleBulkDelete() {
-  const filters = getCurrentFilters();
-  const countElement = getElementByIdSafe("bulkOpsCount");
-  const count = parseInt(countElement.textContent) || 0;
+  const { payload, count, label } = _getBulkPayloadAndLabel();
   
   if (count === 0) {
-    alert("No quotes match the current filters.");
+    alert("No notes to delete.");
     return;
   }
   
   const confirmation = prompt(
-    `⚠️ WARNING: This will PERMANENTLY delete ${count} quotes!\n\n` +
+    `⚠️ WARNING: This will PERMANENTLY delete ${count} ${label}!\n\n` +
     `Type "DELETE ${count}" to confirm:`
   );
   
@@ -2868,7 +3106,7 @@ async function handleBulkDelete() {
     const response = await fetch(`${API_URL}/quotes/bulk-delete`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ filters })
+      body: JSON.stringify(payload)
     });
     
     const result = await response.json();
@@ -2876,6 +3114,7 @@ async function handleBulkDelete() {
     if (response.ok) {
       alert(`✅ ${result.message}`);
       closeBulkOperationsModal();
+      clearSelection();
       currentPage = 1;
       setLibCurrentPage(1);
       loadQuotes();
@@ -2885,7 +3124,7 @@ async function handleBulkDelete() {
     }
   } catch (error) {
     console.error("Bulk delete error:", error);
-    alert("❌ Failed to delete quotes. Check console for details.");
+    alert("❌ Failed to delete notes. Check console for details.");
   }
 }
 

@@ -1865,8 +1865,16 @@ app.delete("/api/quotes/:id", async (req, res) => {
 // Get count of filtered quotes (for bulk operations preview)
 app.post("/api/quotes/bulk-count", async (req, res) => {
   try {
-    const { filters } = req.body;
-    
+    const { filters, noteIds } = req.body;
+
+    if (noteIds && Array.isArray(noteIds) && noteIds.length > 0) {
+      const result = await pool.query(
+        `SELECT COUNT(*) as count FROM quotes WHERE id = ANY($1::int[])`,
+        [noteIds]
+      );
+      return res.json({ count: parseInt(result.rows[0].count) });
+    }
+
     // Build filter query to get matching quote count
     const { query, params } = buildFilterQuery(filters);
     const fullQuery = `SELECT COUNT(*) as count ${query}`;
@@ -2023,26 +2031,29 @@ app.post("/api/quotes/bulk-tag", async (req, res) => {
   try {
     await client.query("BEGIN");
     
-    const { filters, tagName } = req.body;
+    const { filters, tagName, noteIds, noteType: explicitNoteType } = req.body;
     
     if (!tagName || !tagName.trim()) {
       return res.status(400).json({ error: "Tag name is required" });
     }
-    
-    // Build filter query to get matching quote IDs
-    const { query, params } = buildFilterQuery(filters);
-    const fullQuery = `SELECT q.id ${query}`;
-    
-    const quotesResult = await client.query(fullQuery, params);
-    const quoteIds = quotesResult.rows.map(r => r.id);
+
+    let quoteIds;
+    if (noteIds && Array.isArray(noteIds) && noteIds.length > 0) {
+      quoteIds = noteIds.map(id => parseInt(id, 10));
+    } else {
+      // Build filter query to get matching quote IDs
+      const { query, params } = buildFilterQuery(filters);
+      const quotesResult = await client.query(`SELECT q.id ${query}`, params);
+      quoteIds = quotesResult.rows.map(r => r.id);
+    }
     
     if (quoteIds.length === 0) {
       await client.query("ROLLBACK");
-      return res.json({ count: 0, message: "No quotes match the current filters" });
+      return res.json({ count: 0, message: "No notes match" });
     }
     
-    // Get or create the tag
-    const noteType = filters.note_type || 'quote';
+    // Get or create the tag — use explicit noteType (from selection mode) or filter
+    const noteType = explicitNoteType || filters?.note_type || 'quote';
     const tagResult = await client.query(
       `INSERT INTO tags (name, type) 
        VALUES ($1, $2) 
@@ -2090,26 +2101,28 @@ app.post("/api/quotes/bulk-untag", async (req, res) => {
   try {
     await client.query("BEGIN");
     
-    const { filters, tagName } = req.body;
+    const { filters, tagName, noteIds, noteType: explicitNoteType } = req.body;
     
     if (!tagName || !tagName.trim()) {
       return res.status(400).json({ error: "Tag name is required" });
     }
-    
-    // Build filter query to get matching quote IDs
-    const { query, params } = buildFilterQuery(filters);
-    const fullQuery = `SELECT q.id ${query}`;
-    
-    const quotesResult = await client.query(fullQuery, params);
-    const quoteIds = quotesResult.rows.map(r => r.id);
+
+    let quoteIds;
+    if (noteIds && Array.isArray(noteIds) && noteIds.length > 0) {
+      quoteIds = noteIds.map(id => parseInt(id, 10));
+    } else {
+      const { query, params } = buildFilterQuery(filters);
+      const quotesResult = await client.query(`SELECT q.id ${query}`, params);
+      quoteIds = quotesResult.rows.map(r => r.id);
+    }
     
     if (quoteIds.length === 0) {
       await client.query("ROLLBACK");
-      return res.json({ count: 0, message: "No quotes match the current filters" });
+      return res.json({ count: 0, message: "No notes match" });
     }
     
     // Find the tag
-    const noteType = filters.note_type || 'quote';
+    const noteType = explicitNoteType || filters?.note_type || 'quote';
     const tagResult = await client.query(
       `SELECT id FROM tags WHERE name = $1 AND type = $2`,
       [tagName.trim(), noteType]
@@ -2122,7 +2135,7 @@ app.post("/api/quotes/bulk-untag", async (req, res) => {
     
     const tagId = tagResult.rows[0].id;
     
-    // Remove tag from all filtered quotes
+    // Remove tag from matching notes
     const deleteResult = await client.query(
       `DELETE FROM note_tags 
        WHERE tag_id = $1 AND note_id = ANY($2)
@@ -2135,13 +2148,13 @@ app.post("/api/quotes/bulk-untag", async (req, res) => {
     res.json({
       count: deleteResult.rowCount,
       total: quoteIds.length,
-      message: `Removed tag from ${deleteResult.rowCount} quotes (${quoteIds.length - deleteResult.rowCount} didn't have this tag)`
+      message: `Removed tag from ${deleteResult.rowCount} notes (${quoteIds.length - deleteResult.rowCount} didn't have this tag)`
     });
     
   } catch (error) {
     await client.query("ROLLBACK");
     console.error("Error in bulk untag operation:", error);
-    res.status(500).json({ error: "Failed to remove tag from quotes" });
+    res.status(500).json({ error: "Failed to remove tag from notes" });
   } finally {
     client.release();
   }
@@ -2153,27 +2166,35 @@ app.post("/api/quotes/bulk-delete", async (req, res) => {
   try {
     await client.query("BEGIN");
     
-    const { filters } = req.body;
+    const { filters, noteIds } = req.body;
+
+    let notesResult;
+    if (noteIds && Array.isArray(noteIds) && noteIds.length > 0) {
+      notesResult = await client.query(
+        `SELECT id, thumbnail, attachment_full FROM notes WHERE id = ANY($1::int[])`,
+        [noteIds.map(id => parseInt(id, 10))]
+      );
+    } else {
+      const { query, params } = buildFilterQuery(filters);
+      notesResult = await client.query(
+        `SELECT q.id, q.thumbnail, q.attachment_full ${query}`,
+        params
+      );
+    }
     
-    // Build filter query to get matching quotes
-    const { query, params } = buildFilterQuery(filters);
-    const fullQuery = `SELECT q.id, q.thumbnail, q.attachment_full ${query}`;
-    
-    const quotesResult = await client.query(fullQuery, params);
-    
-    if (quotesResult.rows.length === 0) {
+    if (notesResult.rows.length === 0) {
       await client.query("ROLLBACK");
-      return res.json({ count: 0, message: "No quotes match the current filters" });
+      return res.json({ count: 0, message: "No notes match" });
     }
     
     // Delete external files for each note
-    for (const note of quotesResult.rows) {
+    for (const note of notesResult.rows) {
       fileStorage.deleteAttachment(note.thumbnail);
       fileStorage.deleteAttachment(note.attachment_full);
     }
     
-    // Delete all matching quotes
-    const quoteIds = quotesResult.rows.map(r => r.id);
+    // Delete all matching notes
+    const quoteIds = notesResult.rows.map(r => r.id);
     const deleteResult = await client.query(
       `DELETE FROM notes WHERE id = ANY($1)`,
       [quoteIds]
@@ -2183,13 +2204,13 @@ app.post("/api/quotes/bulk-delete", async (req, res) => {
     
     res.json({
       count: deleteResult.rowCount,
-      message: `Deleted ${deleteResult.rowCount} quotes`
+      message: `Deleted ${deleteResult.rowCount} notes`
     });
     
   } catch (error) {
     await client.query("ROLLBACK");
     console.error("Error in bulk delete operation:", error);
-    res.status(500).json({ error: "Failed to delete quotes" });
+    res.status(500).json({ error: "Failed to delete notes" });
   } finally {
     client.release();
   }
