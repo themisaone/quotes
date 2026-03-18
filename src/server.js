@@ -779,7 +779,7 @@ function buildTagSearchCondition(searchQuery, paramCounter, params) {
 // Get total quote count
 app.get("/api/quotes/count", async (req, res) => {
   try {
-    const { quote, author, source, tags, score, types, note_type, training_types, hasAuthor, hasSource, hasNote, hasTags, hasImage } = req.query;
+    const { quote, author, source, tags, score, types, note_type, training_types, hasAuthor, hasSource, hasNote, hasTags, hasImage, hasImageType } = req.query;
     
     // Build filtered count query (with all filters)
     let query = `
@@ -930,13 +930,15 @@ app.get("/api/quotes/count", async (req, res) => {
     }
 
     if (hasImage === 'true') {
-      // Check for any attachment (all stored in attachment_full)
-      console.log('🔍 Filtering for HAS attachment (attachment_full IS NOT NULL)');
       query += ` AND q.attachment_full IS NOT NULL AND q.attachment_full != ''`;
     } else if (hasImage === 'false') {
-      // No attachment at all
-      console.log('🔍 Filtering for NO attachment (attachment_full IS NULL)');
       query += ` AND (q.attachment_full IS NULL OR q.attachment_full = '')`;
+    }
+
+    if (hasImageType === 'true') {
+      query += ` AND q.attachment_full IS NOT NULL AND q.attachment_full != '' AND q.attachment_type = 'image'`;
+    } else if (hasImageType === 'false') {
+      query += ` AND q.attachment_full IS NOT NULL AND q.attachment_full != '' AND (q.attachment_type IS NULL OR q.attachment_type != 'image')`;
     }
 
     // Get filtered count
@@ -1008,6 +1010,7 @@ app.get("/api/quotes", async (req, res) => {
       hasNote,
       hasTags,
       hasImage,
+      hasImageType,
       limit = 20,
       offset = 0,
     } = req.query;
@@ -1124,13 +1127,15 @@ app.get("/api/quotes", async (req, res) => {
     }
 
     if (hasImage === 'true') {
-      // Check for any attachment (all stored in attachment_full)
-      console.log('🔍 GET /api/quotes - Filtering for HAS attachment');
       query += ` AND q.attachment_full IS NOT NULL AND q.attachment_full != ''`;
     } else if (hasImage === 'false') {
-      // No attachment at all
-      console.log('🔍 GET /api/quotes - Filtering for NO attachment');
       query += ` AND (q.attachment_full IS NULL OR q.attachment_full = '')`;
+    }
+
+    if (hasImageType === 'true') {
+      query += ` AND q.attachment_full IS NOT NULL AND q.attachment_full != '' AND q.attachment_type = 'image'`;
+    } else if (hasImageType === 'false') {
+      query += ` AND q.attachment_full IS NOT NULL AND q.attachment_full != '' AND (q.attachment_type IS NULL OR q.attachment_type != 'image')`;
     }
     
     // Translation group filter
@@ -2020,6 +2025,18 @@ function buildFilterQuery(filters) {
     query += ` AND EXISTS (SELECT 1 FROM note_tags WHERE note_id = q.id)`;
   } else if (filters.hasTags === 'false') {
     query += ` AND NOT EXISTS (SELECT 1 FROM note_tags WHERE note_id = q.id)`;
+  }
+
+  if (filters.hasImage === 'true') {
+    query += ` AND q.attachment_full IS NOT NULL AND q.attachment_full != ''`;
+  } else if (filters.hasImage === 'false') {
+    query += ` AND (q.attachment_full IS NULL OR q.attachment_full = '')`;
+  }
+
+  if (filters.hasImageType === 'true') {
+    query += ` AND q.attachment_full IS NOT NULL AND q.attachment_full != '' AND q.attachment_type = 'image'`;
+  } else if (filters.hasImageType === 'false') {
+    query += ` AND q.attachment_full IS NOT NULL AND q.attachment_full != '' AND (q.attachment_type IS NULL OR q.attachment_type != 'image')`;
   }
   
   return { query, params };

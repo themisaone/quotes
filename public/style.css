@@ -2924,15 +2924,10 @@ body.selection-mode .quote-card::after {
     margin-bottom: 1.5rem !important;
   }
   
-  /* Metadata filters: 3 per row on tablet */
+  /* Metadata filters: already 3-column grid, collapse to 2 on tablet */
+  .metadata-filters-grid,
   #metadataFiltersRow {
-    flex-wrap: wrap !important;
-    gap: 0.75rem !important;
-  }
-  
-  .metadata-filter-item {
-    flex: 0 0 calc(33.333% - 0.5rem) !important;
-    min-width: calc(33.333% - 0.5rem) !important;
+    grid-template-columns: repeat(2, 1fr) !important;
   }
   
   /* Latest Quotes section padding */
@@ -3186,30 +3181,30 @@ body.selection-mode .quote-card::after {
   background: white;
   padding: 2rem;
   margin: 0;
-  display: flex;
-  flex-direction: column;
+  overflow-y: auto; /* The fullscreen panel itself scrolls */
 }
 
 .quote-editor-group.fullscreen #quoteEditor {
-  flex: 1;
-  min-height: 0;
-  height: 100% !important;
+  height: auto !important; /* Grow with content */
+  min-height: 70vh;        /* At least 70% of viewport so it looks like a real editor */
   display: flex;
   flex-direction: column;
 }
 
 .quote-editor-group.fullscreen .ql-container {
-  flex: 1;
-  overflow-y: auto;
+  height: auto !important;  /* Override fixed 4-line height, grow with content */
+  min-height: 60vh !important;
+  overflow-y: visible;
   font-size: 1.1rem;
 }
 
 .quote-editor-group.fullscreen .ql-editor {
   font-size: 1.1rem;
   line-height: 1.8;
-  min-height: 100% !important;
+  min-height: 60vh !important;
   height: auto !important;
   max-height: none !important;
+  overflow-y: visible !important;
 }
 
 /* Pagination Controls */
@@ -4855,14 +4850,20 @@ body.selection-mode .quote-card::after {
   line-height: 1.5;
 }
 
-/* Metadata filters row inside Search Quotes */
-.metadata-filters-row {
-  display: flex;
-  gap: 1rem;
+/* Metadata filters — 2×3 grid */
+.metadata-filters-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem 1rem;
   margin: 0;
   padding: 0;
-  flex-wrap: nowrap;
-  justify-content: flex-start;
+}
+
+/* keep old class name as alias in case it's referenced elsewhere */
+.metadata-filters-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem 1rem;
 }
 
 .metadata-filter-item {
@@ -4902,6 +4903,17 @@ body.selection-mode .quote-card::after {
   color: var(--text-primary);
   font-size: 0.9rem;
   flex-shrink: 0;
+}
+
+/* Disabled state for the Image Type filter (depends on Attachment = Have) */
+.metadata-filter-disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.metadata-filter-disabled input[type="checkbox"],
+.metadata-filter-disabled select {
+  cursor: not-allowed;
 }
 
 /* Metadata Search Section - OLD STANDALONE VERSION */

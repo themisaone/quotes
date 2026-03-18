@@ -318,7 +318,8 @@ export function collectFormData(state) {
     note_type: noteType,
     note_date: parsedNoteDate,
     translation_group: getElementValue(MODAL_IDS.TRANSLATION_GROUP_INPUT).trim() || 
-                       getElementValue('quoteTranslationGroup').trim() || null,
+                       getElementValue('quoteTranslationGroup').trim() ||
+                       getElementValue('genericTranslationGroup').trim() || null,
     storageThresholdMB: state.globalSettings?.externalStorageThreshold || 1,
   };
 }

@@ -2796,14 +2796,9 @@ function getCurrentFilters() {
     hasSource: getMetadataState(FILTER_IDS.HAS_SOURCE_CHECKBOX, FILTER_IDS.HAS_SOURCE_CONDITION),
     hasNote: getMetadataState(FILTER_IDS.HAS_NOTE_CHECKBOX, FILTER_IDS.HAS_NOTE_CONDITION),
     hasTags: getMetadataState(FILTER_IDS.HAS_TAGS_CHECKBOX, FILTER_IDS.HAS_TAGS_CONDITION),
-    hasImage: getMetadataState(FILTER_IDS.HAS_IMAGE_CHECKBOX, FILTER_IDS.HAS_IMAGE_CONDITION)
+    hasImage: getMetadataState(FILTER_IDS.HAS_IMAGE_CHECKBOX, FILTER_IDS.HAS_IMAGE_CONDITION),
+    hasImageType: getMetadataState(FILTER_IDS.HAS_IMAGE_TYPE_CHECKBOX, FILTER_IDS.HAS_IMAGE_TYPE_CONDITION),
   };
-  
-  console.log('📊 getCurrentFilters - hasImage filter:', {
-    checkbox: document.getElementById(FILTER_IDS.HAS_IMAGE_CHECKBOX)?.checked,
-    condition: document.getElementById(FILTER_IDS.HAS_IMAGE_CONDITION)?.value,
-    result: filters.hasImage
-  });
   
   return filters;
 }
@@ -3578,15 +3573,36 @@ if (typeof switchView === 'function') {
 }
 
 // Setup metadata search event listeners
+function _syncImageTypeFilterState() {
+  const attachCheckbox  = document.getElementById('searchHasImage');
+  const attachCondition = document.getElementById('searchImageCondition');
+  const imageCheckbox   = document.getElementById('searchHasImageType');
+  const imageCondition  = document.getElementById('searchImageTypeCondition');
+  const imageItem       = document.getElementById('imageTypeFilterItem');
+
+  const enabled = attachCheckbox?.checked && attachCondition?.value === 'has';
+
+  if (imageCheckbox) {
+    imageCheckbox.disabled = !enabled;
+    if (!enabled) imageCheckbox.checked = false;
+  }
+  if (imageCondition) {
+    imageCondition.disabled = !enabled;
+  }
+  if (imageItem) {
+    imageItem.classList.toggle('metadata-filter-disabled', !enabled);
+  }
+}
+
 function setupMetadataSearchListeners() {
   const metadataCheckboxes = [
-    'searchHasAuthor', 'searchHasSource', 'searchHasNote', 
-    'searchHasTags', 'searchHasImage'
+    'searchHasAuthor', 'searchHasSource', 'searchHasNote',
+    'searchHasTags', 'searchHasImage', 'searchHasImageType'
   ];
   
   const metadataSelects = [
     'searchAuthorCondition', 'searchSourceCondition', 'searchNoteCondition',
-    'searchTagsCondition', 'searchImageCondition'
+    'searchTagsCondition', 'searchImageCondition', 'searchImageTypeCondition'
   ];
   
   // Add listeners to checkboxes
@@ -3594,6 +3610,7 @@ function setupMetadataSearchListeners() {
     const checkbox = getElementByIdSafe(id);
     if (checkbox && !checkbox.hasAttribute('data-listener')) {
       checkbox.addEventListener('change', () => {
+        if (id === 'searchHasImage') _syncImageTypeFilterState();
         currentPage = 1;
         setLibCurrentPage(1);
         loadQuotes();
@@ -3607,6 +3624,7 @@ function setupMetadataSearchListeners() {
     const select = getElementByIdSafe(id);
     if (select && !select.hasAttribute('data-listener')) {
       select.addEventListener('change', () => {
+        if (id === 'searchImageCondition') _syncImageTypeFilterState();
         currentPage = 1;
         setLibCurrentPage(1);
         loadQuotes();
@@ -3614,6 +3632,9 @@ function setupMetadataSearchListeners() {
       select.setAttribute('data-listener', 'true');
     }
   });
+
+  // Set initial state
+  _syncImageTypeFilterState();
 }
 
 // Call when switching to quotes view or when metadata section is shown

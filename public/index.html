@@ -361,13 +361,14 @@
                 </div>
               </div>
               
-              <!-- Metadata Label and Filters Row -->
+              <!-- Metadata Label and Filters (2 rows × 3) -->
               <div id="metadataFiltersContainer" style="display: none;">
                 <div style="margin-top: 1.5rem; margin-bottom: 0.5rem;">
                   <strong style="font-size: 0.95rem; color: var(--text-secondary);">Metadata</strong>
                 </div>
-                <div id="metadataFiltersRow" class="metadata-filters-row" style="display: flex; flex-direction: row; flex-wrap: nowrap; gap: 1rem;">
-                  <div class="metadata-filter-item" style="flex: 1; display: flex; flex-direction: row; gap: 0.6rem;">
+                <div id="metadataFiltersRow" class="metadata-filters-grid">
+                  <!-- Row 1 -->
+                  <div class="metadata-filter-item">
                     <input type="checkbox" id="searchHasAuthor" />
                     <select id="searchAuthorCondition">
                       <option value="has">Have</option>
@@ -375,8 +376,8 @@
                     </select>
                     <span>✍️ Author</span>
                   </div>
-                  
-                  <div class="metadata-filter-item" style="flex: 1; display: flex; flex-direction: row; gap: 0.6rem;">
+
+                  <div class="metadata-filter-item">
                     <input type="checkbox" id="searchHasSource" />
                     <select id="searchSourceCondition">
                       <option value="has">Have</option>
@@ -384,8 +385,8 @@
                     </select>
                     <span>📚 Source</span>
                   </div>
-                  
-                  <div class="metadata-filter-item" style="flex: 1; display: flex; flex-direction: row; gap: 0.6rem;">
+
+                  <div class="metadata-filter-item">
                     <input type="checkbox" id="searchHasNote" />
                     <select id="searchNoteCondition">
                       <option value="has">Have</option>
@@ -393,8 +394,9 @@
                     </select>
                     <span>📝 Comment</span>
                   </div>
-                  
-                  <div class="metadata-filter-item" style="flex: 1; display: flex; flex-direction: row; gap: 0.6rem;">
+
+                  <!-- Row 2 -->
+                  <div class="metadata-filter-item">
                     <input type="checkbox" id="searchHasTags" />
                     <select id="searchTagsCondition">
                       <option value="has">Have</option>
@@ -402,14 +404,24 @@
                     </select>
                     <span>🏷️ Tags</span>
                   </div>
-                  
-                  <div class="metadata-filter-item" style="flex: 1; display: flex; flex-direction: row; gap: 0.6rem;">
+
+                  <div class="metadata-filter-item">
                     <input type="checkbox" id="searchHasImage" />
                     <select id="searchImageCondition">
                       <option value="has">Have</option>
                       <option value="not">NOT Have</option>
                     </select>
                     <span>📎 Attachment</span>
+                  </div>
+
+                  <!-- Image type — enabled only when Attachment = Have -->
+                  <div class="metadata-filter-item" id="imageTypeFilterItem">
+                    <input type="checkbox" id="searchHasImageType" disabled />
+                    <select id="searchImageTypeCondition" disabled>
+                      <option value="has">Have</option>
+                      <option value="not">NOT Have</option>
+                    </select>
+                    <span>🖼️ Image</span>
                   </div>
                 </div>
               </div>
@@ -1244,6 +1256,19 @@
               <input
                 type="text"
                 id="translationGroup"
+                placeholder="Group (optional)"
+                title="Enter a group name to link related notes together"
+              />
+            </div>
+          </div>
+
+          <!-- Group field for generic behavior (note, puzzle, historical, …) -->
+          <div class="form-row form-row-with-separator" style="margin-top: 0.5rem; display: none;" id="genericSpecificFields">
+            <div class="form-group form-group-inline" style="flex: 1; margin-bottom: 0;">
+              <label for="genericTranslationGroup">🔗 Group</label>
+              <input
+                type="text"
+                id="genericTranslationGroup"
                 placeholder="Group (optional)"
                 title="Enter a group name to link related notes together"
               />

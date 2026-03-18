@@ -197,10 +197,14 @@ export function setCommonFields(note, elements, quillEditor) {
     translationGroupInput.value = note.translation_group || "";
   }
   
-  // Also set the quote-specific group input if it exists
+  // Also sync the other two group inputs (quote-specific and generic)
   const quoteTranslationGroupInput = document.getElementById('quoteTranslationGroup');
   if (quoteTranslationGroupInput) {
     quoteTranslationGroupInput.value = note.translation_group || "";
+  }
+  const genericTranslationGroupInput = document.getElementById('genericTranslationGroup');
+  if (genericTranslationGroupInput) {
+    genericTranslationGroupInput.value = note.translation_group || "";
   }
 }
 

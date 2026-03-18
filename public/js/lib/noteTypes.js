@@ -131,6 +131,11 @@ export function getNoteTypeBadgeHtml(noteType, showOnlyForAllNotes = false, curr
 
 // ───── Modal field visibility ─────
 
+export function hasGenericGroupField(noteType) {
+  const behavior = getNoteTypeConfig(noteType).behavior;
+  return behavior === 'generic';
+}
+
 export function updateModalFieldVisibility(noteType) {
   const quoteFields = getElementByIdSafe(CONTAINER_IDS.QUOTE_SPECIFIC_FIELDS, 'updateModalFieldVisibility');
   if (quoteFields) {
@@ -139,6 +144,10 @@ export function updateModalFieldVisibility(noteType) {
   const trainingFields = getElementByIdSafe(CONTAINER_IDS.TRAINING_SPECIFIC_FIELDS, 'updateModalFieldVisibility');
   if (trainingFields) {
     trainingFields.style.display = hasDateField(noteType) ? 'flex' : 'none';
+  }
+  const genericFields = document.getElementById('genericSpecificFields');
+  if (genericFields) {
+    genericFields.style.display = hasGenericGroupField(noteType) ? 'flex' : 'none';
   }
 }
 
