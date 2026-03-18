@@ -106,6 +106,13 @@ function parseDateFromCreated(created) {
   return null;
 }
 
+// Returns ISO string if dateStr is a valid date, otherwise null
+function safeISODate(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  return isNaN(d.getTime()) ? null : d.toISOString();
+}
+
 function getTextContent(xmlString, tagName) {
   const regex = new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)<\\/${tagName}>`, 'i');
   const match = xmlString.match(regex);
@@ -180,7 +187,9 @@ function resolveType(noteTypeArg, subTypeArg) {
 
 // ─── Core parser ───────────────────────────────────────────────────────────
 
-function parseEnex(enexPath, noteTypeArg, subTypeArg, maxAttachmentSizeMB = 0) {
+// parseEnex writes output files incrementally as batches fill up — no large in-memory array.
+// Returns { outputFiles, totalParsed, totalFound, skipped, skippedLargeAttachments, largeAttachments }
+async function parseEnex(enexPath, noteTypeArg, subTypeArg, maxAttachmentSizeMB = 0, splitBytes, baseOutputPath) {
   const { noteType, subType, isTraining } = resolveType(noteTypeArg, subTypeArg);
 
   console.log(`📖 Reading ENEX file: ${enexPath}`);
@@ -194,41 +203,82 @@ function parseEnex(enexPath, noteTypeArg, subTypeArg, maxAttachmentSizeMB = 0) {
   }
   console.log('');
 
-  const content = fs.readFileSync(enexPath, 'utf-8');
-  const noteMatches = content.match(/<note>[\s\S]*?<\/note>/g);
+  const fileSize = fs.statSync(enexPath).size;
+  const fileSizeMB = (fileSize / (1024 * 1024)).toFixed(1);
+  console.log(`📂 File size: ${fileSizeMB} MB — using streaming parser\n`);
 
-  if (!noteMatches) {
-    console.error('❌ No notes found in ENEX file');
-    return [];
-  }
+  // ── Incremental batch writer ──────────────────────────────────────────────
+  const outputFiles = [];
+  let batchNum = 0;
+  let currentBatch = [];
+  let currentBatchBytes = 0;
 
-  console.log(`✅ Found ${noteMatches.length} notes in ENEX file\n`);
+  const flushBatch = () => {
+    if (currentBatch.length === 0) return;
+    batchNum++;
+    const batchPath = `${baseOutputPath}-part${batchNum}.json`;
+    const importData = {
+      data: { quotes: currentBatch, authors: [], sources: [], tags: [] },
+      counts: { quotes: currentBatch.length, authors: 0, sources: 0, tags: 0 }
+    };
+    fs.writeFileSync(batchPath, JSON.stringify(importData, null, 2), 'utf-8');
+    const mb = (fs.statSync(batchPath).size / (1024 * 1024)).toFixed(2);
+    process.stdout.write(`\n💾 Part ${batchNum}: ${currentBatch.length} notes → ${batchPath}  (${mb} MB)\n`);
+    outputFiles.push(batchPath);
+    currentBatch = [];
+    currentBatchBytes = 0;
+  };
 
-  const notes = [];
+  const addNote = (note) => {
+    const noteBytes = Buffer.byteLength(JSON.stringify(note), 'utf8');
+    if (noteBytes >= splitBytes) {
+      // Single note exceeds threshold — flush pending batch first, write note alone
+      if (currentBatch.length > 0) flushBatch();
+      const mb = (noteBytes / (1024 * 1024)).toFixed(1);
+      const noteTitle = note.comment || '(no title)';
+      const noteDate  = note.created_at ? note.created_at.slice(0, 10) : 'unknown date';
+      const attachInfo = note.attachment_type ? ` | attachment: ${note.attachment_type}` : '';
+      process.stdout.write(`\n⚠️  Oversized note (${mb} MB) — placed in its own file\n`);
+      process.stdout.write(`   Title : ${noteTitle}\n`);
+      process.stdout.write(`   Date  : ${noteDate}${attachInfo}\n`);
+      currentBatch = [note];
+      currentBatchBytes = noteBytes;
+      flushBatch();
+      return;
+    }
+    if (currentBatch.length > 0 && currentBatchBytes + noteBytes > splitBytes) {
+      flushBatch();
+    }
+    currentBatch.push(note);
+    currentBatchBytes += noteBytes;
+  };
+  // ─────────────────────────────────────────────────────────────────────────
+
+  let totalFound = 0;
+  let totalParsed = 0;
   let skipped = 0;
   let skippedLargeAttachments = 0;
   const largeAttachments = [];
 
-  noteMatches.forEach((noteXml, index) => {
-    const title = getTextContent(noteXml, 'title') || `Note ${index + 1}`;
+  await streamNoteBlocks(enexPath, fileSize, (noteXml, index) => {
+    totalFound = index;
+    const title = getTextContent(noteXml, 'title') || `Note ${index}`;
     const contentXml = getTextContent(noteXml, 'content');
     const created = getTextContent(noteXml, 'created');
 
-    // Date handling
     const dateFromTitle = parseDateFromTitle(title);
     const dateFromCreated = parseDateFromCreated(created);
     const noteDate = dateFromTitle || dateFromCreated;
 
-    // For training, date is required (it's how training entries are identified)
     if (isTraining && !dateFromTitle) {
-      console.warn(`⚠️  Skipping note ${index + 1}: No date in title "${title}" (required for training)`);
+      console.warn(`\n⚠️  Skipping note ${index}: No date in title "${title}" (required for training)`);
       skipped++;
       return;
     }
 
     const htmlContent = enmlToHtml(contentXml);
     if (!htmlContent) {
-      console.warn(`⚠️  Skipping note ${index + 1}: Empty content — "${title}"`);
+      console.warn(`\n⚠️  Skipping note ${index}: Empty content — "${title}"`);
       skipped++;
       return;
     }
@@ -238,14 +288,13 @@ function parseEnex(enexPath, noteTypeArg, subTypeArg, maxAttachmentSizeMB = 0) {
     if (maxAttachmentSizeMB > 0 && resources.length > 0) {
       const tooLarge = resources.find(r => r.sizeMB > maxAttachmentSizeMB);
       if (tooLarge) {
-        console.warn(`⚠️  Skipping note ${index + 1}: Attachment too large (${tooLarge.sizeMB.toFixed(2)} MB > ${maxAttachmentSizeMB} MB limit)`);
+        console.warn(`\n⚠️  Skipping note ${index}: Attachment too large (${tooLarge.sizeMB.toFixed(2)} MB > ${maxAttachmentSizeMB} MB limit)`);
         largeAttachments.push({ title, date: noteDate || 'unknown', size: tooLarge.sizeMB.toFixed(2) });
         skippedLargeAttachments++;
         return;
       }
     }
 
-    // Build the base note object
     const baseNote = isTraining
       ? {
           note_text: htmlContent,
@@ -255,7 +304,7 @@ function parseEnex(enexPath, noteTypeArg, subTypeArg, maxAttachmentSizeMB = 0) {
           comment: title,
           author_name: null,
           source_name: null,
-          created_at: noteDate ? new Date(noteDate).toISOString() : new Date().toISOString(),
+          created_at: safeISODate(noteDate) || new Date().toISOString(),
           updated_at: new Date().toISOString()
         }
       : {
@@ -264,7 +313,7 @@ function parseEnex(enexPath, noteTypeArg, subTypeArg, maxAttachmentSizeMB = 0) {
           comment: title,
           author_name: null,
           source_name: null,
-          created_at: noteDate ? new Date(noteDate).toISOString() : (created ? parseEnexDate(created) : new Date().toISOString()),
+          created_at: safeISODate(noteDate) || (created ? parseEnexDate(created) : new Date().toISOString()),
           updated_at: new Date().toISOString()
         };
 
@@ -276,44 +325,50 @@ function parseEnex(enexPath, noteTypeArg, subTypeArg, maxAttachmentSizeMB = 0) {
     };
 
     if (resources.length === 0) {
-      notes.push({ ...attachmentDefaults, ...baseNote });
-      console.log(`✓ Note ${index + 1}: "${title}"${noteDate ? ` [${noteDate}]` : ''}`);
+      addNote({ ...attachmentDefaults, ...baseNote });
+      totalParsed++;
       return;
     }
 
     if (resources.length === 1) {
       const r = resources[0];
-      notes.push({
+      addNote({
         ...baseNote,
         thumbnail: r.attachmentType === 'image' ? r.dataUrl : null,
         attachment_full: r.dataUrl,
         storage_type: 'base64',
         attachment_type: r.attachmentType
       });
-      console.log(`✓ Note ${index + 1}: "${title}"${noteDate ? ` [${noteDate}]` : ''} + 1 attachment`);
+      totalParsed++;
       return;
     }
 
-    // Multiple attachments → one note per attachment
-    console.log(`   💡 ${resources.length} attachments — creating ${resources.length} notes`);
+    // Multiple attachments → one note per attachment, all sharing the same group
+    const shortId = Math.random().toString(36).slice(2, 7);
+    const groupName = `${title || 'group'}-${shortId}`;
     resources.forEach((r, ai) => {
       const isFirst = ai === 0;
-      notes.push({
+      addNote({
         ...baseNote,
         note_text: isFirst ? htmlContent : `<p><em>Additional attachment from: ${title}</em></p>`,
         comment: isFirst ? title : `${title} — attachment ${ai + 1}`,
         thumbnail: r.attachmentType === 'image' ? r.dataUrl : null,
         attachment_full: r.dataUrl,
         storage_type: 'base64',
-        attachment_type: r.attachmentType
+        attachment_type: r.attachmentType,
+        translation_group: groupName,
       });
     });
-    console.log(`✓ Note ${index + 1}: "${title}"${noteDate ? ` [${noteDate}]` : ''} → ${resources.length} notes`);
+    totalParsed += resources.length;
   });
 
+  // Flush any remaining notes
+  flushBatch();
+
+  process.stdout.write('\n');
   console.log(`\n📊 Summary:`);
-  console.log(`   Total found   : ${noteMatches.length}`);
-  console.log(`   Parsed OK     : ${notes.length}`);
+  console.log(`   Total found   : ${totalFound}`);
+  console.log(`   Parsed OK     : ${totalParsed}`);
   console.log(`   Skipped       : ${skipped}`);
   if (skippedLargeAttachments > 0) {
     console.log(`   Skipped (size): ${skippedLargeAttachments}`);
@@ -321,7 +376,57 @@ function parseEnex(enexPath, noteTypeArg, subTypeArg, maxAttachmentSizeMB = 0) {
     largeAttachments.forEach(a => console.log(`      • [${a.date}] ${a.title} (${a.size} MB)`));
   }
 
-  return notes;
+  return { outputFiles, totalParsed, totalFound, skipped, skippedLargeAttachments, largeAttachments };
+}
+
+// Stream an ENEX file and call callback(noteXml, index) for each complete <note>…</note> block.
+// Only one note's XML is held in memory at a time — safe for multi-GB files.
+function streamNoteBlocks(enexPath, fileSize, callback) {
+  return new Promise((resolve, reject) => {
+    const stream = fs.createReadStream(enexPath, {
+      encoding: 'utf8',
+      highWaterMark: 8 * 1024 * 1024  // 8 MB read chunks
+    });
+
+    let buffer = '';
+    let noteIndex = 0;
+    let bytesRead = 0;
+
+    stream.on('data', (chunk) => {
+      buffer += chunk;
+      bytesRead += Buffer.byteLength(chunk, 'utf8');
+
+      // Extract every complete <note>…</note> block from the buffer
+      while (true) {
+        const start = buffer.indexOf('<note>');
+        if (start === -1) {
+          // No note start yet — discard everything except a small tail in case
+          // the tag is split across the chunk boundary
+          if (buffer.length > 6) buffer = buffer.slice(buffer.length - 6);
+          break;
+        }
+
+        const end = buffer.indexOf('</note>', start);
+        if (end === -1) {
+          // Note started but not finished — keep from start and wait for more data
+          buffer = buffer.slice(start);
+          break;
+        }
+
+        const noteXml = buffer.slice(start, end + '</note>'.length);
+        buffer = buffer.slice(end + '</note>'.length);
+        noteIndex++;
+
+        const pct = fileSize > 0 ? ((bytesRead / fileSize) * 100).toFixed(0) : '?';
+        process.stdout.write(`\r   Progress: ${pct}%  |  Notes processed: ${noteIndex}   `);
+
+        callback(noteXml, noteIndex);
+      }
+    });
+
+    stream.on('end', () => resolve());
+    stream.on('error', reject);
+  });
 }
 
 // Full ISO timestamp from ENEX created string "20260129T120000Z"
@@ -358,49 +463,10 @@ function parseArgs(argv) {
   return { positional, flags };
 }
 
-// ─── Size-based splitting ──────────────────────────────────────────────────
-
-/**
- * Split a flat array of notes into batches where each batch's JSON is ≤ maxBytes.
- * Each note is serialized individually so we know its exact contribution.
- * A single note that exceeds maxBytes on its own goes into its own file with a warning.
- */
-function splitBySize(notes, maxBytes) {
-  const batches = [];
-  let current = [];
-  let currentSize = 0;
-
-  // Overhead of the wrapper JSON structure (approximate, conservative)
-  const WRAPPER_OVERHEAD = 200;
-
-  for (const note of notes) {
-    const noteJson = JSON.stringify(note);
-    const noteSize = Buffer.byteLength(noteJson, 'utf-8');
-
-    // If adding this note would exceed the limit, flush current batch first
-    if (current.length > 0 && currentSize + noteSize + WRAPPER_OVERHEAD > maxBytes) {
-      batches.push(current);
-      current = [];
-      currentSize = 0;
-    }
-
-    if (noteSize + WRAPPER_OVERHEAD > maxBytes && current.length === 0) {
-      // Single note is too large — warn but still include it alone
-      const mb = (noteSize / (1024 * 1024)).toFixed(1);
-      console.warn(`   ⚠️  Note alone is ${mb} MB (exceeds split threshold) — placed in its own file`);
-    }
-
-    current.push(note);
-    currentSize += noteSize + 2; // +2 for comma + newline in JSON array
-  }
-
-  if (current.length > 0) batches.push(current);
-  return batches;
-}
 
 // ─── Main ──────────────────────────────────────────────────────────────────
 
-function main() {
+async function main() {
   const { positional: args, flags } = parseArgs(process.argv.slice(2));
 
   const DEFAULT_SPLIT_MB = 30;
@@ -457,51 +523,31 @@ function main() {
     }
   }
 
-  try {
-    const notes = parseEnex(enexPath, noteTypeArg, subTypeArg, maxAttachmentMB);
+  const splitBytes    = splitMB * 1024 * 1024;
+  const baseOutputPath = outputPath.replace(/\.json$/, '');
 
-    if (notes.length === 0) {
+  try {
+    const result = await parseEnex(enexPath, noteTypeArg, subTypeArg, maxAttachmentMB, splitBytes, baseOutputPath);
+    const { outputFiles, totalParsed } = result;
+
+    if (totalParsed === 0) {
       console.error('❌ No notes were successfully parsed');
       process.exit(1);
     }
 
-    const splitBytes = splitMB * 1024 * 1024;
-    const batches = splitBySize(notes, splitBytes);
-    const baseOutputPath = outputPath.replace(/\.json$/, '');
-
-    const makeImportData = (batch) => ({
-      data: { quotes: batch, authors: [], sources: [], tags: [] },
-      counts: { quotes: batch.length, authors: 0, sources: 0, tags: 0 }
-    });
-
-    if (batches.length === 1) {
-      // Single file — use the exact output path the user specified
-      const importData = makeImportData(batches[0]);
-      fs.writeFileSync(outputPath, JSON.stringify(importData, null, 2), 'utf-8');
+    // If exactly one part was written, rename it to the exact path the user requested
+    if (outputFiles.length === 1 && outputFiles[0] !== outputPath) {
+      fs.renameSync(outputFiles[0], outputPath);
+      outputFiles[0] = outputPath;
       const mb = (fs.statSync(outputPath).size / (1024 * 1024)).toFixed(2);
-
       console.log(`\n✅ Created: ${outputPath}  (${mb} MB)`);
       console.log(`\n📋 Next steps:`);
       console.log(`   1. Open the app in the browser`);
       console.log(`   2. Click "Import Notes" (📥) in the left menu`);
       console.log(`   3. Select: ${outputPath}`);
       console.log(`\n   All notes → ${isTraining ? `training / ${subType}` : noteType}`);
-
     } else {
-      // Multiple files — suffix with -part1, -part2, ...
-      console.log(`\n📦 Auto-split into ${batches.length} files (limit: ${splitMB} MB each)\n`);
-
-      const outputFiles = [];
-      batches.forEach((batch, i) => {
-        const batchPath = `${baseOutputPath}-part${i + 1}.json`;
-        const importData = makeImportData(batch);
-        fs.writeFileSync(batchPath, JSON.stringify(importData, null, 2), 'utf-8');
-        const mb = (fs.statSync(batchPath).size / (1024 * 1024)).toFixed(2);
-        console.log(`   ✅ Part ${i + 1}: ${batch.length} notes → ${batchPath}  (${mb} MB)`);
-        outputFiles.push(batchPath);
-      });
-
-      console.log(`\n✅ Done — ${notes.length} notes across ${batches.length} files`);
+      console.log(`\n✅ Done — ${totalParsed} notes across ${outputFiles.length} files`);
       console.log(`\n📋 Import each file separately via "Import Notes" (📥) in the app:`);
       outputFiles.forEach((f, i) => console.log(`   ${i + 1}. ${f}`));
       console.log(`\n   All notes → ${isTraining ? `training / ${subType}` : noteType}`);
@@ -514,4 +560,8 @@ function main() {
   }
 }
 
-main();
+main().catch(err => {
+  console.error('❌ Fatal error:', err.message);
+  console.error(err.stack);
+  process.exit(1);
+});

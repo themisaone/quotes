@@ -2843,8 +2843,8 @@ app.post("/api/import/json", async (req, res) => {
             // Insert with new auto-generated ID
             const insertResult = await client.query(
               `INSERT INTO notes (note_text, author_id, source_id, type, comment, note_type, note_date, 
-                                   attachment_type, created_at, updated_at)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                                   attachment_type, created_at, updated_at, translation_group)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
                RETURNING id`,
               [
                 note.note_text,
@@ -2857,6 +2857,7 @@ app.post("/api/import/json", async (req, res) => {
                 note.attachment_type || null,
                 note.created_at || new Date(),
                 note.updated_at || new Date(),
+                note.translation_group || null,
               ],
             );
             quoteId = insertResult.rows[0].id;
@@ -2865,8 +2866,8 @@ app.post("/api/import/json", async (req, res) => {
             quoteId = note.id;
             await client.query(
               `INSERT INTO notes (id, note_text, author_id, source_id, type, comment, note_type, note_date, 
-                                   attachment_type, created_at, updated_at)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+                                   attachment_type, created_at, updated_at, translation_group)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
               [
                 quoteId,
                 note.note_text,
@@ -2879,14 +2880,15 @@ app.post("/api/import/json", async (req, res) => {
                 note.attachment_type || null,
                 note.created_at || new Date(),
                 note.updated_at || new Date(),
+                note.translation_group || null,
               ],
             );
           } else {
             // No ID provided (e.g., ENEX import) - let database auto-generate ID
             const insertResult = await client.query(
               `INSERT INTO notes (note_text, author_id, source_id, type, comment, note_type, note_date, 
-                                   attachment_type, created_at, updated_at)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                                   attachment_type, created_at, updated_at, translation_group)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
                RETURNING id`,
               [
                 note.note_text,
@@ -2899,6 +2901,7 @@ app.post("/api/import/json", async (req, res) => {
                 note.attachment_type || null,
                 note.created_at || new Date(),
                 note.updated_at || new Date(),
+                note.translation_group || null,
               ],
             );
             quoteId = insertResult.rows[0].id;

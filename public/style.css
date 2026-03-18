@@ -2493,38 +2493,28 @@ body.selection-mode .quote-card::after {
   transform: scale(1.05);
 }
 
-/* Attachment toggle button */
-.attachment-toggle-btn {
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  color: var(--text-secondary);
-  width: 28px;
-  height: 40px;
+/* Attachment toggle button — lives in the label row alongside Note text / ⛶ */
+.btn-attach-toggle {
+  font-size: 0.78rem;
+  padding: 0.2rem 0.55rem;
   border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.3s ease;
-  font-size: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  margin-top: 0; /* No extra margin needed - aligns naturally with image */
-  padding: 0;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
-.attachment-toggle-btn:hover {
+.btn-attach-toggle:hover:not(:disabled) {
   background: var(--hover-bg);
   color: var(--primary-color);
   border-color: var(--primary-color);
 }
 
-.attachment-toggle-btn.collapsed {
-  border-radius: 6px 0 0 6px;
-}
-
-/* When button is hidden via style.display = 'none', no margin needed */
-.attachment-toggle-btn[style*="display: none"] {
-  margin: 0;
+.btn-attach-toggle:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 #attachmentContainer.hidden {
@@ -2537,14 +2527,9 @@ body.selection-mode .quote-card::after {
 }
 
 #attachmentContainer:not(.hidden) {
-  width: fit-content; /* Shrink to content width */
+  width: fit-content;
   max-width: 250px;
-  margin-right: 1rem; /* Space between attachment and toggle button */
-}
-
-/* Toggle button gets right margin when visible */
-.attachment-toggle-btn:not(.hidden) {
-  margin-right: 0rem; /* Space between button and quote editor */
+  margin-right: 16px;
 }
 
 .image-upload-area button {

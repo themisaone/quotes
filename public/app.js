@@ -3474,7 +3474,7 @@ function toggleImageSection() {
 // Make global for onclick handlers
 window.toggleImageSection = toggleImageSection;
 
-// Manage attachment panel and toggle button visibility based on whether there's an attachment
+// Manage attachment panel and toggle button state based on whether there's an attachment
 function updateAttachmentPanelVisibility() {
   const container = document.getElementById(CONTAINER_IDS.ATTACHMENT_CONTAINER);
   const toggleBtn = document.getElementById(BUTTON_IDS.TOGGLE_ATTACHMENT_BTN);
@@ -3484,20 +3484,21 @@ function updateAttachmentPanelVisibility() {
   const hasAttachment = currentQuoteImage || currentQuoteImageFull;
   
   if (hasAttachment) {
-    // Has attachment: Show container, hide button (give more space to editor)
+    // Image present: show panel, disable button
     container.classList.remove('hidden');
-    toggleBtn.style.display = 'none';
+    toggleBtn.disabled = true;
+    toggleBtn.textContent = '📎 Attachment';
+    toggleBtn.title = 'Attachment is present';
   } else {
-    // No attachment: Hide container by default, show button to open
+    // No attachment: hide panel by default, button active with "Add attachment"
     container.classList.add('hidden');
-    toggleBtn.style.display = 'flex';
-    toggleBtn.textContent = '▶';
-    toggleBtn.classList.add('collapsed');
-    toggleBtn.title = 'Show Attachment Panel';
+    toggleBtn.disabled = false;
+    toggleBtn.textContent = '📎 Add attachment';
+    toggleBtn.title = 'Show attachment panel';
   }
 }
 
-// Toggle attachment panel (horizontal collapse) - only used when no attachment exists
+// Toggle attachment panel — only called when there is no attachment
 function toggleAttachmentPanel() {
   const container = document.getElementById(CONTAINER_IDS.ATTACHMENT_CONTAINER);
   const toggleBtn = document.getElementById(BUTTON_IDS.TOGGLE_ATTACHMENT_BTN);
@@ -3506,17 +3507,13 @@ function toggleAttachmentPanel() {
     const isHidden = container.classList.contains('hidden');
     
     if (isHidden) {
-      // Show
       container.classList.remove('hidden');
-      toggleBtn.textContent = '◀';
-      toggleBtn.classList.remove('collapsed');
-      toggleBtn.title = 'Hide Attachment Panel';
+      toggleBtn.textContent = '📎 Hide';
+      toggleBtn.title = 'Hide attachment panel';
     } else {
-      // Hide
       container.classList.add('hidden');
-      toggleBtn.textContent = '▶';
-      toggleBtn.classList.add('collapsed');
-      toggleBtn.title = 'Show Attachment Panel';
+      toggleBtn.textContent = '📎 Add attachment';
+      toggleBtn.title = 'Show attachment panel';
     }
   }
 }

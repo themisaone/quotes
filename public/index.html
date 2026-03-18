@@ -1054,11 +1054,14 @@
           <input type="hidden" id="noteType" value="quote" />
 
           <div class="form-group quote-editor-group">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0;">
               <div style="display: flex; align-items: center; gap: 0.5rem;">
                 <label for="quoteText" style="margin-bottom: 0;"><span id="quoteTextLabel">📝 Note text *</span></label>
                 <button type="button" id="toggleFullscreenEditor" class="btn-icon" title="Fullscreen Editor" style="padding: 0.25rem 0.5rem; font-size: 0.9rem;">
                   ⛶
+                </button>
+                <button type="button" id="toggleAttachmentBtn" class="btn-attach-toggle" title="Toggle attachment panel">
+                  📎 Add attachment
                 </button>
               </div>
               <div class="score-radio-group">
@@ -1093,8 +1096,8 @@
               </div>
             </div>
             <!-- Quill editor and Attachment side by side -->
-            <div style="display: flex; gap: 0; align-items: flex-start; margin-top: 0.75rem;">
-              <!-- Left: Attachment (collapsible) - dynamic width based on image -->
+            <div style="display: flex; gap: 0; align-items: flex-start; margin-top: 0;">
+              <!-- Left: Attachment (collapsible) -->
               <div id="attachmentContainer" style="width: auto; max-width: 250px; flex-shrink: 0; transition: all 0.3s ease;">
                 <div style="position: relative;">
                   <div id="quoteImagePreview" class="image-preview image-preview-vertical">
@@ -1122,12 +1125,7 @@
                 <span id="attachmentLabel" style="display: none;">📎 Attachment</span>
               </div>
               
-              <!-- Toggle button for attachment -->
-              <button type="button" id="toggleAttachmentBtn" class="attachment-toggle-btn" title="Toggle Attachment Panel">
-                ◀
-              </button>
-              
-              <!-- Right: Quill editor - aligned to placeholder bottom -->
+              <!-- Right: Quill editor -->
               <div style="flex: 1; min-width: 0;">
                 <div id="quoteEditor" style="min-height: 204px; height: 204px;"></div>
                 <input type="hidden" id="quoteText" required />
