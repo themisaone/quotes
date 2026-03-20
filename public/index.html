@@ -33,6 +33,35 @@
       </div>
     </div>
 
+    <!-- ── Merge Modal ──────────────────────────────────────────────────── -->
+    <div id="mergeModal" class="modal" style="display:none;">
+      <div class="modal-content merge-modal-content">
+        <div class="merge-modal-header">
+          <h2>🔀 Merge Notes</h2>
+          <button class="modal-close-x" onclick="closeMergeModal()">✕</button>
+        </div>
+        <p class="merge-modal-hint">Click a note to make it the <strong>Main</strong> — all others merge into it.</p>
+        <div id="mergeNotesList" class="merge-notes-list"></div>
+        <div class="merge-options">
+          <label class="merge-option-row">
+            <input type="checkbox" id="mergeAppendTexts" checked>
+            <span>Append other texts to main note <span class="merge-option-hint">(add divider between)</span></span>
+          </label>
+          <label class="merge-option-row">
+            <input type="checkbox" id="mergeTags" checked>
+            <span>Merge tags from all notes</span>
+          </label>
+        </div>
+        <div class="merge-modal-footer">
+          <button class="btn-secondary" onclick="closeMergeModal()">Cancel</button>
+          <button id="executeMergeBtn" class="btn-primary btn-merge-execute" onclick="executeMerge()">
+            🔀 Merge <span id="mergeCountLabel"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+    <!-- ──────────────────────────────────────────────────────────────────── -->
+
     <div class="app-layout">
         <!-- Side Menu -->
         <nav class="side-menu">
@@ -423,6 +452,15 @@
                     </select>
                     <span>🖼️ Image</span>
                   </div>
+
+                  <div class="metadata-filter-item">
+                    <input type="checkbox" id="searchHasTranslationGroup" />
+                    <select id="searchTranslationGroupCondition">
+                      <option value="has">Have</option>
+                      <option value="not">NOT Have</option>
+                    </select>
+                    <span>🔗 Group</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -436,13 +474,16 @@
               <div class="selection-bar-right">
                 <button id="selectAllPageBtn" class="btn-sel-action">Select page</button>
                 <button id="clearSelectionBtn" class="btn-sel-action btn-sel-clear">✕ Clear</button>
+                <button id="mergeSelectedBtn" class="btn-sel-action btn-sel-merge" onclick="openMergeModalFromSelection()" title="Merge selected notes into one">🔀 Merge</button>
                 <button id="bulkTagSelectedBtn" class="btn-sel-action btn-sel-primary">⚡ Bulk Ops →</button>
               </div>
             </div>
 
             <!-- Quotes List -->
             <div class="quotes-section">
-              <h2>⏳ Latest <span id="quoteCount"></span></h2>
+              <h2>⏳ Latest <span id="quoteCount"></span>
+                <button id="mergeGroupBtn" class="btn-merge-group" style="display:none;" onclick="openMergeModalFromGroup()" title="Merge all notes in this group">🔀 Merge group</button>
+              </h2>
               <div id="quotesList" class="quotes-list">
                 <div class="loading">Loading quotes...</div>
               </div>

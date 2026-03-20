@@ -5334,3 +5334,193 @@ body.selection-mode .quote-card::after {
 .note-type-menu-item:not(:last-child) {
   border-bottom: 1px solid var(--border);
 }
+
+/* ── Merge Modal ────────────────────────────────────────────────────────── */
+.merge-modal-content {
+  max-width: 620px;
+  width: 95vw;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  background: var(--surface);
+  color: var(--text-primary);
+}
+
+.merge-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+.merge-modal-header h2 { margin: 0; font-size: 1.15rem; }
+
+.merge-modal-hint {
+  margin: 0;
+  padding: 0.6rem 1.25rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary, #6b7280);
+  background: var(--bg-secondary, #f9fafb);
+  border-bottom: 1px solid var(--border);
+}
+
+.merge-notes-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem 0;
+}
+
+.merge-note-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 1.25rem;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-left: 3px solid transparent;
+}
+.merge-note-row:hover { background: var(--hover-color, #f3f4f6); }
+.merge-note-row.merge-note-main {
+  background: #eff6ff;
+  border-left-color: var(--primary, #3b82f6);
+}
+.dark-mode .merge-note-row.merge-note-main {
+  background: #1e3a5f;
+  border-left-color: #60a5fa;
+}
+
+.merge-note-main-radio {
+  font-size: 1.2rem;
+  width: 1.4rem;
+  text-align: center;
+  flex-shrink: 0;
+  color: var(--primary, #3b82f6);
+}
+
+.merge-note-thumb {
+  width: 52px;
+  height: 52px;
+  object-fit: cover;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+.merge-note-nothumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  background: var(--bg-secondary, #f3f4f6);
+  border-radius: 6px;
+}
+
+.merge-note-info {
+  flex: 1;
+  min-width: 0;
+}
+.merge-note-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.merge-note-snippet {
+  font-size: 0.78rem;
+  color: var(--text-secondary, #6b7280);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+.merge-note-att-badge {
+  font-size: 0.72rem;
+  background: #e0f2fe;
+  color: #0369a1;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+.dark-mode .merge-note-att-badge { background: #1e3a5f; color: #7dd3fc; }
+
+.merge-note-main-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--primary, #3b82f6);
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+.merge-options {
+  padding: 0.75rem 1.25rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.merge-option-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.88rem;
+}
+.merge-option-hint {
+  color: var(--text-secondary, #9ca3af);
+  font-size: 0.78rem;
+}
+
+.merge-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.btn-merge-execute {
+  background: #7c3aed;
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1.2rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-merge-execute:hover { background: #6d28d9; }
+.btn-merge-execute:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Merge button in selection bar */
+.btn-sel-merge {
+  background: #7c3aed;
+  color: #fff;
+}
+.btn-sel-merge:hover { background: #6d28d9; }
+
+/* Merge group button near count heading */
+.btn-merge-group {
+  font-size: 0.78rem;
+  padding: 3px 10px;
+  background: #7c3aed;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 600;
+  margin-left: 0.75rem;
+  vertical-align: middle;
+  transition: background 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.btn-merge-group:hover { background: #6d28d9; }
+
+/* ─────────────────────────────────────────────────────────────────────────── */

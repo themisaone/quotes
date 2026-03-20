@@ -92,6 +92,12 @@ function validateCallbacks(callbacks) {
 async function loadAndDisplayGroup(groupName, callbacks) {
   const quotes = await fetchTranslationGroupQuotes(groupName);
   displayGroupQuotes(quotes, groupName, callbacks);
+  // Expose to merge modal and show "Merge group" button when group has 2+ notes
+  window._currentGroupNotes = quotes;
+  const mergeBtn = document.getElementById('mergeGroupBtn');
+  if (mergeBtn) {
+    mergeBtn.style.display = quotes.length >= 2 ? 'inline-flex' : 'none';
+  }
   scrollToTop();
 }
 

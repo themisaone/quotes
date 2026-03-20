@@ -1196,6 +1196,11 @@ function addRefreshAnimation(buttonId, asyncFunction) {
 
 // Load and display quotes
 async function loadQuotes() {
+  // Clear group-view state
+  window._currentGroupNotes = null;
+  const mergeGroupBtn = document.getElementById('mergeGroupBtn');
+  if (mergeGroupBtn) mergeGroupBtn.style.display = 'none';
+
   const currentSettings = getGlobalSettings();
   const quotes = await loadQuotesLib(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes, currentSettings);
   currentQuotesData = getCurrentQuotesData(); // Sync for PDF export
@@ -2181,6 +2186,129 @@ function removePendingAttachment(pendingIdx) {
   renderPendingStrip();
 }
 window.removePendingAttachment = removePendingAttachment;
+
+// ── Merge Modal ───────────────────────────────────────────────────────────────
+
+let mergeModalNotes    = [];   // notes shown in the merge modal
+let mergeMainNoteId    = null; // which note is marked as Main
+
+function openMergeModal(notes) {
+  if (!notes || notes.length < 2) {
+    alert('Select at least 2 notes to merge.');
+    return;
+  }
+  mergeModalNotes = notes;
+  mergeMainNoteId = notes[0].id; // first is pre-selected as main
+  renderMergeNotesList();
+  document.getElementById('mergeCountLabel').textContent = `${notes.length} notes`;
+  document.getElementById('mergeModal').style.display = 'block';
+}
+
+function closeMergeModal() {
+  document.getElementById('mergeModal').style.display = 'none';
+  mergeModalNotes = [];
+  mergeMainNoteId = null;
+  // Re-enable button without touching its inner HTML (the span#mergeCountLabel must stay)
+  const btn = document.getElementById('executeMergeBtn');
+  if (btn) btn.disabled = false;
+  const lbl = document.getElementById('mergeCountLabel');
+  if (lbl) lbl.textContent = '';
+}
+window.closeMergeModal = closeMergeModal;
+
+function renderMergeNotesList() {
+  const list = document.getElementById('mergeNotesList');
+  if (!list) return;
+  list.innerHTML = mergeModalNotes.map(note => {
+    const isMain  = note.id === mergeMainNoteId;
+    const thumb   = note.thumbnail
+      ? `<img src="${note.thumbnail}" class="merge-note-thumb" alt="">`
+      : `<div class="merge-note-thumb merge-note-nothumb">${note.attachment_type === 'pdf' ? '📄' : note.attachment_type === 'video' ? '🎬' : '📝'}</div>`;
+    const title   = note.comment || note.note_date || `Note #${note.id}`;
+    const snippet = (note.note_text || '').replace(/<[^>]+>/g, '').slice(0, 80);
+    const attCount = note.attachments?.length || (note.thumbnail || note.attachment_full ? 1 : 0);
+    const attBadge = attCount ? `<span class="merge-note-att-badge">📎 ${attCount}</span>` : '';
+    return `<div class="merge-note-row ${isMain ? 'merge-note-main' : ''}" data-note-id="${note.id}" onclick="selectMergeMain(${note.id})">
+      <div class="merge-note-main-radio">${isMain ? '★' : '○'}</div>
+      ${thumb}
+      <div class="merge-note-info">
+        <div class="merge-note-title">${escapeHtml(title)}${attBadge}</div>
+        <div class="merge-note-snippet">${escapeHtml(snippet)}</div>
+      </div>
+      ${isMain ? '<div class="merge-note-main-label">MAIN</div>' : ''}
+    </div>`;
+  }).join('');
+}
+
+function selectMergeMain(noteId) {
+  mergeMainNoteId = noteId;
+  renderMergeNotesList();
+}
+window.selectMergeMain = selectMergeMain;
+
+async function executeMerge() {
+  if (!mergeMainNoteId || mergeModalNotes.length < 2) return;
+  const otherIds = mergeModalNotes.filter(n => n.id !== mergeMainNoteId).map(n => n.id);
+  const appendTexts = document.getElementById('mergeAppendTexts')?.checked ?? true;
+  const mergeTags   = document.getElementById('mergeTags')?.checked ?? true;
+
+  const btn = document.getElementById('executeMergeBtn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Merging… <span id="mergeCountLabel"></span>'; }
+
+  try {
+    const resp = await fetch('/api/notes/merge', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mainNoteId: mergeMainNoteId, otherNoteIds: otherIds, appendTexts, mergeTags }),
+    });
+    if (!resp.ok) throw new Error(await resp.text());
+    const mergedNote = await resp.json();
+
+    closeMergeModal();
+    clearSelection();
+    loadQuotes();
+    loadTotalCount();
+
+    // Open the merged note for cleanup
+    setTimeout(() => openEditModal(mergedNote), 400);
+
+  } catch (err) {
+    alert('Merge failed: ' + err.message);
+    if (btn) { btn.disabled = false; btn.innerHTML = `🔀 Merge <span id="mergeCountLabel">${mergeModalNotes.length} notes</span>`; }
+  }
+}
+window.executeMerge = executeMerge;
+
+function openMergeModalFromSelection() {
+  // Collect full note objects for selected IDs
+  const notes = [...selectedNoteIds]
+    .map(id => currentQuotesData?.find(n => n.id === id))
+    .filter(Boolean);
+  if (notes.length < 2) {
+    // currentQuotesData may not have all; fall back to fetching
+    fetchNotesByIds([...selectedNoteIds]).then(openMergeModal);
+    return;
+  }
+  openMergeModal(notes);
+}
+window.openMergeModalFromSelection = openMergeModalFromSelection;
+
+function openMergeModalFromGroup() {
+  const notes = window._currentGroupNotes;
+  if (!notes || notes.length < 2) {
+    alert('No group loaded or group has fewer than 2 notes.');
+    return;
+  }
+  openMergeModal(notes);
+}
+window.openMergeModalFromGroup = openMergeModalFromGroup;
+
+async function fetchNotesByIds(ids) {
+  const results = await Promise.all(
+    ids.map(id => fetch(`${API_URL}/quotes/${id}`).then(r => r.json()).catch(() => null))
+  );
+  return results.filter(Boolean);
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -3172,6 +3300,7 @@ function getCurrentFilters() {
     hasTags: getMetadataState(FILTER_IDS.HAS_TAGS_CHECKBOX, FILTER_IDS.HAS_TAGS_CONDITION),
     hasImage: getMetadataState(FILTER_IDS.HAS_IMAGE_CHECKBOX, FILTER_IDS.HAS_IMAGE_CONDITION),
     hasImageType: getMetadataState(FILTER_IDS.HAS_IMAGE_TYPE_CHECKBOX, FILTER_IDS.HAS_IMAGE_TYPE_CONDITION),
+    hasTranslationGroup: getMetadataState(FILTER_IDS.HAS_TRANSLATION_GROUP_CHECKBOX, FILTER_IDS.HAS_TRANSLATION_GROUP_CONDITION),
   };
   
   return filters;
@@ -3976,12 +4105,13 @@ function _syncImageTypeFilterState() {
 function setupMetadataSearchListeners() {
   const metadataCheckboxes = [
     'searchHasAuthor', 'searchHasSource', 'searchHasNote',
-    'searchHasTags', 'searchHasImage', 'searchHasImageType'
+    'searchHasTags', 'searchHasImage', 'searchHasImageType', 'searchHasTranslationGroup'
   ];
   
   const metadataSelects = [
     'searchAuthorCondition', 'searchSourceCondition', 'searchNoteCondition',
-    'searchTagsCondition', 'searchImageCondition', 'searchImageTypeCondition'
+    'searchTagsCondition', 'searchImageCondition', 'searchImageTypeCondition',
+    'searchTranslationGroupCondition'
   ];
   
   // Add listeners to checkboxes

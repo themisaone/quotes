@@ -833,7 +833,7 @@ function buildTagSearchCondition(searchQuery, paramCounter, params) {
 // Get total quote count
 app.get("/api/quotes/count", async (req, res) => {
   try {
-    const { quote, author, source, tags, score, types, note_type, training_types, hasAuthor, hasSource, hasNote, hasTags, hasImage, hasImageType } = req.query;
+    const { quote, author, source, tags, score, types, note_type, training_types, hasAuthor, hasSource, hasNote, hasTags, hasImage, hasImageType, hasTranslationGroup } = req.query;
     
     // Build filtered count query (with all filters)
     let query = `
@@ -995,6 +995,12 @@ app.get("/api/quotes/count", async (req, res) => {
       query += ` AND q.attachment_full IS NOT NULL AND q.attachment_full != '' AND (q.attachment_type IS NULL OR q.attachment_type != 'image')`;
     }
 
+    if (hasTranslationGroup === 'true') {
+      query += ` AND q.translation_group IS NOT NULL AND q.translation_group != ''`;
+    } else if (hasTranslationGroup === 'false') {
+      query += ` AND (q.translation_group IS NULL OR q.translation_group = '')`;
+    }
+
     // Get filtered count
     const filteredResult = await pool.query(query, params);
     const filteredCount = parseInt(filteredResult.rows[0].count);
@@ -1065,6 +1071,7 @@ app.get("/api/quotes", async (req, res) => {
       hasTags,
       hasImage,
       hasImageType,
+      hasTranslationGroup,
       limit = 20,
       offset = 0,
     } = req.query;
@@ -1191,7 +1198,13 @@ app.get("/api/quotes", async (req, res) => {
     } else if (hasImageType === 'false') {
       query += ` AND q.attachment_full IS NOT NULL AND q.attachment_full != '' AND (q.attachment_type IS NULL OR q.attachment_type != 'image')`;
     }
-    
+
+    if (hasTranslationGroup === 'true') {
+      query += ` AND q.translation_group IS NOT NULL AND q.translation_group != ''`;
+    } else if (hasTranslationGroup === 'false') {
+      query += ` AND (q.translation_group IS NULL OR q.translation_group = '')`;
+    }
+
     // Translation group filter
     if (translation_group) {
       query += ` AND q.translation_group = $${paramCounter}`;
@@ -2033,6 +2046,134 @@ app.patch("/api/notes/:noteId/attachments/:attachId/make-primary", async (req, r
     res.json(updated.rows.map(resolveAttachment));
   } catch (err) {
     await client.query("ROLLBACK");
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+});
+
+// ── Note Merge ───────────────────────────────────────────────────────────────
+
+// POST /api/notes/merge
+// Body: { mainNoteId, otherNoteIds[], appendTexts, mergeTags }
+// Moves all attachments + optionally text/tags from otherNoteIds into mainNoteId,
+// then deletes the other notes.
+app.post("/api/notes/merge", async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const { mainNoteId, otherNoteIds = [], appendTexts = true, mergeTags = true } = req.body;
+    if (!mainNoteId || otherNoteIds.length === 0) {
+      return res.status(400).json({ error: "mainNoteId and otherNoteIds required" });
+    }
+
+    // Verify main note exists
+    const mainRow = await client.query(
+      `SELECT * FROM notes WHERE id = $1`, [mainNoteId]
+    );
+    if (mainRow.rows.length === 0) return res.status(404).json({ error: "Main note not found" });
+
+    // For each "other" note, move its attachments to main
+    let nextPos = (await client.query(
+      `SELECT COALESCE(MAX(position), -1) + 1 AS n FROM note_attachments WHERE note_id = $1`,
+      [mainNoteId]
+    )).rows[0].n;
+
+    for (const otherId of otherNoteIds) {
+      // Re-assign each attachment row to mainNoteId with new positions
+      const otherAtts = await client.query(
+        `SELECT * FROM note_attachments WHERE note_id = $1 ORDER BY position`, [otherId]
+      );
+      for (const att of otherAtts.rows) {
+        await client.query(
+          `UPDATE note_attachments SET note_id = $1, position = $2 WHERE id = $3`,
+          [mainNoteId, nextPos++, att.id]
+        );
+      }
+    }
+
+    // Optionally append texts from other notes (wrapped in a divider)
+    if (appendTexts) {
+      const others = await client.query(
+        `SELECT id, note_text, comment FROM notes WHERE id = ANY($1::int[]) ORDER BY id`,
+        [otherNoteIds]
+      );
+      const dividerParts = others.rows
+        .filter(r => r.note_text && r.note_text.trim() !== '')
+        .map(r => {
+          const label = r.comment ? `<em>${r.comment}</em>` : '';
+          return `<hr>${label}${r.note_text}`;
+        });
+      if (dividerParts.length > 0) {
+        const appendedText = (mainRow.rows[0].note_text || '') + dividerParts.join('');
+        await client.query(
+          `UPDATE notes SET note_text = $1 WHERE id = $2`, [appendedText, mainNoteId]
+        );
+      }
+    }
+
+    // Optionally merge tags from other notes
+    if (mergeTags) {
+      const otherTagIds = await client.query(
+        `SELECT DISTINCT tag_id FROM note_tags WHERE note_id = ANY($1::int[])`, [otherNoteIds]
+      );
+      for (const row of otherTagIds.rows) {
+        await client.query(
+          `INSERT INTO note_tags (note_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+          [mainNoteId, row.tag_id]
+        );
+      }
+    }
+
+    // Delete the other notes (cascades note_attachments — but we already moved them above,
+    // so only the now-empty rows remain; they'll be deleted safely)
+    await client.query(
+      `DELETE FROM notes WHERE id = ANY($1::int[])`, [otherNoteIds]
+    );
+
+    // Clear translation_group on main note (no longer grouped)
+    await client.query(
+      `UPDATE notes SET translation_group = NULL WHERE id = $1`, [mainNoteId]
+    );
+
+    // Sync flat columns with new position=0 attachment
+    const newFirst = await client.query(
+      `SELECT * FROM note_attachments WHERE note_id = $1 ORDER BY position LIMIT 1`, [mainNoteId]
+    );
+    if (newFirst.rows.length > 0) {
+      const f = newFirst.rows[0];
+      await client.query(
+        `UPDATE notes SET thumbnail = $1, attachment_full = $2, attachment_type = $3 WHERE id = $4`,
+        [f.thumbnail, f.attachment_full, f.attachment_type, mainNoteId]
+      );
+    }
+
+    await client.query("COMMIT");
+
+    // Return the fully populated main note
+    const result = await pool.query(
+      `SELECT q.*, a.name as author_name, a.image as author_image,
+              s.name as source_name, s.image as source_image, q.type as source_type
+       FROM notes q
+       LEFT JOIN authors a ON q.author_id = a.id
+       LEFT JOIN sources s ON q.source_id = s.id
+       WHERE q.id = $1`,
+      [mainNoteId]
+    );
+    const quoteTags   = await getTagsForNote(mainNoteId);
+    const attsMap     = await getAttachmentsForNotes([mainNoteId]);
+    const withImages  = retrieveQuoteImages(result.rows[0]);
+    const withAll     = applyAttachments(withImages, attsMap.get(mainNoteId));
+    res.json({
+      ...withAll,
+      tags: quoteTags.map(t => t.name).join(", "),
+      tag_objects: quoteTags,
+    });
+
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("Merge error:", err);
     res.status(500).json({ error: err.message });
   } finally {
     client.release();
