@@ -358,34 +358,51 @@ async function parseEnex(enexPath, noteTypeArg, subTypeArg, maxAttachmentSizeMB 
 
     if (resources.length === 1) {
       const r = resources[0];
+      const thumb = r.attachmentType === 'image' ? await generateThumbnail(r.dataUrl) : null;
       addNote({
         ...baseNote,
-        thumbnail: r.attachmentType === 'image' ? await generateThumbnail(r.dataUrl) : null,
+        // Flat fields (backward compat with importer)
+        thumbnail: thumb,
         attachment_full: r.dataUrl,
         storage_type: 'base64',
-        attachment_type: r.attachmentType
+        attachment_type: r.attachmentType,
+        // Structured attachments array for note_attachments table
+        attachments: [{
+          position: 0,
+          thumbnail: thumb,
+          attachment_full: r.dataUrl,
+          attachment_type: r.attachmentType,
+          filename: r.filename || null,
+        }]
       });
       totalParsed++;
       return;
     }
 
-    // Multiple attachments → one note per attachment, all sharing the same group
-    const shortId = Math.random().toString(36).slice(2, 7);
-    const groupName = `${title || 'group'}-${shortId}`;
+    // Multiple attachments → ONE note with an attachments[] array (no more splitting)
+    const attachmentsArr = [];
     for (const [ai, r] of resources.entries()) {
-      const isFirst = ai === 0;
-      addNote({
-        ...baseNote,
-        note_text: isFirst ? htmlContent : `<p><em>Additional attachment from: ${title}</em></p>`,
-        comment: isFirst ? title : `${title} — attachment ${ai + 1}`,
-        thumbnail: r.attachmentType === 'image' ? await generateThumbnail(r.dataUrl) : null,
+      const thumb = r.attachmentType === 'image' ? await generateThumbnail(r.dataUrl) : null;
+      attachmentsArr.push({
+        position: ai,
+        thumbnail: thumb,
         attachment_full: r.dataUrl,
-        storage_type: 'base64',
         attachment_type: r.attachmentType,
-        translation_group: groupName,
+        filename: r.filename || null,
       });
     }
-    totalParsed += resources.length;
+    const firstAtt = attachmentsArr[0];
+    addNote({
+      ...baseNote,
+      // Flat fields from first attachment (backward compat)
+      thumbnail: firstAtt.thumbnail,
+      attachment_full: firstAtt.attachment_full,
+      storage_type: 'base64',
+      attachment_type: firstAtt.attachment_type,
+      // Full array for proper multi-attachment import
+      attachments: attachmentsArr,
+    });
+    totalParsed++;
   });
 
   // Flush any remaining notes
