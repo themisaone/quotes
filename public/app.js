@@ -1130,6 +1130,9 @@ function openEditModal(quote) {
   } else {
     clearImagePreview(quoteImagePreview, "quote");
   }
+
+  // Render the multi-attachment strip (hidden when only one attachment)
+  renderModalAttachmentStrip(quote);
   
   // Update attachment panel visibility
   updateAttachmentPanelVisibility();
@@ -1147,6 +1150,12 @@ function closeQuoteModal() {
   currentAttachmentType = "image";
   currentAttachmentFileName = "";
   clearImagePreview(quoteImagePreview, "quote");
+  // Clear attachment strip and pending queue
+  const strip = document.getElementById('modalAttachmentStrip');
+  if (strip) { strip.style.display = 'none'; strip.innerHTML = ''; }
+  currentModalAttachments = [];
+  currentModalAttachIdx = 0;
+  pendingExtraAttachments = [];
   authorSuggestions.classList.remove("show");
   sourceSuggestions.classList.remove("show");
 }
@@ -1276,16 +1285,31 @@ async function handleSubmit(e) {
     }
   }
 
+  // If this note already has multiple attachments managed by the strip,
+  // do NOT send attachment fields in PUT — they are handled by note_attachments.
+  // Sending them would overwrite position=0 with whatever strip item was last previewed.
+  const attachmentsAlreadyManaged = editingQuoteId && currentModalAttachments.length > 1;
+
   const state = {
     editingQuoteId,
-    currentQuoteImage,
-    currentQuoteImageFull,
-    currentAttachmentType,
+    currentQuoteImage:    attachmentsAlreadyManaged ? undefined : currentQuoteImage,
+    currentQuoteImageFull: attachmentsAlreadyManaged ? undefined : currentQuoteImageFull,
+    currentAttachmentType: attachmentsAlreadyManaged ? undefined : currentAttachmentType,
     globalSettings
   };
-  
+
   const callbacks = {
-    onSuccess: () => {
+    onSuccess: async (newNote) => {
+      // Upload any queued attachments (add-mode multi-attach)
+      if (pendingExtraAttachments.length > 0) {
+        const noteId = newNote?.id || editingQuoteId;
+        if (noteId) {
+          for (const att of pendingExtraAttachments) {
+            try { await postAttachmentToNote(noteId, att); } catch (_) {}
+          }
+          pendingExtraAttachments = [];
+        }
+      }
       closeQuoteModal();
       loadQuotes();
       loadTotalCount();
@@ -1294,7 +1318,7 @@ async function handleSubmit(e) {
       alert("Failed to save quote: " + error);
     }
   };
-  
+
   await handleFormSubmitLib(e, { apiUrl: API_URL, state, callbacks });
 }
 
@@ -1590,6 +1614,33 @@ function readImageFile(file, type) {
 
 // Handle Paste - wrapper for library function
 function handlePaste(e, type) {
+  // Has existing attachment: paste adds a NEW attachment (edit → API, add → queue)
+  if (type === "quote" && (currentQuoteImage || currentQuoteImageFull)) {
+    const pasteCallbacks = {
+      onImageLoaded: async (result) => {
+        const attData = {
+          thumbnail:       result.thumbnail,
+          attachment_full: result.full,
+          attachment_type: result.type || 'image',
+          filename:        result.filename || 'pasted-image.jpg',
+        };
+        try {
+          if (editingQuoteId) {
+            await postAttachmentToNote(editingQuoteId, attData);
+          } else {
+            pendingExtraAttachments.push(attData);
+            renderPendingStrip();
+            updateAttachmentPanelVisibility();
+          }
+        } catch (err) {
+          alert('Could not add pasted attachment: ' + err.message);
+        }
+      },
+    };
+    handlePasteEvent(e, type, globalSettings, pasteCallbacks);
+    return;
+  }
+
   const callbacks = {
     onImageLoaded: (result) => {
       if (type === "quote") {
@@ -1849,11 +1900,26 @@ function handleSourceFileSelect(e) {
 // ============= QUOTE IMAGE HANDLING =============
 
 // Handle quote image file selection
-quoteImageFile.addEventListener("change", (e) => {
+quoteImageFile.addEventListener("change", async (e) => {
   const file = e.target.files[0];
-  if (file) {
-    readAttachmentFile(file, "quote");
+  if (!file) return;
+
+  // Edit mode + existing attachment → add via API immediately
+  if (editingQuoteId && (currentQuoteImage || currentQuoteImageFull)) {
+    await addAttachmentFromFile(file, editingQuoteId);
+    quoteImageFile.value = "";
+    return;
   }
+
+  // Add mode + existing primary attachment → queue for upload after save
+  if (!editingQuoteId && (currentQuoteImage || currentQuoteImageFull)) {
+    await queuePendingAttachment(file);
+    quoteImageFile.value = "";
+    return;
+  }
+
+  // Normal flow — set as the primary attachment
+  readAttachmentFile(file, "quote");
 });
 
 // Handle quote image paste
@@ -1872,6 +1938,314 @@ clearQuoteImageBtn.addEventListener("click", (e) => {
   quoteImageFile.value = "";
   updateAttachmentPanelVisibility(); // Update panel visibility when image is cleared
 });
+
+// ── Modal attachment strip for multi-attachment notes ─────────────────────
+
+let currentModalAttachments = [];   // full attachments[] array for open note
+let currentModalAttachIdx  = 0;     // which one is active in the main preview
+let pendingExtraAttachments = [];   // queued attachments on a new (unsaved) note
+
+function renderModalAttachmentStrip(note) {
+  const strip = document.getElementById('modalAttachmentStrip');
+  if (!strip) return;
+
+  const atts = (note && note.attachments && note.attachments.length > 0)
+    ? note.attachments
+    : null;
+
+  currentModalAttachments = atts || [];
+  currentModalAttachIdx   = 0;
+
+  if (!atts || atts.length <= 1) {
+    strip.style.display = 'none';
+    strip.innerHTML = '';
+    return;
+  }
+
+  strip.style.display = 'flex';
+  strip.innerHTML = atts.map((att, idx) => {
+    const isImg  = (att.attachment_type || 'image') === 'image';
+    const thumb  = att.thumbnail || att.attachment_full || '';
+    const thumbTag = isImg && thumb
+      ? `<img src="${thumb}" alt="attachment ${idx+1}">`
+      : `<div class="modal-att-icon">${att.attachment_type === 'pdf' ? '📄' : att.attachment_type === 'video' ? '🎬' : '📎'}</div>`;
+    const activeCls = idx === 0 ? ' active' : '';
+    const primaryBadge = idx === 0 ? `<div class="modal-att-primary-badge" title="Primary">★</div>` : '';
+    return `<div class="modal-att-item${activeCls}" data-att-idx="${idx}" title="${idx === 0 ? 'Primary (click others to change)' : 'Click to make primary'}">
+      ${thumbTag}
+      <button class="modal-att-del" title="Delete this attachment" onclick="event.stopPropagation(); deleteModalAttachment(${idx})">✕</button>
+      ${primaryBadge}
+    </div>`;
+  }).join('');
+
+  // Click on strip item → make it the primary (and update preview)
+  strip.querySelectorAll('.modal-att-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+      if (e.target.classList.contains('modal-att-del') || e.target.classList.contains('modal-att-del')) return;
+      if (e.target.closest('.modal-att-del')) return;
+      const idx = parseInt(item.dataset.attIdx);
+      selectModalAttachment(idx);
+    });
+  });
+}
+
+async function selectModalAttachment(idx) {
+  // In add-mode the strip is rendered from pendingExtraAttachments, not currentModalAttachments.
+  // allItems[0] = primary, allItems[1..] = pending
+  const isAddMode = !editingQuoteId && pendingExtraAttachments.length > 0;
+  const allItems = isAddMode
+    ? [{ thumbnail: currentQuoteImage, attachment_full: currentQuoteImageFull,
+         attachment_type: currentAttachmentType, _isPrimary: true },
+       ...pendingExtraAttachments]
+    : currentModalAttachments;
+
+  const att = allItems[idx];
+  if (!att) return;
+
+  // Show selected attachment in main preview immediately
+  const previewThumb = att.thumbnail || att.attachment_full || '';
+  const previewType  = att.attachment_type || 'image';
+  if (previewType !== 'image') {
+    displayAttachmentPreview(quoteImagePreview, getAttachmentIcon(previewType), 'Attachment', '');
+  } else if (previewThumb) {
+    displayImage(quoteImagePreview, previewThumb);
+  }
+
+  // Highlight active item right away for instant feedback
+  const strip = document.getElementById('modalAttachmentStrip');
+  if (strip) {
+    strip.querySelectorAll('.modal-att-item').forEach((el, i) => {
+      el.classList.toggle('active', i === idx);
+    });
+  }
+
+  if (idx === 0) return; // Already primary — nothing to do
+
+  // In edit mode: persist the change to the DB so the card shows correctly after save
+  if (editingQuoteId && att.id) {
+    try {
+      const resp = await fetch(
+        `/api/notes/${editingQuoteId}/attachments/${att.id}/make-primary`,
+        { method: 'PATCH' }
+      );
+      if (resp.ok) {
+        const updatedList = await resp.json();
+        // Refresh currentModalAttachments so subsequent saves are consistent
+        currentModalAttachments = updatedList;
+        currentModalAttachIdx = 0;
+        // Sync flat state with new position=0
+        const newFirst = updatedList[0] || {};
+        currentQuoteImage     = newFirst.thumbnail      || '';
+        currentQuoteImageFull = newFirst.attachment_full || '';
+        currentAttachmentType = newFirst.attachment_type || 'image';
+        // Re-render strip (active highlight on the new position=0)
+        renderModalAttachmentStrip({ attachments: updatedList });
+        loadQuotes(); // refresh card in list
+      }
+    } catch (err) {
+      console.warn('make-primary failed:', err);
+    }
+    return;
+  }
+
+  // Add-mode with pending queue: swap selected pending item to be the new primary
+  if (!editingQuoteId) {
+    // idx corresponds to allItems[idx] where allItems = [primary, ...pending]
+    const pendingIdx = idx - 1; // 0-based index into pendingExtraAttachments
+    if (pendingIdx >= 0 && pendingIdx < pendingExtraAttachments.length) {
+      const newPrimary = pendingExtraAttachments[pendingIdx];
+      const oldPrimary = {
+        thumbnail:       currentQuoteImage,
+        attachment_full: currentQuoteImageFull,
+        attachment_type: currentAttachmentType,
+        filename:        currentAttachmentFileName,
+      };
+      // Swap
+      currentQuoteImage     = newPrimary.thumbnail      || '';
+      currentQuoteImageFull = newPrimary.attachment_full || '';
+      currentAttachmentType = newPrimary.attachment_type || 'image';
+      pendingExtraAttachments[pendingIdx] = oldPrimary;
+      renderPendingStrip();
+      updateAttachmentPanelVisibility();
+    }
+  }
+}
+
+async function deleteModalAttachment(idx) {
+  if (!editingQuoteId) return;
+  const att = currentModalAttachments[idx];
+  if (!att) return;
+  if (!confirm(`Delete attachment ${idx + 1}?`)) return;
+
+  try {
+    const resp = await fetch(`/api/notes/${editingQuoteId}/attachments/${att.id}`, { method: 'DELETE' });
+    if (!resp.ok) throw new Error(await resp.text());
+
+    // Refresh note data and re-render the strip
+    const updated = await fetch(`/api/quotes/${editingQuoteId}`).then(r => r.json());
+    renderModalAttachmentStrip(updated);
+    // Switch preview to first remaining attachment
+    if (currentModalAttachments.length > 0) {
+      selectModalAttachment(0);
+    } else {
+      currentQuoteImage = ''; currentQuoteImageFull = '';
+      clearImagePreview(quoteImagePreview, 'quote');
+    }
+    updateAttachmentPanelVisibility();
+    // Refresh card in list
+    loadQuotes();
+  } catch (err) {
+    alert('Could not delete attachment: ' + err.message);
+  }
+}
+
+window.deleteModalAttachment = deleteModalAttachment;
+
+// ── Pending-attachment queue (add-mode only) ──────────────────────────────
+
+async function queuePendingAttachment(file) {
+  const globalSettings = getGlobalSettings();
+  return new Promise((resolve) => {
+    const callbacks = {
+      onImageLoaded: (result) => {
+        pendingExtraAttachments.push({
+          thumbnail:       result.thumbnail,
+          attachment_full: result.full,
+          attachment_type: result.type || 'image',
+          filename:        result.filename || file.name,
+        });
+        renderPendingStrip();
+        resolve();
+      },
+      onAttachmentLoaded: (result) => {
+        pendingExtraAttachments.push({
+          thumbnail:       result.thumbnail || null,
+          attachment_full: result.full,
+          attachment_type: result.type || 'image',
+          filename:        result.filename || file.name,
+        });
+        renderPendingStrip();
+        resolve();
+      },
+    };
+    readAttachmentFileLib(file, 'quote', globalSettings, callbacks);
+  });
+}
+
+function renderPendingStrip() {
+  const strip = document.getElementById('modalAttachmentStrip');
+  if (!strip) return;
+  if (pendingExtraAttachments.length === 0) {
+    strip.style.display = 'none';
+    strip.innerHTML = '';
+    return;
+  }
+
+  strip.style.display = 'flex';
+  // allItems: [primary, ...pending]  — idx=0 is always the primary
+  const allItems = [
+    { thumbnail: currentQuoteImage, attachment_full: currentQuoteImageFull,
+      attachment_type: currentAttachmentType, _isPrimary: true },
+    ...pendingExtraAttachments,
+  ];
+
+  strip.innerHTML = allItems.map((att, idx) => {
+    const isImg = (att.attachment_type || 'image') === 'image';
+    const thumb = att.thumbnail || att.attachment_full || '';
+    const thumbTag = isImg && thumb
+      ? `<img src="${thumb}" alt="attachment ${idx + 1}">`
+      : `<div class="modal-att-icon">${att.attachment_type === 'pdf' ? '📄' : att.attachment_type === 'video' ? '🎬' : '📎'}</div>`;
+    const activeCls  = idx === 0 ? ' active' : '';
+    const titleAttr  = idx === 0 ? 'Primary — click others to change' : 'Click to make this the primary attachment';
+    const primaryBadge = idx === 0 ? `<div class="modal-att-primary-badge" title="Primary">★</div>` : '';
+    // Delete button only on non-primary (pending) items
+    const delBtn = idx === 0 ? '' :
+      `<button class="modal-att-del" title="Remove" onclick="event.stopPropagation(); removePendingAttachment(${idx - 1})">✕</button>`;
+    return `<div class="modal-att-item${activeCls}" data-pending-idx="${idx}" title="${titleAttr}">
+      ${thumbTag}${delBtn}${primaryBadge}
+    </div>`;
+  }).join('');
+
+  // Wire up click handlers — clicking makes that item the primary
+  strip.querySelectorAll('.modal-att-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+      if (e.target.closest('.modal-att-del')) return;
+      const idx = parseInt(item.dataset.pendingIdx);
+      selectModalAttachment(idx);
+    });
+  });
+}
+
+function removePendingAttachment(pendingIdx) {
+  pendingExtraAttachments.splice(pendingIdx, 1);
+  renderPendingStrip();
+}
+window.removePendingAttachment = removePendingAttachment;
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Read a file, generate thumbnail + full via the attachments library,
+ * POST it to /api/notes/:id/attachments, then refresh the strip.
+ */
+async function addAttachmentFromFile(file, noteId) {
+  const globalSettings = getGlobalSettings();
+
+  return new Promise((resolve) => {
+    const callbacks = {
+      onImageLoaded: async (result) => {
+        try {
+          await postAttachmentToNote(noteId, {
+            thumbnail:       result.thumbnail,
+            attachment_full: result.full,
+            attachment_type: result.type || 'image',
+            filename:        result.filename || file.name,
+          });
+          resolve();
+        } catch (err) {
+          alert('Could not add attachment: ' + err.message);
+          resolve();
+        }
+      },
+      onAttachmentLoaded: async (result) => {
+        try {
+          await postAttachmentToNote(noteId, {
+            thumbnail:       result.thumbnail || null,
+            attachment_full: result.full,
+            attachment_type: result.type || 'image',
+            filename:        result.filename || file.name,
+          });
+          resolve();
+        } catch (err) {
+          alert('Could not add attachment: ' + err.message);
+          resolve();
+        }
+      },
+    };
+    readAttachmentFileLib(file, 'quote', globalSettings, callbacks);
+  });
+}
+
+async function postAttachmentToNote(noteId, attData) {
+  const globalSettings = getGlobalSettings();
+  const resp = await fetch(`/api/notes/${noteId}/attachments`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      ...attData,
+      storageThresholdMB: globalSettings?.storageThresholdMB || 1,
+    }),
+  });
+  if (!resp.ok) throw new Error(await resp.text());
+
+  // Refresh the strip with the updated note
+  const updated = await fetch(`/api/quotes/${noteId}`).then(r => r.json());
+  renderModalAttachmentStrip(updated);
+  // Reload cards to reflect changes
+  loadQuotes();
+}
+
+// ──────────────────────────────────────────────────────────────────────────
 
 // Toggle attachment panel
 const toggleAttachmentBtn = getElementByIdSafe(BUTTON_IDS.TOGGLE_ATTACHMENT_BTN, 'setupEventListeners');
@@ -3478,43 +3852,51 @@ window.toggleImageSection = toggleImageSection;
 function updateAttachmentPanelVisibility() {
   const container = document.getElementById(CONTAINER_IDS.ATTACHMENT_CONTAINER);
   const toggleBtn = document.getElementById(BUTTON_IDS.TOGGLE_ATTACHMENT_BTN);
-  
+
   if (!container || !toggleBtn) return;
-  
+
   const hasAttachment = currentQuoteImage || currentQuoteImageFull;
-  
+
+  // Panel is always shown once the user opens it or has an attachment
+  toggleBtn.disabled = false;
+
   if (hasAttachment) {
-    // Image present: show panel, disable button
     container.classList.remove('hidden');
-    toggleBtn.disabled = true;
-    toggleBtn.textContent = '📎 Attachment';
-    toggleBtn.title = 'Attachment is present';
+    const pendingCount = pendingExtraAttachments.length;
+    const extra = pendingCount > 0 ? ` (+${pendingCount})` : '';
+    toggleBtn.textContent = `📎 Add more${extra}`;
+    toggleBtn.title = 'Add another attachment';
   } else {
-    // No attachment: hide panel by default, button active with "Add attachment"
     container.classList.add('hidden');
-    toggleBtn.disabled = false;
     toggleBtn.textContent = '📎 Add attachment';
     toggleBtn.title = 'Show attachment panel';
   }
 }
 
-// Toggle attachment panel — only called when there is no attachment
+// Toggle attachment panel
 function toggleAttachmentPanel() {
   const container = document.getElementById(CONTAINER_IDS.ATTACHMENT_CONTAINER);
   const toggleBtn = document.getElementById(BUTTON_IDS.TOGGLE_ATTACHMENT_BTN);
-  
-  if (container && toggleBtn) {
-    const isHidden = container.classList.contains('hidden');
-    
-    if (isHidden) {
-      container.classList.remove('hidden');
-      toggleBtn.textContent = '📎 Hide';
-      toggleBtn.title = 'Hide attachment panel';
-    } else {
-      container.classList.add('hidden');
-      toggleBtn.textContent = '📎 Add attachment';
-      toggleBtn.title = 'Show attachment panel';
-    }
+  if (!container || !toggleBtn) return;
+
+  const hasAttachment = currentQuoteImage || currentQuoteImageFull;
+
+  // Has attachment (edit or add mode): open file picker directly to add another
+  if (hasAttachment) {
+    quoteImageFile.click();
+    return;
+  }
+
+  // Otherwise: toggle panel visibility
+  const isHidden = container.classList.contains('hidden');
+  if (isHidden) {
+    container.classList.remove('hidden');
+    toggleBtn.textContent = hasAttachment ? '📎 Attachment' : '📎 Hide';
+    toggleBtn.title = 'Hide attachment panel';
+  } else {
+    container.classList.add('hidden');
+    toggleBtn.textContent = '📎 Add attachment';
+    toggleBtn.title = 'Show attachment panel';
   }
 }
 

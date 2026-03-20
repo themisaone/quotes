@@ -196,36 +196,65 @@ function buildGenericMetadata(noteTypeBadge, translationBadge) {
   return `<div class="meta-item">${noteTypeBadge}${translationBadge}</div>`;
 }
 
+const FILE_ICONS  = { pdf: '📄', video: '🎬', document: '📎' };
+const FILE_LABELS = { pdf: 'PDF', video: 'Video', document: 'File' };
+
+function buildSingleAttachmentTile(att, noteId, isMain = true) {
+  const type    = att.attachment_type || 'image';
+  const fullUrl = att.attachment_full || att.thumbnail || '';
+  const cls     = isMain ? 'quote-image-thumb' : 'att-strip-thumb';
+
+  if (type === 'image') {
+    const displayUrl = resolveAttachmentUrl(att.thumbnail || att.attachment_full);
+    return `<div class="${cls}" onclick="event.stopPropagation(); showFullImage('${fullUrl}', ${noteId}, '${type}')"><img src="${displayUrl}" alt="attachment"></div>`;
+  }
+  const icon  = FILE_ICONS[type]  || '📁';
+  const label = FILE_LABELS[type] || 'File';
+  const fileCls = isMain ? 'quote-file-thumb' : 'att-strip-thumb att-strip-file';
+  return `<div class="${fileCls}" onclick="event.stopPropagation(); showFullImage('${fullUrl}', ${noteId}, '${type}')"><div class="file-icon">${icon}</div>${isMain ? `<div class="file-label">${label}</div>` : ''}</div>`;
+}
+
 /**
  * Build attachment section (image thumb or file icon)
+ * Supports note.attachments[] array for multi-attachment notes.
  */
 function buildAttachmentSection(note, imageUrl, imageFullUrl) {
-  if (!note.thumbnail && !note.attachment_full) {
-    return '';
+  // Use structured attachments[] when available
+  const attachments = note.attachments && note.attachments.length > 0 ? note.attachments : null;
+
+  if (attachments) {
+    const first = attachments[0];
+    const rest  = attachments.slice(1);
+    const mainTile = buildSingleAttachmentTile(first, note.id, true);
+
+    if (rest.length === 0) return mainTile;
+
+    // Build extra thumbnails strip (max 4 shown, then "+N" badge)
+    const MAX_STRIP = 4;
+    const shown = rest.slice(0, MAX_STRIP);
+    const overflow = rest.length - MAX_STRIP;
+    const stripItems = shown.map(a => buildSingleAttachmentTile(a, note.id, false)).join('');
+    const badge = overflow > 0 ? `<div class="att-strip-thumb att-strip-more">+${overflow}</div>` : '';
+
+    return `
+      <div class="quote-image-thumb-multi">
+        ${mainTile}
+        <div class="att-strip">${stripItems}${badge}</div>
+      </div>`;
   }
-  
+
+  // Fallback to flat fields
+  if (!note.thumbnail && !note.attachment_full) return '';
+
   const attachmentType = note.attachment_type || 'image';
   const url = note.attachment_full || note.thumbnail;
   const displayUrl = imageUrl || imageFullUrl;
-  
+
   if (attachmentType === 'image') {
     return `<div class="quote-image-thumb" onclick="event.stopPropagation(); showFullImage('${url}', ${note.id}, '${attachmentType}')"><img src="${displayUrl}" alt="Quote attachment"></div>`;
   }
-  
-  // File attachment (PDF, video, document)
-  const fileIcons = {
-    'pdf': '📄',
-    'video': '🎬',
-    'document': '📎'
-  };
-  const fileLabels = {
-    'pdf': 'PDF',
-    'video': 'Video',
-    'document': 'File'
-  };
-  const fileIcon = fileIcons[attachmentType] || '📁';
-  const fileLabel = fileLabels[attachmentType] || 'File';
-  
+  const fileIcon  = FILE_ICONS[attachmentType]  || '📁';
+  const fileLabel = FILE_LABELS[attachmentType] || 'File';
   return `<div class="quote-file-thumb" onclick="event.stopPropagation(); showFullImage('${url}', ${note.id}, '${attachmentType}')"><div class="file-icon">${fileIcon}</div><div class="file-label">${fileLabel}</div></div>`;
 }
 

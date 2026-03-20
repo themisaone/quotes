@@ -133,6 +133,54 @@ function retrieveQuoteImages(note) {
   return note;
 }
 
+// Resolve storage references in a single attachment row
+function resolveAttachment(att) {
+  if (!att) return att;
+  return {
+    ...att,
+    thumbnail: att.thumbnail ? fileStorage.retrieveFromStorage(att.thumbnail) : null,
+    // attachment_full kept as-is (file: ref or base64) — same policy as notes
+  };
+}
+
+// Fetch all attachments for a list of note IDs in one query.
+// Returns a Map<noteId, attachment[]> sorted by position.
+async function getAttachmentsForNotes(noteIds) {
+  if (!noteIds || noteIds.length === 0) return new Map();
+  try {
+    const result = await pool.query(
+      `SELECT * FROM note_attachments
+       WHERE note_id = ANY($1::int[])
+       ORDER BY note_id, position`,
+      [noteIds]
+    );
+    const map = new Map();
+    for (const row of result.rows) {
+      if (!map.has(row.note_id)) map.set(row.note_id, []);
+      map.get(row.note_id).push(resolveAttachment(row));
+    }
+    return map;
+  } catch (_) {
+    // table may not exist yet during startup migration
+    return new Map();
+  }
+}
+
+// Attach the `attachments` array to a note and keep flat fields in sync with [0].
+function applyAttachments(note, attachments) {
+  const list = attachments || [];
+  const first = list[0] || null;
+  return {
+    ...note,
+    attachments: list,
+    // Keep flat fields populated from first attachment so all existing
+    // frontend code continues to work unchanged.
+    thumbnail:       first ? first.thumbnail       : note.thumbnail,
+    attachment_full: first ? first.attachment_full : note.attachment_full,
+    attachment_type: first ? first.attachment_type : note.attachment_type,
+  };
+}
+
 // ============= AUTHORS API =============
 
 // Get all authors (with optional search)
@@ -1247,30 +1295,29 @@ app.get("/api/quotes", async (req, res) => {
 
     const result = await pool.query(query, params);
     
-    // Add tags to each quote
+    // Add tags and attachments to each note
     if (result.rows.length > 0) {
+      const noteIds = result.rows.map(q => q.id);
+      const attachmentsMap = await getAttachmentsForNotes(noteIds);
+
       const hasNewTables = await checkTagTablesExist();
-      
       if (hasNewTables) {
-        const quoteIds = result.rows.map(q => q.id);
-        const tagsMap = await getTagsForNotes(quoteIds);
-        
+        const tagsMap = await getTagsForNotes(noteIds);
         const quotesWithTags = result.rows.map(note => {
           const quoteTags = tagsMap.get(note.id) || [];
-          // Retrieve thumbnails from hybrid storage
           const noteWithImages = retrieveQuoteImages(note);
+          const noteWithAll = applyAttachments(noteWithImages, attachmentsMap.get(note.id));
           return {
-            ...noteWithImages,
+            ...noteWithAll,
             tags: quoteTags.length > 0 ? quoteTags.map((t) => t.name).join(", ") : (note.tags || ""),
             tag_objects: quoteTags,
           };
         });
-        
         res.json(quotesWithTags);
       } else {
-        // Fallback: tags already in note.tags from old column
-        // Still need to retrieve thumbnails
-        const quotesWithImages = result.rows.map(retrieveQuoteImages);
+        const quotesWithImages = result.rows.map(note =>
+          applyAttachments(retrieveQuoteImages(note), attachmentsMap.get(note.id))
+        );
         res.json(quotesWithImages);
       }
     } else {
@@ -1303,22 +1350,21 @@ app.get("/api/quotes/random", async (req, res) => {
       return res.status(404).json({ error: "No quotes found" });
     }
 
-    // Add tags to response
+    // Add tags and attachments to response
+    const noteId0 = result.rows[0].id;
+    const attachmentsMap0 = await getAttachmentsForNotes([noteId0]);
     const hasNewTables = await checkTagTablesExist();
     if (hasNewTables) {
-      const quoteTags = await getTagsForNote(result.rows[0].id);
-      // Retrieve thumbnails from hybrid storage
+      const quoteTags = await getTagsForNote(noteId0);
       const quoteWithImages = retrieveQuoteImages(result.rows[0]);
-      const quoteWithTags = {
-        ...quoteWithImages,
+      const quoteWithAll = applyAttachments(quoteWithImages, attachmentsMap0.get(noteId0));
+      res.json({
+        ...quoteWithAll,
         tags: quoteTags.length > 0 ? quoteTags.map((t) => t.name).join(", ") : (result.rows[0].tags || ""),
         tag_objects: quoteTags,
-      };
-      res.json(quoteWithTags);
+      });
     } else {
-      // Fallback: use tags from old column, but still retrieve thumbnails
-      const quoteWithImages = retrieveQuoteImages(result.rows[0]);
-      res.json(quoteWithImages);
+      res.json(applyAttachments(retrieveQuoteImages(result.rows[0]), attachmentsMap0.get(noteId0)));
     }
   } catch (error) {
     console.error("Error fetching random quote:", error);
@@ -1347,22 +1393,19 @@ app.get("/api/quotes/:id", async (req, res) => {
       return res.status(404).json({ error: "Quote not found" });
     }
 
-    // Add tags to response
+    const attachmentsMap = await getAttachmentsForNotes([parseInt(id)]);
     const hasNewTables = await checkTagTablesExist();
     if (hasNewTables) {
       const quoteTags = await getTagsForNote(id);
-      // Retrieve thumbnails from hybrid storage
       const quoteWithImages = retrieveQuoteImages(result.rows[0]);
-      const quoteWithTags = {
-        ...quoteWithImages,
+      const quoteWithAll = applyAttachments(quoteWithImages, attachmentsMap.get(parseInt(id)));
+      res.json({
+        ...quoteWithAll,
         tags: quoteTags.length > 0 ? quoteTags.map((t) => t.name).join(", ") : (result.rows[0].tags || ""),
         tag_objects: quoteTags,
-      };
-      res.json(quoteWithTags);
+      });
     } else {
-      // Fallback: use tags from old column, but still retrieve thumbnails
-      const quoteWithImages = retrieveQuoteImages(result.rows[0]);
-      res.json(quoteWithImages);
+      res.json(applyAttachments(retrieveQuoteImages(result.rows[0]), attachmentsMap.get(parseInt(id))));
     }
   } catch (error) {
     console.error("Error fetching quote:", error);
@@ -1445,11 +1488,20 @@ app.post("/api/quotes", async (req, res) => {
     console.log(`   Thumbnail: ${thumbnail ? `${(thumbnail.length/1024).toFixed(0)}KB` : 'none'} → ${processedImage ? (processedImage.startsWith('file:') ? processedImage : `${(processedImage.length/1024).toFixed(0)}KB base64`) : 'none'}`);
     console.log(`   Full: ${attachment_full ? `${(attachment_full.length/1024/1024).toFixed(2)}MB` : 'none'} → ${processedImageFull ? (processedImageFull.startsWith('file:') ? processedImageFull : `${(processedImageFull.length/1024).toFixed(0)}KB base64`) : 'none'}`);
 
-    // Update quote with processed attachments and attachment type
+    // Update notes flat columns (backward compat) and write to note_attachments
     await client.query(
       `UPDATE notes SET thumbnail = $1, attachment_full = $2, attachment_type = $3 WHERE id = $4`,
       [processedImage, processedImageFull, attachment_type, quoteId]
     );
+
+    if (processedImage || processedImageFull) {
+      await client.query(
+        `INSERT INTO note_attachments (note_id, position, thumbnail, attachment_full, attachment_type, storage_type)
+         VALUES ($1, 0, $2, $3, $4, 'base64')
+         ON CONFLICT DO NOTHING`,
+        [quoteId, processedImage, processedImageFull, attachment_type || 'image']
+      );
+    }
 
     // Handle tags using new tag system (if tables exist)
     const tagNames = parseTagInput(tags);
@@ -1462,30 +1514,26 @@ app.post("/api/quotes", async (req, res) => {
 
     await client.query("COMMIT");
 
-    // Fetch the complete quote with author, source, and tags
+    // Fetch the complete quote with author, source, tags and attachments
     const completeQuote = await pool.query(
-      `
-      SELECT q.*, 
-             a.name as author_name, a.image as author_image,
-             s.name as source_name, s.image as source_image, q.type as source_type
-      FROM notes q
-      LEFT JOIN authors a ON q.author_id = a.id
-      LEFT JOIN sources s ON q.source_id = s.id
-      WHERE q.id = $1
-    `,
+      `SELECT q.*, a.name as author_name, a.image as author_image,
+              s.name as source_name, s.image as source_image, q.type as source_type
+       FROM notes q
+       LEFT JOIN authors a ON q.author_id = a.id
+       LEFT JOIN sources s ON q.source_id = s.id
+       WHERE q.id = $1`,
       [quoteId],
     );
 
-    // Add tags to response
     const quoteTags = await getTagsForNote(quoteId);
-    // Retrieve thumbnails from hybrid storage
+    const attachmentsMap = await getAttachmentsForNotes([quoteId]);
     const quoteWithImages = retrieveQuoteImages(completeQuote.rows[0]);
-    const quoteWithTags = {
-      ...quoteWithImages,
+    const quoteWithAll = applyAttachments(quoteWithImages, attachmentsMap.get(quoteId));
+    res.status(201).json({
+      ...quoteWithAll,
       tags: quoteTags.length > 0 ? quoteTags.map((t) => t.name).join(", ") : "",
       tag_objects: quoteTags,
-    };
-    res.status(201).json(quoteWithTags);
+    });
   } catch (error) {
     await client.query("ROLLBACK");
     console.error("Error creating quote:", error);
@@ -1711,12 +1759,10 @@ app.put("/api/quotes/:id", async (req, res) => {
       const tagIds = await getOrCreateTagIds(tagNames, note_type, client);
       console.log("UPDATE TAGS - Tag IDs:", tagIds);
       
-      // Always update associations, even if empty (to clear tags)
       if (tagIds.length > 0) {
         await associateTagsWithNote(id, tagIds, client);
         console.log("UPDATE TAGS - Associated tags with quote");
       } else {
-        // Clear all tag associations if no tags provided
         const hasNewTables = await checkTagTablesExist();
         if (hasNewTables) {
           await client.query("DELETE FROM note_tags WHERE note_id = $1", [id]);
@@ -1725,39 +1771,65 @@ app.put("/api/quotes/:id", async (req, res) => {
       }
     }
 
+    // Sync note_attachments position=0 with updated flat attachment fields
+    if (thumbnail !== undefined || attachment_full !== undefined || attachment_type !== undefined) {
+      const updatedNote = result.rows[0];
+      const updateStorageFolder2 = updatedNote.note_type || 'quote';
+      const syncThumb = thumbnail !== undefined
+        ? fileStorage.processForStorage(thumbnail || null, updateStorageFolder2, id, '', storageThresholdMB || 1)
+        : undefined;
+      const syncFull  = attachment_full !== undefined
+        ? fileStorage.processForStorage(attachment_full || null, updateStorageFolder2, id, '_full', storageThresholdMB || 1)
+        : undefined;
+
+      const existing = await client.query(
+        `SELECT id FROM note_attachments WHERE note_id = $1 AND position = 0`, [id]
+      );
+      if (existing.rows.length > 0) {
+        const setParts = [];
+        const setVals  = [];
+        if (syncThumb  !== undefined) { setParts.push(`thumbnail = $${setVals.length+1}`);       setVals.push(syncThumb  || null); }
+        if (syncFull   !== undefined) { setParts.push(`attachment_full = $${setVals.length+1}`); setVals.push(syncFull   || null); }
+        if (attachment_type !== undefined) { setParts.push(`attachment_type = $${setVals.length+1}`); setVals.push(attachment_type || null); }
+        if (setParts.length > 0) {
+          setVals.push(id);
+          await client.query(
+            `UPDATE note_attachments SET ${setParts.join(', ')} WHERE note_id = $${setVals.length} AND position = 0`,
+            setVals
+          );
+        }
+      } else if (syncThumb || syncFull) {
+        await client.query(
+          `INSERT INTO note_attachments (note_id, position, thumbnail, attachment_full, attachment_type, storage_type)
+           VALUES ($1, 0, $2, $3, $4, 'base64')`,
+          [id, syncThumb || null, syncFull || null, attachment_type || 'image']
+        );
+      }
+    }
+
     await client.query("COMMIT");
 
-    // Fetch the complete quote with author, source, and tags
+    // Fetch the complete updated note with author, source, tags and attachments
     const completeQuote = await pool.query(
-      `
-      SELECT q.*, 
-             a.name as author_name, a.image as author_image,
-             s.name as source_name, s.image as source_image, q.type as source_type
-      FROM notes q
-      LEFT JOIN authors a ON q.author_id = a.id
-      LEFT JOIN sources s ON q.source_id = s.id
-      WHERE q.id = $1
-    `,
+      `SELECT q.*, a.name as author_name, a.image as author_image,
+              s.name as source_name, s.image as source_image, q.type as source_type
+       FROM notes q
+       LEFT JOIN authors a ON q.author_id = a.id
+       LEFT JOIN sources s ON q.source_id = s.id
+       WHERE q.id = $1`,
       [id],
     );
 
-    // Add tags to response
     const hasNewTables = await checkTagTablesExist();
-    if (hasNewTables) {
-      const quoteTags = await getTagsForNote(id);
-      // Retrieve thumbnails from hybrid storage
-      const quoteWithImages = retrieveQuoteImages(completeQuote.rows[0]);
-      const quoteWithTags = {
-        ...quoteWithImages,
-        tags: quoteTags.length > 0 ? quoteTags.map((t) => t.name).join(", ") : (completeQuote.rows[0].tags || ""),
-        tag_objects: quoteTags,
-      };
-      res.json(quoteWithTags);
-    } else {
-      // Fallback: use tags from old column, but still retrieve thumbnails
-      const quoteWithImages = retrieveQuoteImages(completeQuote.rows[0]);
-      res.json(quoteWithImages);
-    }
+    const quoteTags = hasNewTables ? await getTagsForNote(id) : [];
+    const attachmentsMapPut = await getAttachmentsForNotes([parseInt(id)]);
+    const quoteWithImages = retrieveQuoteImages(completeQuote.rows[0]);
+    const quoteWithAll = applyAttachments(quoteWithImages, attachmentsMapPut.get(parseInt(id)));
+    res.json({
+      ...quoteWithAll,
+      tags: quoteTags.length > 0 ? quoteTags.map((t) => t.name).join(", ") : (completeQuote.rows[0].tags || ""),
+      tag_objects: quoteTags,
+    });
   } catch (error) {
     await client.query("ROLLBACK");
     console.error("Error updating quote:", error);
@@ -1799,6 +1871,175 @@ app.post("/api/quotes/:id/downscale-thumbnail", async (req, res) => {
     res.status(500).json({ error: "Failed to downscale thumbnail" });
   }
 });
+
+// ── Note Attachments CRUD ──────────────────────────────────────────────────
+
+// GET  /api/notes/:id/attachments  — list all attachments for a note
+app.get("/api/notes/:id/attachments", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(
+      `SELECT * FROM note_attachments WHERE note_id = $1 ORDER BY position`,
+      [id]
+    );
+    res.json(result.rows.map(resolveAttachment));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/notes/:id/attachments  — add an attachment to a note
+app.post("/api/notes/:id/attachments", async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const { id } = req.params;
+    const { thumbnail, attachment_full, attachment_type = 'image', filename, storageThresholdMB = 1 } = req.body;
+
+    const posResult = await client.query(
+      `SELECT COALESCE(MAX(position), -1) + 1 AS next_pos FROM note_attachments WHERE note_id = $1`, [id]
+    );
+    const position = posResult.rows[0].next_pos;
+
+    const noteRow = await client.query(`SELECT note_type FROM notes WHERE id = $1`, [id]);
+    const folder  = noteRow.rows[0]?.note_type || 'historical';
+
+    const processedThumb = fileStorage.processForStorage(thumbnail, folder, `${id}_a${position}`, '', storageThresholdMB);
+    const processedFull  = fileStorage.processForStorage(attachment_full, folder, `${id}_a${position}`, '_full', storageThresholdMB);
+
+    const ins = await client.query(
+      `INSERT INTO note_attachments (note_id, position, thumbnail, attachment_full, attachment_type, storage_type, filename)
+       VALUES ($1, $2, $3, $4, $5, 'base64', $6) RETURNING *`,
+      [id, position, processedThumb, processedFull, attachment_type, filename || null]
+    );
+
+    // Keep notes flat columns in sync with position=0
+    if (position === 0) {
+      await client.query(
+        `UPDATE notes SET thumbnail = $1, attachment_full = $2, attachment_type = $3 WHERE id = $4`,
+        [processedThumb, processedFull, attachment_type, id]
+      );
+    }
+
+    await client.query("COMMIT");
+    res.status(201).json(resolveAttachment(ins.rows[0]));
+  } catch (err) {
+    await client.query("ROLLBACK");
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+});
+
+// DELETE /api/notes/:noteId/attachments/:attachId  — remove one attachment
+app.delete("/api/notes/:noteId/attachments/:attachId", async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const { noteId, attachId } = req.params;
+
+    const attRow = await client.query(
+      `SELECT * FROM note_attachments WHERE id = $1 AND note_id = $2`, [attachId, noteId]
+    );
+    if (attRow.rows.length === 0) return res.status(404).json({ error: "Attachment not found" });
+
+    const att = attRow.rows[0];
+    // Delete filesystem files if applicable
+    if (att.thumbnail)       fileStorage.deleteAttachment(att.thumbnail);
+    if (att.attachment_full) fileStorage.deleteAttachment(att.attachment_full);
+
+    await client.query(`DELETE FROM note_attachments WHERE id = $1`, [attachId]);
+
+    // Re-number positions
+    await client.query(
+      `UPDATE note_attachments SET position = pos_rank - 1
+       FROM (SELECT id, ROW_NUMBER() OVER (ORDER BY position) AS pos_rank
+             FROM note_attachments WHERE note_id = $1) ranked
+       WHERE note_attachments.id = ranked.id`,
+      [noteId]
+    );
+
+    // Sync notes flat columns with new position=0 (or null if no attachments left)
+    const newFirst = await client.query(
+      `SELECT * FROM note_attachments WHERE note_id = $1 ORDER BY position LIMIT 1`, [noteId]
+    );
+    if (newFirst.rows.length > 0) {
+      const f = newFirst.rows[0];
+      await client.query(
+        `UPDATE notes SET thumbnail = $1, attachment_full = $2, attachment_type = $3 WHERE id = $4`,
+        [f.thumbnail, f.attachment_full, f.attachment_type, noteId]
+      );
+    } else {
+      await client.query(
+        `UPDATE notes SET thumbnail = NULL, attachment_full = NULL, attachment_type = NULL WHERE id = $1`,
+        [noteId]
+      );
+    }
+
+    await client.query("COMMIT");
+    res.json({ ok: true });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+});
+
+// PATCH /api/notes/:noteId/attachments/:attachId/make-primary
+// Moves the given attachment to position=0 (re-numbers the rest) and syncs flat columns.
+app.patch("/api/notes/:noteId/attachments/:attachId/make-primary", async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const { noteId, attachId } = req.params;
+
+    const allRows = await client.query(
+      `SELECT * FROM note_attachments WHERE note_id = $1 ORDER BY position`,
+      [noteId]
+    );
+    if (allRows.rows.length === 0) return res.status(404).json({ error: "No attachments" });
+
+    const targetIdx = allRows.rows.findIndex(r => r.id === parseInt(attachId));
+    if (targetIdx < 0) return res.status(404).json({ error: "Attachment not found" });
+    if (targetIdx === 0) { await client.query("ROLLBACK"); return res.json({ ok: true }); }
+
+    // Re-order: move target to front, shift others down
+    const reordered = [
+      allRows.rows[targetIdx],
+      ...allRows.rows.slice(0, targetIdx),
+      ...allRows.rows.slice(targetIdx + 1),
+    ];
+    for (let i = 0; i < reordered.length; i++) {
+      await client.query(
+        `UPDATE note_attachments SET position = $1 WHERE id = $2`,
+        [i, reordered[i].id]
+      );
+    }
+
+    // Sync flat columns on notes with new position=0
+    const first = reordered[0];
+    await client.query(
+      `UPDATE notes SET thumbnail = $1, attachment_full = $2, attachment_type = $3 WHERE id = $4`,
+      [first.thumbnail, first.attachment_full, first.attachment_type, noteId]
+    );
+
+    await client.query("COMMIT");
+
+    // Return updated list
+    const updated = await pool.query(
+      `SELECT * FROM note_attachments WHERE note_id = $1 ORDER BY position`, [noteId]
+    );
+    res.json(updated.rows.map(resolveAttachment));
+  } catch (err) {
+    await client.query("ROLLBACK");
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 // Get translations for a quote (by translation_group)
 app.get("/api/quotes/:id/translations", async (req, res) => {
@@ -2898,16 +3139,39 @@ app.post("/api/import/json", async (req, res) => {
           // Use note_type directly as the storage folder name so any new type
           // (historical, puzzle, custom, ...) automatically gets its own directory.
           const storageFolder = noteType || 'quotes';
-          
-          // Now process attachments with the note ID (respects 1 MB threshold)
-          const processedImage = fileStorage.processForStorage(note.thumbnail, storageFolder, quoteId, '', storageThresholdMB);
-          const processedImageFull = fileStorage.processForStorage(note.attachment_full, storageFolder, quoteId, '_full', storageThresholdMB);
-          
-          // Update with processed attachment references
-          if (processedImage || processedImageFull) {
+
+          // Support both old flat fields and new attachments array from parse-enex
+          const attachmentRows = note.attachments && note.attachments.length > 0
+            ? note.attachments
+            : (note.thumbnail || note.attachment_full)
+              ? [{ thumbnail: note.thumbnail, attachment_full: note.attachment_full,
+                   attachment_type: note.attachment_type, filename: note.filename,
+                   position: 0 }]
+              : [];
+
+          let primaryThumb = null, primaryFull = null;
+
+          for (const att of attachmentRows) {
+            const pos = att.position ?? 0;
+            const suffix = pos === 0 ? '' : `_${pos}`;
+            const procThumb = fileStorage.processForStorage(att.thumbnail, storageFolder, quoteId, suffix ? `${suffix}` : '', storageThresholdMB);
+            const procFull  = fileStorage.processForStorage(att.attachment_full, storageFolder, quoteId, pos === 0 ? '_full' : `_${pos}_full`, storageThresholdMB);
+
+            await client.query(
+              `INSERT INTO note_attachments (note_id, position, thumbnail, attachment_full, attachment_type, storage_type, filename)
+               VALUES ($1, $2, $3, $4, $5, 'base64', $6)`,
+              [quoteId, pos, procThumb || null, procFull || null,
+               att.attachment_type || null, att.filename || null]
+            );
+
+            if (pos === 0) { primaryThumb = procThumb; primaryFull = procFull; }
+          }
+
+          // Update flat columns on notes with position=0 values
+          if (primaryThumb || primaryFull) {
             await client.query(
               `UPDATE notes SET thumbnail = $1, attachment_full = $2 WHERE id = $3`,
-              [processedImage, processedImageFull, quoteId]
+              [primaryThumb, primaryFull, quoteId]
             );
           }
           

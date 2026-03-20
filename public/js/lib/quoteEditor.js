@@ -386,7 +386,8 @@ export async function handleFormSubmit(e, config) {
 
     if (response.ok) {
       if (callbacks.onSuccess) {
-        callbacks.onSuccess();
+        const savedNote = await response.json().catch(() => null);
+        callbacks.onSuccess(savedNote);
       }
     } else {
       const errorData = await response.json();
