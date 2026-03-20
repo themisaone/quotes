@@ -1,5 +1,31 @@
-const fs = require('fs');
-const path = require('path');
+const fs    = require('fs');
+const path  = require('path');
+const sharp = require('sharp');
+
+const THUMBNAIL_MAX_PX = 240;
+
+/**
+ * Downscale a base64 data-URL image to THUMBNAIL_MAX_PX on the longest side.
+ * Returns a JPEG base64 data-URL. Falls back to the original on any error.
+ */
+async function generateThumbnail(dataUrl) {
+  if (!dataUrl || !dataUrl.startsWith('data:image/')) return dataUrl;
+  try {
+    const comma  = dataUrl.indexOf(',');
+    const input  = Buffer.from(dataUrl.slice(comma + 1), 'base64');
+    const meta   = await sharp(input).metadata();
+    const longest = Math.max(meta.width || 0, meta.height || 0);
+    if (longest <= THUMBNAIL_MAX_PX) return dataUrl; // already small
+    const out = await sharp(input)
+      .resize(THUMBNAIL_MAX_PX, THUMBNAIL_MAX_PX, { fit: 'inside', withoutEnlargement: true })
+      .jpeg({ quality: 85 })
+      .toBuffer();
+    return `data:image/jpeg;base64,${out.toString('base64')}`;
+  } catch (err) {
+    process.stdout.write(`\n⚠️  Thumbnail generation failed: ${err.message}\n`);
+    return dataUrl; // fallback to original
+  }
+}
 
 // ─── Load configured note types from settings.json ─────────────────────────
 
@@ -260,7 +286,7 @@ async function parseEnex(enexPath, noteTypeArg, subTypeArg, maxAttachmentSizeMB 
   let skippedLargeAttachments = 0;
   const largeAttachments = [];
 
-  await streamNoteBlocks(enexPath, fileSize, (noteXml, index) => {
+  await streamNoteBlocks(enexPath, fileSize, async (noteXml, index) => {
     totalFound = index;
     const title = getTextContent(noteXml, 'title') || `Note ${index}`;
     const contentXml = getTextContent(noteXml, 'content');
@@ -334,7 +360,7 @@ async function parseEnex(enexPath, noteTypeArg, subTypeArg, maxAttachmentSizeMB 
       const r = resources[0];
       addNote({
         ...baseNote,
-        thumbnail: r.attachmentType === 'image' ? r.dataUrl : null,
+        thumbnail: r.attachmentType === 'image' ? await generateThumbnail(r.dataUrl) : null,
         attachment_full: r.dataUrl,
         storage_type: 'base64',
         attachment_type: r.attachmentType
@@ -346,19 +372,19 @@ async function parseEnex(enexPath, noteTypeArg, subTypeArg, maxAttachmentSizeMB 
     // Multiple attachments → one note per attachment, all sharing the same group
     const shortId = Math.random().toString(36).slice(2, 7);
     const groupName = `${title || 'group'}-${shortId}`;
-    resources.forEach((r, ai) => {
+    for (const [ai, r] of resources.entries()) {
       const isFirst = ai === 0;
       addNote({
         ...baseNote,
         note_text: isFirst ? htmlContent : `<p><em>Additional attachment from: ${title}</em></p>`,
         comment: isFirst ? title : `${title} — attachment ${ai + 1}`,
-        thumbnail: r.attachmentType === 'image' ? r.dataUrl : null,
+        thumbnail: r.attachmentType === 'image' ? await generateThumbnail(r.dataUrl) : null,
         attachment_full: r.dataUrl,
         storage_type: 'base64',
         attachment_type: r.attachmentType,
         translation_group: groupName,
       });
-    });
+    }
     totalParsed += resources.length;
   });
 
@@ -388,27 +414,27 @@ function streamNoteBlocks(enexPath, fileSize, callback) {
       highWaterMark: 8 * 1024 * 1024  // 8 MB read chunks
     });
 
-    let buffer = '';
-    let noteIndex = 0;
-    let bytesRead = 0;
+    let buffer      = '';
+    let noteIndex   = 0;
+    let bytesRead   = 0;
+    let processing  = false;
+    let streamEnded = false;
 
-    stream.on('data', (chunk) => {
-      buffer += chunk;
-      bytesRead += Buffer.byteLength(chunk, 'utf8');
+    // Process all complete notes currently in the buffer.
+    // The stream is paused while we await async callbacks so memory stays bounded.
+    const processBuffer = async () => {
+      if (processing) return;
+      processing = true;
+      stream.pause();
 
-      // Extract every complete <note>…</note> block from the buffer
       while (true) {
         const start = buffer.indexOf('<note>');
         if (start === -1) {
-          // No note start yet — discard everything except a small tail in case
-          // the tag is split across the chunk boundary
           if (buffer.length > 6) buffer = buffer.slice(buffer.length - 6);
           break;
         }
-
         const end = buffer.indexOf('</note>', start);
         if (end === -1) {
-          // Note started but not finished — keep from start and wait for more data
           buffer = buffer.slice(start);
           break;
         }
@@ -420,11 +446,28 @@ function streamNoteBlocks(enexPath, fileSize, callback) {
         const pct = fileSize > 0 ? ((bytesRead / fileSize) * 100).toFixed(0) : '?';
         process.stdout.write(`\r   Progress: ${pct}%  |  Notes processed: ${noteIndex}   `);
 
-        callback(noteXml, noteIndex);
+        await callback(noteXml, noteIndex);
       }
+
+      processing = false;
+      if (streamEnded) {
+        resolve();
+      } else {
+        stream.resume();
+      }
+    };
+
+    stream.on('data', (chunk) => {
+      buffer    += chunk;
+      bytesRead += Buffer.byteLength(chunk, 'utf8');
+      processBuffer().catch(reject);
     });
 
-    stream.on('end', () => resolve());
+    stream.on('end', () => {
+      streamEnded = true;
+      if (!processing) resolve();
+    });
+
     stream.on('error', reject);
   });
 }

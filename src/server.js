@@ -2524,114 +2524,103 @@ app.post("/api/tags/bulk-add", async (req, res) => {
 
 // Export all data as JSON
 app.get("/api/export/json", async (req, res) => {
+  const { note_type } = req.query;
+  console.log(`JSON export requested... (note_type: ${note_type || 'all'})`);
+
+  // Stream the response immediately so the browser doesn't time out and we
+  // never build one giant JSON string in memory (avoids "Invalid string length").
+  res.setHeader("Content-Type", "application/json");
+  res.setHeader(
+    "Content-Disposition",
+    `attachment; filename=quotes_backup_${new Date().toISOString().split("T")[0]}.json`,
+  );
+
   try {
-    const { note_type } = req.query;
-    const noteTypeFilter = note_type ? `WHERE q.note_type = $1` : '';
-    const queryParams = note_type ? [note_type] : [];
-    
-    console.log(`JSON export requested... (note_type: ${note_type || 'all'})`);
+    // ── Small tables: authors, sources, tags ─────────────────────────────────
+    const authorsResult = await pool.query("SELECT * FROM authors ORDER BY id");
+    const sourcesResult = await pool.query("SELECT * FROM sources ORDER BY id");
+    const tagsResult    = await pool.query("SELECT * FROM tags    ORDER BY id");
 
-    // Fetch all quotes with full details (filtered by note_type if provided)
-    const quotesQuery = `
-      SELECT q.*, 
-             a.name as author_name, 
-             s.name as source_name
-      FROM notes q
-      LEFT JOIN authors a ON q.author_id = a.id
-      LEFT JOIN sources s ON q.source_id = s.id
-      ${noteTypeFilter}
-      ORDER BY q.id
-    `;
-    
-    const quotesResult = note_type 
-      ? await pool.query(quotesQuery, queryParams)
-      : await pool.query(quotesQuery);
+    // ── Quote count (for the counts header) ──────────────────────────────────
+    const countParams = note_type ? [note_type] : [];
+    const countResult = await pool.query(
+      `SELECT COUNT(*) FROM notes${note_type ? ' WHERE note_type = $1' : ''}`,
+      countParams
+    );
+    const quoteCount = parseInt(countResult.rows[0].count, 10);
 
-    // Fetch tags for each note
-    const quotesWithTags = [];
-    for (const note of quotesResult.rows) {
-      const tagsResult = await pool.query(`
-        SELECT t.id, t.name, t.type
-        FROM tags t
-        JOIN note_tags qt ON t.id = qt.tag_id
-        WHERE qt.note_id = $1
-        ORDER BY t.name
-      `, [note.id]);
-      
-      quotesWithTags.push({
-        ...note,
-        tag_objects: tagsResult.rows
-      });
-    }
-
-    // Get unique author and source IDs from the filtered quotes
-    const authorIds = [...new Set(quotesWithTags.map(q => q.author_id).filter(id => id !== null))];
-    const sourceIds = [...new Set(quotesWithTags.map(q => q.source_id).filter(id => id !== null))];
-    
-    // Fetch only the authors and sources used by these quotes
-    let authorsResult = { rows: [] };
-    let sourcesResult = { rows: [] };
-    
-    if (authorIds.length > 0) {
-      authorsResult = await pool.query(
-        "SELECT * FROM authors WHERE id = ANY($1) ORDER BY id",
-        [authorIds]
-      );
-    }
-    
-    if (sourceIds.length > 0) {
-      sourcesResult = await pool.query(
-        "SELECT * FROM sources WHERE id = ANY($1) ORDER BY id",
-        [sourceIds]
-      );
-    }
-
-    // Get all unique tags used by these quotes
-    const allTagIds = [...new Set(quotesWithTags.flatMap(q => 
-      q.tag_objects.map(t => t.id)
-    ))];
-    
-    let tagsResult = { rows: [] };
-    if (allTagIds.length > 0) {
-      tagsResult = await pool.query(
-        "SELECT * FROM tags WHERE id = ANY($1) ORDER BY id",
-        [allTagIds]
-      );
-    }
-
-    const exportData = {
-      version: "2.0", // Bumped version for new format with tags
-      exportedAt: new Date().toISOString(),
-      noteTypeFilter: note_type || 'all',
-      counts: {
-        authors: authorsResult.rows.length,
-        sources: sourcesResult.rows.length,
-        tags: tagsResult.rows.length,
-        quotes: quotesWithTags.length,
-      },
-      data: {
-        authors: authorsResult.rows,
-        sources: sourcesResult.rows,
-        tags: tagsResult.rows,
-        quotes: quotesWithTags,
-      },
+    const counts = {
+      authors: authorsResult.rows.length,
+      sources: sourcesResult.rows.length,
+      tags:    tagsResult.rows.length,
+      quotes:  quoteCount,
     };
 
-    console.log(
-      `Exported ${exportData.counts.authors} authors, ${exportData.counts.sources} sources, ${exportData.counts.tags} tags, ${exportData.counts.quotes} quotes (note_type: ${note_type || 'all'})`,
-    );
+    console.log(`Exported ${counts.authors} authors, ${counts.sources} sources, ${counts.tags} tags, ${counts.quotes} quotes (note_type: ${note_type || 'all'})`);
 
-    res.setHeader("Content-Type", "application/json");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename=quotes_backup_${new Date().toISOString().split("T")[0]}.json`,
-    );
-    res.json(exportData);
+    // ── Write JSON preamble ───────────────────────────────────────────────────
+    res.write('{"version":"2.0"');
+    res.write(`,"exportedAt":${JSON.stringify(new Date().toISOString())}`);
+    res.write(`,"noteTypeFilter":${JSON.stringify(note_type || 'all')}`);
+    res.write(`,"counts":${JSON.stringify(counts)}`);
+    res.write(`,"data":{"authors":${JSON.stringify(authorsResult.rows)}`);
+    res.write(`,"sources":${JSON.stringify(sourcesResult.rows)}`);
+    res.write(`,"tags":${JSON.stringify(tagsResult.rows)}`);
+    res.write(',"quotes":[');
+
+    // ── Stream notes in batches using cursor pagination ───────────────────────
+    // Each batch uses a single query with json_agg to avoid N+1 tag queries.
+    const BATCH = 200;
+    let lastId  = 0;
+    let first   = true;
+    const noteTypeClause = note_type ? 'AND q.note_type = $3' : '';
+
+    while (true) {
+      const params = note_type ? [lastId, BATCH, note_type] : [lastId, BATCH];
+      const batch  = await pool.query(
+        `SELECT q.*,
+                a.name AS author_name,
+                s.name AS source_name,
+                COALESCE(
+                  json_agg(json_build_object('id', t.id, 'name', t.name, 'type', t.type))
+                  FILTER (WHERE t.id IS NOT NULL),
+                  '[]'::json
+                ) AS tag_objects
+         FROM notes q
+         LEFT JOIN authors   a  ON a.id = q.author_id
+         LEFT JOIN sources   s  ON s.id = q.source_id
+         LEFT JOIN note_tags nt ON nt.note_id = q.id
+         LEFT JOIN tags      t  ON t.id = nt.tag_id
+         WHERE q.id > $1 ${noteTypeClause}
+         GROUP BY q.id, a.name, s.name
+         ORDER BY q.id
+         LIMIT $2`,
+        params
+      );
+
+      if (batch.rows.length === 0) break;
+
+      for (const note of batch.rows) {
+        if (!first) res.write(',');
+        res.write(JSON.stringify(note));
+        first = false;
+      }
+
+      lastId = batch.rows[batch.rows.length - 1].id;
+      if (batch.rows.length < BATCH) break;
+    }
+
+    res.write(']}}');
+    res.end();
+
   } catch (error) {
     console.error("Error exporting data:", error);
-    res
-      .status(500)
-      .json({ error: "Failed to export data", details: error.message });
+    // If headers not sent yet we can send a proper error; otherwise just end.
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Failed to export data", details: error.message });
+    } else {
+      res.end();
+    }
   }
 });
 
