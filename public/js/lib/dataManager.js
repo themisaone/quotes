@@ -11,6 +11,7 @@
 
 import { API_URL } from './api.js';
 import { getNoteTypeConfig } from './noteTypes.js';
+import { showConfirm } from './confirmDialog.js';
 
 // ============= CONSTANTS =============
 
@@ -353,10 +354,10 @@ export async function exportToJson(config) {
     
     // Show confirmation dialog
     const message = generateBackupConfirmationMessage(currentNoteTypeFilter, typeLabel);
-    if (!confirm(message)) {
+    if (!await showConfirm(message, { icon: '📤', title: 'Export notes', confirmLabel: 'Export' })) {
       return;
     }
-    
+
     const originalText = setButtonLoading(exportBtn, "⏳ Exporting...");
 
     // Fetch and download backup
@@ -472,7 +473,7 @@ export async function handleImportFile(event, config) {
     // Show confirmation
     const message = generateImportConfirmationMessage(backupData);
     
-    if (!confirm(message)) {
+    if (!await showConfirm(message, { icon: '📥', title: 'Restore backup', confirmLabel: 'Restore' })) {
       resetFileInput(event, selectFileBtn);
       return;
     }

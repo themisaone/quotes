@@ -157,8 +157,7 @@ import {
   handleHashChange,
   initializeHashChangeListener
 } from './js/lib/pageCoordinator.js';
-
-// Note: displayImage, clearImagePreview, displayAttachmentPreview NOT imported
+import { showConfirm } from './js/lib/confirmDialog.js';
 // They are kept as local functions due to tight coupling with app-specific state
 
 // ============= CONSTANTS =============
@@ -1318,10 +1317,9 @@ async function handleSubmit(e) {
       if (!hasYearTag) missing.push('YEAR');
       if (!hasMonthTag) missing.push('MONTH');
       
-      const proceed = confirm(
-        `⚠️ Warning: This training note is missing ${missing.join(' and ')} tag(s).\n\n` +
-        `Without these tags, it will be difficult to find later.\n\n` +
-        `Do you want to save it anyway?`
+      const proceed = await showConfirm(
+        `This training note is missing ${missing.join(' and ')} tag(s).\n\nWithout these tags, it will be difficult to find later.`,
+        { icon: '⚠️', title: 'Missing tags', confirmLabel: 'Save anyway' }
       );
       
       if (!proceed) {
@@ -1973,9 +1971,9 @@ getElementByIdSafe("quoteModal").addEventListener("paste", (e) => {
 });
 
 // Clear quote image
-clearQuoteImageBtn.addEventListener("click", (e) => {
+clearQuoteImageBtn.addEventListener("click", async (e) => {
   e.stopPropagation();
-  if (!confirm('Remove the main attachment from this note?')) return;
+  if (!await showConfirm('Remove the main attachment from this note?', { icon: '📎', title: 'Remove attachment', danger: true })) return;
   currentQuoteImage = "";
   currentQuoteImageFull = "";
   currentAttachmentType = "image";
@@ -2122,7 +2120,7 @@ async function deleteModalAttachment(idx) {
   const att = currentModalAttachments[idx];
   if (!att) return;
   const label = att.attachment_filename || att.attachment_type || `attachment ${idx + 1}`;
-  if (!confirm(`Remove "${label}" from this note?\n\nThis cannot be undone.`)) return;
+  if (!await showConfirm(`"${label}" will be removed from this note.`, { title: 'Remove attachment', danger: true })) return;
 
   try {
     const resp = await fetch(`/api/notes/${editingQuoteId}/attachments/${att.id}`, { method: 'DELETE' });
@@ -2223,10 +2221,10 @@ function renderPendingStrip() {
   });
 }
 
-function removePendingAttachment(pendingIdx) {
+async function removePendingAttachment(pendingIdx) {
   const att = pendingExtraAttachments[pendingIdx];
   const label = att?.name || att?.filename || `attachment ${pendingIdx + 1}`;
-  if (!confirm(`Remove "${label}" from the queue?\n\nIt has not been saved yet.`)) return;
+  if (!await showConfirm(`"${label}" has not been saved yet and will be discarded.`, { title: 'Remove attachment', danger: true })) return;
   pendingExtraAttachments.splice(pendingIdx, 1);
   renderPendingStrip();
 }
@@ -3145,7 +3143,7 @@ document.addEventListener('DOMContentLoaded', () => {
         confirmMessage = `Add tag "${targetTagValue}" to all quotes that have "${sourceTagName}"?\n\nThis will not remove the existing tag.`;
       }
       
-      if (!confirm(confirmMessage)) {
+      if (!await showConfirm(confirmMessage, { icon: '🏷️', title: 'Add tag to notes', confirmLabel: 'Add tag' })) {
         return;
       }
       
@@ -3580,7 +3578,9 @@ async function handleBulkTag() {
   }
 
   const tagList = _bulkTagQueue.map(t => `"${t}"`).join(', ');
-  if (!confirm(`Add ${_bulkTagQueue.length} tag(s) — ${tagList} — to ${count} ${label}?`)) {
+  if (!await showConfirm(`Add ${_bulkTagQueue.length} tag(s) — ${tagList} — to ${count} ${label}?`, {
+    icon: '🏷️', title: 'Bulk tag notes', confirmLabel: 'Add tags'
+  })) {
     return;
   }
 
@@ -3630,7 +3630,9 @@ async function handleBulkUntag() {
     return;
   }
   
-  if (!confirm(`Remove tag "${tagName}" from ${count} ${label}?`)) {
+  if (!await showConfirm(`Remove tag "${tagName}" from ${count} ${label}?`, {
+    icon: '🏷️', title: 'Bulk remove tag', danger: true, confirmLabel: 'Remove'
+  })) {
     return;
   }
   

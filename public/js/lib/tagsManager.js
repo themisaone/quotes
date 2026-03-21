@@ -26,6 +26,7 @@
 
 import { API_URL } from './api.js';
 import { escapeHtml } from './utils.js';
+import { showConfirm } from './confirmDialog.js';
 import { 
   FILTER_IDS,
   CONTAINER_IDS,
@@ -692,7 +693,7 @@ async function handleMergeTags() {
   const isNewTag = !targetTagId;
   const confirmMessage = generateMergeConfirmMessage(isNewTag, targetTagValue, sourceTagName);
   
-  if (!confirm(confirmMessage)) {
+  if (!await showConfirm(confirmMessage, { icon: '🏷️', title: 'Add tag to notes', confirmLabel: 'Add tag' })) {
     return;
   }
   
@@ -772,8 +773,9 @@ export async function loadTags(typeFilter = null) {
  * @param {string} name - Tag name
  */
 export async function deleteTag(id, name) {
-  const confirmDelete = confirm(
-    `Are you sure you want to delete the tag "${name}"?\n\nThis will remove the tag from all quotes that have it. The quotes themselves will not be deleted.`
+  const confirmDelete = await showConfirm(
+    `This will remove the tag from all notes that have it. The notes themselves will not be deleted.`,
+    { title: `Delete tag "${name}"?`, danger: true }
   );
   
   if (!confirmDelete) return;

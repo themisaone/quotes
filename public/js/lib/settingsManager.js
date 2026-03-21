@@ -11,6 +11,7 @@
 
 import { API_URL } from './api.js';
 import { getElementByIdSafe } from '../constants.js';
+import { showConfirm } from './confirmDialog.js';
 
 // ============= GLOBAL STATE =============
 
@@ -546,9 +547,12 @@ export function renderNoteTypesList(rebuildMenuFn) {
     if (behaviorSel)  behaviorSel.addEventListener('change', updateType);
 
     if (deleteBtn) {
-      deleteBtn.addEventListener('click', () => {
+      deleteBtn.addEventListener('click', async () => {
         const current = getNoteTypesSettings();
-        if (confirm(`Delete note type "${current[index].label}"?\nExisting notes of this type will still exist but won't appear in the menu.`)) {
+        if (await showConfirm(`Existing notes of this type will still exist but won't appear in the menu.`, {
+          title: `Delete note type "${current[index].label}"?`,
+          danger: true,
+        })) {
           current.splice(index, 1);
           saveNoteTypesAndRefresh(current, rebuildMenuFn);
         }
@@ -579,9 +583,12 @@ export function renderNoteTypesList(rebuildMenuFn) {
       labelI.addEventListener('change', updateSub);
 
       if (delBtn) {
-        delBtn.addEventListener('click', () => {
+        delBtn.addEventListener('click', async () => {
           const current = getNoteTypesSettings();
-          if (confirm(`Delete sub-type "${current[ntIdx].subTypes[siIdx].label}"?`)) {
+          if (await showConfirm(`This sub-type will be removed from the menu.`, {
+            title: `Delete sub-type "${current[ntIdx].subTypes[siIdx].label}"?`,
+            danger: true,
+          })) {
             current[ntIdx].subTypes.splice(siIdx, 1);
             saveNoteTypesAndRefresh(current, rebuildMenuFn);
           }

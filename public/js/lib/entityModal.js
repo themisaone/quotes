@@ -21,6 +21,7 @@
 import { API_URL } from './api.js';
 import { displayImage, clearImagePreview } from './attachments.js';
 import { getElementByIdSafe } from '../constants.js';
+import { showConfirm } from './confirmDialog.js';
 
 // ============= 1. DOM HELPERS =============
 
@@ -293,7 +294,10 @@ async function handleDeleteClick(button, modal, config, callbacks) {
   const entityId = button.dataset[`${config.entityType}Id`];
   const entityName = button.dataset[`${config.entityType}Name`];
   
-  if (!confirm(`Delete ${config.entityName} "${entityName}"? This cannot be undone.`)) {
+  if (!await showConfirm(`"${entityName}" will be permanently removed.`, {
+    title: `Delete ${config.entityName}?`,
+    danger: true,
+  })) {
     return;
   }
   

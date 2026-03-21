@@ -12,6 +12,7 @@
  */
 
 import { getElementByIdSafe } from '../constants.js';
+import { showConfirm } from './confirmDialog.js';
 
 // ============================================
 // Constants
@@ -238,7 +239,7 @@ async function handleBulkSubmit(e, callbacks = {}) {
 
   const formData = collectBulkFormData();
   
-  if (!validateAndConfirm(formData)) {
+  if (!await validateAndConfirm(formData)) {
     return;
   }
 
@@ -257,7 +258,7 @@ async function handleBulkSubmit(e, callbacks = {}) {
  * @param {Object} formData - Form data
  * @returns {boolean} True if validated and confirmed
  */
-function validateAndConfirm(formData) {
+async function validateAndConfirm(formData) {
   const validation = validateBulkFormData(formData);
   if (!validation.valid) {
     alert(validation.message);
@@ -267,7 +268,7 @@ function validateAndConfirm(formData) {
   const quotes = parseQuotes(formData.quotesText);
   const confirmMessage = buildConfirmationMessage(quotes.length, formData.author, formData.source);
   
-  return confirm(confirmMessage);
+  return await showConfirm(confirmMessage, { icon: '📥', title: 'Import notes', confirmLabel: 'Import' });
 }
 
 /**

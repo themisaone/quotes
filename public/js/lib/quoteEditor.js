@@ -19,6 +19,7 @@
 import { MODAL_IDS, getElementByIdSafe, getElementValue } from '../constants.js';
 import { downscaleImage } from './attachments.js';
 import { getNoteTypeConfig } from './noteTypes.js';
+import { showConfirm } from './confirmDialog.js';
 
 // ============= CONSTANTS =============
 
@@ -419,7 +420,7 @@ export async function handleFormSubmit(e, config) {
  * @returns {Promise<void>}
  */
 export async function deleteQuote(id, apiUrl, callbacks) {
-  if (!confirm("Are you sure you want to delete this quote?")) {
+  if (!await showConfirm("Delete this note? This cannot be undone.", { danger: true, title: "Delete note" })) {
     return;
   }
 
