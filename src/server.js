@@ -833,7 +833,7 @@ function buildTagSearchCondition(searchQuery, paramCounter, params) {
 // Get total quote count
 app.get("/api/quotes/count", async (req, res) => {
   try {
-    const { quote, author, source, tags, score, types, note_type, training_types, hasAuthor, hasSource, hasNote, hasTags, hasImage, hasImageType, hasTranslationGroup } = req.query;
+    const { quote, author, source, tags, score, types, note_type, training_types, hasAuthor, hasSource, hasNote, hasTags, hasImage, hasImageType, hasTranslationGroup, hasMultipleAttachments } = req.query;
     
     // Build filtered count query (with all filters)
     let query = `
@@ -1001,6 +1001,12 @@ app.get("/api/quotes/count", async (req, res) => {
       query += ` AND (q.translation_group IS NULL OR q.translation_group = '')`;
     }
 
+    if (hasMultipleAttachments === 'true') {
+      query += ` AND (SELECT COUNT(*) FROM note_attachments WHERE note_id = q.id) > 1`;
+    } else if (hasMultipleAttachments === 'false') {
+      query += ` AND (SELECT COUNT(*) FROM note_attachments WHERE note_id = q.id) <= 1`;
+    }
+
     // Get filtered count
     const filteredResult = await pool.query(query, params);
     const filteredCount = parseInt(filteredResult.rows[0].count);
@@ -1072,6 +1078,7 @@ app.get("/api/quotes", async (req, res) => {
       hasImage,
       hasImageType,
       hasTranslationGroup,
+      hasMultipleAttachments,
       limit = 20,
       offset = 0,
     } = req.query;
@@ -1203,6 +1210,12 @@ app.get("/api/quotes", async (req, res) => {
       query += ` AND q.translation_group IS NOT NULL AND q.translation_group != ''`;
     } else if (hasTranslationGroup === 'false') {
       query += ` AND (q.translation_group IS NULL OR q.translation_group = '')`;
+    }
+
+    if (hasMultipleAttachments === 'true') {
+      query += ` AND (SELECT COUNT(*) FROM note_attachments WHERE note_id = q.id) > 1`;
+    } else if (hasMultipleAttachments === 'false') {
+      query += ` AND (SELECT COUNT(*) FROM note_attachments WHERE note_id = q.id) <= 1`;
     }
 
     // Translation group filter

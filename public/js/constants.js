@@ -49,6 +49,8 @@ export const FILTER_IDS = {
   HAS_IMAGE_TYPE_CONDITION: 'searchImageTypeCondition',
   HAS_TRANSLATION_GROUP_CHECKBOX: 'searchHasTranslationGroup',
   HAS_TRANSLATION_GROUP_CONDITION: 'searchTranslationGroupCondition',
+  HAS_MULTIPLE_ATTACHMENTS_CHECKBOX: 'searchHasMultipleAttachments',
+  HAS_MULTIPLE_ATTACHMENTS_CONDITION: 'searchMultipleAttachmentsCondition',
   
   // Search containers
   SEARCH_HEADER_TITLE: 'searchHeaderTitle',

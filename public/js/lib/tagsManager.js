@@ -93,14 +93,15 @@ function exposeTagsGlobally(tags) {
  * Create HTML for a single tag card
  */
 function createTagCardHtml(tag) {
+  const typeArg = tag.type ? `, '${escapeHtml(tag.type)}'` : '';
   return `
-    <div class="tag-card" onclick="filterByTag('${escapeHtml(tag.name)}')">
+    <div class="tag-card" onclick="filterByTag('${escapeHtml(tag.name)}'${typeArg})">
         <div class="tag-card-name">
             <span class="tag-card-icon">🏷️</span>
             <span>${escapeHtml(tag.name)}</span>
         </div>
         <div class="tag-card-actions">
-            <div class="tag-card-count">${tag.quote_count} quotes</div>
+            <div class="tag-card-count">${tag.quote_count} notes</div>
             <button class="tag-delete-btn" onclick="event.stopPropagation(); deleteTag(${tag.id}, '${escapeHtml(tag.name)}')" title="Delete tag">🗑️</button>
         </div>
     </div>
@@ -319,15 +320,20 @@ function updateActiveMenuItem() {
  * Filter quotes by a specific tag
  * @param {string} tagName - Tag name to filter by
  */
-export function filterByTag(tagName) {
-  console.log("Filtering by tag:", tagName);
+export function filterByTag(tagName, noteType) {
+  console.log("Filtering by tag:", tagName, noteType ? `(type: ${noteType})` : '');
   
   // Requires window.switchView and window.loadQuotes from app.js
   if (!window.switchView || !window.loadQuotes) {
     console.error("filterByTag requires window.switchView and window.loadQuotes");
     return;
   }
-  
+
+  // If a note type was active in the Tags view, switch to it first
+  if (noteType && window.setNoteTypeFilter) {
+    window.setNoteTypeFilter(noteType);
+  }
+
   window.switchView("quotes");
   clearSearchFilters();
   setTagFilter(tagName);
@@ -656,9 +662,14 @@ function setupMergeTagsOperation() {
  */
 export async function loadTags(typeFilter = null) {
   try {
+    // If no explicit filter, respect whatever the tag-type dropdown currently shows
+    const effective = typeFilter !== null
+      ? typeFilter
+      : (document.getElementById('tagTypeFilter')?.value || null);
+
     let url = `${API_URL}/tags`;
-    if (typeFilter) {
-      url += `?type=${encodeURIComponent(typeFilter)}`;
+    if (effective) {
+      url += `?type=${encodeURIComponent(effective)}`;
     }
     
     const response = await fetch(url);
@@ -667,6 +678,13 @@ export async function loadTags(typeFilter = null) {
     exposeTagsGlobally(tags);
     updateTagCounters(tags.length);
     displayTags(tags);
+
+    // Re-apply client-side search text filter if the user has typed something
+    const searchVal = document.getElementById('searchSourcesInput')?.value;
+    if (searchVal) {
+      const searchInput = document.getElementById('searchSourcesInput');
+      if (searchInput) searchInput.dispatchEvent(new Event('input'));
+    }
   } catch (error) {
     console.error("Error loading tags:", error);
     displayTagsError();

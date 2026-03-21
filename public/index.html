@@ -435,6 +435,16 @@
                   </div>
 
                   <div class="metadata-filter-item">
+                    <input type="checkbox" id="searchHasTranslationGroup" />
+                    <select id="searchTranslationGroupCondition">
+                      <option value="has">Have</option>
+                      <option value="not">NOT Have</option>
+                    </select>
+                    <span>🔗 Group</span>
+                  </div>
+
+                  <!-- Row 3: attachment-related (Image and Multiple depend on Attachment = Have) -->
+                  <div class="metadata-filter-item">
                     <input type="checkbox" id="searchHasImage" />
                     <select id="searchImageCondition">
                       <option value="has">Have</option>
@@ -443,7 +453,6 @@
                     <span>📎 Attachment</span>
                   </div>
 
-                  <!-- Image type — enabled only when Attachment = Have -->
                   <div class="metadata-filter-item" id="imageTypeFilterItem">
                     <input type="checkbox" id="searchHasImageType" disabled />
                     <select id="searchImageTypeCondition" disabled>
@@ -453,13 +462,13 @@
                     <span>🖼️ Image</span>
                   </div>
 
-                  <div class="metadata-filter-item">
-                    <input type="checkbox" id="searchHasTranslationGroup" />
-                    <select id="searchTranslationGroupCondition">
+                  <div class="metadata-filter-item" id="multipleAttachmentsFilterItem">
+                    <input type="checkbox" id="searchHasMultipleAttachments" disabled />
+                    <select id="searchMultipleAttachmentsCondition" disabled>
                       <option value="has">Have</option>
                       <option value="not">NOT Have</option>
                     </select>
-                    <span>🔗 Group</span>
+                    <span>📎² Multi</span>
                   </div>
                 </div>
               </div>

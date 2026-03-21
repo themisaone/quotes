@@ -2529,6 +2529,29 @@ window.switchView = switchView;
 window.loadQuotes = loadQuotes;
 window.setLibCurrentPage = setLibCurrentPage;
 
+/**
+ * Switch the active note-type filter programmatically.
+ * Used by filterByTag so clicking a tag in the Tags view respects the
+ * type filter that was active there.
+ * @param {string|null} noteType
+ */
+window.setNoteTypeFilter = function(noteType) {
+  currentNoteTypeFilter = noteType || null;
+  window.currentNoteTypeFilter = currentNoteTypeFilter;
+  currentPage = 1;
+  setLibCurrentPage(1);
+  // Sync active state on the left-menu note-type buttons
+  document.querySelectorAll('.note-type-filter').forEach(btn => {
+    btn.classList.toggle('active', noteType ? btn.dataset.noteType === noteType : false);
+  });
+  // Keep "All Notes" button active when no type is selected
+  const allNotesBtn = document.querySelector('.menu-item[data-view="quotes"]');
+  if (allNotesBtn) allNotesBtn.classList.toggle('active', !noteType);
+  updateAddButtonText?.();
+  updateMainTitle?.();
+  updateSourcesFilterVisibility?.();
+};
+
 async function loadAuthors() {
   try {
     const response = await fetch(`${API_URL}/authors`);
@@ -2767,7 +2790,14 @@ function displaySources(sources) {
 
 // ============= TAGS PAGE - MIGRATED TO tagsManager.js =============
 async function loadTags(typeFilter = null) {
-  return loadTagsLib(typeFilter);
+  // If no explicit filter is passed, respect whatever the tag-type dropdown currently shows
+  const effective = typeFilter !== null
+    ? typeFilter
+    : (document.getElementById('tagTypeFilter')?.value || null);
+  await loadTagsLib(effective);
+  // Re-apply client-side search text filter if the user has typed something
+  const searchVal = document.getElementById('searchSourcesInput')?.value;
+  if (searchVal) filterTags();
 }
 
 // Make global for onclick handlers (direct library access)
@@ -3301,6 +3331,7 @@ function getCurrentFilters() {
     hasImage: getMetadataState(FILTER_IDS.HAS_IMAGE_CHECKBOX, FILTER_IDS.HAS_IMAGE_CONDITION),
     hasImageType: getMetadataState(FILTER_IDS.HAS_IMAGE_TYPE_CHECKBOX, FILTER_IDS.HAS_IMAGE_TYPE_CONDITION),
     hasTranslationGroup: getMetadataState(FILTER_IDS.HAS_TRANSLATION_GROUP_CHECKBOX, FILTER_IDS.HAS_TRANSLATION_GROUP_CONDITION),
+    hasMultipleAttachments: getMetadataState(FILTER_IDS.HAS_MULTIPLE_ATTACHMENTS_CHECKBOX, FILTER_IDS.HAS_MULTIPLE_ATTACHMENTS_CONDITION),
   };
   
   return filters;
@@ -4087,6 +4118,9 @@ function _syncImageTypeFilterState() {
   const imageCheckbox   = document.getElementById('searchHasImageType');
   const imageCondition  = document.getElementById('searchImageTypeCondition');
   const imageItem       = document.getElementById('imageTypeFilterItem');
+  const multiCheckbox   = document.getElementById('searchHasMultipleAttachments');
+  const multiCondition  = document.getElementById('searchMultipleAttachmentsCondition');
+  const multiItem       = document.getElementById('multipleAttachmentsFilterItem');
 
   const enabled = attachCheckbox?.checked && attachCondition?.value === 'has';
 
@@ -4100,18 +4134,30 @@ function _syncImageTypeFilterState() {
   if (imageItem) {
     imageItem.classList.toggle('metadata-filter-disabled', !enabled);
   }
+
+  if (multiCheckbox) {
+    multiCheckbox.disabled = !enabled;
+    if (!enabled) multiCheckbox.checked = false;
+  }
+  if (multiCondition) {
+    multiCondition.disabled = !enabled;
+  }
+  if (multiItem) {
+    multiItem.classList.toggle('metadata-filter-disabled', !enabled);
+  }
 }
 
 function setupMetadataSearchListeners() {
   const metadataCheckboxes = [
     'searchHasAuthor', 'searchHasSource', 'searchHasNote',
-    'searchHasTags', 'searchHasImage', 'searchHasImageType', 'searchHasTranslationGroup'
+    'searchHasTags', 'searchHasImage', 'searchHasImageType',
+    'searchHasTranslationGroup', 'searchHasMultipleAttachments'
   ];
   
   const metadataSelects = [
     'searchAuthorCondition', 'searchSourceCondition', 'searchNoteCondition',
     'searchTagsCondition', 'searchImageCondition', 'searchImageTypeCondition',
-    'searchTranslationGroupCondition'
+    'searchTranslationGroupCondition', 'searchMultipleAttachmentsCondition'
   ];
   
   // Add listeners to checkboxes
