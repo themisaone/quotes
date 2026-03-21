@@ -94,6 +94,7 @@ function exposeTagsGlobally(tags) {
  */
 function createTagCardHtml(tag) {
   const typeArg = tag.type ? `, '${escapeHtml(tag.type)}'` : '';
+  const safeName = escapeHtml(tag.name).replace(/'/g, "\\'");
   return `
     <div class="tag-card" onclick="filterByTag('${escapeHtml(tag.name)}'${typeArg})">
         <div class="tag-card-name">
@@ -102,6 +103,7 @@ function createTagCardHtml(tag) {
         </div>
         <div class="tag-card-actions">
             <div class="tag-card-count">${tag.quote_count} notes</div>
+            <button class="tag-browse-add-btn" onclick="event.stopPropagation(); addToBrowseStack('${safeName}')" title="Add to browse filter">+</button>
             <button class="tag-delete-btn" onclick="event.stopPropagation(); deleteTag(${tag.id}, '${escapeHtml(tag.name)}')" title="Delete tag">🗑️</button>
         </div>
     </div>
@@ -281,7 +283,82 @@ function setupTagOperationsAutocomplete(tags) {
   });
 }
 
-// ============= 4. FILTER & NAVIGATION =============
+// ============= 4. BROWSE MODE =============
+// Accumulated tag stack for faceted browsing
+
+let browseStack = [];
+
+function getBrowseTypeFilter() {
+  return document.getElementById('tagTypeFilter')?.value || null;
+}
+
+function renderBrowseStrip() {
+  const strip = document.getElementById('tagBrowseStrip');
+  if (!strip) return;
+  if (browseStack.length === 0) {
+    strip.style.display = 'none';
+    strip.innerHTML = '';
+    return;
+  }
+  strip.style.display = 'flex';
+  strip.innerHTML =
+    `<span class="browse-strip-label">🔍 Browsing:</span>` +
+    browseStack.map(tag =>
+      `<span class="browse-strip-tag">${escapeHtml(tag)
+      }<button class="browse-strip-remove" onclick="removeFromBrowseStack('${escapeHtml(tag).replace(/'/g, "\\'")}')" title="Remove">×</button></span>`
+    ).join('') +
+    `<button class="browse-show-notes-btn" onclick="showNotesForStack()">Show notes →</button>` +
+    `<button class="browse-clear-btn" onclick="clearBrowseStack()">✕ Clear</button>`;
+}
+
+async function loadCoOccurringTags() {
+  if (browseStack.length === 0) { await loadTags(); return; }
+  const typeFilter = getBrowseTypeFilter();
+  // Note: we intentionally do NOT pass the type filter to co-occurring —
+  // discovery should show ALL tags that appear on those notes so the user
+  // can navigate across tag types. The type filter only controls the initial list.
+  const params = new URLSearchParams({ tags: browseStack.join(',') });
+  console.log('[browse] loadCoOccurringTags → stack:', browseStack, '| type filter (not sent):', typeFilter, '| url:', `${API_URL}/tags/co-occurring?${params}`);
+  try {
+    const resp = await fetch(`${API_URL}/tags/co-occurring?${params}`);
+    const tags = await resp.json();
+    console.log('[browse] co-occurring result count:', tags.length, '| first 5:', tags.slice(0,5).map(t=>t.name));
+    exposeTagsGlobally(tags);
+    updateTagCounters(tags.length);
+    displayTags(tags);
+  } catch (err) {
+    console.error('co-occurring tags error:', err);
+  }
+}
+
+export function addToBrowseStack(tagName) {
+  if (!browseStack.includes(tagName)) browseStack.push(tagName);
+  // Clear the tag search box — it was used to find this tag but now we're browsing
+  const searchInput = document.getElementById('searchSourcesInput');
+  if (searchInput) searchInput.value = '';
+  renderBrowseStrip();
+  loadCoOccurringTags();
+}
+
+export function removeFromBrowseStack(tagName) {
+  browseStack = browseStack.filter(t => t !== tagName);
+  renderBrowseStrip();
+  if (browseStack.length === 0) loadTags(); else loadCoOccurringTags();
+}
+
+export function clearBrowseStack() {
+  browseStack = [];
+  renderBrowseStrip();
+  loadTags();
+}
+
+export function showNotesForStack() {
+  if (browseStack.length === 0) return;
+  const type = getBrowseTypeFilter();
+  filterByTag(browseStack.join(','), type || undefined);
+}
+
+// ============= 5. FILTER & NAVIGATION =============
 
 /**
  * Clear all search filters
@@ -323,34 +400,32 @@ function updateActiveMenuItem() {
 export function filterByTag(tagName, noteType) {
   console.log("Filtering by tag:", tagName, noteType ? `(type: ${noteType})` : '');
   
-  // Requires window.switchView and window.loadQuotes from app.js
   if (!window.switchView || !window.loadQuotes) {
     console.error("filterByTag requires window.switchView and window.loadQuotes");
     return;
   }
 
-  // If a note type was active in the Tags view, switch to it first
+  // Combine browse stack + clicked tag into one comma-separated AND filter
+  const allTags = [...browseStack];
+  if (tagName && !allTags.includes(tagName)) allTags.push(tagName);
+  const tagFilter = allTags.join(',');
+
+  // Clear browse stack on navigation
+  browseStack = [];
+  renderBrowseStrip();
+
   if (noteType && window.setNoteTypeFilter) {
     window.setNoteTypeFilter(noteType);
   }
 
   window.switchView("quotes");
   clearSearchFilters();
-  setTagFilter(tagName);
+  setTagFilter(tagFilter);
   
-  // Reset pagination
-  if (window.currentPage !== undefined) {
-    window.currentPage = 1;
-  }
-  // Also sync with library if available
-  if (window.setLibCurrentPage) {
-    window.setLibCurrentPage(1);
-  }
+  if (window.currentPage !== undefined) window.currentPage = 1;
+  if (window.setLibCurrentPage) window.setLibCurrentPage(1);
   
-  setTimeout(() => {
-    window.loadQuotes();
-  }, SWITCH_VIEW_DELAY_MS);
-
+  setTimeout(() => { window.loadQuotes(); }, SWITCH_VIEW_DELAY_MS);
   updateActiveMenuItem();
 }
 

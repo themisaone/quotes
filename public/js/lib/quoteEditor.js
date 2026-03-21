@@ -24,6 +24,7 @@ import { getNoteTypeConfig } from './noteTypes.js';
 
 const QUILL_TOOLBAR_CONFIG = [
   ['bold', 'italic', 'underline'],
+  [{ 'color': [] }, { 'background': [] }],
   [{ 'header': [1, 2, 3, false] }],
   [{ 'list': 'ordered'}, { 'list': 'bullet' }],
   ['image'],

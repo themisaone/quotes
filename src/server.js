@@ -30,6 +30,14 @@ if (!fs.existsSync(configDir)) {
 app.use(cors());
 app.use(express.json({ limit: "100mb" })); // Increased limit for bulk imports with attachments
 app.use(express.urlencoded({ limit: "100mb", extended: true })); // Also increase URL-encoded limit
+
+// Serve JS and CSS with no-cache so edits take effect on hard-refresh
+app.use((req, res, next) => {
+  if (req.path.endsWith('.js') || req.path.endsWith('.css')) {
+    res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+  }
+  next();
+});
 app.use(express.static(path.join(__dirname, "../public")));
 // Serve attachments folder for large files
 app.use('/attachments', express.static(path.join(__dirname, '../attachments')));
@@ -2635,6 +2643,56 @@ app.post("/api/quotes/bulk-delete", async (req, res) => {
 });
 
 // ============= TAGS API =============
+
+// Get tags that co-occur with ALL of the given tags on notes of a given type.
+// Used by the browse-tags feature.
+// Query: ?tags=tag1,tag2&type=historical
+app.get("/api/tags/co-occurring", async (req, res) => {
+  try {
+    const { tags: tagsParam, type } = req.query;
+    if (!tagsParam) return res.json([]);
+    const tagList = tagsParam.split(',').map(t => t.trim()).filter(Boolean);
+    if (tagList.length === 0) return res.json([]);
+
+    // Find notes that have ALL of the requested tags (no note_type filter —
+    // the tag's own type may differ from note_type depending on import origin).
+    // Then return other tags that appear on those notes, optionally filtered
+    // by tag type so the browse strip stays within the chosen tag category.
+    const params = [tagList, tagList.length];
+    let tagTypeClause = '';
+    if (type) {
+      params.push(type);
+      tagTypeClause = `AND t.type = $${params.length}`;
+    }
+
+    console.log('[co-occurring] tagList:', tagList, '| type:', type, '| params:', params);
+
+    const result = await pool.query(`
+      SELECT t.id, t.name, t.type,
+             COUNT(DISTINCT nt.note_id) AS quote_count
+      FROM tags t
+      JOIN note_tags nt ON t.id = nt.tag_id
+      WHERE nt.note_id IN (
+        SELECT nt2.note_id
+        FROM note_tags nt2
+        JOIN tags t2 ON t2.id = nt2.tag_id
+        WHERE t2.name = ANY($1::text[])
+        GROUP BY nt2.note_id
+        HAVING COUNT(DISTINCT t2.name) = $2
+      )
+      AND t.name != ALL($1::text[])
+      ${tagTypeClause}
+      GROUP BY t.id, t.name, t.type
+      ORDER BY quote_count DESC, t.name
+    `, params);
+
+    console.log('[co-occurring] returned', result.rows.length, 'tags');
+    res.json(result.rows);
+  } catch (err) {
+    console.error('co-occurring tags error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // Get all tags with quote counts
 app.get("/api/tags", async (req, res) => {

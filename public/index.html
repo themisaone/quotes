@@ -793,6 +793,9 @@
               </div>
             </div>
             
+            <!-- Browse filter strip — shown when browse stack is non-empty -->
+            <div id="tagBrowseStrip" class="tag-browse-strip" style="display:none;"></div>
+
             <div id="tagsList" class="tags-list">
               <div class="loading">Loading tags...</div>
             </div>
@@ -1331,6 +1334,14 @@
             <button type="button" id="cancelBtn" class="btn btn-secondary">
               Cancel
             </button>
+            <button type="button" id="viewHtmlBtn" class="btn btn-secondary" onclick="toggleHtmlSource()" title="View/edit raw HTML source">📄 HTML</button>
+          </div>
+          <div id="htmlSourcePanel" style="display:none; margin-top:0.75rem;">
+            <textarea id="htmlSourceArea" style="width:100%; height:180px; font-family:monospace; font-size:0.8rem; border:1px solid var(--border); border-radius:6px; padding:0.5rem; resize:vertical;" spellcheck="false"></textarea>
+            <div style="display:flex; gap:0.5rem; margin-top:0.4rem;">
+              <button type="button" class="btn btn-primary" style="font-size:0.82rem; padding:0.3rem 0.8rem;" onclick="applyHtmlSource()">Apply to editor</button>
+              <span style="font-size:0.78rem; color:var(--text-secondary); align-self:center;">Edit HTML then click Apply to load it back into the editor</span>
+            </div>
           </div>
         </form>
         </div>
@@ -1788,6 +1799,6 @@ Quote number three..."
 
     <!-- Quill Editor Script -->
     <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
-    <script type="module" src="app.js"></script>
+    <script type="module" src="app.js?v=20260317"></script>
   </body>
 </html>

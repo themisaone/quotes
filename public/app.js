@@ -76,7 +76,11 @@ import {
   loadTags as loadTagsLib,
   filterByTag as filterByTagLib,
   deleteTag as deleteTagLib,
-  displayTags as displayTagsLib
+  displayTags as displayTagsLib,
+  addToBrowseStack as addToBrowseStackLib,
+  removeFromBrowseStack as removeFromBrowseStackLib,
+  clearBrowseStack as clearBrowseStackLib,
+  showNotesForStack as showNotesForStackLib
 } from './js/lib/tagsManager.js';
 
 import {
@@ -1158,7 +1162,35 @@ function closeQuoteModal() {
   pendingExtraAttachments = [];
   authorSuggestions.classList.remove("show");
   sourceSuggestions.classList.remove("show");
+  // Hide HTML source panel
+  const htmlPanel = document.getElementById('htmlSourcePanel');
+  if (htmlPanel) htmlPanel.style.display = 'none';
 }
+
+// ── HTML source viewer ──────────────────────────────────────────────────────
+window.toggleHtmlSource = function() {
+  const panel = document.getElementById('htmlSourcePanel');
+  const area  = document.getElementById('htmlSourceArea');
+  if (!panel || !area) return;
+  if (panel.style.display === 'none') {
+    // Show: populate with current editor HTML
+    const hidden = document.getElementById('quoteText');
+    area.value = hidden ? hidden.value : (quillEditor?.root?.innerHTML || '');
+    panel.style.display = 'block';
+    document.getElementById('viewHtmlBtn').textContent = '📄 Hide HTML';
+  } else {
+    panel.style.display = 'none';
+    document.getElementById('viewHtmlBtn').textContent = '📄 HTML';
+  }
+};
+
+window.applyHtmlSource = function() {
+  const area = document.getElementById('htmlSourceArea');
+  if (!area || !quillEditor) return;
+  quillEditor.clipboard.dangerouslyPasteHTML(area.value);
+  document.getElementById('htmlSourcePanel').style.display = 'none';
+  document.getElementById('viewHtmlBtn').textContent = '📄 HTML';
+};
 
 // Clear filters functionality
 function clearFilters() {
@@ -2802,6 +2834,10 @@ async function loadTags(typeFilter = null) {
 
 // Make global for onclick handlers (direct library access)
 window.filterByTag = filterByTagLib;
+window.addToBrowseStack = addToBrowseStackLib;
+window.removeFromBrowseStack = removeFromBrowseStackLib;
+window.clearBrowseStack = clearBrowseStackLib;
+window.showNotesForStack = showNotesForStackLib;
 
 async function deleteTag(id, name) {
   return deleteTagLib(id, name);

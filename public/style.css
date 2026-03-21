@@ -8,6 +8,8 @@
   --primary-color: #1e40af;
   --primary-hover: #1e3a8a;
   --secondary-color: #64748b;
+  --accent: #059669;
+  --accent-hover: #047857;
   --background: #f8fafc;
   --surface: #ffffff;
   --card-hover-bg: #f0fff4;
@@ -847,7 +849,7 @@ h2 {
   margin: 0;
   padding: 0;
   border-radius: 12px;
-  width: min(1200px, 95vw);
+  width: min(1200px, 65vw);
   max-height: 90vh;
   overflow: hidden; /* Clip children to border-radius */
   display: flex;
@@ -2179,6 +2181,7 @@ body.selection-mode .quote-card::after {
 .quote-text h2 {
   font-size: 1.3em;
   background: none !important;
+  color: var(--primary-color);
 }
 
 .quote-text h3 {
@@ -2239,6 +2242,7 @@ body.selection-mode .quote-card::after {
   background: none !important;
   padding: 0 !important;
   margin: 0.5em 0 !important;
+  color: var(--primary-color);
 }
 
 /* Inline images inside Quill editor */
@@ -3956,6 +3960,33 @@ body.selection-mode .quote-card::after {
   gap: 12px;
 }
 
+/* + browse button on tag cards — always visible, subtle until hovered */
+.tag-browse-add-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 2px 7px;
+  border-radius: 4px;
+  color: var(--text-secondary);
+  line-height: 1;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  opacity: 0.35;
+  flex-shrink: 0;
+}
+.tag-browse-add-btn:hover,
+.tag-card:hover .tag-browse-add-btn:hover {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+  opacity: 1;
+}
+.tag-card:hover .tag-browse-add-btn {
+  opacity: 0.7;
+  border-color: var(--border);
+}
+
 .tag-delete-btn {
   background: transparent;
   border: 1px solid var(--border);
@@ -3977,6 +4008,72 @@ body.selection-mode .quote-card::after {
 .tag-card:hover .tag-delete-btn {
   opacity: 1;
 }
+
+/* Browse strip — shown when browse stack is non-empty */
+.tag-browse-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.8rem;
+  margin-bottom: 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  font-size: 0.9rem;
+}
+.browse-strip-label {
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.browse-strip-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--accent);
+  color: white;
+  border-radius: 20px;
+  padding: 3px 10px 3px 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+.browse-strip-remove {
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+  opacity: 0.8;
+}
+.browse-strip-remove:hover { opacity: 1; }
+.browse-show-notes-btn {
+  margin-left: auto;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 5px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.browse-show-notes-btn:hover { filter: brightness(1.1); }
+.browse-clear-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+.browse-clear-btn:hover { background: #fee2e2; border-color: #dc2626; color: #dc2626; }
 
 /* Author/Source card updates */
 .card-content {
@@ -4043,6 +4140,10 @@ body.selection-mode .quote-card::after {
   
   .tag-delete-btn {
     opacity: 1;
+  }
+
+  .tag-browse-add-btn {
+    opacity: 0.6;
   }
 }
 
