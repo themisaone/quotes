@@ -1051,38 +1051,13 @@
               </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
-              <!-- Quote Types Column -->
-              <div class="settings-section">
-                <h2>📑 Quote Types</h2>
-                <p class="setting-description" style="margin-bottom: 1rem;">
-                  Manage the types of quote sources (Books, Movies, etc.) available in your system.
-                </p>
-                <div class="setting-item">
-                  <div id="quoteTypesList" class="quote-types-list">
-                    <!-- Populated by JavaScript -->
-                  </div>
-                  <button type="button" id="addQuoteTypeBtn" class="btn btn-secondary" style="margin-top: 0.5rem;">
-                    ➕ Add New Type
-                  </button>
-                </div>
-              </div>
-              
-              <!-- Training Types Column -->
-              <div class="settings-section">
-                <h2>🏋️ Training Types</h2>
-                <p class="setting-description" style="margin-bottom: 1rem;">
-                  Manage the types of training activities (Weights, Cardio, etc.) available in your system.
-                </p>
-                <div class="setting-item">
-                  <div id="trainingTypesList" class="quote-types-list">
-                    <!-- Populated by JavaScript -->
-                  </div>
-                  <button type="button" id="addTrainingTypeBtn" class="btn btn-secondary" style="margin-top: 0.5rem;">
-                    ➕ Add New Type
-                  </button>
-                </div>
-              </div>
+
+            <!-- Quote Types and Training Types are now managed inline in Note Types above -->
+            <div style="display:none;">
+              <div id="quoteTypesList"></div>
+              <button type="button" id="addQuoteTypeBtn"></button>
+              <div id="trainingTypesList"></div>
+              <button type="button" id="addTrainingTypeBtn"></button>
             </div>
           </div>
         </div>

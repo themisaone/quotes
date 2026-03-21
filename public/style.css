@@ -5329,12 +5329,13 @@ body.selection-mode .quote-card::after {
   box-shadow: var(--shadow);
 }
 
+/* Note type rows — compact inputs, no flex stretching */
 .quote-type-item input[type="text"] {
-  flex: 1;
-  padding: 0.5rem;
+  flex: none;
+  padding: 0.25rem 0.4rem;
   border: 1px solid var(--border);
   border-radius: 4px;
-  font-size: 0.9rem;
+  font-size: 0.82rem;
 }
 
 .quote-type-item input[type="text"]:focus {
@@ -5368,6 +5369,85 @@ body.selection-mode .quote-card::after {
   white-space: nowrap;
   flex-shrink: 0;
 }
+
+/* Note type row with optional inline sub-types */
+.note-type-main-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+.note-type-row {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.note-type-core-badge {
+  font-size: 0.8rem;
+  flex-shrink: 0;
+  opacity: 0.6;
+  title: "Core type";
+}
+
+.note-type-icon-input  { width: 38px !important; flex-shrink: 0; text-align: center; font-size: 1rem; }
+.note-type-value-input { width: 80px !important; flex-shrink: 0; font-family: monospace; font-size: 0.8rem; }
+.note-type-label-input { width: 90px !important; flex-shrink: 0; font-size: 0.85rem; }
+
+.note-type-behavior-select {
+  font-size: 0.78rem;
+  padding: 0.2rem 0.3rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--input-bg);
+  flex-shrink: 0;
+  width: auto;
+}
+.note-type-behavior-select:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.subtype-section {
+  margin: 6px 0 4px 1.5rem;
+  border-left: 2px solid var(--border);
+  padding-left: 0.75rem;
+}
+
+.subtype-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.subtype-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.subtype-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.subtype-item input[type="text"] {
+  padding: 0.2rem 0.35rem;
+  font-size: 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--input-bg);
+  flex: none;
+}
+.subtype-icon  { width: 34px !important; flex-shrink: 0; text-align: center; }
+.subtype-value { width: 80px !important; flex-shrink: 0; font-family: monospace; font-size: 0.78rem !important; }
+.subtype-label { width: 90px !important; flex-shrink: 0; }
+
+.btn-add-subtype { font-size: 0.75rem; color: var(--accent); }
 
 .btn-icon-small {
   padding: 0.4rem 0.6rem;

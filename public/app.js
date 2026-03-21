@@ -4137,7 +4137,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadQuotes,
     populateTypeDropdowns,
     populateTypeFilterCheckboxes: populateTypeFilterCheckboxesWrapper,
-    populateTrainingTypeFilterCheckboxes: populateTrainingTypeFilterCheckboxesWrapper
+    populateTrainingTypeFilterCheckboxes: populateTrainingTypeFilterCheckboxesWrapper,
+    renderNoteTypesList: () => renderNoteTypesList(generateNoteTypeMenu),
+    setupTypeManagementListeners,
+    rebuildNoteTypeMenu: generateNoteTypeMenu,
+    renderQuoteTypesList,
+    renderTrainingTypesList,
   });
   
   // Initialize quote types management UI (handled by initializeSettingsLib now)

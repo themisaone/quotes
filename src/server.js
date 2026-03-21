@@ -54,18 +54,21 @@ app.get('/api/settings', (req, res) => {
   try {
     // Default settings
     const defaultSettings = {
-      quoteTypes: [
-        { value: 'BOOK', label: 'Book', icon: '📖' },
-        { value: 'MOVIE-TV', label: 'Movies & TV', icon: '🎬' },
-        { value: 'POETRY', label: 'Poetry', icon: '📜' },
-        { value: 'LYRICS', label: 'Lyrics', icon: '🎵' },
-        { value: 'JOKES', label: 'Jokes', icon: '😂' },
-        { value: 'ASSORTED', label: 'Assorted', icon: '📝' }
-      ],
       noteTypes: [
-        { value: 'quote',    label: 'Quotes',   icon: '💬', behavior: 'quote',    core: true },
+        { value: 'quote',    label: 'Quotes',   icon: '💬', behavior: 'quote',    core: true,
+          subTypes: [
+            { value: 'BOOK',     label: 'Book',       icon: '📖' },
+            { value: 'MOVIE-TV', label: 'Movies & TV', icon: '🎬' },
+            { value: 'ASSORTED', label: 'Assorted',   icon: '📝' }
+          ]
+        },
         { value: 'note',     label: 'Notes',    icon: '📝', behavior: 'generic',  core: true },
-        { value: 'training', label: 'Training', icon: '💪', behavior: 'training', core: true },
+        { value: 'training', label: 'Training', icon: '💪', behavior: 'training', core: true,
+          subTypes: [
+            { value: 'WEIGHTS', label: 'Weights', icon: '🏋️' },
+            { value: 'CARDIO',  label: 'Cardio',  icon: '🏃' }
+          ]
+        },
         { value: 'puzzle',   label: 'Puzzles',  icon: '🧩', behavior: 'generic',  core: true }
       ],
       downscaleQuoteImages: true,
@@ -115,8 +118,8 @@ app.put('/api/settings', (req, res) => {
     const settings = req.body;
     
     // Validate settings structure
-    if (!settings.quoteTypes || !Array.isArray(settings.quoteTypes)) {
-      return res.status(400).json({ error: 'Invalid settings structure' });
+    if (!settings.noteTypes || !Array.isArray(settings.noteTypes)) {
+      return res.status(400).json({ error: 'Invalid settings structure: noteTypes array required' });
     }
     
     // Write to file

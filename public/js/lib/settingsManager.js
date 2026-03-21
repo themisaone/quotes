@@ -308,223 +308,98 @@ export function applyColorToCSS(colorType, colorValue) {
 // ============= TYPE MANAGEMENT - QUOTES =============
 
 /**
- * Get quote types (from global settings)
+ * Get quote subTypes — derived from noteTypes[behavior='quote'].subTypes
+ * Falls back to legacy globalSettings.quoteTypes for backward compat.
  */
 export function getQuoteTypes() {
-  // Require global settings to be loaded
   if (!globalSettings) {
-    console.error('❌ FATAL: globalSettings not loaded! Settings must be initialized before calling getQuoteTypes()');
     throw new Error('Settings not loaded. Please refresh the page.');
   }
-  
-  if (!globalSettings.quoteTypes || !Array.isArray(globalSettings.quoteTypes)) {
-    console.error('❌ FATAL: quoteTypes missing or invalid in settings:', globalSettings);
-    throw new Error('Quote types configuration is missing or invalid in settings.json');
-  }
-  
-  return globalSettings.quoteTypes;
+  // New structure: subTypes nested inside the quote noteType
+  const quoteNoteType = (globalSettings.noteTypes || []).find(t => t.behavior === 'quote');
+  if (quoteNoteType?.subTypes?.length) return quoteNoteType.subTypes;
+  // Legacy fallback
+  if (globalSettings.quoteTypes?.length) return globalSettings.quoteTypes;
+  return [{ value: 'ASSORTED', label: 'Assorted', icon: '📝' }];
 }
 
 /**
- * Save quote types (deprecated - use saveSettings instead)
+ * Save quote subtypes back into noteTypes[behavior='quote'].subTypes
  */
 export function saveQuoteTypes(types) {
-  // Update global settings
-  if (globalSettings) {
-    globalSettings.quoteTypes = types;
-    saveSettings(globalSettings);
-  } else {
-    // Fallback to localStorage
-    localStorage.setItem('quoteTypes', JSON.stringify(types));
-  }
+  if (!globalSettings) return;
+  const nt = (globalSettings.noteTypes || []).find(t => t.behavior === 'quote');
+  if (nt) nt.subTypes = types;
+  // keep legacy key in sync so old code paths don't break
+  globalSettings.quoteTypes = types;
+  saveSettings(globalSettings);
 }
 
 /**
- * Render quote types list in settings UI
+ * Render quote types list — now a no-op shim; subTypes rendered inside renderNoteTypesList
  */
 export function renderQuoteTypesList(populateTypeDropdowns, populateTypeFilterCheckboxes) {
-  const container = getElementByIdSafe('quoteTypesList', 'renderQuoteTypesList');
-  if (!container) return;
-  
-  const types = getQuoteTypes();
-  
-  container.innerHTML = types.map((type, index) => `
-    <div class="quote-type-item" data-index="${index}">
-      <input type="text" class="quote-type-icon-input" value="${type.icon}" placeholder="📖" maxlength="2" />
-      <input type="text" class="quote-type-value-input" value="${type.value}" placeholder="BOOK" />
-      <input type="text" class="quote-type-label-input" value="${type.label}" placeholder="Book" />
-      <div class="quote-type-actions">
-        ${types.length > 1 ? '<button class="btn-icon-small btn-delete-type" title="Delete Type">🗑️</button>' : ''}
-      </div>
-    </div>
-  `).join('');
-  
-  // Add event listeners
-  container.querySelectorAll('.quote-type-item').forEach((item, index) => {
-    const iconInput = item.querySelector('.quote-type-icon-input');
-    const valueInput = item.querySelector('.quote-type-value-input');
-    const labelInput = item.querySelector('.quote-type-label-input');
-    const deleteBtn = item.querySelector('.btn-delete-type');
-    
-    // Update on change
-    const updateType = () => {
-      const types = getQuoteTypes();
-      types[index] = {
-        icon: iconInput.value || '📖',
-        value: valueInput.value.toUpperCase().replace(/[^A-Z0-9-]/g, '') || 'CUSTOM',
-        label: labelInput.value || 'Custom'
-      };
-      saveQuoteTypesAndRefresh(types, populateTypeDropdowns, populateTypeFilterCheckboxes);
-    };
-    
-    iconInput.addEventListener('change', updateType);
-    valueInput.addEventListener('change', updateType);
-    labelInput.addEventListener('change', updateType);
-    
-    if (deleteBtn) {
-      deleteBtn.addEventListener('click', () => {
-        if (confirm(`Delete type "${types[index].label}"? This cannot be undone.`)) {
-          const types = getQuoteTypes();
-          types.splice(index, 1);
-          saveQuoteTypesAndRefresh(types, populateTypeDropdowns, populateTypeFilterCheckboxes);
-        }
-      });
-    }
-  });
+  if (populateTypeDropdowns) populateTypeDropdowns();
+  if (populateTypeFilterCheckboxes) populateTypeFilterCheckboxes();
 }
 
 /**
  * Save quote types and refresh UI
  */
 function saveQuoteTypesAndRefresh(types, populateTypeDropdowns, populateTypeFilterCheckboxes) {
-  // Save to file via API
-  if (globalSettings) {
-    globalSettings.quoteTypes = types;
-    saveSettings(globalSettings).then(success => {
-      if (success) {
-        renderQuoteTypesList(populateTypeDropdowns, populateTypeFilterCheckboxes);
-        if (populateTypeDropdowns) populateTypeDropdowns();
-        if (populateTypeFilterCheckboxes) populateTypeFilterCheckboxes();
-        console.log('✅ Quote types updated');
-      }
-    });
-  } else {
-    // Fallback to localStorage
-    saveQuoteTypes(types);
-    renderQuoteTypesList(populateTypeDropdowns, populateTypeFilterCheckboxes);
-    if (populateTypeDropdowns) populateTypeDropdowns();
-    if (populateTypeFilterCheckboxes) populateTypeFilterCheckboxes();
-  }
+  saveQuoteTypes(types);
+  saveSettings(globalSettings).then(success => {
+    if (success) {
+      if (populateTypeDropdowns) populateTypeDropdowns();
+      if (populateTypeFilterCheckboxes) populateTypeFilterCheckboxes();
+    }
+  });
 }
 
 // ============= TYPE MANAGEMENT - TRAINING =============
 
 /**
- * Get training types from settings
+ * Get training subTypes — derived from noteTypes[behavior='training'].subTypes
+ * Falls back to legacy globalSettings.trainingTypes for backward compat.
  */
 export function getTrainingTypes() {
-  // Require global settings to be loaded
   if (!globalSettings) {
-    console.error('❌ FATAL: globalSettings not loaded! Settings must be initialized before calling getTrainingTypes()');
     throw new Error('Settings not loaded. Please refresh the page.');
   }
-  
-  if (!globalSettings.trainingTypes || !Array.isArray(globalSettings.trainingTypes)) {
-    console.error('❌ FATAL: trainingTypes missing or invalid in settings:', globalSettings);
-    throw new Error('Training types configuration is missing or invalid in settings.json');
-  }
-  
-  return globalSettings.trainingTypes;
+  const trainingNoteType = (globalSettings.noteTypes || []).find(t => t.behavior === 'training');
+  if (trainingNoteType?.subTypes?.length) return trainingNoteType.subTypes;
+  if (globalSettings.trainingTypes?.length) return globalSettings.trainingTypes;
+  return [{ value: 'GENERAL', label: 'General', icon: '💪' }];
 }
 
 /**
- * Save training types
+ * Save training subtypes back into noteTypes[behavior='training'].subTypes
  */
 export function saveTrainingTypes(types) {
-  // Update global settings
-  if (globalSettings) {
-    globalSettings.trainingTypes = types;
-    saveSettings(globalSettings);
-  } else {
-    // Fallback to localStorage
-    localStorage.setItem('trainingTypes', JSON.stringify(types));
-  }
+  if (!globalSettings) return;
+  const nt = (globalSettings.noteTypes || []).find(t => t.behavior === 'training');
+  if (nt) nt.subTypes = types;
+  globalSettings.trainingTypes = types;
+  saveSettings(globalSettings);
 }
 
 /**
- * Render training types list in settings UI
+ * Render training types list — now a no-op shim; subTypes rendered inside renderNoteTypesList
  */
 export function renderTrainingTypesList(populateTrainingTypeFilterCheckboxes) {
-  const container = getElementByIdSafe('trainingTypesList');
-  if (!container) return;
-  
-  const types = getTrainingTypes();
-  
-  container.innerHTML = types.map((type, index) => `
-    <div class="quote-type-item" data-index="${index}">
-      <input type="text" class="quote-type-icon-input" value="${type.icon}" placeholder="🏋️" maxlength="2" />
-      <input type="text" class="quote-type-value-input" value="${type.value}" placeholder="WEIGHTS" />
-      <input type="text" class="quote-type-label-input" value="${type.label}" placeholder="Weights" />
-      <div class="quote-type-actions">
-        ${types.length > 1 ? '<button class="btn-icon-small btn-delete-type" title="Delete Type">🗑️</button>' : ''}
-      </div>
-    </div>
-  `).join('');
-  
-  // Add event listeners
-  container.querySelectorAll('.quote-type-item').forEach((item, index) => {
-    const iconInput = item.querySelector('.quote-type-icon-input');
-    const valueInput = item.querySelector('.quote-type-value-input');
-    const labelInput = item.querySelector('.quote-type-label-input');
-    const deleteBtn = item.querySelector('.btn-delete-type');
-    
-    // Update on change
-    const updateType = () => {
-      const types = getTrainingTypes();
-      types[index] = {
-        icon: iconInput.value || '🏋️',
-        value: valueInput.value.toUpperCase().replace(/[^A-Z0-9-]/g, '') || 'CUSTOM',
-        label: labelInput.value || 'Custom'
-      };
-      saveTrainingTypesAndRefresh(types, populateTrainingTypeFilterCheckboxes);
-    };
-    
-    iconInput.addEventListener('change', updateType);
-    valueInput.addEventListener('change', updateType);
-    labelInput.addEventListener('change', updateType);
-    
-    if (deleteBtn) {
-      deleteBtn.addEventListener('click', () => {
-        if (confirm(`Delete training type "${types[index].label}"? This cannot be undone.`)) {
-          const types = getTrainingTypes();
-          types.splice(index, 1);
-          saveTrainingTypesAndRefresh(types, populateTrainingTypeFilterCheckboxes);
-        }
-      });
-    }
-  });
+  if (populateTrainingTypeFilterCheckboxes) populateTrainingTypeFilterCheckboxes();
 }
 
 /**
  * Save training types and refresh UI
  */
 function saveTrainingTypesAndRefresh(types, populateTrainingTypeFilterCheckboxes) {
-  // Save to file via API
-  if (globalSettings) {
-    globalSettings.trainingTypes = types;
-    saveSettings(globalSettings).then(success => {
-      if (success) {
-        renderTrainingTypesList(populateTrainingTypeFilterCheckboxes);
-        if (populateTrainingTypeFilterCheckboxes) populateTrainingTypeFilterCheckboxes();
-        console.log('✅ Training types updated');
-      }
-    });
-  } else {
-    // Fallback to localStorage
-    saveTrainingTypes(types);
-    renderTrainingTypesList(populateTrainingTypeFilterCheckboxes);
-    if (populateTrainingTypeFilterCheckboxes) populateTrainingTypeFilterCheckboxes();
-  }
+  saveTrainingTypes(types);
+  saveSettings(globalSettings).then(success => {
+    if (success) {
+      if (populateTrainingTypeFilterCheckboxes) populateTrainingTypeFilterCheckboxes();
+    }
+  });
 }
 
 /**
@@ -595,7 +470,7 @@ export function getNoteTypesSettings() {
 }
 
 /**
- * Render note types list in settings UI
+ * Render note types list in settings UI — includes inline subTypes for quote/training behaviors
  */
 export function renderNoteTypesList(rebuildMenuFn) {
   const container = getElementByIdSafe('noteTypesList', 'renderNoteTypesList');
@@ -603,47 +478,126 @@ export function renderNoteTypesList(rebuildMenuFn) {
 
   const types = getNoteTypesSettings();
 
-  const behaviorBadge = (b) => {
-    const badges = { quote: '📖 Quote', training: '🏋️ Training', generic: '📄 Generic' };
-    return `<span class="note-type-behavior-badge" title="Behavior determines which fields are shown">${badges[b] || b}</span>`;
-  };
+  const behaviorLabel = (b) => ({ quote: '📖 Quote', training: '🏋️ Training', generic: '📄 Generic' }[b] || b);
 
-  container.innerHTML = types.map((type, index) => `
-    <div class="quote-type-item" data-index="${index}">
-      <input type="text" class="note-type-icon-input" value="${type.icon}" placeholder="📝" maxlength="2" ${type.core ? 'title="Core type — icon only editable"' : ''} />
-      <input type="text" class="note-type-label-input" value="${type.label}" placeholder="My Type" />
-      ${behaviorBadge(type.behavior || 'generic')}
-      <div class="quote-type-actions">
-        ${!type.core ? `<button class="btn-icon-small btn-delete-type" title="Delete Type">🗑️</button>` : ''}
+  const subTypeRowHtml = (sub, ntIdx, sIdx, canDelete) => `
+    <div class="subtype-item" data-nt="${ntIdx}" data-si="${sIdx}">
+      <input type="text" class="subtype-icon"  value="${sub.icon}"  placeholder="📝" maxlength="2" />
+      <input type="text" class="subtype-value" value="${sub.value}" placeholder="VALUE" style="width:90px;text-transform:uppercase;" />
+      <input type="text" class="subtype-label" value="${sub.label}" placeholder="Label" />
+      ${canDelete ? `<button type="button" class="btn-icon-small btn-delete-subtype" title="Delete subtype">🗑️</button>` : ''}
+    </div>`;
+
+  container.innerHTML = types.map((type, index) => {
+    const hasSubs = type.behavior === 'quote' || type.behavior === 'training';
+    const subs = type.subTypes || [];
+    const behaviorOpts = ['quote','training','generic'].map(b =>
+      `<option value="${b}" ${(type.behavior||'generic')===b?'selected':''}>${behaviorLabel(b)}</option>`).join('');
+    const subsHtml = hasSubs ? `
+      <div class="subtype-section">
+        <div class="subtype-header">
+          <span>↳ Sub-types (${subs.length})</span>
+          <button type="button" class="btn-add-subtype btn-icon-small" data-nt="${index}" title="Add sub-type">➕</button>
+        </div>
+        <div class="subtype-list" data-nt="${index}">
+          ${subs.map((s, si) => subTypeRowHtml(s, index, si, subs.length > 1)).join('')}
+        </div>
+      </div>` : '';
+
+    return `
+    <div class="quote-type-item note-type-row" data-index="${index}">
+      <div class="note-type-main-row">
+        <input type="text" class="note-type-icon-input"  value="${type.icon}"  placeholder="📝" maxlength="2" title="Icon" />
+        <input type="text" class="note-type-value-input" value="${type.value}" placeholder="value" title="Internal key stored in database" />
+        <input type="text" class="note-type-label-input" value="${type.label}" placeholder="Label" title="Display label" />
+        <select class="note-type-behavior-select" title="Controls which fields appear in the edit modal">
+          ${behaviorOpts}
+        </select>
+        <div class="quote-type-actions">
+          <button type="button" class="btn-icon-small btn-delete-type" title="Delete note type">🗑️</button>
+        </div>
       </div>
-    </div>
-  `).join('');
+      ${subsHtml}
+    </div>`;
+  }).join('');
 
-  container.querySelectorAll('.quote-type-item').forEach((item, index) => {
-    const iconInput = item.querySelector('.note-type-icon-input');
-    const labelInput = item.querySelector('.note-type-label-input');
-    const deleteBtn = item.querySelector('.btn-delete-type');
+  // ── Wire up note type main row ──
+  container.querySelectorAll('.note-type-row').forEach((row, index) => {
+    const iconInput     = row.querySelector('.note-type-icon-input');
+    const valueInput    = row.querySelector('.note-type-value-input');
+    const labelInput    = row.querySelector('.note-type-label-input');
+    const behaviorSel   = row.querySelector('.note-type-behavior-select');
+    const deleteBtn     = row.querySelector('.btn-delete-type');
 
     const updateType = () => {
       const current = getNoteTypesSettings();
       current[index] = {
         ...current[index],
-        icon: iconInput.value || '📝',
-        label: labelInput.value || 'Custom',
+        icon:     iconInput.value  || '📝',
+        label:    labelInput.value || 'Custom',
+        value:    valueInput?.value?.trim()  || current[index].value,
+        behavior: behaviorSel?.value         || current[index].behavior,
       };
       saveNoteTypesAndRefresh(current, rebuildMenuFn);
     };
-
     iconInput.addEventListener('change', updateType);
     labelInput.addEventListener('change', updateType);
+    if (valueInput)   valueInput.addEventListener('change', updateType);
+    if (behaviorSel)  behaviorSel.addEventListener('change', updateType);
 
     if (deleteBtn) {
       deleteBtn.addEventListener('click', () => {
         const current = getNoteTypesSettings();
-        if (confirm(`Delete note type "${current[index].label}"?\nExisting notes of this type will still exist in the database but won't appear in the menu.`)) {
+        if (confirm(`Delete note type "${current[index].label}"?\nExisting notes of this type will still exist but won't appear in the menu.`)) {
           current.splice(index, 1);
           saveNoteTypesAndRefresh(current, rebuildMenuFn);
         }
+      });
+    }
+
+    // ── Wire up subtype rows ──
+    row.querySelectorAll('.subtype-item').forEach((sRow) => {
+      const ntIdx = parseInt(sRow.dataset.nt);
+      const siIdx = parseInt(sRow.dataset.si);
+      const iconI  = sRow.querySelector('.subtype-icon');
+      const valueI = sRow.querySelector('.subtype-value');
+      const labelI = sRow.querySelector('.subtype-label');
+      const delBtn = sRow.querySelector('.btn-delete-subtype');
+
+      const updateSub = () => {
+        const current = getNoteTypesSettings();
+        if (!current[ntIdx].subTypes) current[ntIdx].subTypes = [];
+        current[ntIdx].subTypes[siIdx] = {
+          icon:  iconI.value  || '📝',
+          value: (valueI.value || 'CUSTOM').toUpperCase().replace(/[^A-Z0-9/\-_]/g, ''),
+          label: labelI.value || 'Custom'
+        };
+        saveNoteTypesAndRefresh(current, rebuildMenuFn);
+      };
+      iconI.addEventListener('change', updateSub);
+      valueI.addEventListener('change', updateSub);
+      labelI.addEventListener('change', updateSub);
+
+      if (delBtn) {
+        delBtn.addEventListener('click', () => {
+          const current = getNoteTypesSettings();
+          if (confirm(`Delete sub-type "${current[ntIdx].subTypes[siIdx].label}"?`)) {
+            current[ntIdx].subTypes.splice(siIdx, 1);
+            saveNoteTypesAndRefresh(current, rebuildMenuFn);
+          }
+        });
+      }
+    });
+
+    // ── Add sub-type button ──
+    const addSubBtn = row.querySelector('.btn-add-subtype');
+    if (addSubBtn) {
+      addSubBtn.addEventListener('click', () => {
+        const ntIdx = parseInt(addSubBtn.dataset.nt);
+        const current = getNoteTypesSettings();
+        if (!current[ntIdx].subTypes) current[ntIdx].subTypes = [];
+        current[ntIdx].subTypes.push({ icon: '📝', value: 'CUSTOM', label: 'New Sub-type' });
+        saveNoteTypesAndRefresh(current, rebuildMenuFn);
       });
     }
   });
