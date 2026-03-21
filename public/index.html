@@ -145,9 +145,9 @@
       <div class="main-content">
         <!-- Tablet Menu View (landing page for tablets) -->
         <div id="menuView" class="view-container tablet-menu-view" style="display: none;">
-          <div class="container">
+          <div class="container">s
             <header class="tablet-menu-header">
-              <h1>Misa's Quote Collection</h1>
+              <h1>Misa's Notes Collection</h1>
             </header>
             
             <p class="tablet-menu-description">
@@ -214,21 +214,6 @@
                 </span>
               </h1>
               <div class="header-actions">
-                <button
-                  id="backButton"
-                  class="btn btn-back btn-icon-only"
-                  title="Go back to previous view/search"
-                  disabled
-                >
-                  ⬅
-                </button>
-                <button
-                  id="refreshQuotesBtn"
-                  class="btn btn-refresh btn-icon-only"
-                  title="Refresh"
-                >
-                  ↻
-                </button>
                 <!-- Desktop buttons (long text) -->
                 <button id="addBulkBtn" class="btn btn-bulk desktop-text">
                   + Add Multiple Quotes
@@ -242,11 +227,6 @@
                 </button>
                 <button id="addQuoteBtnTablet" class="btn btn-add tablet-text">
                   <span id="addNoteBtnTextTablet">+ Add Note</span>
-                </button>
-                
-                <!-- Select mode toggle -->
-                <button id="selectModeBtn" class="btn btn-select-mode desktop-text" title="Enter selection mode to manually pick notes for bulk operations">
-                  ☑ Select
                 </button>
 
                 <!-- Popup menu for note type selection (only shown on "All Notes") -->
@@ -503,9 +483,26 @@
 
             <!-- Quotes List -->
             <div class="quotes-section">
-              <h2>⏳ Latest <span id="quoteCount"></span>
-                <button id="mergeGroupBtn" class="btn-merge-group" style="display:none;" onclick="openMergeModalFromGroup()" title="Merge all notes in this group">🔀 Merge group</button>
-              </h2>
+              <div class="quotes-section-header">
+                <h2>⏳ Latest <span id="quoteCount"></span></h2>
+                <div class="quotes-section-actions">
+                  <button
+                    id="backButton"
+                    class="btn btn-back btn-icon-only"
+                    title="Go back to previous view/search"
+                    disabled
+                  >⬅</button>
+                  <button
+                    id="refreshQuotesBtn"
+                    class="btn btn-refresh btn-icon-only"
+                    title="Refresh"
+                  >↻</button>
+                  <button id="selectModeBtn" class="btn btn-select-mode" title="Enter selection mode to manually pick notes for bulk operations">
+                    ☑ Select
+                  </button>
+                  <button id="mergeGroupBtn" class="btn-merge-group" style="display:none;" onclick="openMergeModalFromGroup()" title="Merge all notes in this group">🔀 Merge group</button>
+                </div>
+              </div>
               <div id="quotesList" class="quotes-list">
                 <div class="loading">Loading quotes...</div>
               </div>

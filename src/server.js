@@ -3484,7 +3484,7 @@ app.post("/api/export/pdf", async (req, res) => {
 
     // Generate HTML for PDF
     console.log("Generating HTML...");
-    const html = generatePdfHtml(groupedByAuthor, filters);
+    const html = generatePdfHtml(groupedByAuthor, filters, quotes);
 
     // Launch puppeteer
     console.log("Launching browser...");
@@ -3502,10 +3502,10 @@ app.post("/api/export/pdf", async (req, res) => {
     const pdfBuffer = await page.pdf({
       format: "A4",
       margin: {
-        top: "20mm",
-        right: "15mm",
-        bottom: "20mm",
-        left: "15mm",
+        top: "12mm",
+        right: "12mm",
+        bottom: "12mm",
+        left: "12mm",
       },
       printBackground: true,
     });
@@ -3526,125 +3526,178 @@ app.post("/api/export/pdf", async (req, res) => {
   }
 });
 
-function generatePdfHtml(groupedByAuthor, filters) {
-  const typeIcon = {
-    BOOK: "📖",
-    MOVIE: "🎬",
-    ASSORTED: "📝",
-  };
-
-  let filterInfo = "";
-  if (filters && Object.keys(filters).length > 0) {
-    filterInfo =
-      '<div style="background: #f3f4f6; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-size: 10pt;">';
-    filterInfo +=
-      '<h3 style="margin: 0 0 8px 0; color: #374151; font-size: 12pt;">Filters Applied:</h3>';
-    if (filters.quote)
-      filterInfo += `<p style="margin: 4px 0; font-size: 10pt;"><strong>Quote:</strong> ${filters.quote}</p>`;
-    if (filters.author)
-      filterInfo += `<p style="margin: 4px 0; font-size: 10pt;"><strong>Author:</strong> ${filters.author}</p>`;
-    if (filters.source)
-      filterInfo += `<p style="margin: 4px 0; font-size: 10pt;"><strong>Source:</strong> ${filters.source}</p>`;
-    if (filters.tags)
-      filterInfo += `<p style="margin: 4px 0; font-size: 10pt;"><strong>Tags:</strong> ${filters.tags}</p>`;
-    filterInfo += "</div>";
-  }
-
-  let authorsHtml = "";
-  Object.values(groupedByAuthor).forEach((author) => {
-    authorsHtml += `
-      <div style="page-break-before: always; margin-bottom: 30px;">
-        <div style="display: flex; align-items: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #3b82f6;">
-          ${
-            author.authorImage
-              ? `<img src="${author.authorImage}" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; margin-right: 15px;">`
-              : '<div style="width: 60px; height: 60px; border-radius: 50%; background: #e5e7eb; display: flex; align-items: center; justify-content: center; font-size: 28px; margin-right: 15px;">✍️</div>'
-          }
-          <h2 style="margin: 0; color: #1f2937; font-size: 16pt;">${escapeHtml(author.authorName)}</h2>
-        </div>
-    `;
-
-    Object.values(author.sources).forEach((source) => {
-      authorsHtml += `
-        <div style="margin-bottom: 20px; margin-left: 15px;">
-          <div style="display: flex; align-items: center; margin-bottom: 12px;">
-            ${
-              source.sourceImage
-                ? `<img src="${source.sourceImage}" style="width: 50px; height: 75px; object-fit: cover; border-radius: 3px; margin-right: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">`
-                : ""
-            }
-            <h3 style="margin: 0; color: #4b5563; font-size: 13pt;">
-              ${typeIcon[source.sourceType] || "📖"} ${escapeHtml(source.sourceName)}
-            </h3>
-          </div>
-      `;
-
-      source.quotes.forEach((note) => {
-        // Use thumbnail (thumbnail) instead of full size
-        const quoteImage = note.thumbnail || note.attachment_full;
-        
-        authorsHtml += `
-          <div style="margin-bottom: 15px; padding: 12px; background: #f9fafb; border-left: 3px solid #3b82f6; border-radius: 3px; display: flex; gap: 12px;">
-            ${quoteImage ? `<div style="flex-shrink: 0;"><img src="${quoteImage}" style="width: 120px; height: auto; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"></div>` : ''}
-            <div style="flex: 1;">
-              <div style="margin: 0 0 8px 0; font-style: italic; color: #1f2937; line-height: 1.5; font-size: 11pt;">${note.note_text}</div>
-              ${note.tags ? `<p style="margin: 4px 0 0 0; font-size: 9pt; color: #6b7280;">Tags: ${escapeHtml(note.tags)}</p>` : ""}
-            </div>
-          </div>
-        `;
-      });
-
-      authorsHtml += "</div>";
-    });
-
-    authorsHtml += "</div>";
+function generatePdfHtml(groupedByAuthor, filters, allQuotes) {
+  const hasRealAuthors = allQuotes && allQuotes.some(
+    q => q.author_name && q.author_name !== 'Unknown Author'
+  );
+  const filterInfo = buildFilterInfoHtml(filters);
+  const noteType = (filters && filters.noteType) || '';
+  const titleLabel = noteType || 'Notes';
+  const generatedDate = new Date().toLocaleDateString('en-US', {
+    year: 'numeric', month: 'long', day: 'numeric'
   });
+  const bodyHtml = hasRealAuthors
+    ? buildGroupedHtml(groupedByAuthor)
+    : buildFlatHtml(allQuotes);
 
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: Georgia, 'Times New Roman', serif;
+      line-height: 1.45;
+      color: #1f2937;
+      font-size: 8.5pt;
+      max-width: 100%;
+    }
+    h1 { color: #1f2937; font-size: 13pt; margin: 0 0 3px 0; font-family: 'Segoe UI', Arial, sans-serif; }
+    h2 { color: #1f2937; font-size: 11pt; margin: 0 0 3px 0; font-family: 'Segoe UI', Arial, sans-serif; }
+    h3 { color: #4b5563; font-size: 9.5pt;  margin: 0;        font-family: 'Segoe UI', Arial, sans-serif; }
+    .page-header {
+      text-align: center;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1.5px solid #d1d5db;
+    }
+    .date { color: #6b7280; font-size: 7.5pt; font-family: 'Segoe UI', Arial, sans-serif; }
+    .note-card {
+      margin-bottom: 6px;
+      padding: 6px 9px;
+      background: #f9fafb;
+      border-radius: 3px;
+      display: flex;
+      gap: 9px;
+    }
+    .note-card-body { flex: 1; min-width: 0; }
+    .note-text p        { margin: 0; line-height: 1.45; }
+    .note-text p + p    { margin-top: 2px; }
+    .note-text ul, .note-text ol { margin: 1px 0 1px 16px; padding: 0; }
+    .note-text li       { margin: 0; }
+    .note-text h1, .note-text h2, .note-text h3 { margin: 3px 0 1px 0; font-size: 8.5pt; }
+    .note-text { font-style: italic; color: #1f2937; font-size: 8.5pt; }
+    .note-meta  { margin-top: 3px; font-size: 7pt; color: #6b7280; font-family: 'Segoe UI', Arial, sans-serif; font-style: normal; }
+    .author-section { page-break-before: always; margin-bottom: 18px; }
+    .author-header {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 12px; padding-bottom: 6px;
+      border-bottom: 1.5px solid #d1d5db;
+    }
+    .author-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+    .author-avatar-placeholder {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: #e5e7eb;
+      display: flex; align-items: center; justify-content: center; font-size: 18px;
+    }
+    .source-section { margin-bottom: 12px; margin-left: 10px; }
+    .source-header  { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+    .source-cover   { width: 34px; height: 51px; object-fit: cover; border-radius: 2px; }
+    .flat-group         { margin-bottom: 14px; }
+    .flat-group-title   {
+      font-size: 8.5pt; font-weight: 700; color: #374151;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      padding: 2px 6px; background: #e5e7eb; border-radius: 3px;
+      margin-bottom: 5px;
+    }
+    .filter-info {
+      background: #f3f4f6; padding: 6px 9px;
+      border-radius: 4px; margin-bottom: 12px; font-size: 7.5pt;
+      font-family: 'Segoe UI', Arial, sans-serif;
+    }
+    .filter-info h3 { font-size: 8pt; margin: 0 0 4px 0; color: #374151; }
+    .filter-info p  { margin: 2px 0; }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <h1>📋 ${escapeHtml(titleLabel)}</h1>
+    <p class="date">Generated on ${generatedDate}</p>
+  </div>
+  ${filterInfo}
+  ${bodyHtml}
+</body>
+</html>`;
+}
+
+function buildFilterInfoHtml(filters) {
+  if (!filters || Object.keys(filters).length === 0) return '';
+  const lines = [];
+  if (filters.quote)    lines.push(`<p><strong>Text:</strong> ${filters.quote}</p>`);
+  if (filters.author)   lines.push(`<p><strong>Author:</strong> ${filters.author}</p>`);
+  if (filters.source)   lines.push(`<p><strong>Source:</strong> ${filters.source}</p>`);
+  if (filters.tags)     lines.push(`<p><strong>Tags:</strong> ${filters.tags}</p>`);
+  if (filters.noteType) lines.push(`<p><strong>Type:</strong> ${filters.noteType}</p>`);
+  if (!lines.length) return '';
+  return `<div class="filter-info"><h3>Filters Applied:</h3>${lines.join('')}</div>`;
+}
+
+function buildNoteCardHtml(note) {
+  const quoteImage = note.thumbnail || note.attachment_full;
+  const imgHtml = quoteImage
+    ? `<div style="flex-shrink:0"><img src="${quoteImage}" style="width:100px;height:auto;border-radius:4px;"></div>`
+    : '';
+  const tagsHtml = note.tags
+    ? `<div class="note-meta">🏷 ${escapeHtml(note.tags)}</div>` : '';
   return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <style>
-        body {
-          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-          line-height: 1.5;
-          color: #333;
-          max-width: 100%;
-          font-size: 11pt;
-        }
-        h1 {
-          color: #1f2937;
-          font-size: 20pt;
-          margin-bottom: 8px;
-        }
-        .header {
-          text-align: center;
-          margin-bottom: 30px;
-          padding-bottom: 15px;
-          border-bottom: 3px solid #3b82f6;
-        }
-        .date {
-          color: #6b7280;
-          font-size: 10pt;
-        }
-      </style>
-    </head>
-    <body>
-      <div class="header">
-        <h1>📚 Quotes Collection</h1>
-        <p class="date">Generated on ${new Date().toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })}</p>
+    <div class="note-card">
+      ${imgHtml}
+      <div class="note-card-body">
+        <div class="note-text">${note.note_text || ''}</div>
+        ${tagsHtml}
       </div>
-      
-      ${filterInfo}
-      ${authorsHtml}
-    </body>
-    </html>
-  `;
+    </div>`;
+}
+
+function buildGroupedHtml(groupedByAuthor) {
+  const typeIcon = { BOOK: '📖', MOVIE: '🎬', ASSORTED: '📝' };
+  let html = '';
+  Object.values(groupedByAuthor).forEach((author, idx) => {
+    const avatarHtml = author.authorImage
+      ? `<img src="${author.authorImage}" class="author-avatar">`
+      : `<div class="author-avatar-placeholder">✍️</div>`;
+    html += `<div class="author-section" ${idx === 0 ? 'style="page-break-before:avoid"' : ''}>
+      <div class="author-header">
+        ${avatarHtml}
+        <h2>${escapeHtml(author.authorName)}</h2>
+      </div>`;
+    Object.values(author.sources).forEach(source => {
+      const coverHtml = source.sourceImage
+        ? `<img src="${source.sourceImage}" class="source-cover">` : '';
+      html += `<div class="source-section">
+        <div class="source-header">
+          ${coverHtml}
+          <h3>${typeIcon[source.sourceType] || '📝'} ${escapeHtml(source.sourceName)}</h3>
+        </div>`;
+      source.quotes.forEach(note => { html += buildNoteCardHtml(note); });
+      html += `</div>`;
+    });
+    html += `</div>`;
+  });
+  return html;
+}
+
+function buildFlatHtml(allQuotes) {
+  if (!allQuotes || allQuotes.length === 0) return '';
+  const groups = {};
+  allQuotes.forEach(note => {
+    let groupKey = 'Undated';
+    if (note.created_at) {
+      const d = new Date(note.created_at);
+      groupKey = d.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+    }
+    if (!groups[groupKey]) groups[groupKey] = [];
+    groups[groupKey].push(note);
+  });
+  let html = '';
+  Object.entries(groups).forEach(([label, notes]) => {
+    html += `<div class="flat-group">
+      <div class="flat-group-title">📅 ${escapeHtml(label)}</div>`;
+    notes.forEach(note => { html += buildNoteCardHtml(note); });
+    html += `</div>`;
+  });
+  return html;
 }
 
 function escapeHtml(text) {

@@ -3219,41 +3219,11 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============= EXPORT TO PDF =============
 
 async function exportToPdf() {
-  // Gather search field values
-  const searchFields = {
-    quote: searchQuote.value,
-    author: searchAuthor.value,
-    source: searchSource.value,
-    tags: searchTags.value,
-    score: searchScore.value,
-  };
-
-  // Get selected quote types
-  const selectedTypes = [];
-  const typeCheckboxes = document.querySelectorAll('.type-filter-option input[type="checkbox"]');
-  typeCheckboxes.forEach(checkbox => {
-    if (checkbox.checked) {
-      selectedTypes.push(checkbox.dataset.type);
-    }
-  });
-
-  // Get selected training types
-  const selectedTrainingTypes = [];
-  const trainingTypeCheckboxes = document.querySelectorAll('.training-type-filter-options input[type="checkbox"]');
-  trainingTypeCheckboxes.forEach(checkbox => {
-    if (checkbox.checked) {
-      selectedTrainingTypes.push(checkbox.dataset.type);
-    }
-  });
-
-  // Call library function
   await exportToPdfLib({
-    searchFields,
     currentNoteTypeFilter,
-    selectedTypes,
-    selectedTrainingTypes,
-    exportBtn: getElementByIdSafe("exportPdfBtn", "exportToPdf"), // May be null if moved to bulk ops
+    exportBtn: getElementByIdSafe("exportPdfBtn", "exportToPdf"),
     getQuoteTypes,
+    getTrainingTypes,
   });
 }
 

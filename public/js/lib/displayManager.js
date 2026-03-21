@@ -167,9 +167,23 @@ function buildQuotesParams(currentNoteTypeFilter, getQuoteTypes, getTrainingType
   addTrainingTypeFilters(params, currentNoteTypeFilter);
   addMetadataFilters(params);
   addPaginationParams(params);
-  
   return params;
 }
+
+/**
+ * Build URL parameters for export (same as display but without pagination limit)
+ */
+export function buildExportParams(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes, limit = 10000) {
+  const params = new URLSearchParams();
+  addSearchFilters(params);
+  if (currentNoteTypeFilter) params.append("note_type", currentNoteTypeFilter);
+  addQuoteTypeFilters(params, currentNoteTypeFilter, getQuoteTypes);
+  addTrainingTypeFilters(params, currentNoteTypeFilter);
+  addMetadataFilters(params);
+  params.append("limit", String(limit));
+  return params;
+}
+
 /**
  * Load quotes from API and return them
  * Note: Does NOT render quotes - caller should call displayQuotes with the result

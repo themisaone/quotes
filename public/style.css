@@ -1538,6 +1538,32 @@ textarea {
   box-shadow: var(--shadow);
 }
 
+.quotes-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface);
+  padding: 0.6rem 1.5rem;
+  margin: 0 0 1rem 0;
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.quotes-section-header h2 {
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.quotes-section-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
 #quoteCount {
   font-size: 1rem;
   color: var(--text-secondary);
@@ -3154,12 +3180,19 @@ body.selection-mode .quote-card::after {
     padding: 0 !important;
   }
   
-  .quotes-section h2 {
+  .quotes-section h2,
+  .quotes-section-header {
     background: var(--surface) !important;
-    padding: 0.9rem 1.25rem !important;
+    padding: 0.6rem 1.25rem !important;
     margin: 0 0 1rem 0 !important;
     border-radius: 8px !important;
     box-shadow: var(--shadow) !important;
+  }
+  
+  .quotes-section-header h2 {
+    background: transparent !important;
+    padding: 0 !important;
+    box-shadow: none !important;
   }
   
   /* Equal width for quote cards in 2-column grid */

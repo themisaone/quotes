@@ -11,6 +11,8 @@
 
 import { API_URL } from './api.js';
 import { getNoteTypeConfig } from './noteTypes.js';
+import { buildExportParams } from './displayManager.js';
+import { getSearchValues } from './searchManager.js';
 import { showConfirm } from './confirmDialog.js';
 
 // ============= CONSTANTS =============
@@ -79,19 +81,20 @@ function buildFilterParams(searchFields, currentNoteTypeFilter, selectedTypes, s
  * @param {string} currentNoteTypeFilter - Current note type filter
  * @returns {Object}
  */
-function buildFiltersObject(searchFields, currentNoteTypeFilter) {
+function buildFiltersObject(currentNoteTypeFilter) {
   const filters = {};
   
   if (currentNoteTypeFilter) {
     const typeLabel = getNoteTypeConfig(currentNoteTypeFilter)?.label || 'Notes';
     filters.noteType = typeLabel;
   }
-  
-  if (searchFields.quote) filters.quote = searchFields.quote;
-  if (searchFields.author) filters.author = searchFields.author;
-  if (searchFields.source) filters.source = searchFields.source;
-  if (searchFields.tags) filters.tags = searchFields.tags;
-  if (searchFields.score) filters.score = searchFields.score;
+
+  const s = getSearchValues();
+  if (s.quote)  filters.quote  = s.quote;
+  if (s.author) filters.author = s.author;
+  if (s.source) filters.source = s.source;
+  if (s.tags)   filters.tags   = s.tags;
+  if (s.score)  filters.score  = s.score;
 
   return filters;
 }
@@ -272,25 +275,22 @@ async function generatePdf(quotes, filters) {
  */
 export async function exportToPdf(config) {
   const {
-    searchFields,
     currentNoteTypeFilter,
-    selectedTypes,
-    selectedTrainingTypes,
     exportBtn,
     getQuoteTypes,
+    getTrainingTypes,
   } = config;
 
   try {
     const typeLabel = getTypeLabel(currentNoteTypeFilter);
     const originalText = exportBtn ? setButtonLoading(exportBtn, "⏳ Generating PDF...") : null;
 
-    // Build filter parameters and fetch quotes
-    const params = buildFilterParams(
-      searchFields,
+    // Build filter parameters — uses the exact same filters as the current view
+    // (search text, type, training year/month, metadata filters, etc.)
+    const params = buildExportParams(
       currentNoteTypeFilter,
-      selectedTypes,
-      selectedTrainingTypes,
-      getQuoteTypes
+      getQuoteTypes,
+      getTrainingTypes
     );
 
     const allQuotes = await fetchQuotesForExport(params);
@@ -304,7 +304,7 @@ export async function exportToPdf(config) {
     }
 
     // Generate and download PDF
-    const filters = buildFiltersObject(searchFields, currentNoteTypeFilter);
+    const filters = buildFiltersObject(currentNoteTypeFilter);
     const pdfBlob = await generatePdf(allQuotes, filters);
     
     const filePrefix = currentNoteTypeFilter || 'all_notes';
