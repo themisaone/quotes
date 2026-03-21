@@ -22,6 +22,8 @@ export function parseUrlHash() {
     return 'training';
   } else if (view === 'puzzles' || view === 'puzzle') {
     return 'puzzle';
+  } else if (view === 'historicals' || view === 'historical') {
+    return 'historical';
   }
   
   return null; // Default to all notes
@@ -68,11 +70,12 @@ export function updatePageTitle(noteTypeFilter) {
   if (!titleIcon || !titleText) return;
   
   const titles = {
-    null: { icon: '💬', text: "All Misa's Notes" },
-    'quote': { icon: '💬', text: "Misa's Quote Collection" },
-    'note': { icon: '📝', text: "Misa's Notes" },
-    'training': { icon: '💪', text: "Misa's Trainings" },
-    'puzzle': { icon: '🧩', text: "Misa's Puzzle Collection" }
+    null: { icon: '💬', text: "All Notes" },
+    'quote': { icon: '💬', text: "Quotes" },
+    'note': { icon: '📝', text: "Notes" },
+    'training': { icon: '💪', text: "Trainings" },
+    'puzzle': { icon: '🧩', text: "Puzzles" },
+    'historical': { icon: '📜', text: "Historical Notes" }
   };
   
   const title = titles[noteTypeFilter] || titles[null];

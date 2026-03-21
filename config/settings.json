@@ -2,7 +2,7 @@
   "noteTypes": [
     {
       "value": "quote",
-      "label": "Quotes",
+      "label": "Quote",
       "icon": "💬",
       "behavior": "quote",
       "core": true,
@@ -41,7 +41,7 @@
     },
     {
       "value": "note",
-      "label": "Notes",
+      "label": "Note",
       "icon": "📝",
       "behavior": "generic",
       "core": true
@@ -89,7 +89,7 @@
     },
     {
       "value": "historical",
-      "label": "Historical",
+      "label": "Historical Note",
       "icon": "📜",
       "behavior": "generic"
     }

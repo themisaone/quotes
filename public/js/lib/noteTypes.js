@@ -103,9 +103,9 @@ export function getAddButtonText(noteTypeFilter) {
 }
 
 export function getPageTitle(noteTypeFilter) {
-  if (!noteTypeFilter) return { icon: '💬', text: "All Misa's Notes" };
+  if (!noteTypeFilter) return { icon: '💬', text: "All Notes" };
   const config = getNoteTypeConfig(noteTypeFilter);
-  return { icon: config.icon, text: `Misa's ${config.label}` };
+  return { icon: config.icon, text: `${config.label}` };
 }
 
 export function getSearchHeaderText(noteTypeFilter) {
