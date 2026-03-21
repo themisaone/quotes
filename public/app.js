@@ -472,6 +472,14 @@ function generateNoteTypeMenu() {
     tagTypeFilter.innerHTML = `<option value="">🏷️ All Types</option>` +
       types.map(type => `<option value="${type.value}">${type.icon} ${type.label}</option>`).join('');
   }
+
+  // Populate the note-type selector inside the edit/add modal
+  const noteTypeSelect = document.getElementById('noteType');
+  if (noteTypeSelect) {
+    const prev = noteTypeSelect.value;
+    noteTypeSelect.innerHTML = types.map(type => `<option value="${type.value}">${type.icon} ${type.label}</option>`).join('');
+    if (prev) noteTypeSelect.value = prev;
+  }
 }
 
 // Initialize
@@ -1967,6 +1975,7 @@ getElementByIdSafe("quoteModal").addEventListener("paste", (e) => {
 // Clear quote image
 clearQuoteImageBtn.addEventListener("click", (e) => {
   e.stopPropagation();
+  if (!confirm('Remove the main attachment from this note?')) return;
   currentQuoteImage = "";
   currentQuoteImageFull = "";
   currentAttachmentType = "image";
@@ -2010,7 +2019,7 @@ function renderModalAttachmentStrip(note) {
     const primaryBadge = idx === 0 ? `<div class="modal-att-primary-badge" title="Primary">★</div>` : '';
     return `<div class="modal-att-item${activeCls}" data-att-idx="${idx}" title="${idx === 0 ? 'Primary (click others to change)' : 'Click to make primary'}">
       ${thumbTag}
-      <button class="modal-att-del" title="Delete this attachment" onclick="event.stopPropagation(); deleteModalAttachment(${idx})">✕</button>
+      <button type="button" class="modal-att-del" title="Delete this attachment" onclick="event.stopPropagation(); deleteModalAttachment(${idx})">✕</button>
       ${primaryBadge}
     </div>`;
   }).join('');
@@ -2112,7 +2121,8 @@ async function deleteModalAttachment(idx) {
   if (!editingQuoteId) return;
   const att = currentModalAttachments[idx];
   if (!att) return;
-  if (!confirm(`Delete attachment ${idx + 1}?`)) return;
+  const label = att.attachment_filename || att.attachment_type || `attachment ${idx + 1}`;
+  if (!confirm(`Remove "${label}" from this note?\n\nThis cannot be undone.`)) return;
 
   try {
     const resp = await fetch(`/api/notes/${editingQuoteId}/attachments/${att.id}`, { method: 'DELETE' });
@@ -2197,7 +2207,7 @@ function renderPendingStrip() {
     const primaryBadge = idx === 0 ? `<div class="modal-att-primary-badge" title="Primary">★</div>` : '';
     // Delete button only on non-primary (pending) items
     const delBtn = idx === 0 ? '' :
-      `<button class="modal-att-del" title="Remove" onclick="event.stopPropagation(); removePendingAttachment(${idx - 1})">✕</button>`;
+      `<button type="button" class="modal-att-del" title="Remove" onclick="event.stopPropagation(); removePendingAttachment(${idx - 1})">✕</button>`;
     return `<div class="modal-att-item${activeCls}" data-pending-idx="${idx}" title="${titleAttr}">
       ${thumbTag}${delBtn}${primaryBadge}
     </div>`;
@@ -2214,6 +2224,9 @@ function renderPendingStrip() {
 }
 
 function removePendingAttachment(pendingIdx) {
+  const att = pendingExtraAttachments[pendingIdx];
+  const label = att?.name || att?.filename || `attachment ${pendingIdx + 1}`;
+  if (!confirm(`Remove "${label}" from the queue?\n\nIt has not been saved yet.`)) return;
   pendingExtraAttachments.splice(pendingIdx, 1);
   renderPendingStrip();
 }

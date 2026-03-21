@@ -1098,13 +1098,18 @@
             <span class="modal-header-icon">💬</span>
             <h2 id="modalTitle">Add New Quote</h2>
           </div>
+          <div style="display:flex; align-items:center; gap:0.4rem; flex-shrink:0; margin-right:0.75rem;">
+            <span style="color:rgba(255,255,255,0.75); font-size:0.78rem; white-space:nowrap;">Note type:</span>
+            <select id="noteType" class="modal-notetype-select">
+              <!-- Options populated by generateNoteTypeMenu() -->
+            </select>
+          </div>
           <div id="quoteMetadata" class="quote-metadata-header" style="display: none;"></div>
           <span class="close">&times;</span>
         </div>
         <div class="modal-body">
           <form id="quoteForm">
           <input type="hidden" id="quoteId" />
-          <input type="hidden" id="noteType" value="quote" />
 
           <div class="form-group quote-editor-group">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0;">
@@ -1161,8 +1166,6 @@
                   </div>
                   <button type="button" id="clearQuoteImageX" class="clear-image-btn" style="display: none;" onclick="event.stopPropagation(); document.getElementById('clearQuoteImage').click();">✕</button>
                 </div>
-                <!-- Multi-attachment strip: shown when note has >1 attachment -->
-                <div id="modalAttachmentStrip" class="modal-att-strip" style="display:none;"></div>
                 <input
                   type="file"
                   id="quoteImageFile"
@@ -1186,6 +1189,8 @@
                 <input type="hidden" id="quoteText" required />
               </div>
             </div>
+            <!-- Multi-attachment strip: full-width horizontal scroll below editor -->
+            <div id="modalAttachmentStrip" class="modal-att-strip" style="display:none;"></div>
           </div>
 
           <div class="form-row form-row-with-separator">
