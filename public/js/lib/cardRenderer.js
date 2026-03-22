@@ -56,15 +56,17 @@ function getTrainingIconAndLabel(sourceType, trainingTypes) {
 }
 
 /**
- * Format training date with Norwegian day name
+ * Format training date as YYYY.MM.DD  Full day name
+ * e.g. "2026.02.19  Thursday"
  */
 function formatTrainingDate(dateString) {
   if (!dateString) return '';
-  
   const date = new Date(dateString);
-  const dayName = date.toLocaleDateString('nb-NO', { weekday: 'short' });
-  const dateFormatted = date.toLocaleDateString('nb-NO');
-  return `${dayName} ${dateFormatted}`;
+  const yyyy = date.getFullYear();
+  const mm   = String(date.getMonth() + 1).padStart(2, '0');
+  const dd   = String(date.getDate()).padStart(2, '0');
+  const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
+  return `${yyyy}.${mm}.${dd}\u00a0\u00a0${dayName}`;
 }
 
 /**
@@ -172,12 +174,12 @@ function buildTrainingMetadata(note, noteTypeBadge, translationBadge, getTrainin
   
   // Date + Training Type
   if (dateStr && trainingTypeStr) {
-    return `<div class="meta-item-combined">${noteTypeBadge}${translationBadge}${trainingTypeStr} <span class="meta-from">•</span> <span class="meta-value">📅 ${dateStr}</span></div>`;
+    return `<div class="meta-item-combined">${noteTypeBadge}${translationBadge}${trainingTypeStr} <span class="meta-from training-date-sep">—</span> <span class="meta-value"><span class="type-icon-badge">📅</span> ${dateStr}</span></div>`;
   }
   
   // Date only
   if (dateStr) {
-    return `<div class="meta-item">${noteTypeBadge}${translationBadge}<span class="meta-value">📅 ${dateStr}</span></div>`;
+    return `<div class="meta-item">${noteTypeBadge}${translationBadge}<span class="meta-value"><span class="type-icon-badge">📅</span> ${dateStr}</span></div>`;
   }
   
   // Training Type only
@@ -316,9 +318,17 @@ export function createQuoteCard(note, currentNoteTypeFilter, getTrainingTypes, g
   const attachmentSection = buildAttachmentSection(note, imageUrl, imageFullUrl);
 
   // Return complete card HTML
-  return `
-        <div class="quote-card ${note.image || note.attachment_full ? 'has-image' : ''}" data-quote-id="${note.id}" style="cursor: pointer;">
-            <div class="quote-card-content">
+  const isTraining = noteType === 'training';
+
+  const metaRow = `
+                <div class="quote-metadata-row${isTraining ? ' training-meta-top' : ''}">
+                    <div class="quote-metadata-left">
+                        ${metadataContent}
+                    </div>
+                    ${tags ? `<div class="quote-tags-inline">${tags}</div>` : ''}
+                </div>`;
+
+  const topSection = `
                 <div class="quote-top-section">
                     <div class="quote-left-column">
                         ${noteScoreLine}
@@ -328,14 +338,13 @@ export function createQuoteCard(note, currentNoteTypeFilter, getTrainingTypes, g
                         </div>
                     </div>
                     ${attachmentSection}
-                </div>
-                <div class="quote-separator"></div>
-                <div class="quote-metadata-row">
-                    <div class="quote-metadata-left">
-                        ${metadataContent}
-                    </div>
-                    ${tags ? `<div class="quote-tags-inline">${tags}</div>` : ''}
-                </div>
+                </div>`;
+
+  return `
+        <div class="quote-card ${note.image || note.attachment_full ? 'has-image' : ''}" data-quote-id="${note.id}" style="cursor: pointer;">
+            <div class="quote-card-content">
+                ${isTraining ? metaRow + '<div class="quote-separator"></div>' + topSection
+                             : topSection + '<div class="quote-separator"></div>' + metaRow}
             </div>
         </div>
     `;

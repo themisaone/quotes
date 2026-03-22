@@ -2162,6 +2162,40 @@ body.selection-mode .quote-card::after {
   margin-top: 0.75rem;
 }
 
+/* Training cards: meta strip sits at the top */
+.quote-metadata-row.training-meta-top {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.25rem;
+}
+
+/* ↑ Training date/type strip — same size & color as h2. To adjust, edit the two rules below */
+.training-meta-top .meta-item {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--primary-color);
+}
+.training-meta-top .meta-item-combined {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+/* Dash separator — equal spacing on both sides, matching strip color/weight */
+.training-date-sep {
+  margin: 0 0.5rem;
+  font-weight: 600;
+  font-style: normal;
+  font-size: inherit;
+  color: var(--primary-color);
+}
+
+/* Date value inside training strip — match training type weight & color */
+.training-meta-top .meta-value {
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
 .quote-metadata-left {
   flex: 0 1 auto;
   display: flex;
@@ -2200,7 +2234,7 @@ body.selection-mode .quote-card::after {
 
 .type-icon-badge {
   display: inline-block;
-  padding: 0rem 0.8rem 0rem 0rem;
+  padding: 0rem 0rem 0rem 0rem;
   border-radius: 12px;
   background: transparent;
   color: white;

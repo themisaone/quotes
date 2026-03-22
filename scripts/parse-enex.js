@@ -57,24 +57,26 @@ function loadTrainingSubTypes() {
  * Parse ENEX file and convert to JSON format compatible with the notes import system
  *
  * Usage:
- *   node scripts/parse-enex.js <enex-file> [output-json] [note_type] [sub_type] [batch-size] [max-mb]
+ *   node scripts/parse-enex.js <enex-file> [output-json] [note_type] [sub_type] [tag ...] [--flags]
  *
  * Parameters:
  *   note_type   - lowercase note type: training, historical, note, puzzle  (default: training)
  *   sub_type    - optional sub-type, only used for training: WEIGHTS, CARDIO, MIX, ...
- *   batch-size  - split output into files of N notes each (default: 0 = no split)
- *   max-mb      - skip notes with attachments larger than this (default: 0 = no limit)
+ *   tag ...     - zero or more extra tags applied to ALL notes (e.g. 2013 archiv)
+ *
+ * Named flags:
+ *   --split-mb=N   split output into files of N MB each       (default: 30)
+ *   --skip-mb=N    skip notes with attachments larger than N MB (default: off)
  *
  * Examples:
- *   node scripts/parse-enex.js 2026.enex weights.json training WEIGHTS
- *   node scripts/parse-enex.js hist.enex  hist.json   historical
- *   node scripts/parse-enex.js big.enex   out.json    training WEIGHTS --split-mb=20
- *   node scripts/parse-enex.js big.enex   out.json    training WEIGHTS --split-mb=20 --skip-mb=50
+ *   node scripts/parse-enex.js 2013.enex 2013enex.json training WEIGHTS 2013
+ *   node scripts/parse-enex.js 2026.enex weights.json  training WEIGHTS
+ *   node scripts/parse-enex.js hist.enex  hist.json    historical
+ *   node scripts/parse-enex.js big.enex   out.json     training WEIGHTS --split-mb=20 --skip-mb=50
  *
- * Notes for non-training types (historical, note, puzzle, etc.):
- *   - Date in title is optional (notes without a date are NOT skipped)
- *   - Falls back to the ENEX <created> timestamp if no date in title
- *   - No note_date or training sub-type fields are written
+ * Date handling for training notes:
+ *   - Title date (YYYY.MM.DD) is used when present
+ *   - Falls back to ENEX <created> timestamp when title has no date (no longer skipped)
  */
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -215,14 +217,20 @@ function resolveType(noteTypeArg, subTypeArg) {
 
 // parseEnex writes output files incrementally as batches fill up — no large in-memory array.
 // Returns { outputFiles, totalParsed, totalFound, skipped, skippedLargeAttachments, largeAttachments }
-async function parseEnex(enexPath, noteTypeArg, subTypeArg, maxAttachmentSizeMB = 0, splitBytes, baseOutputPath) {
+async function parseEnex(enexPath, noteTypeArg, subTypeArg, maxAttachmentSizeMB = 0, splitBytes, baseOutputPath, extraTags = []) {
   const { noteType, subType, isTraining } = resolveType(noteTypeArg, subTypeArg);
+
+  // Build tag_objects from extra tags (applied to every note)
+  const tagObjects = extraTags.map(t => ({ name: t, type: noteType }));
 
   console.log(`📖 Reading ENEX file: ${enexPath}`);
   if (isTraining) {
     console.log(`🏋️  Note type: training  /  Sub-type: ${subType}`);
   } else {
     console.log(`📋 Note type: ${noteType}  (no sub-type)`);
+  }
+  if (tagObjects.length > 0) {
+    console.log(`🏷️  Tags applied to all notes: ${extraTags.join(', ')}`);
   }
   if (maxAttachmentSizeMB > 0) {
     console.log(`⚠️  Will skip notes with attachments > ${maxAttachmentSizeMB} MB`);
@@ -296,10 +304,8 @@ async function parseEnex(enexPath, noteTypeArg, subTypeArg, maxAttachmentSizeMB 
     const dateFromCreated = parseDateFromCreated(created);
     const noteDate = dateFromTitle || dateFromCreated;
 
-    if (isTraining && !dateFromTitle) {
-      console.warn(`\n⚠️  Skipping note ${index}: No date in title "${title}" (required for training)`);
-      skipped++;
-      return;
+    if (isTraining && !dateFromTitle && dateFromCreated) {
+      process.stdout.write(`\n   ℹ️  No date in title "${title}" — using <created> date: ${dateFromCreated}\n`);
     }
 
     const htmlContent = enmlToHtml(contentXml);
@@ -331,7 +337,8 @@ async function parseEnex(enexPath, noteTypeArg, subTypeArg, maxAttachmentSizeMB 
           author_name: null,
           source_name: null,
           created_at: safeISODate(noteDate) || new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
+          ...(tagObjects.length > 0 ? { tag_objects: tagObjects } : {})
         }
       : {
           note_text: htmlContent,
@@ -340,7 +347,8 @@ async function parseEnex(enexPath, noteTypeArg, subTypeArg, maxAttachmentSizeMB 
           author_name: null,
           source_name: null,
           created_at: safeISODate(noteDate) || (created ? parseEnexDate(created) : new Date().toISOString()),
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
+          ...(tagObjects.length > 0 ? { tag_objects: tagObjects } : {})
         };
 
     const attachmentDefaults = {
@@ -532,28 +540,31 @@ async function main() {
   const DEFAULT_SPLIT_MB = 30;
 
   if (args.length === 0) {
-    console.log('Usage: node scripts/parse-enex.js <enex-file> [output] [note_type] [sub_type] [--split-mb=N] [--skip-mb=N]');
+    console.log('Usage: node scripts/parse-enex.js <enex-file> [output] [note_type] [sub_type] [tag ...] [--flags]');
     console.log('');
     console.log('Positional:');
     console.log('  note_type    lowercase: training  historical  note  puzzle  (default: training)');
     console.log('  sub_type     training only: WEIGHTS  CARDIO  MIX  ...      (default: WEIGHTS)');
+    console.log('  tag ...      zero or more tags applied to ALL notes         (e.g. 2013  archiv)');
     console.log('');
     console.log('Named flags:');
     console.log(`  --split-mb=N   auto-split output when file exceeds N MB    (default: ${DEFAULT_SPLIT_MB})`);
     console.log('  --skip-mb=N    skip notes whose attachment is larger than N MB (default: off)');
     console.log('');
     console.log('Examples:');
-    console.log('  node scripts/parse-enex.js 2026.enex weights.json training WEIGHTS');
-    console.log('  node scripts/parse-enex.js hist.enex  hist.json   historical');
-    console.log('  node scripts/parse-enex.js big.enex   out.json    training WEIGHTS --split-mb=20');
-    console.log('  node scripts/parse-enex.js big.enex   out.json    training WEIGHTS --split-mb=20 --skip-mb=50');
+    console.log('  node scripts/parse-enex.js 2013.enex 2013enex.json training WEIGHTS 2013');
+    console.log('  node scripts/parse-enex.js 2026.enex weights.json  training WEIGHTS');
+    console.log('  node scripts/parse-enex.js hist.enex  hist.json    historical');
+    console.log('  node scripts/parse-enex.js big.enex   out.json     training WEIGHTS --split-mb=20 --skip-mb=50');
     process.exit(1);
   }
 
   const enexPath       = args[0];
   const outputPath     = args[1] || enexPath.replace('.enex', '-import.json');
   const noteTypeArg    = args[2] || 'training';
-  const subTypeArg     = args[3] || null;
+  const isTrainingType = noteTypeArg.toLowerCase() === 'training';
+  const subTypeArg     = isTrainingType ? (args[3] || null) : null;
+  const extraTags      = isTrainingType ? args.slice(4) : args.slice(3);  // tags start after sub_type for training, right after note_type otherwise
   const splitMB        = flags['split-mb']  ? parseFloat(flags['split-mb'])  : DEFAULT_SPLIT_MB;
   const maxAttachmentMB= flags['skip-mb']   ? parseFloat(flags['skip-mb'])   : 0;
 
@@ -587,7 +598,7 @@ async function main() {
   const baseOutputPath = outputPath.replace(/\.json$/, '');
 
   try {
-    const result = await parseEnex(enexPath, noteTypeArg, subTypeArg, maxAttachmentMB, splitBytes, baseOutputPath);
+    const result = await parseEnex(enexPath, noteTypeArg, subTypeArg, maxAttachmentMB, splitBytes, baseOutputPath, extraTags);
     const { outputFiles, totalParsed } = result;
 
     if (totalParsed === 0) {

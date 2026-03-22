@@ -101,7 +101,7 @@
   "enableQuoteMetaSearches": true,
   "displayQuotesByRealSize": true,
   "displayImageQuotesLong": false,
-  "showLongQuotesExpanded": false,
+  "showLongQuotesExpanded": true,
   "displayScoreInCards": true,
   "colors": {
     "button": "#1e40af",
