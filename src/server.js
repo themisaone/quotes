@@ -2524,6 +2524,49 @@ app.post("/api/quotes/bulk-tag", async (req, res) => {
   }
 });
 
+// Bulk set translation group
+app.post("/api/quotes/bulk-set-group", async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const { filters, groupName, noteIds } = req.body;
+
+    if (!groupName || !groupName.trim()) {
+      return res.status(400).json({ error: "Group name is required" });
+    }
+
+    let quoteIds;
+    if (noteIds && Array.isArray(noteIds) && noteIds.length > 0) {
+      quoteIds = noteIds.map(id => parseInt(id, 10));
+    } else {
+      const { query, params } = buildFilterQuery(filters);
+      const quotesResult = await client.query(`SELECT q.id ${query}`, params);
+      quoteIds = quotesResult.rows.map(r => r.id);
+    }
+
+    if (quoteIds.length === 0) {
+      await client.query("ROLLBACK");
+      return res.json({ count: 0, message: "No notes match" });
+    }
+
+    await client.query(
+      `UPDATE notes SET translation_group = $1 WHERE id = ANY($2::int[])`,
+      [groupName.trim(), quoteIds]
+    );
+
+    await client.query("COMMIT");
+    res.json({ count: quoteIds.length, message: `Set group on ${quoteIds.length} notes` });
+
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Error in bulk set-group:", error);
+    res.status(500).json({ error: "Failed to set group" });
+  } finally {
+    client.release();
+  }
+});
+
 // Bulk untag (remove tag) operation
 app.post("/api/quotes/bulk-untag", async (req, res) => {
   const client = await pool.connect();

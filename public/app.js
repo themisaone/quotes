@@ -718,6 +718,7 @@ function setupEventListeners() {
   const bulkTagExecuteBtn = getElementByIdSafe("bulkTagExecuteBtn");
   const bulkTagAddBtn = getElementByIdSafe("bulkTagAddBtn");
   const bulkUntagExecuteBtn = getElementByIdSafe("bulkUntagExecuteBtn");
+  const bulkGroupExecuteBtn = getElementByIdSafe("bulkGroupExecuteBtn");
   const bulkExportPdfBtn = getElementByIdSafe("bulkExportPdfBtn");
   const bulkDeleteBtn = getElementByIdSafe("bulkDeleteBtn");
 
@@ -769,6 +770,10 @@ function setupEventListeners() {
 
   if (bulkUntagExecuteBtn) {
     bulkUntagExecuteBtn.addEventListener("click", handleBulkUntag);
+  }
+
+  if (bulkGroupExecuteBtn) {
+    bulkGroupExecuteBtn.addEventListener("click", handleBulkSetGroup);
   }
 
   if (bulkExportPdfBtn) {
@@ -3455,6 +3460,8 @@ function closeBulkOperationsModal() {
   const modal = getElementByIdSafe("bulkOperationsModal");
   modal.style.display = "none";
   _clearBulkTagQueue();
+  const groupInput = document.getElementById('bulkGroupInput');
+  if (groupInput) groupInput.value = '';
 }
 
 // ── Multi-tag queue for bulk tagging ──────────────────────────────────────
@@ -3626,6 +3633,51 @@ async function handleBulkUntag() {
   } catch (error) {
     console.error("Bulk untag error:", error);
     alert("❌ Failed to remove tag from notes. Check console for details.");
+  }
+}
+
+async function handleBulkSetGroup() {
+  const input = document.getElementById('bulkGroupInput');
+  const groupName = input?.value?.trim();
+
+  if (!groupName) {
+    alert("⚠️ Please enter a group name");
+    input?.focus();
+    return;
+  }
+
+  const { payload, count, label } = _getBulkPayloadAndLabel();
+
+  if (count === 0) {
+    alert("⚠️ No notes to group");
+    return;
+  }
+
+  if (!await showConfirm(`Set group "${groupName}" on ${count} ${label}?`, {
+    icon: '🔗', title: 'Set Group', confirmLabel: 'Set Group'
+  })) return;
+
+  const btn = document.getElementById('bulkGroupExecuteBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Applying…'; }
+
+  try {
+    const response = await fetch(`${API_URL}/quotes/bulk-set-group`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...payload, groupName })
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to set group');
+
+    if (input) input.value = '';
+    closeBulkOperationsModal();
+    loadQuotes();
+    alert(`✅ Group "${groupName}" set on ${result.count} notes`);
+  } catch (error) {
+    console.error("Bulk set-group error:", error);
+    alert(`❌ Error: ${error.message}`);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Set Group'; }
   }
 }
 

@@ -42,15 +42,21 @@ function loadNoteTypes() {
   return ['quote', 'note', 'training', 'puzzle', 'historical'];
 }
 
-function loadTrainingSubTypes() {
+function loadSubTypesForNoteType(noteType) {
   const settingsPath = path.join(__dirname, '..', 'config', 'settings.json');
   try {
     const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
-    if (Array.isArray(settings.trainingTypes)) {
-      return settings.trainingTypes.map(t => t.value.toUpperCase());
+    if (Array.isArray(settings.noteTypes)) {
+      const nt = settings.noteTypes.find(t => t.value.toLowerCase() === noteType.toLowerCase());
+      if (nt && Array.isArray(nt.subTypes)) {
+        return nt.subTypes.map(s => s.value.toUpperCase());
+      }
     }
   } catch (e) {}
-  return ['WEIGHTS', 'CARDIO', 'MIX', 'HOME', 'OVERVIEW/DOC'];
+  // Hard-coded fallbacks
+  if (noteType === 'training') return ['WEIGHTS', 'CARDIO', 'MIX', 'HOME', 'OVERVIEW/DOC'];
+  if (noteType === 'quote')    return ['BOOK', 'MOVIE-TV', 'POETRY', 'LYRICS', 'JOKES', 'ASSORTED'];
+  return [];
 }
 
 /**
@@ -60,8 +66,10 @@ function loadTrainingSubTypes() {
  *   node scripts/parse-enex.js <enex-file> [output-json] [note_type] [sub_type] [tag ...] [--flags]
  *
  * Parameters:
- *   note_type   - lowercase note type: training, historical, note, puzzle  (default: training)
- *   sub_type    - optional sub-type, only used for training: WEIGHTS, CARDIO, MIX, ...
+ *   note_type   - lowercase note type: quote, training, note, puzzle, historical  (default: training)
+ *   sub_type    - for quote: BOOK, LYRICS, POETRY, MOVIE-TV, JOKES, ASSORTED
+ *                 for training: WEIGHTS, CARDIO, MIX, HOME, OVERVIEW/DOC  (default: WEIGHTS)
+ *                 omit entirely for types with no sub-types (note, puzzle, historical)
  *   tag ...     - zero or more extra tags applied to ALL notes (e.g. 2013 archiv)
  *
  * Named flags:
@@ -209,7 +217,10 @@ function extractAllResources(noteXml) {
 function resolveType(noteTypeArg, subTypeArg) {
   const noteType = (noteTypeArg || 'training').toLowerCase();
   const isTraining = noteType === 'training';
-  const subType = isTraining ? (subTypeArg ? subTypeArg.toUpperCase() : 'WEIGHTS') : null;
+  // For training, default sub-type is WEIGHTS; for others, null if not specified
+  const subType = subTypeArg
+    ? subTypeArg.toUpperCase()
+    : (isTraining ? 'WEIGHTS' : null);
   return { noteType, subType, isTraining };
 }
 
@@ -224,8 +235,8 @@ async function parseEnex(enexPath, noteTypeArg, subTypeArg, maxAttachmentSizeMB 
   const tagObjects = extraTags.map(t => ({ name: t, type: noteType }));
 
   console.log(`📖 Reading ENEX file: ${enexPath}`);
-  if (isTraining) {
-    console.log(`🏋️  Note type: training  /  Sub-type: ${subType}`);
+  if (subType) {
+    console.log(`📋 Note type: ${noteType}  /  Sub-type: ${subType}`);
   } else {
     console.log(`📋 Note type: ${noteType}  (no sub-type)`);
   }
@@ -343,6 +354,7 @@ async function parseEnex(enexPath, noteTypeArg, subTypeArg, maxAttachmentSizeMB 
       : {
           note_text: htmlContent,
           note_type: noteType,
+          type: subType || null,
           comment: title,
           author_name: null,
           source_name: null,
@@ -543,9 +555,11 @@ async function main() {
     console.log('Usage: node scripts/parse-enex.js <enex-file> [output] [note_type] [sub_type] [tag ...] [--flags]');
     console.log('');
     console.log('Positional:');
-    console.log('  note_type    lowercase: training  historical  note  puzzle  (default: training)');
-    console.log('  sub_type     training only: WEIGHTS  CARDIO  MIX  ...      (default: WEIGHTS)');
-    console.log('  tag ...      zero or more tags applied to ALL notes         (e.g. 2013  archiv)');
+    console.log('  note_type    lowercase: quote  training  note  puzzle  historical  (default: training)');
+    console.log('  sub_type     for quote: BOOK  LYRICS  POETRY  MOVIE-TV  JOKES  ASSORTED');
+    console.log('               for training: WEIGHTS  CARDIO  MIX  HOME  OVERVIEW/DOC  (default: WEIGHTS)');
+    console.log('               omit for types with no sub-types (note, puzzle, historical)');
+    console.log('  tag ...      zero or more tags applied to ALL notes  (e.g. 2013  archiv)');
     console.log('');
     console.log('Named flags:');
     console.log(`  --split-mb=N   auto-split output when file exceeds N MB    (default: ${DEFAULT_SPLIT_MB})`);
@@ -562,9 +576,10 @@ async function main() {
   const enexPath       = args[0];
   const outputPath     = args[1] || enexPath.replace('.enex', '-import.json');
   const noteTypeArg    = args[2] || 'training';
-  const isTrainingType = noteTypeArg.toLowerCase() === 'training';
-  const subTypeArg     = isTrainingType ? (args[3] || null) : null;
-  const extraTags      = isTrainingType ? args.slice(4) : args.slice(3);  // tags start after sub_type for training, right after note_type otherwise
+  const validSubTypes  = loadSubTypesForNoteType(noteTypeArg);
+  const hasSubTypes    = validSubTypes.length > 0;
+  const subTypeArg     = hasSubTypes ? (args[3] || null) : null;
+  const extraTags      = hasSubTypes ? args.slice(4) : args.slice(3);
   const splitMB        = flags['split-mb']  ? parseFloat(flags['split-mb'])  : DEFAULT_SPLIT_MB;
   const maxAttachmentMB= flags['skip-mb']   ? parseFloat(flags['skip-mb'])   : 0;
 
@@ -584,10 +599,9 @@ async function main() {
 
   const { noteType, subType, isTraining } = resolveType(noteTypeArg, subTypeArg);
 
-  if (isTraining && subTypeArg) {
-    const validSubTypes = loadTrainingSubTypes();
+  if (subTypeArg && validSubTypes.length > 0) {
     if (!validSubTypes.includes(subTypeArg.toUpperCase())) {
-      console.error(`❌ Unknown training sub-type: "${subTypeArg.toUpperCase()}"`);
+      console.error(`❌ Unknown sub-type for "${noteTypeArg}": "${subTypeArg.toUpperCase()}"`);
       console.error(`   Valid sub-types: ${validSubTypes.join(', ')}`);
       console.error(`   (Configured in config/settings.json)`);
       process.exit(1);
