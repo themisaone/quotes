@@ -94,6 +94,8 @@ import {
 import {
   populateTypeFilterCheckboxes as populateTypeFilterCheckboxesLib,
   populateTrainingTypeFilterCheckboxes as populateTrainingTypeFilterCheckboxesLib,
+  updateTrainingTypeSummary,
+  updateQuoteSourcesSummary,
   clearFilters as clearFiltersLib,
   updateSourcesFilterVisibility as updateSourcesFilterVisibilityLib2,
   initializeFilterHandlers
@@ -500,9 +502,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   
   // Initialize quote source type filter checkboxes (direct library call)
   populateTypeFilterCheckboxesLib(getQuoteTypes);
+  updateQuoteSourcesSummary();
   
   // Initialize training type filter checkboxes (direct library call)
   populateTrainingTypeFilterCheckboxesLib(getTrainingTypes);
+  updateTrainingTypeSummary();
   
   // Handle URL hash navigation (takes priority over saved view)
   if (window.location.hash) {
@@ -4153,8 +4157,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   
   // Create wrapper functions for filter checkbox population
-  const populateTypeFilterCheckboxesWrapper = () => populateTypeFilterCheckboxesLib(getQuoteTypes);
-  const populateTrainingTypeFilterCheckboxesWrapper = () => populateTrainingTypeFilterCheckboxesLib(getTrainingTypes);
+  const populateTypeFilterCheckboxesWrapper = () => { populateTypeFilterCheckboxesLib(getQuoteTypes); updateQuoteSourcesSummary(); };
+  const populateTrainingTypeFilterCheckboxesWrapper = () => { populateTrainingTypeFilterCheckboxesLib(getTrainingTypes); updateTrainingTypeSummary(); };
   
   // Initialize settings UI (using settingsManager library)
   initializeSettingsLib({

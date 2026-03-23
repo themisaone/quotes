@@ -336,6 +336,47 @@ header h1 {
   display: inline-block;
 }
 
+/* Title + summary column wrapper */
+.search-title-with-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.search-title-with-summary h2 {
+  margin: 0;
+}
+
+.search-type-summaries {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+/* Active/inactive type summary shown below the search title */
+.filter-type-summary {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.tts-on {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.tts-off {
+  color: #dc2626;
+  text-decoration: line-through;
+  opacity: 0.75;
+}
+
+.tts-sep {
+  color: #9ca3af;
+  font-size: 0.75em;
+  user-select: none;
+}
+
 /* Training Date Filters */
 .training-date-select {
   width: 100%;

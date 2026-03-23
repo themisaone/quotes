@@ -239,8 +239,14 @@
             <div class="search-section">
               <div class="search-header">
                 <div class="search-title-row">
-                  <h2 id="searchHeaderTitle">🔍 Search Quotes</h2>
-                  
+                  <div class="search-title-with-summary">
+                    <h2 id="searchHeaderTitle">🔍 Search Quotes</h2>
+                    <div class="search-type-summaries">
+                      <span id="quoteSourcesSummary" class="filter-type-summary" style="display:none;"></span>
+                      <span id="trainingTypeSummary" class="filter-type-summary" style="display:none;"></span>
+                    </div>
+                  </div>
+
                   <!-- Type Filter Dropdown -->
                   <div class="type-filter-dropdown-container" id="quoteSourcesFilterContainer">
                     <button type="button" id="typeFilterToggle" class="type-filter-toggle">

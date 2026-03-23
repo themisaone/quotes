@@ -88,9 +88,53 @@ function createTypeCheckbox(checkboxId, type, isChecked) {
   const checkbox = label.querySelector('input');
   checkbox.addEventListener('change', () => {
     typeFilterChanged = true;
+    updateTrainingTypeSummary();
+    updateQuoteSourcesSummary();
   });
   
   return label;
+}
+
+/**
+ * Generic helper: read checkboxes from a container and update a summary span's content.
+ * Does NOT touch display — visibility is controlled solely by updateSourcesFilterVisibility.
+ */
+function renderTypeSummary(summaryEl, checkboxSelector) {
+  if (!summaryEl) return;
+  const checkboxes = [...document.querySelectorAll(checkboxSelector)];
+  if (checkboxes.length === 0) { summaryEl.innerHTML = ''; return; }
+
+  const parts = checkboxes.map((cb, i) => {
+    const span = cb.closest('label')?.querySelector('span');
+    const text = span?.textContent?.trim() || cb.dataset.type;
+    const cls  = cb.checked ? 'tts-on' : 'tts-off';
+    const sep  = i < checkboxes.length - 1 ? '<span class="tts-sep"> · </span>' : '';
+    return `<span class="${cls}">${text}</span>${sep}`;
+  });
+
+  summaryEl.innerHTML = '(' + parts.join('') + ')';
+}
+
+/**
+ * Refresh active/inactive training type summary below the search title.
+ */
+export function updateTrainingTypeSummary() {
+  renderTypeSummary(
+    document.getElementById('trainingTypeSummary'),
+    SELECTORS.trainingTypeCheckbox   // '.training-type-filter-options input[type="checkbox"]'
+  );
+}
+
+/**
+ * Refresh active/inactive quote source type summary below the search title.
+ * Uses the quote-sources container selector (not the generic label class) to avoid
+ * accidentally matching training checkboxes in the combined dropdown.
+ */
+export function updateQuoteSourcesSummary() {
+  renderTypeSummary(
+    document.getElementById('quoteSourcesSummary'),
+    SELECTORS.quoteTypeOptions + ' input[type="checkbox"]'  // '.type-filter-options input[type="checkbox"]'
+  );
 }
 
 /**
@@ -246,6 +290,25 @@ export function updateSourcesFilterVisibility(currentNoteTypeFilter, getQuoteTyp
       populateTrainingTypeFilterCheckboxes(getTrainingTypes);
     }
   }
+
+  // Refresh summaries — each only on its own dedicated page, never mixed.
+  // Only updateSourcesFilterVisibility controls display; renderTypeSummary only updates content.
+  const trainingSummaryEl = document.getElementById('trainingTypeSummary');
+  const quoteSummaryEl    = document.getElementById('quoteSourcesSummary');
+
+  if (currentNoteTypeFilter === 'training') {
+    updateTrainingTypeSummary();
+    if (trainingSummaryEl) trainingSummaryEl.style.display = '';
+  } else {
+    if (trainingSummaryEl) { trainingSummaryEl.style.display = 'none'; trainingSummaryEl.innerHTML = ''; }
+  }
+
+  if (currentNoteTypeFilter === 'quote') {
+    updateQuoteSourcesSummary();
+    if (quoteSummaryEl) quoteSummaryEl.style.display = '';
+  } else {
+    if (quoteSummaryEl) { quoteSummaryEl.style.display = 'none'; quoteSummaryEl.innerHTML = ''; }
+  }
   
   // Hide Author/Source search fields — only shown for "quote" behavior or All Notes view
   const quoteBehavior = currentNoteTypeFilter !== null && getNoteTypeConfig(currentNoteTypeFilter).behavior === 'quote';
@@ -385,29 +448,17 @@ function setupQuoteTypeDropdown(callbacks) {
   document.addEventListener("click", (e) => {
     if (!e.target.closest(SELECTORS.typeFilterContainer)) {
       const wasOpen = typeFilterDropdown.classList.contains("show");
-      
-      if (wasOpen) {
-        const typeCheckboxes = document.querySelectorAll(SELECTORS.quoteTypeCheckbox);
-        const states = {};
-        typeCheckboxes.forEach(cb => {
-          states[cb.id] = cb.checked;
-        });
-        console.log("=== CLOSING DROPDOWN ===");
-        console.log("Checkbox states:", states);
-      }
-      
+
+      // Always close
       typeFilterDropdown.classList.remove("show");
       typeFilterToggle.classList.remove("open");
-      
-      // If closing and changes were made, reload quotes
+
+      // If changes were made while it was open, reload — do NOT toggle class again
       if (wasOpen && typeFilterChanged) {
-        handleDropdownToggle(
-          typeFilterToggle,
-          typeFilterDropdown,
-          SELECTORS.quoteTypeCheckbox,
-          callbacks,
-          true
-        );
+        typeFilterChanged = false;
+        if (callbacks.setCurrentPage) callbacks.setCurrentPage(1);
+        if (callbacks.loadQuotes) callbacks.loadQuotes();
+        if (callbacks.loadTotalCount) callbacks.loadTotalCount();
       }
     }
   });
@@ -422,6 +473,9 @@ function setAllCheckboxes(selector, checked) {
     checkbox.checked = checked;
   });
   typeFilterChanged = true;
+  // Refresh both summaries (each only renders if its element is visible)
+  updateTrainingTypeSummary();
+  updateQuoteSourcesSummary();
 }
 
 /**
