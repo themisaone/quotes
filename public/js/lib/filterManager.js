@@ -176,7 +176,9 @@ export function populateTrainingTypeFilterCheckboxes(getTrainingTypes) {
   
   trainingTypes.forEach(type => {
     const checkboxId = `filterTraining${type.value}`;
-    const isChecked = checkedStates[checkboxId] !== false;
+    // Use stored state if present; otherwise fall back to type's defaultChecked (default: true)
+    const typeDefault = type.defaultChecked !== false;
+    const isChecked = checkedStates[checkboxId] !== undefined ? checkedStates[checkboxId] : typeDefault;
     container.appendChild(createTypeCheckbox(checkboxId, type, isChecked));
   });
 }
@@ -219,7 +221,8 @@ export function populateCombinedTypeFilterCheckboxes(getQuoteTypes, getTrainingT
   
   trainingTypes.forEach(type => {
     const checkboxId = `filterTraining${type.value}`;
-    const isChecked = checkedStates[checkboxId] !== false;
+    const typeDefault = type.defaultChecked !== false;
+    const isChecked = checkedStates[checkboxId] !== undefined ? checkedStates[checkboxId] : typeDefault;
     container.appendChild(createTypeCheckbox(checkboxId, type, isChecked));
   });
 }

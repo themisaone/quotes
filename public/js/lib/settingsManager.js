@@ -103,6 +103,75 @@ export function getGlobalSettings() {
 }
 
 /**
+ * Get an effective display setting for a specific note type.
+ * Falls back to the global value when no per-type override is set.
+ *
+ * @param {string} key       - e.g. 'displayByRealSize' | 'showLongExpanded'
+ * @param {string} noteType  - e.g. 'training' | 'quote' (pass null for global)
+ */
+export function getDisplaySetting(key, noteType) {
+  if (noteType) {
+    const nt = globalSettings?.noteTypes?.find(t => t.value === noteType);
+    const override = nt?.displaySettings?.[key];
+    if (override !== undefined) return override;
+  }
+  // Fall back to global key (support both new short key and legacy key names)
+  const legacyMap = {
+    displayByRealSize: 'displayQuotesByRealSize',
+    showLongExpanded:  'showLongQuotesExpanded',
+  };
+  return globalSettings?.[key] ?? globalSettings?.[legacyMap[key]];
+}
+
+/**
+ * Save a per-type display setting override into the noteType's displaySettings block.
+ */
+export async function updateNoteTypeDisplaySetting(noteType, key, value) {
+  const nt = globalSettings?.noteTypes?.find(t => t.value === noteType);
+  if (!nt) return;
+  if (!nt.displaySettings) nt.displaySettings = {};
+  nt.displaySettings[key] = value;
+  await saveSettings(globalSettings);
+}
+
+/**
+ * Render per-type override checkboxes into a container element.
+ * Each note type gets a checkbox reflecting its effective value for `settingKey`.
+ */
+export function renderPerTypeOverrides(containerId, settingKey, globalKey, callbacks) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const noteTypes = globalSettings?.noteTypes || [];
+  const globalVal = globalSettings?.[globalKey] === true;
+
+  container.innerHTML = '<span class="per-type-label">Per type:</span>';
+
+  noteTypes.forEach(nt => {
+    const override = nt.displaySettings?.[settingKey];
+    const effectiveVal = override !== undefined ? override : globalVal;
+    const isOverridden  = override !== undefined && override !== globalVal;
+
+    const lbl = document.createElement('label');
+    lbl.className = 'per-type-item' + (isOverridden ? ' per-type-overridden' : '');
+    lbl.title = isOverridden ? `Override active (global default: ${globalVal})` : 'Same as global default';
+    lbl.innerHTML = `<input type="checkbox" ${effectiveVal ? 'checked' : ''}><span>${nt.icon} ${nt.label}</span>`;
+
+    const cb = lbl.querySelector('input');
+    cb.addEventListener('change', async (e) => {
+      await updateNoteTypeDisplaySetting(nt.value, settingKey, e.target.checked);
+      lbl.classList.toggle('per-type-overridden', e.target.checked !== globalVal);
+      lbl.title = e.target.checked !== globalVal
+        ? `Override active (global default: ${globalVal})`
+        : 'Same as global default';
+      if (callbacks?.loadQuotes) callbacks.loadQuotes();
+    });
+
+    container.appendChild(lbl);
+  });
+}
+
+/**
  * Migrate localStorage settings to file (one-time)
  */
 async function migrateLocalStorageToFile() {
@@ -1050,49 +1119,44 @@ export function initializeSettings(callbacks = {}) {
     });
   }
   
-  // Display Quotes by Real Size setting
+  // Display Notes by Natural Height setting (global default + per-type overrides)
   if (displayQuotesByRealSizeCheckbox) {
-    // Load saved setting from globalSettings (default: false)
     const realSizeEnabled = globalSettings?.displayQuotesByRealSize === true;
     displayQuotesByRealSizeCheckbox.checked = realSizeEnabled;
-    
-    // Apply initial state
     applyQuoteSizingMode(realSizeEnabled);
-    
-    // Listen for changes
+    renderPerTypeOverrides('perTypeOverrides-displayByRealSize', 'displayByRealSize', 'displayQuotesByRealSize', { loadQuotes });
+
     displayQuotesByRealSizeCheckbox.addEventListener('change', (e) => {
       const isEnabled = e.target.checked;
       updateSetting('displayQuotesByRealSize', isEnabled);
       applyQuoteSizingMode(isEnabled);
+      // Re-render per-type rows so override indicators update relative to new global
+      renderPerTypeOverrides('perTypeOverrides-displayByRealSize', 'displayByRealSize', 'displayQuotesByRealSize', { loadQuotes });
     });
   }
-  
-  // Display Image Quotes Long setting
+
+  // Display Image Notes Full Width setting
   if (displayImageQuotesLongCheckbox) {
-    // Load saved setting from globalSettings (default: false)
     const imageLongEnabled = globalSettings?.displayImageQuotesLong === true;
     displayImageQuotesLongCheckbox.checked = imageLongEnabled;
-    
-    // Listen for changes
+
     displayImageQuotesLongCheckbox.addEventListener('change', (e) => {
       const isEnabled = e.target.checked;
       updateSetting('displayImageQuotesLong', isEnabled);
-      // Reload quotes to apply the setting
       if (loadQuotes) loadQuotes();
     });
   }
-  
-  // Show Long Quotes Expanded setting
+
+  // Display Long Notes Expanded setting (global default + per-type overrides)
   if (showLongQuotesExpandedCheckbox) {
-    // Load saved setting from globalSettings (default: false)
     const expandLongEnabled = globalSettings?.showLongQuotesExpanded === true;
     showLongQuotesExpandedCheckbox.checked = expandLongEnabled;
-    
-    // Listen for changes
+    renderPerTypeOverrides('perTypeOverrides-showLongExpanded', 'showLongExpanded', 'showLongQuotesExpanded', { loadQuotes });
+
     showLongQuotesExpandedCheckbox.addEventListener('change', (e) => {
       const isEnabled = e.target.checked;
       updateSetting('showLongQuotesExpanded', isEnabled);
-      // Reload quotes to apply the setting
+      renderPerTypeOverrides('perTypeOverrides-showLongExpanded', 'showLongExpanded', 'showLongQuotesExpanded', { loadQuotes });
       if (loadQuotes) loadQuotes();
     });
   }

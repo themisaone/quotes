@@ -64,7 +64,7 @@ body {
 }
 
 .menu-list li {
-  margin-bottom: 0.5rem;
+  margin-bottom: 0rem;
 }
 
 .menu-operations {
@@ -336,11 +336,13 @@ header h1 {
   display: inline-block;
 }
 
-/* Title + summary column wrapper */
+/* Title + summary on the same line */
 .search-title-with-summary {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .search-title-with-summary h2 {
@@ -349,8 +351,8 @@ header h1 {
 
 .search-type-summaries {
   display: flex;
-  flex-direction: column;
-  gap: 1px;
+  flex-direction: row;
+  gap: 4px;
 }
 
 /* Active/inactive type summary shown below the search title */
@@ -5236,6 +5238,27 @@ body.selection-mode .quote-card::after {
   box-shadow: var(--shadow);
 }
 
+/* Two cards side-by-side row */
+.settings-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 1.5rem;
+  align-items: start;
+  margin-top: 2rem;
+}
+
+.settings-row > .settings-section {
+  margin-top: 0.75rem;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+@media (max-width: 900px) {
+  .settings-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 .settings-section h2 {
   font-size: 1.25rem;
   margin-bottom: 1.5rem;
@@ -5271,6 +5294,49 @@ body.selection-mode .quote-card::after {
   font-size: 0.875rem;
   color: var(--text-secondary);
   line-height: 1.5;
+}
+
+/* Per-type override checkboxes row (under relevant display settings) */
+.per-type-overrides-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  margin: 0.5rem 0 0 2.25rem;
+  font-size: 0.82rem;
+}
+
+.per-type-overrides-row:empty {
+  display: none;
+}
+
+.per-type-label {
+  color: var(--text-secondary);
+  font-style: italic;
+  margin-right: 2px;
+}
+
+.per-type-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  color: var(--text-primary);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  transition: border-color 0.15s;
+}
+
+.per-type-item:hover {
+  border-color: var(--border);
+  background: var(--background);
+}
+
+.per-type-item.per-type-overridden {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  font-weight: 600;
 }
 
 /* Metadata filters — 2×3 grid */

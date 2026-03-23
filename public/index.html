@@ -828,8 +828,9 @@
               <h1>⚙️ Options</h1>
             </header>
             
+            <div class="settings-row">
             <div class="settings-section">
-              <h2>Tag Management</h2>
+              <h2>🏷️ Tag Management</h2>
               <div class="setting-item">
                 <label class="setting-label">
                   <input type="checkbox" id="enableTagOperations" />
@@ -838,7 +839,36 @@
                 <p class="setting-description">Show advanced tag operations panel in the Tags page (rename, bulk add, etc.)</p>
               </div>
             </div>
-            
+
+            <div class="settings-section">
+              <h2>🔍 Search Features</h2>
+              <div class="setting-item">
+                <label class="setting-label">
+                  <input type="checkbox" id="enableQuoteMetaSearches" />
+                  <span>Quote Meta Searches</span>
+                </label>
+                <p class="setting-description">Enable advanced metadata search capabilities for quotes.</p>
+              </div>
+            </div>
+            </div><!-- end settings-row: Tag Management + Search Features -->
+
+            <div class="settings-row">
+            <!-- Note Types -->
+            <div class="settings-section">
+              <h2>📋 Note Types</h2>
+              <p class="setting-description" style="margin-bottom: 1rem;">
+                Manage the note types available in the menu (Quotes, Notes, Training, etc.).
+                Core types cannot be deleted. New types always use "generic" behavior (like Notes/Puzzles).
+              </p>
+              <div class="setting-item">
+                <div id="noteTypesList" class="quote-types-list">
+                  <!-- Populated by JavaScript -->
+                </div>
+                <button type="button" id="addNoteTypeBtn" class="btn btn-secondary" style="margin-top: 0.5rem;">
+                  ➕ Add Note Type
+                </button>
+              </div>
+            </div>
             <div class="settings-section">
               <h2>🎨 Color Customization</h2>
               <div style="display: flex; gap: 1rem; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 2px solid var(--border);">
@@ -962,47 +992,40 @@
                 <span style="color: var(--text-secondary); font-size: 0.85rem;">Background for modal button area (Note, Author & Source modals)</span>
               </div>
             </div>
-            
-            <div class="settings-section">
-              <h2>Search Features</h2>
-              <div class="setting-item">
-                <label class="setting-label">
-                  <input type="checkbox" id="enableQuoteMetaSearches" />
-                  <span>Quote Meta Searches</span>
-                </label>
-                <p class="setting-description">Enable advanced metadata search capabilities for quotes.</p>
-              </div>
-            </div>
+            </div><!-- end settings-row: Note Types + Color Customization -->
 
+            <div class="settings-row">
             <div class="settings-section">
-              <h2>Quote Display Options</h2>
+              <h2>🖥️ Note Display Options</h2>
               <div class="setting-item">
                 <label class="setting-label">
                   <input type="checkbox" id="displayQuotesByRealSize" />
-                  <span>Display Quotes by Natural Height</span>
+                  <span>Display Notes by Natural Height</span>
                 </label>
-                <p class="setting-description">Show each quote with its natural height using masonry column layout. Quotes stack naturally to fill space.</p>
+                <p class="setting-description">Show each note with its natural height using masonry column layout. Notes stack naturally to fill space.</p>
+                <div id="perTypeOverrides-displayByRealSize" class="per-type-overrides-row"></div>
               </div>
               <div class="setting-item">
                 <label class="setting-label">
                   <input type="checkbox" id="displayImageQuotesLong" />
-                  <span>Display Image Quotes Full Width</span>
+                  <span>Display Image Notes Full Width</span>
                 </label>
-                <p class="setting-description">Always show quotes with images in expanded/full width mode.</p>
+                <p class="setting-description">Always show notes with images in expanded/full width mode.</p>
               </div>
               <div class="setting-item">
                 <label class="setting-label">
                   <input type="checkbox" id="showLongQuotesExpanded" />
-                  <span>Display Long Quotes Expanded</span>
+                  <span>Display Long Notes Expanded</span>
                 </label>
-                <p class="setting-description">Automatically expand all long quotes to show their full text (with "Show less" button to collapse).</p>
+                <p class="setting-description">Automatically expand all long notes to show their full text (with "Show less" button to collapse).</p>
+                <div id="perTypeOverrides-showLongExpanded" class="per-type-overrides-row"></div>
               </div>
               <div class="setting-item">
                 <label class="setting-label">
                   <input type="checkbox" id="displayScoreInCards" />
-                  <span>Display Score in Quote Cards</span>
+                  <span>Display Score in Note Cards</span>
                 </label>
-                <p class="setting-description">Show dice score icon in the top-left corner of quote cards (only for quotes with scores).</p>
+                <p class="setting-description">Show dice score icon in the top-left corner of note cards (only for notes with scores).</p>
               </div>
               <div class="setting-item">
                 <label class="setting-label">
@@ -1049,23 +1072,8 @@
                 </p>
               </div>
             </div>
-            
-            <!-- Note Types -->
-            <div class="settings-section" style="margin-top: 1.5rem;">
-              <h2>📋 Note Types</h2>
-              <p class="setting-description" style="margin-bottom: 1rem;">
-                Manage the note types available in the menu (Quotes, Notes, Training, etc.).
-                Core types cannot be deleted. New types always use "generic" behavior (like Notes/Puzzles).
-              </p>
-              <div class="setting-item">
-                <div id="noteTypesList" class="quote-types-list">
-                  <!-- Populated by JavaScript -->
-                </div>
-                <button type="button" id="addNoteTypeBtn" class="btn btn-secondary" style="margin-top: 0.5rem;">
-                  ➕ Add Note Type
-                </button>
-              </div>
-            </div>
+            </div><!-- end settings-row: Note Display Options + Storage & Performance -->
+
 
 
             <!-- Quote Types and Training Types are now managed inline in Note Types above -->

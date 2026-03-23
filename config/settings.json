@@ -37,14 +37,20 @@
           "label": "Assorted",
           "icon": "📝"
         }
-      ]
+      ],
+      "displaySettings": {
+        "showLongExpanded": false
+      }
     },
     {
       "value": "note",
       "label": "Note",
       "icon": "📝",
       "behavior": "generic",
-      "core": true
+      "core": true,
+      "displaySettings": {
+        "showLongExpanded": false
+      }
     },
     {
       "value": "training",
@@ -76,32 +82,43 @@
         {
           "value": "OVERVIEW/DOC",
           "label": "Overview/Doc",
-          "icon": "📋"
+          "icon": "📋",
+          "defaultChecked": false
         }
-      ]
+      ],
+      "displaySettings": {
+        "displayByRealSize": true,
+        "showLongExpanded": true
+      }
     },
     {
       "value": "puzzle",
       "label": "Brain",
       "icon": "🧩",
       "behavior": "generic",
-      "core": true
+      "core": true,
+      "displaySettings": {
+        "showLongExpanded": false
+      }
     },
     {
       "value": "historical",
       "label": "Historical Note",
       "icon": "📜",
-      "behavior": "generic"
+      "behavior": "generic",
+      "displaySettings": {
+        "showLongExpanded": false
+      }
     }
   ],
   "downscaleQuoteImages": true,
   "externalStorageThreshold": 1,
   "compactMode": false,
   "enableTagOperations": true,
-  "enableQuoteMetaSearches": true,
+  "enableQuoteMetaSearches": false,
   "displayQuotesByRealSize": true,
   "displayImageQuotesLong": false,
-  "showLongQuotesExpanded": false,
+  "showLongQuotesExpanded": true,
   "displayScoreInCards": true,
   "colors": {
     "button": "#1e40af",

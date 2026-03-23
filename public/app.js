@@ -59,6 +59,7 @@ import {
   toggleMetadataSearchSection,
   applyQuoteSizingMode,
   toggleTagOperationsPanel,
+  getDisplaySetting,
   initializeSettings as initializeSettingsLib
 } from './js/lib/settingsManager.js';
 
@@ -1408,18 +1409,18 @@ function displayQuotes(quotes) {
   // Use library for basic rendering (pass globalSettings for score display)
   displayQuotesLib(quotes, currentNoteTypeFilter, getQuoteTypes, getTrainingTypes, currentSettings);
 
-  // Apply app-specific settings and post-processing
-  const realSizeEnabled = currentSettings?.displayQuotesByRealSize === true;
+  // Apply app-specific settings and post-processing (per-type overrides respected)
+  const realSizeEnabled = getDisplaySetting('displayByRealSize', currentNoteTypeFilter);
   applyQuoteSizingMode(realSizeEnabled);
 
-  const imageLongEnabled = globalSettings?.displayImageQuotesLong === true;
+  const imageLongEnabled = currentSettings?.displayImageQuotesLong === true;
   if (imageLongEnabled) {
     document.querySelectorAll('.quote-card.has-image').forEach((card) => {
       card.classList.add('expanded-card');
     });
   }
 
-  const expandLongEnabled = globalSettings?.showLongQuotesExpanded === true;
+  const expandLongEnabled = getDisplaySetting('showLongExpanded', currentNoteTypeFilter);
   if (expandLongEnabled) {
     document.querySelectorAll('.quote-text.collapsible').forEach((quoteText) => {
       const numericId = quoteText.id.replace('quote-', '');

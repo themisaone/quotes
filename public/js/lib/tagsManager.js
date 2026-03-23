@@ -356,7 +356,7 @@ export function clearBrowseStack() {
 export function showNotesForStack() {
   if (browseStack.length === 0) return;
   const type = getBrowseTypeFilter();
-  filterByTag(browseStack.join(','), type || undefined);
+  filterByTag('', type || undefined);  // browseStack is already read inside filterByTag
 }
 
 // ============= 5. FILTER & NAVIGATION =============
