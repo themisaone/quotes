@@ -118,23 +118,26 @@ function renderTypeSummary(summaryEl, checkboxSelector) {
 /**
  * Refresh active/inactive training type summary below the search title.
  */
-export function updateTrainingTypeSummary() {
-  renderTypeSummary(
-    document.getElementById('trainingTypeSummary'),
-    SELECTORS.trainingTypeCheckbox   // '.training-type-filter-options input[type="checkbox"]'
-  );
+export function updateTrainingTypeSummary(isAllNotes = false) {
+  // In All Notes (combined) use id-prefix to avoid including quote-source checkboxes.
+  // In Training view all checkboxes are training types so the simple selector is fine.
+  const selector = isAllNotes
+    ? '.training-type-filter-options input[id^="filterTraining"]'
+    : SELECTORS.trainingTypeCheckbox;
+  renderTypeSummary(document.getElementById('trainingTypeSummary'), selector);
 }
 
 /**
  * Refresh active/inactive quote source type summary below the search title.
- * Uses the quote-sources container selector (not the generic label class) to avoid
- * accidentally matching training checkboxes in the combined dropdown.
+ * In All Notes view, quote checkboxes live in the combined dropdown (filterQuote* IDs).
+ * In Quote view, they live in the dedicated .type-filter-options dropdown.
  */
 export function updateQuoteSourcesSummary() {
-  renderTypeSummary(
-    document.getElementById('quoteSourcesSummary'),
-    SELECTORS.quoteTypeOptions + ' input[type="checkbox"]'  // '.type-filter-options input[type="checkbox"]'
-  );
+  const inCombined = document.querySelector('.training-type-filter-options input[id^="filterQuote"]');
+  const selector = inCombined
+    ? '.training-type-filter-options input[id^="filterQuote"]'
+    : SELECTORS.quoteTypeOptions + ' input[type="checkbox"]';
+  renderTypeSummary(document.getElementById('quoteSourcesSummary'), selector);
 }
 
 /**
@@ -299,14 +302,16 @@ export function updateSourcesFilterVisibility(currentNoteTypeFilter, getQuoteTyp
   const trainingSummaryEl = document.getElementById('trainingTypeSummary');
   const quoteSummaryEl    = document.getElementById('quoteSourcesSummary');
 
-  if (currentNoteTypeFilter === 'training') {
-    updateTrainingTypeSummary();
+  // Training types summary: show on Training view AND All Notes view
+  if (currentNoteTypeFilter === 'training' || isAllNotesView) {
+    updateTrainingTypeSummary(isAllNotesView);
     if (trainingSummaryEl) trainingSummaryEl.style.display = '';
   } else {
     if (trainingSummaryEl) { trainingSummaryEl.style.display = 'none'; trainingSummaryEl.innerHTML = ''; }
   }
 
-  if (currentNoteTypeFilter === 'quote') {
+  // Quote sources summary: show on Quote view AND All Notes view
+  if (currentNoteTypeFilter === 'quote' || isAllNotesView) {
     updateQuoteSourcesSummary();
     if (quoteSummaryEl) quoteSummaryEl.style.display = '';
   } else {

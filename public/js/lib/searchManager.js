@@ -38,7 +38,8 @@ const SEARCH_INPUT_IDS = [
   FILTER_IDS.SEARCH_AUTHOR,
   FILTER_IDS.SEARCH_SOURCE,
   FILTER_IDS.SEARCH_TAGS,
-  FILTER_IDS.SEARCH_SCORE
+  FILTER_IDS.SEARCH_SCORE,
+  FILTER_IDS.SEARCH_NOTE_ID
 ];
 
 const SEARCH_FIELD_IDS = [
@@ -297,7 +298,8 @@ export function getSearchValues() {
     author: getInputValue("searchAuthor"),
     source: getInputValue("searchSource"),
     tags: getInputValue("searchTags"),
-    score: getInputValue("searchScore")
+    score: getInputValue("searchScore"),
+    noteId: getInputValue("searchNoteId")
   };
 }
 

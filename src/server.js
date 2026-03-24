@@ -890,23 +890,30 @@ app.get("/api/quotes/count", async (req, res) => {
       paramCounter = newParamCounter;
     }
     
-    // Filter by types if provided (quote source types)
-    if (types && note_type !== 'training') {
+    // Filter by quote source types
+    if (types) {
       const typeArray = types.split(",").filter((t) => t);
-      const totalTypes = 6; // BOOK, MOVIE-TV, POETRY, LYRICS, JOKES, ASSORTED
+      const totalTypes = 6;
       if (typeArray.length > 0 && typeArray.length < totalTypes) {
-        // Only filter if not all selected
-        query += ` AND q.type = ANY($${paramCounter})`;
+        if (note_type === 'quote') {
+          query += ` AND q.type = ANY($${paramCounter})`;
+        } else {
+          query += ` AND (q.note_type != 'quote' OR q.type = ANY($${paramCounter}))`;
+        }
         params.push(typeArray);
         paramCounter++;
       }
     }
-    
-    // Training types filter (for training notes)
-    if (training_types && note_type === 'training') {
+
+    // Training types filter
+    if (training_types) {
       const trainingTypeArray = training_types.split(",").filter((t) => t);
       if (trainingTypeArray.length > 0) {
-        query += ` AND q.type = ANY($${paramCounter})`;
+        if (note_type === 'training') {
+          query += ` AND q.type = ANY($${paramCounter})`;
+        } else {
+          query += ` AND (q.note_type != 'training' OR q.type = ANY($${paramCounter}))`;
+        }
         params.push(trainingTypeArray);
         paramCounter++;
       }
@@ -1018,6 +1025,13 @@ app.get("/api/quotes/count", async (req, res) => {
       query += ` AND (SELECT COUNT(*) FROM note_attachments WHERE note_id = q.id) <= 1`;
     }
 
+    // Find by ID
+    if (req.query.noteId && !isNaN(parseInt(req.query.noteId))) {
+      query += ` AND q.id = $${paramCounter}`;
+      params.push(parseInt(req.query.noteId));
+      paramCounter++;
+    }
+
     // Get filtered count
     const filteredResult = await pool.query(query, params);
     const filteredCount = parseInt(filteredResult.rows[0].count);
@@ -1090,6 +1104,7 @@ app.get("/api/quotes", async (req, res) => {
       hasImageType,
       hasTranslationGroup,
       hasMultipleAttachments,
+      noteId,
       limit = 20,
       offset = 0,
     } = req.query;
@@ -1168,16 +1183,28 @@ app.get("/api/quotes", async (req, res) => {
       }
     }
     
-    // Filter by types if provided
+    // Filter by quote source types
     if (types) {
       const typeArray = types.split(",").filter((t) => t);
       const totalTypes = 6; // BOOK, MOVIE-TV, POETRY, LYRICS, JOKES, ASSORTED
       if (typeArray.length > 0 && typeArray.length < totalTypes) {
-        // Only filter if not all selected
-        query += ` AND q.type = ANY($${paramCounter})`;
+        if (note_type === 'quote') {
+          // Quote view: filter all notes by type
+          query += ` AND q.type = ANY($${paramCounter})`;
+        } else {
+          // All Notes view: only restrict quote-type notes; other note types pass through
+          query += ` AND (q.note_type != 'quote' OR q.type = ANY($${paramCounter}))`;
+        }
         params.push(typeArray);
         paramCounter++;
       }
+    }
+
+    // Find by ID
+    if (noteId && !isNaN(parseInt(noteId))) {
+      query += ` AND q.id = $${paramCounter}`;
+      params.push(parseInt(noteId));
+      paramCounter++;
     }
 
     // Metadata filters
@@ -1243,11 +1270,17 @@ app.get("/api/quotes", async (req, res) => {
       paramCounter++;
     }
     
-    // Training types filter (like source types but for training notes)
+    // Training types filter
     if (training_types) {
       const trainingTypeArray = training_types.split(",").filter((t) => t);
       if (trainingTypeArray.length > 0) {
-        query += ` AND q.type = ANY($${paramCounter})`;
+        if (note_type === 'training') {
+          // Training view: filter all notes by training sub-type
+          query += ` AND q.type = ANY($${paramCounter})`;
+        } else {
+          // All Notes view: only restrict training-type notes; other note types pass through
+          query += ` AND (q.note_type != 'training' OR q.type = ANY($${paramCounter}))`;
+        }
         params.push(trainingTypeArray);
         paramCounter++;
       }
@@ -2357,21 +2390,29 @@ function buildFilterQuery(filters) {
   }
   
   // Quote types filter
-  if (filters.types && filters.note_type !== 'training') {
+  if (filters.types) {
     const typeArray = filters.types.split(",").filter((t) => t);
     const totalTypes = 6;
     if (typeArray.length > 0 && typeArray.length < totalTypes) {
-      query += ` AND q.type = ANY($${paramCounter})`;
+      if (filters.note_type === 'quote') {
+        query += ` AND q.type = ANY($${paramCounter})`;
+      } else {
+        query += ` AND (q.note_type != 'quote' OR q.type = ANY($${paramCounter}))`;
+      }
       params.push(typeArray);
       paramCounter++;
     }
   }
-  
+
   // Training types filter
-  if (filters.training_types && filters.note_type === 'training') {
+  if (filters.training_types) {
     const trainingTypeArray = filters.training_types.split(",").filter((t) => t);
     if (trainingTypeArray.length > 0) {
-      query += ` AND q.type = ANY($${paramCounter}`;
+      if (filters.note_type === 'training') {
+        query += ` AND q.type = ANY($${paramCounter})`;
+      } else {
+        query += ` AND (q.note_type != 'training' OR q.type = ANY($${paramCounter}))`;
+      }
       params.push(trainingTypeArray);
       paramCounter++;
     }
@@ -2449,6 +2490,12 @@ function buildFilterQuery(filters) {
     query += ` AND q.attachment_full IS NOT NULL AND q.attachment_full != '' AND q.attachment_type = 'image'`;
   } else if (filters.hasImageType === 'false') {
     query += ` AND q.attachment_full IS NOT NULL AND q.attachment_full != '' AND (q.attachment_type IS NULL OR q.attachment_type != 'image')`;
+  }
+
+  if (filters.noteId && !isNaN(parseInt(filters.noteId))) {
+    query += ` AND q.id = $${paramCounter}`;
+    params.push(parseInt(filters.noteId));
+    paramCounter++;
   }
   
   return { query, params };
@@ -2633,6 +2680,103 @@ app.post("/api/quotes/bulk-untag", async (req, res) => {
 });
 
 // Bulk delete operation
+app.post("/api/quotes/bulk-duplicate", async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const { filters, noteIds } = req.body;
+
+    let quoteIds;
+    if (noteIds && Array.isArray(noteIds) && noteIds.length > 0) {
+      quoteIds = noteIds.map(id => parseInt(id, 10));
+    } else {
+      const { query, params } = buildFilterQuery(filters);
+      const result = await client.query(`SELECT q.id ${query}`, params);
+      quoteIds = result.rows.map(r => r.id);
+    }
+
+    if (quoteIds.length === 0) {
+      await client.query("ROLLBACK");
+      return res.json({ count: 0, message: "No notes match" });
+    }
+
+    for (const oldId of quoteIds) {
+      // 1. Fetch original note row
+      const noteRes = await client.query(
+        `SELECT note_text, author_id, source_id, type, score, thumbnail, attachment_full,
+                attachment_type, attachment_filename, comment, translation_group, note_type, note_date
+         FROM notes WHERE id = $1`,
+        [oldId]
+      );
+      if (noteRes.rows.length === 0) continue;
+      const orig = noteRes.rows[0];
+
+      // 2. Insert new note (flat attachment refs copied after we have the new ID)
+      const insertRes = await client.query(
+        `INSERT INTO notes
+           (note_text, author_id, source_id, type, score, thumbnail, attachment_full,
+            attachment_type, attachment_filename, comment, translation_group, note_type, note_date)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+         RETURNING id`,
+        [
+          orig.note_text, orig.author_id, orig.source_id, orig.type, orig.score,
+          orig.thumbnail, orig.attachment_full, orig.attachment_type, orig.attachment_filename,
+          orig.comment, orig.translation_group, orig.note_type, orig.note_date
+        ]
+      );
+      const newId = insertRes.rows[0].id;
+
+      // 3. Copy flat-column attachment files (thumbnail / attachment_full)
+      const newThumb = fileStorage.copyAttachmentFile(orig.thumbnail, oldId, newId);
+      const newFull  = fileStorage.copyAttachmentFile(orig.attachment_full, oldId, newId);
+      if (newThumb !== orig.thumbnail || newFull !== orig.attachment_full) {
+        await client.query(
+          `UPDATE notes SET thumbnail = $1, attachment_full = $2 WHERE id = $3`,
+          [newThumb, newFull, newId]
+        );
+      }
+
+      // 4. Copy note_attachments rows (with copied files)
+      const attRes = await client.query(
+        `SELECT * FROM note_attachments WHERE note_id = $1 ORDER BY position`,
+        [oldId]
+      );
+      for (const att of attRes.rows) {
+        // Additional-attachment files use "{noteId}_a{position}" as their ID prefix
+        const oldKey = `${oldId}_a${att.position}`;
+        const newKey = `${newId}_a${att.position}`;
+        const newAttThumb = fileStorage.copyAttachmentFile(att.thumbnail, oldKey, newKey);
+        const newAttFull  = fileStorage.copyAttachmentFile(att.attachment_full, oldKey, newKey);
+        await client.query(
+          `INSERT INTO note_attachments
+             (note_id, position, thumbnail, attachment_full, attachment_type, storage_type, filename)
+           VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+          [newId, att.position, newAttThumb, newAttFull, att.attachment_type, att.storage_type, att.filename]
+        );
+      }
+
+      // 5. Copy tags
+      await client.query(
+        `INSERT INTO note_tags (note_id, tag_id)
+         SELECT $1, tag_id FROM note_tags WHERE note_id = $2
+         ON CONFLICT DO NOTHING`,
+        [newId, oldId]
+      );
+    }
+
+    await client.query("COMMIT");
+    res.json({ count: quoteIds.length, message: `Duplicated ${quoteIds.length} note${quoteIds.length !== 1 ? 's' : ''}` });
+
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Error in bulk-duplicate:", error);
+    res.status(500).json({ error: "Failed to duplicate notes" });
+  } finally {
+    client.release();
+  }
+});
+
 app.post("/api/quotes/bulk-delete", async (req, res) => {
   const client = await pool.connect();
   try {

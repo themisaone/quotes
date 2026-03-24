@@ -294,6 +294,39 @@ function deleteAttachment(value) {
   // If it's base64, nothing to delete from filesystem
 }
 
+/**
+ * Copy an attachment file to a new note ID, returning the new file reference.
+ * For base64 values, returns as-is (no file to copy).
+ * For file: references, copies the physical file replacing oldId with newId in the filename.
+ * @param {string} value - EITHER base64 string OR "file:path:mimetype"
+ * @param {number|string} oldId - The original note ID (or compound key like "123_a0")
+ * @param {number|string} newId - The new note ID (or compound key like "456_a0")
+ * @returns {string|null} New file reference, original base64, or null
+ */
+function copyAttachmentFile(value, oldId, newId) {
+  if (!value || !isFilePath(value)) return value;
+
+  const { path: relativePath, mimeType } = parseFilePath(value);
+  const oldFullPath = path.join(ATTACHMENTS_DIR, relativePath);
+
+  if (!fs.existsSync(oldFullPath)) {
+    console.warn(`copyAttachmentFile: source file not found: ${relativePath}`);
+    return value;
+  }
+
+  const dir = path.dirname(relativePath);
+  const basename = path.basename(relativePath);
+  // Replace only the first occurrence of oldId in the basename (ID is always the prefix)
+  const newBasename = basename.replace(String(oldId), String(newId));
+  const newRelativePath = path.join(dir, newBasename);
+  const newFullPath = path.join(ATTACHMENTS_DIR, newRelativePath);
+
+  fs.copyFileSync(oldFullPath, newFullPath);
+  console.log(`Copied attachment: ${relativePath} → ${newRelativePath}`);
+
+  return createFileReference(newRelativePath, mimeType);
+}
+
 module.exports = {
   DEFAULT_MAX_SIZE_MB,
   ATTACHMENTS_DIR,
@@ -315,4 +348,5 @@ module.exports = {
   processForStorage,
   retrieveFromStorage,
   deleteAttachment,
+  copyAttachmentFile,
 };

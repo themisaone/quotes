@@ -470,6 +470,18 @@
                     <span>📎² Multi</span>
                   </div>
                 </div>
+
+                <!-- Find by ID -->
+                <div style="margin-top: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+                  <label style="font-size: 0.85rem; color: var(--text-secondary); white-space: nowrap;">#️⃣ Note ID</label>
+                  <input
+                    type="number"
+                    id="searchNoteId"
+                    placeholder="e.g. 1234"
+                    min="1"
+                    style="width: 120px; padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; background: var(--bg-secondary); color: var(--text-primary);"
+                  />
+                </div>
               </div>
             </div>
 
@@ -1801,6 +1813,15 @@ Quote number three..."
               <div style="flex: 1;">
                 <div style="font-weight: 600; font-size: 1rem;">Export to PDF</div>
                 <div style="font-size: 0.85rem; opacity: 0.8; margin-top: 2px;">Export all filtered quotes as PDF</div>
+              </div>
+            </button>
+
+            <!-- Duplicate -->
+            <button id="bulkDuplicateBtn" class="btn" style="display: flex; align-items: center; padding: 12px; text-align: left; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe;">
+              <span style="font-size: 1.5rem; margin-right: 12px;">⧉</span>
+              <div style="flex: 1;">
+                <div style="font-weight: 600; font-size: 1rem;">Duplicate Notes</div>
+                <div style="font-size: 0.85rem; opacity: 0.8; margin-top: 2px;">Copy selected notes with all attachments and tags</div>
               </div>
             </button>
 

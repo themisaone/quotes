@@ -86,20 +86,27 @@ function addSearchFilters(params) {
   if (searchValues.source) params.append('source', searchValues.source);
   if (searchValues.tags) params.append('tags', searchValues.tags);
   if (searchValues.score) params.append('score', searchValues.score);
+  if (searchValues.noteId && !isNaN(parseInt(searchValues.noteId))) params.append('noteId', searchValues.noteId.trim());
 }
 
 /**
  * Add quote type filters to params (for Quote view or All Notes view)
  */
 function addQuoteTypeFilters(params, currentNoteTypeFilter, getQuoteTypes) {
-  if (currentNoteTypeFilter !== null && currentNoteTypeFilter !== 'quote') {
-    return;
-  }
-  
-  const selectedTypes = getSelectedCheckboxValues('.type-filter-options input[type="checkbox"]');
   const quoteTypes = getQuoteTypes();
   const totalTypes = quoteTypes.length;
-  
+
+  let selectedTypes;
+  if (currentNoteTypeFilter === 'quote') {
+    // Quote view: read from the quote-specific dropdown
+    selectedTypes = getSelectedCheckboxValues('.type-filter-options input[type="checkbox"]');
+  } else if (currentNoteTypeFilter === null) {
+    // All Notes: combined dropdown — read only the filterQuote* checkboxes
+    selectedTypes = getSelectedCheckboxValues('.training-type-filter-options input[id^="filterQuote"]');
+  } else {
+    return;
+  }
+
   // Only add filter if some (but not all) types are selected
   if (selectedTypes.length > 0 && selectedTypes.length < totalTypes) {
     params.append("types", selectedTypes.join(","));
@@ -107,24 +114,31 @@ function addQuoteTypeFilters(params, currentNoteTypeFilter, getQuoteTypes) {
 }
 
 /**
- * Add training type filters to params (for Training view)
+ * Add training type filters to params (Training view AND All Notes view)
  */
 function addTrainingTypeFilters(params, currentNoteTypeFilter) {
-  if (currentNoteTypeFilter !== 'training') {
+  // Run for Training view and All Notes; skip all other note types
+  if (currentNoteTypeFilter !== 'training' && currentNoteTypeFilter !== null) {
     return;
   }
-  
-  const selectedTrainingTypes = getSelectedCheckboxValues('.training-type-filter-options input[type="checkbox"]');
-  
+
+  // In All Notes (combined dropdown) use id-prefix to exclude quote-source checkboxes.
+  // In Training view all checkboxes are training types so the simple selector is sufficient.
+  const trainingSelector = currentNoteTypeFilter === null
+    ? '.training-type-filter-options input[id^="filterTraining"]'
+    : '.training-type-filter-options input[type="checkbox"]';
+  const selectedTrainingTypes = getSelectedCheckboxValues(trainingSelector);
+
   if (selectedTrainingTypes.length > 0) {
     params.append("training_types", selectedTrainingTypes.join(","));
   }
-  
-  // Year and month filters from searchManager
-  const trainingFilters = getTrainingFilters();
-  
-  if (trainingFilters.year) params.append("year", trainingFilters.year);
-  if (trainingFilters.month && trainingFilters.year) params.append("month", trainingFilters.month);
+
+  // Year and month filters only make sense in the dedicated Training view
+  if (currentNoteTypeFilter === 'training') {
+    const trainingFilters = getTrainingFilters();
+    if (trainingFilters.year) params.append("year", trainingFilters.year);
+    if (trainingFilters.month && trainingFilters.year) params.append("month", trainingFilters.month);
+  }
 }
 
 /**

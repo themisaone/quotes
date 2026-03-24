@@ -341,7 +341,7 @@ export function createQuoteCard(note, currentNoteTypeFilter, getTrainingTypes, g
                 </div>`;
 
   return `
-        <div class="quote-card ${note.image || note.attachment_full ? 'has-image' : ''}" data-quote-id="${note.id}" style="cursor: pointer;">
+        <div class="quote-card ${note.image || note.attachment_full ? 'has-image' : ''}" data-quote-id="${note.id}" data-note-type="${note.note_type || ''}" style="cursor: pointer;">
             <div class="quote-card-content">
                 ${isTraining ? metaRow + '<div class="quote-separator"></div>' + topSection
                              : topSection + '<div class="quote-separator"></div>' + metaRow}

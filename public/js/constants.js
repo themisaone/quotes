@@ -19,6 +19,7 @@ export const FILTER_IDS = {
   SEARCH_SOURCE: 'searchSource',
   SEARCH_TAGS: 'searchTags',
   SEARCH_SCORE: 'searchScore',
+  SEARCH_NOTE_ID: 'searchNoteId',
   
   // Dropdown filters
   AUTHOR_FILTER: 'authorFilter',

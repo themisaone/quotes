@@ -115,7 +115,7 @@
   "externalStorageThreshold": 1,
   "compactMode": false,
   "enableTagOperations": true,
-  "enableQuoteMetaSearches": false,
+  "enableQuoteMetaSearches": true,
   "displayQuotesByRealSize": true,
   "displayImageQuotesLong": false,
   "showLongQuotesExpanded": true,

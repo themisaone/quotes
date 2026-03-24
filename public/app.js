@@ -785,6 +785,11 @@ function setupEventListeners() {
     bulkExportPdfBtn.addEventListener("click", handleBulkExportPdf);
   }
 
+  const bulkDuplicateBtn = document.getElementById('bulkDuplicateBtn');
+  if (bulkDuplicateBtn) {
+    bulkDuplicateBtn.addEventListener("click", handleBulkDuplicate);
+  }
+
   if (bulkDeleteBtn) {
     bulkDeleteBtn.addEventListener("click", handleBulkDelete);
   }
@@ -1420,20 +1425,23 @@ function displayQuotes(quotes) {
     });
   }
 
-  const expandLongEnabled = getDisplaySetting('showLongExpanded', currentNoteTypeFilter);
-  if (expandLongEnabled) {
-    document.querySelectorAll('.quote-text.collapsible').forEach((quoteText) => {
-      const numericId = quoteText.id.replace('quote-', '');
-      const btnId = `expand-${numericId}`;
-      const btnEl = getElementByIdSafe(btnId);
-      
+  // In "All notes" (currentNoteTypeFilter is null), resolve showLongExpanded per card
+  // so that per-type overrides (e.g. training = false) are respected even in the mixed view.
+  document.querySelectorAll('.quote-text.collapsible').forEach((quoteText) => {
+    const numericId = quoteText.id.replace('quote-', '');
+    const card = document.querySelector(`.quote-card[data-quote-id="${numericId}"]`);
+    const cardNoteType = currentNoteTypeFilter || card?.dataset?.noteType || null;
+    const expandLongEnabled = getDisplaySetting('showLongExpanded', cardNoteType);
+
+    if (expandLongEnabled) {
+      const btnEl = getElementByIdSafe(`expand-${numericId}`);
       if (btnEl) {
         quoteText.classList.remove('collapsible');
         quoteText.dataset.expanded = "true";
         btnEl.innerHTML = "▲ Show less";
       }
-    });
-  }
+    }
+  });
 
   // Add click handlers to quote cards (open edit modal)
   document.querySelectorAll(".quote-card").forEach((card) => {
@@ -3689,6 +3697,41 @@ async function handleBulkSetGroup() {
 async function handleBulkExportPdf() {
   closeBulkOperationsModal();
   await exportToPdf();
+}
+
+async function handleBulkDuplicate() {
+  const { payload, count, label } = _getBulkPayloadAndLabel();
+
+  if (count === 0) {
+    alert("⚠️ No notes to duplicate.");
+    return;
+  }
+
+  if (!await showConfirm(`Duplicate ${count} ${label}? Each copy will include all attachments and tags.`, {
+    icon: '⧉', title: 'Duplicate Notes', confirmLabel: 'Duplicate'
+  })) return;
+
+  const btn = document.getElementById('bulkDuplicateBtn');
+  if (btn) { btn.disabled = true; btn.querySelector('div > div').textContent = '⏳ Duplicating…'; }
+
+  try {
+    const response = await fetch(`${API_URL}/quotes/bulk-duplicate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to duplicate');
+
+    closeBulkOperationsModal();
+    loadQuotes();
+    alert(`✅ ${result.message}`);
+  } catch (error) {
+    console.error("Bulk duplicate error:", error);
+    alert(`❌ Error: ${error.message}`);
+  } finally {
+    if (btn) { btn.disabled = false; btn.querySelector('div > div').textContent = 'Duplicate Notes'; }
+  }
 }
 
 async function handleBulkDelete() {
