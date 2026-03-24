@@ -133,6 +133,7 @@ export function handleHashChange(handlers, state) {
   handlers.updateAddButtonText();
   handlers.updateMainTitle();
   handlers.updateSourcesFilterVisibility();
+  handlers.updateViewModeToggle?.();
   
   // Update metadata search visibility
   const metaSearchEnabled = state.globalSettings?.enableQuoteMetaSearches === true;

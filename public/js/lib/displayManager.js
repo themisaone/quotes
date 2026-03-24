@@ -31,7 +31,13 @@ import {
 
 let currentQuotesData = []; // Store for PDF export
 let currentPage = 1;
-const quotesPerPage = 20;
+let quotesPerPage = 20;
+
+/** Override the page size (e.g. use a smaller value for list-pane mode). */
+export function setQuotesPerPage(n) {
+  quotesPerPage = n;
+  currentPage = 1; // reset to page 1 when page size changes
+}
 
 // ============= CONFIGURATION =============
 

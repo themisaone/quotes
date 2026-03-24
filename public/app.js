@@ -89,7 +89,9 @@ import {
   loadTotalCount as loadTotalCountLib,
   displayQuotes as displayQuotesLib,
   getCurrentQuotesData,
-  setCurrentPage as setLibCurrentPage
+  setCurrentPage as setLibCurrentPage,
+  setQuotesPerPage,
+  getQuotesPerPage
 } from './js/lib/displayManager.js';
 
 import {
@@ -161,6 +163,11 @@ import {
   initializeHashChangeListener
 } from './js/lib/pageCoordinator.js';
 import { showConfirm } from './js/lib/confirmDialog.js';
+import {
+  renderListPaneView,
+  refreshPaneNote,
+  getSelectedNoteId as getLpSelectedNoteId
+} from './js/lib/listPaneView.js';
 // They are kept as local functions due to tight coupling with app-specific state
 
 // ============= CONSTANTS =============
@@ -245,7 +252,27 @@ function populateTypeDropdowns() {
 // Local state synced with displayManager library
 let currentPage = 1; // Sync via setLibCurrentPage() when changed
 let currentNoteTypeFilter = null; // null = show all types
-const quotesPerPage = 20;
+// quotesPerPage lives in displayManager — use getQuotesPerPage() to read it
+
+// View mode: 'cards' | 'list-pane'
+// Persisted in localStorage per note type so each type remembers its preference.
+let currentViewMode = 'cards';
+
+function getStoredViewMode(noteType) {
+  try {
+    return localStorage.getItem(`viewMode_${noteType || 'all'}`) || 'cards';
+  } catch { return 'cards'; }
+}
+
+function saveViewMode(noteType, mode) {
+  try {
+    localStorage.setItem(`viewMode_${noteType || 'all'}`, mode);
+  } catch {}
+}
+
+// Note types that support (and default to) list-pane view
+const LIST_PANE_SUPPORTED_TYPES = new Set(['training']);
+// To enable globally later: just add more types or use a wildcard check
 
 // Expose globally for historyManager
 window.currentNoteTypeFilter = currentNoteTypeFilter;
@@ -326,6 +353,7 @@ initializeHashChangeListener(
     updateAddButtonText,
     updateMainTitle,
     updateSourcesFilterVisibility,
+    updateViewModeToggle: () => updateViewModeToggle(),
     toggleMetadataSearchSection,
     loadQuotes,
     loadTotalCount,
@@ -349,7 +377,9 @@ const addQuoteBtn = getElementByIdSafe("addQuoteBtn");
 const closeModal = document.querySelector(".close");
 const cancelBtn = getElementByIdSafe("cancelBtn");
 const quotesList = getElementByIdSafe("quotesList");
+const lpWrapper = getElementByIdSafe("lpWrapper");   // dedicated container for list-pane view
 const quoteCount = getElementByIdSafe("quoteCount");
+const viewModeToggleBtn = getElementByIdSafe("viewModeToggleBtn");
 const modalTitle = getElementByIdSafe("modalTitle");
 
 // MIGRATED: Bulk import elements moved to bulkImport.js
@@ -415,6 +445,9 @@ function generateNoteTypeMenu() {
       window.currentNoteTypeFilter = noteType;
       currentPage = 1;
       setLibCurrentPage(1);
+
+      // Sync view mode BEFORE switchView, which calls loadQuotes() internally
+      updateViewModeToggle();
 
       switchView('quotes');
       saveCurrentView();
@@ -522,6 +555,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   updateAddButtonText();
   updateMainTitle();
   updateSourcesFilterVisibility();
+  updateViewModeToggle();
   
   // Show/hide metadata search section based on current filter and settings
   const metaSearchEnabled = globalSettings?.enableQuoteMetaSearches === true;
@@ -632,9 +666,19 @@ function setupEventListeners() {
       refreshQuotesBtn.classList.add('refreshing');
       currentPage = 1;
       setLibCurrentPage(1);
+      // Show loading state in whichever container is active
+      const activeContainer = (currentViewMode === 'list-pane' && lpWrapper && lpWrapper.style.display !== 'none')
+        ? lpWrapper : quotesList;
+      if (activeContainer) activeContainer.innerHTML = '<div class="loading">Loading…</div>';
       try {
         await loadQuotes();
         await loadTotalCount();
+        // Brief "refreshed" toast
+        const toast = document.createElement('div');
+        toast.className = 'refresh-toast';
+        toast.textContent = '✓ Refreshed';
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 1800);
       } finally {
         setTimeout(() => {
           refreshQuotesBtn.classList.remove('refreshing');
@@ -692,6 +736,24 @@ function setupEventListeners() {
   const selectModeBtn = getElementByIdSafe("selectModeBtn");
   if (selectModeBtn) {
     selectModeBtn.addEventListener("click", toggleSelectionMode);
+  }
+
+  // View mode toggle (Cards ↔ List-Pane)
+  if (viewModeToggleBtn) {
+    viewModeToggleBtn.addEventListener('click', () => {
+      currentViewMode = currentViewMode === 'list-pane' ? 'cards' : 'list-pane';
+      saveViewMode(currentNoteTypeFilter, currentViewMode);
+      if (currentViewMode === 'list-pane') {
+        viewModeToggleBtn.textContent = '⊞ Cards';
+        viewModeToggleBtn.classList.add('active');
+      } else {
+        viewModeToggleBtn.textContent = '≡ List';
+        viewModeToggleBtn.classList.remove('active');
+      }
+      // Re-render with the current notes in new layout
+      const notes = getCurrentQuotesData();
+      if (notes && notes.length > 0) displayQuotes(notes);
+    });
   }
 
   // Selection bar buttons
@@ -1002,6 +1064,49 @@ function updateAddButtonText() {
 // Wrapper for filterManager library
 function updateSourcesFilterVisibility() {
   updateSourcesFilterVisibilityLib2(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes);
+}
+
+// Show/hide and label the view-mode toggle button based on current note type.
+// Also applies quotesList display style immediately so layout is correct
+// even before the first async fetch completes.
+function updateViewModeToggle() {
+  const supported = LIST_PANE_SUPPORTED_TYPES.has(currentNoteTypeFilter);
+  const selectModeBtn = getElementByIdSafe('selectModeBtn');
+
+  if (viewModeToggleBtn) {
+    viewModeToggleBtn.style.display = supported ? '' : 'none';
+  }
+
+  if (supported) {
+    currentViewMode = getStoredViewMode(currentNoteTypeFilter);
+    if (viewModeToggleBtn) {
+      if (currentViewMode === 'list-pane') {
+        // Icon: grid = "you can switch to cards"
+        viewModeToggleBtn.textContent = '⊞';
+        viewModeToggleBtn.title = 'Switch to card grid view';
+        viewModeToggleBtn.classList.add('active');
+      } else {
+        // Icon: lines = "you can switch to list"
+        viewModeToggleBtn.textContent = '☰';
+        viewModeToggleBtn.title = 'Switch to list+pane view';
+        viewModeToggleBtn.classList.remove('active');
+      }
+    }
+    // Use a compact page size in list-pane mode; restore normal size for cards
+    setQuotesPerPage(currentViewMode === 'list-pane' ? 12 : 20);
+
+    // Hide Select button in list-pane mode (bulk ops require card mode)
+    if (selectModeBtn) {
+      selectModeBtn.style.display = currentViewMode === 'list-pane' ? 'none' : '';
+    }
+  } else {
+    currentViewMode = 'cards';
+    setQuotesPerPage(20);
+    // Restore Select button visibility for non-list-pane views
+    if (selectModeBtn) {
+      selectModeBtn.style.display = '';
+    }
+  }
 }
 
 // Wrapper with app-specific additions
@@ -1398,17 +1503,78 @@ async function deleteQuote(id) {
 // ============================================
 // MIGRATED: Translation group functions moved to translationGroups.js
 
+// Apply showLongExpanded setting to any collapsible text inside the pane.
+// Called after each pane render (initial + row click).
+function applyPaneShowLongExpanded() {
+  document.querySelectorAll('.lp-pane .quote-text.collapsible').forEach((quoteText) => {
+    const numericId = quoteText.id.replace('quote-', '');
+    const expandEnabled = getDisplaySetting('showLongExpanded', currentNoteTypeFilter);
+    if (expandEnabled) {
+      const btnEl = document.getElementById(`expand-${numericId}`);
+      if (btnEl) {
+        quoteText.classList.remove('collapsible');
+        quoteText.dataset.expanded = 'true';
+        btnEl.innerHTML = '▲ Show less';
+      }
+    }
+  });
+}
+
 // Display Functions
 function displayQuotes(quotes) {
+  // Always sync view mode from localStorage so the first render after a page
+  // reload or hash-navigation is correct, regardless of call order.
+  if (LIST_PANE_SUPPORTED_TYPES.has(currentNoteTypeFilter)) {
+    currentViewMode = getStoredViewMode(currentNoteTypeFilter);
+    updateViewModeToggle();
+  } else {
+    currentViewMode = 'cards';
+  }
+
   quoteCount.textContent = `(${quotes.length})`;
 
   if (quotes.length === 0) {
+    // Show "empty" in quotesList, hide lpWrapper
+    quotesList.style.display = '';
+    if (lpWrapper) lpWrapper.style.display = 'none';
     quotesList.innerHTML =
       '<div class="no-quotes">No quotes found. Add your first quote!</div>';
     return;
   }
 
-  // Get current settings from settingsManager
+  // ── List-Pane view ──────────────────────────────────────────
+  // Renders into #lpWrapper (a plain div, never a grid) — quotesList is hidden.
+  if (currentViewMode === 'list-pane' && LIST_PANE_SUPPORTED_TYPES.has(currentNoteTypeFilter)) {
+    quotesList.style.display = 'none';
+    if (lpWrapper) {
+      lpWrapper.style.display = 'block';
+    } else {
+      // lpWrapper missing — fall through to card grid as safety net
+      quotesList.style.display = '';
+    }
+    const currentSettings = getGlobalSettings();
+    // Preserve selection across reloads (e.g. after save)
+    const prevSelectedId = getLpSelectedNoteId();
+    renderListPaneView(lpWrapper || quotesList, quotes, {
+      openEditModal,
+      openAuthorModal,
+      openSourceModal,
+      filterByTag,
+      currentNoteTypeFilter,
+      getTrainingTypes,
+      getQuoteTypes,
+      globalSettings: currentSettings,
+      initialNoteId: prevSelectedId,
+      onPaneRendered: applyPaneShowLongExpanded,
+      createQuoteCard: (note) =>
+        createQuoteCardLib(note, currentNoteTypeFilter, getTrainingTypes, getQuoteTypes, currentSettings)
+    });
+    return;
+  }
+
+  // ── Card grid view (default) ────────────────────────────────
+  if (lpWrapper) lpWrapper.style.display = 'none';
+  quotesList.style.display = '';
   const currentSettings = getGlobalSettings();
   
   // Use library for basic rendering (pass globalSettings for score display)
@@ -2469,10 +2635,10 @@ function updatePaginationControls() {
   if (!paginationContainer) return;
 
   // Use filteredQuotes for pagination calculations
-  const totalPages = Math.ceil(filteredQuotes / quotesPerPage);
-  const startItem =
-    filteredQuotes === 0 ? 0 : (currentPage - 1) * quotesPerPage + 1;
-  const endItem = Math.min(currentPage * quotesPerPage, filteredQuotes);
+  const qpp = getQuotesPerPage();
+  const totalPages = Math.ceil(filteredQuotes / qpp);
+  const startItem = filteredQuotes === 0 ? 0 : (currentPage - 1) * qpp + 1;
+  const endItem = Math.min(currentPage * qpp, filteredQuotes);
 
   if (filteredQuotes === 0) {
     paginationContainer.innerHTML = "";
@@ -2508,7 +2674,7 @@ function updatePaginationControls() {
 }
 
 function goToPage(page) {
-  const totalPages = Math.ceil(filteredQuotes / quotesPerPage);
+  const totalPages = Math.ceil(filteredQuotes / getQuotesPerPage());
   if (page < 1 || page > totalPages) return;
   
   // Update both local and library currentPage
@@ -2546,6 +2712,7 @@ function setupMenuNavigation() {
         updateAddButtonText();
         updateMainTitle();
         updateSourcesFilterVisibility();
+        updateViewModeToggle();
       }
       
       // MIGRATED: Core view switching logic now in pageCoordinator.js

@@ -761,6 +761,30 @@ h2 {
   pointer-events: none;
 }
 
+/* Refresh toast notification */
+.refresh-toast {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  background: #10b981;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.55rem 1.1rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+  z-index: 9999;
+  animation: toastIn 0.2s ease, toastOut 0.3s ease 1.5s forwards;
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes toastOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
 .btn-refresh.refreshing::after {
   content: "⟳";
   position: absolute;
@@ -6028,4 +6052,232 @@ body.selection-mode .quote-card::after {
 .confirm-btn-ok.danger:hover {
   background: #b91c1c;
   box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+}
+
+/* ============================================================
+   LIST-PANE VIEW
+   ============================================================ */
+
+/* View-mode toggle button */
+/* View-mode toggle: icon-only button, same size as Back/Refresh, amber colour */
+.view-mode-toggle {
+  font-size: 1.3rem;
+  padding: 0.5rem 0.6rem;
+  min-width: 3rem;
+  height: 2.5rem;
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #d97706;  /* amber-600 */
+  border-color: #b45309;
+  color: #fff;
+}
+.view-mode-toggle:hover {
+  background: #b45309;  /* amber-700 */
+  border-color: #92400e;
+}
+/* Slightly darker when list-pane mode is active */
+.view-mode-toggle.active {
+  background: #92400e;  /* amber-800 */
+  border-color: #78350f;
+}
+
+/* lpWrapper: full-width block container for the list-pane view */
+#lpWrapper {
+  width: 100%;
+  box-sizing: border-box;
+}
+#lpWrapper > .lp-layout {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Outer wrapper — two independent cards side by side */
+.lp-layout {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+/* ── Left: list card ── */
+.lp-list {
+  background: var(--surface);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  /* No internal scroll — paging controls handle navigation; page scrolls naturally */
+}
+
+.lp-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.65rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.12s;
+  user-select: none;
+  background: var(--surface);
+}
+.lp-row:hover {
+  background: var(--bg-secondary, #f5f7fa);
+}
+.lp-row.lp-selected {
+  background: #bfdbfe; /* blue-200 — soft, readable, clearly selected */
+  color: #1e3a8a;      /* blue-900 — dark text stays legible */
+}
+.lp-row.lp-selected .lp-row-meta,
+.lp-row.lp-selected .lp-row-preview,
+.lp-row.lp-selected .lp-row-date {
+  color: #1e40af; /* blue-800 */
+}
+
+.lp-row-main { min-width: 0; }
+
+.lp-row-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.2rem;
+  overflow: hidden;
+}
+.lp-row-date {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  white-space: nowrap;
+  flex: 1 1 auto; /* expands to push badges to the right */
+}
+.lp-row.lp-selected .lp-row-date { color: #1e3a8a; }
+
+.lp-row-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  background: transparent; 
+  color: var(--primary-color);
+  white-space: nowrap;
+}
+.lp-row.lp-selected .lp-row-badge {
+  background: rgba(30,58,138,0.1);
+  border-color: #3b82f6;
+  color: #1e3a8a;
+}
+
+.lp-row-preview {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lp-row-thumb {
+  width: 52px;
+  height: 52px;
+  object-fit: cover;
+  border-radius: 5px;
+  flex-shrink: 0;
+}
+
+/* ── Right: pane card ── */
+.lp-pane {
+  background: var(--surface);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 1.5rem;
+  min-height: 300px;
+  /* Sticky so the pane stays in view as the user scrolls the list */
+  position: sticky;
+  top: 1rem;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+}
+
+.lp-pane-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 0.75rem;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  opacity: 0.6;
+}
+
+.lp-pane-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+.lp-nav-btn {
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.12s;
+}
+.lp-nav-btn:hover:not(:disabled) {
+  background: var(--primary-color);
+  color: #fff;
+  border-color: var(--primary-color);
+}
+.lp-nav-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.lp-nav-counter {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.lp-pane-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+/* Inside the pane the card renders without hover effects or cursor */
+.lp-pane .quote-card {
+  cursor: default !important;
+  box-shadow: none !important;
+  border: none;
+  margin: 0;
+  width: 100%;
+  box-sizing: border-box;
+  /* Allow text selection in read-mode pane */
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  user-select: text;
+}
+.lp-pane .quote-card:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Remove border from the very last row so it doesn't bleed into the card's rounded corner */
+.lp-row:last-child {
+  border-bottom: none;
+}
+
+/* Responsive: stack on narrow screens */
+@media (max-width: 900px) {
+  .lp-layout {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  .lp-list {
+    max-height: 300px;
+  }
 }

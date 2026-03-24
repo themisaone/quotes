@@ -2,7 +2,7 @@
   "noteTypes": [
     {
       "value": "quote",
-      "label": "Quote",
+      "label": "Quotes",
       "icon": "💬",
       "behavior": "quote",
       "core": true,
@@ -44,7 +44,7 @@
     },
     {
       "value": "note",
-      "label": "Note",
+      "label": "Assorted Notes",
       "icon": "📝",
       "behavior": "generic",
       "core": true,
@@ -54,7 +54,7 @@
     },
     {
       "value": "training",
-      "label": "Training",
+      "label": "Trainings",
       "icon": "💪",
       "behavior": "training",
       "core": true,
@@ -103,7 +103,7 @@
     },
     {
       "value": "historical",
-      "label": "Historical Note",
+      "label": "Historical Notes",
       "icon": "📜",
       "behavior": "generic",
       "displaySettings": {
@@ -115,7 +115,7 @@
   "externalStorageThreshold": 1,
   "compactMode": false,
   "enableTagOperations": true,
-  "enableQuoteMetaSearches": true,
+  "enableQuoteMetaSearches": false,
   "displayQuotesByRealSize": true,
   "displayImageQuotesLong": false,
   "showLongQuotesExpanded": true,

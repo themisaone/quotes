@@ -519,11 +519,14 @@
                     ☑ Select
                   </button>
                   <button id="mergeGroupBtn" class="btn-merge-group" style="display:none;" onclick="openMergeModalFromGroup()" title="Merge all notes in this group">🔀 Merge group</button>
+                  <button id="viewModeToggleBtn" class="btn view-mode-toggle" title="Switch view" style="display:none;">☰</button>
                 </div>
               </div>
               <div id="quotesList" class="quotes-list">
                 <div class="loading">Loading quotes...</div>
               </div>
+              <!-- List-Pane view renders here (separate from the card grid) -->
+              <div id="lpWrapper" style="display:none;"></div>
 
               <!-- Pagination Controls -->
               <div id="paginationControls" class="pagination-container"></div>
