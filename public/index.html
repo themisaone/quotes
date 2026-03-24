@@ -145,51 +145,57 @@
       <div class="main-content">
         <!-- Tablet Menu View (landing page for tablets) -->
         <div id="menuView" class="view-container tablet-menu-view" style="display: none;">
-          <div class="container">s
+          <div class="container">
             <header class="tablet-menu-header">
               <h1>Misa's Notes Collection</h1>
+              <p class="tablet-menu-description">
+                The private collection of texts, quotes, training logs, scanned documents and images.
+              </p>
             </header>
-            
-            <p class="tablet-menu-description">
-              Misa's private collection of various texts, quotes and jokes, <br>compiled from books, movies, poems, lyrics and other sources.<br>
-              Some are meant to be funny, some serious, some are just nice formulations...
-            </p>
 
             <div class="tablet-menu-separator"></div>
 
-            <div class="tablet-menu-grid">
-              <!-- Main 4 buttons in 2x2 grid -->
-              <button class="tablet-menu-btn" onclick="switchView('quotes')">
+            <!-- Browse Notes section: All Notes + dynamically generated type buttons -->
+            <h3 class="tablet-section-label">Browse Notes</h3>
+            <div id="tabletBrowseGrid" class="tablet-menu-grid">
+              <button class="tablet-menu-btn" id="tabletAllNotesBtn">
                 <span class="menu-btn-icon">💬</span>
-                <span class="menu-btn-text">Quotes</span>
+                <span class="menu-btn-text">All Notes</span>
               </button>
-              
+              <!-- Note-type buttons injected here by generateNoteTypeMenu() -->
+            </div>
+
+            <div class="tablet-menu-separator"></div>
+
+            <!-- Browse by metadata -->
+            <h3 class="tablet-section-label">Browse by</h3>
+            <div class="tablet-menu-grid">
               <button class="tablet-menu-btn" onclick="switchView('authors')">
                 <span class="menu-btn-icon">✍️</span>
                 <span class="menu-btn-text">Authors</span>
               </button>
-              
+
               <button class="tablet-menu-btn" onclick="switchView('sources')">
                 <span class="menu-btn-icon">📚</span>
                 <span class="menu-btn-text">Sources</span>
               </button>
-              
+
               <button class="tablet-menu-btn" onclick="switchView('tags')">
                 <span class="menu-btn-icon">🏷️</span>
                 <span class="menu-btn-text">Tags</span>
               </button>
             </div>
-            
-            <!-- Separator -->
+
             <div class="tablet-menu-separator"></div>
-            
+
+            <!-- Operations -->
+            <h3 class="tablet-section-label">Operations</h3>
             <div class="tablet-menu-grid">
-              <!-- Second row: Random Quote and Settings -->
               <button class="tablet-menu-btn" onclick="switchView('quotes'); setTimeout(() => showWelcomeQuote(true), 150)">
                 <span class="menu-btn-icon">🎲</span>
-                <span class="menu-btn-text">Random Quote</span>
+                <span class="menu-btn-text">Random Note</span>
               </button>
-              
+
               <button class="tablet-menu-btn" onclick="switchView('settings')">
                 <span class="menu-btn-icon">⚙️</span>
                 <span class="menu-btn-text">Settings</span>

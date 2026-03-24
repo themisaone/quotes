@@ -2385,6 +2385,37 @@ body.selection-mode .quote-card::after {
   padding: 4px 8px !important;
   border-top-left-radius: 8px;
   border-top-right-radius: 8px;
+  /* Follow palette */
+  background: var(--input-bg) !important;
+  border-color: var(--border) !important;
+}
+
+/* Toolbar SVG icons — follow text colour so they're visible on dark backgrounds */
+.ql-toolbar.ql-snow .ql-stroke {
+  stroke: var(--text-secondary) !important;
+}
+.ql-toolbar.ql-snow .ql-fill,
+.ql-toolbar.ql-snow .ql-stroke.ql-fill {
+  fill: var(--text-secondary) !important;
+}
+.ql-toolbar.ql-snow .ql-picker,
+.ql-toolbar.ql-snow .ql-picker-label {
+  color: var(--text-secondary) !important;
+}
+.ql-toolbar.ql-snow button:hover .ql-stroke,
+.ql-toolbar.ql-snow .ql-picker-label:hover .ql-stroke,
+.ql-toolbar.ql-snow button.ql-active .ql-stroke {
+  stroke: var(--primary-color) !important;
+}
+.ql-toolbar.ql-snow button:hover .ql-fill,
+.ql-toolbar.ql-snow button.ql-active .ql-fill {
+  fill: var(--primary-color) !important;
+}
+
+.ql-container.ql-snow {
+  border-color: var(--border) !important;
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
 }
 
 .ql-editor {
@@ -2402,6 +2433,15 @@ body.selection-mode .quote-card::after {
   line-height: 1.6 !important;
   box-sizing: border-box;
   padding: 12px 15px !important; /* Quill default padding */
+  /* Follow palette — background and text colour */
+  background: var(--input-bg) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Quill placeholder text */
+.ql-editor.ql-blank::before {
+  color: var(--text-secondary) !important;
+  opacity: 0.6;
 }
 
 /* Remove Quill's default h2 styling */
@@ -3025,70 +3065,122 @@ body.selection-mode .quote-card::after {
     display: block !important;
   }
   
-  /* Modal adjustments for tablet */
+  /* Modal — medium screens: wider + tall (internal padding does the compacting) */
   .modal-content {
     padding: 0 !important;
+    width: min(1100px, 82vw) !important;
+    max-height: 92vh !important;   /* keep tall; reduced internal spacing shows all buttons */
   }
-  
+
+  .modal-header {
+    padding: 0.35rem 0.85rem !important;
+  }
+
+  /* body side-padding drives yellow-footer negative-margin calculations */
   .modal-body {
-    padding: 1.25rem !important;
+    padding: 0.5rem 0.85rem 0.85rem 0.85rem !important;
   }
-  
+
+  /* form-group vertical gap — only between independent groups */
+  .modal-content .form-group,
+  .form-group {
+    margin-bottom: 0.65rem !important;
+  }
+
+  /* form-row items must stay gap-free */
+  .form-row .form-group,
+  .form-row-2 .form-group,
+  .form-row-3 .form-group {
+    margin-bottom: 0 !important;
+  }
+
   .modal-header-row {
-    margin-bottom: 0.75rem !important;
+    margin-bottom: 0.3rem !important;
+    padding-right: 0.85rem !important;
     align-items: center !important;
   }
-  
+
   .modal-header-row h2 {
     margin: 0 !important;
     line-height: 1 !important;
   }
-  
+
   .modal-header-row .quote-metadata {
     align-self: center !important;
     line-height: 1 !important;
   }
-  
-  /* Quote editor shorter on tablet */
+
+  /* Yellow footer: negative margins match body side-padding (0.85rem) */
+  #quoteModal .form-actions,
+  #authorModal .form-actions,
+  #sourceModal .form-actions {
+    margin: 0.65rem -0.85rem -0.85rem -0.85rem !important;
+    padding: 0.55rem 0.85rem !important;
+  }
+
+  .form-actions {
+    gap: 0.5rem !important;
+    margin-top: 0.65rem !important;
+  }
+
+  /* Quote editor */
   #quoteEditor {
-    height: calc(3.2rem + 42px + 24px) !important; /* 2 lines (3.2rem) + toolbar (42px) + padding (24px) */
+    height: calc(3.4rem + 42px + 12px) !important;
   }
-  
+
   .ql-container {
-    height: calc(3.2rem + 24px) !important; /* 2 lines + padding */
+    height: calc(3.4rem + 12px) !important;
   }
   
-  /* Landing page header styling */
+  /* Landing page header — title left, description right on same row */
   .tablet-menu-header {
-    text-align: center !important;
-    margin-bottom: 1.5rem !important;
-    padding-bottom: 1.5rem !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 2rem !important;
+    flex-wrap: wrap !important;
+    text-align: left !important;
+    margin-bottom: 0.75rem !important;
+    padding-bottom: 0.75rem !important;
     border-bottom: 2px solid rgba(0, 0, 0, 0.1);
   }
-  
+
   .tablet-menu-header h1 {
-    font-size: 2.2rem !important;
+    font-size: 1.7rem !important;
     color: #667eea !important;
-    margin: 0 0 0.75rem 0 !important;
+    margin: 0 !important;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
-  
+
   .tablet-menu-description {
-    text-align: center !important;
-    font-size: 1rem !important;
+    font-size: 0.82rem !important;
     color: var(--text-secondary) !important;
-    line-height: 1.6 !important;
-    margin: 0 auto 2rem auto !important;
-    max-width: 600px !important;
+    line-height: 1.4 !important;
+    margin: 0 !important;
     font-style: italic !important;
+    flex: 1 1 0;
   }
   
   /* Landing menu page styles */
+  .tablet-section-label {
+    text-align: center;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    max-width: 600px;
+    margin: 0 auto 0.75rem auto;
+    padding: 0;
+  }
+
   .tablet-menu-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1.5rem;
-    margin-top: 0rem;
-    max-width: 600px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-top: 0;
+    max-width: 800px;
     margin-left: auto;
     margin-right: auto;
   }
@@ -3096,15 +3188,15 @@ body.selection-mode .quote-card::after {
   .tablet-menu-separator {
     height: 1px;
     background: rgba(0, 0, 0, 0.1);
-    margin: 2rem auto;
+    margin: 0.75rem auto;
     max-width: 600px;
   }
   
   .tablet-menu-btn {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #178e26 0%, #6b6364 100%);
     border: none;
     border-radius: 12px;
-    padding: 1rem 1.5rem;
+    padding: 0.5rem 1.5rem;
     cursor: pointer;
     transition: all 0.3s;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
@@ -3192,44 +3284,26 @@ body.selection-mode .quote-card::after {
     margin: 0.8rem 0;
   }
   
-  /* Modal header tablet adjustments */
   .modal-header {
-    padding: 0.85rem 1.25rem;
+    padding: 0.75rem 1.1rem;
   }
-  
-  .modal-header h2 {
-    font-size: 1.1rem !important;
-    line-height: 1 !important;
-  }
-  
-  .modal-header-icon {
-    font-size: 1.3rem !important;
-    line-height: 1 !important;
-  }
-  
-  .quote-metadata-header {
-    font-size: 0.7rem;
-    padding-right: 0.5rem;
-  }
-  
-  .modal-body {
-    padding: 1.5rem;
-  }
-  
-  /* Header and title adjustments */
+
+  /* ── Global ~10% size reduction for medium screens ── */
+
+  /* Header and title */
   .main-content {
-    padding-top: 1rem;
+    padding-top: 0.9rem;
   }
-  
+
   h1 {
-    font-size: 1.8rem;
+    font-size: 1.6rem;
   }
-  
+
   /* Counter badges */
   .quote-counts {
-    font-size: 0.9rem;
+    font-size: 0.8rem;
   }
-  
+
   .quote-counts #filteredQuotesCount,
   .quote-counts #typeQuotesCount,
   .quote-counts #totalQuotesCount,
@@ -3239,147 +3313,242 @@ body.selection-mode .quote-card::after {
   .quote-counts #totalSourcesCount,
   .quote-counts #filteredTagsCount,
   .quote-counts #totalTagsCount {
-    font-size: 0.95rem;
-    padding: 0.3rem 0.65rem;
+    font-size: 0.85rem;
+    padding: 0.25rem 0.55rem;
   }
-  
-  /* Buttons in header */
-  .btn,
-  .btn-primary,
-  .btn-secondary,
-  .btn-refresh {
-    font-size: 0.9rem;
-    padding: 0.5rem 0.9rem;
+
+  /* All toolbar buttons: uniform height, same padding baseline.
+     Exclude .desktop-text so the hide/show split still works. */
+  .btn:not(.desktop-text),
+  .btn-primary:not(.desktop-text),
+  .btn-secondary:not(.desktop-text),
+  .btn-refresh,
+  .btn-icon-only,
+  .btn-select-mode,
+  .view-mode-toggle {
+    height: 2.05rem !important;
+    min-height: unset !important;   /* cancels .search-item button { min-height: 38px } */
+    line-height: 1 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 0.82rem !important;
+    box-sizing: border-box !important;
   }
-  
+
+  /* Icon-only: slightly larger icon character, compact horizontal padding */
+  .btn-icon-only,
+  .view-mode-toggle {
+    font-size: 1rem !important;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+    min-width: 2.2rem !important;
+  }
+
+  /* Text buttons keep their horizontal padding */
+  .btn:not(.btn-icon-only):not(.view-mode-toggle):not(.desktop-text) {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+
   .btn-icon {
-    padding: 0.4rem;
-    font-size: 1.1rem;
+    padding: 0.35rem;
+    font-size: 1rem;
   }
-  
-  /* Section title consistency */
+
+  /* Section headings */
   h2 {
-    font-size: 1.5rem !important;
-    margin-bottom: 1rem !important;
+    font-size: 1.35rem !important;
+    margin-bottom: 0.85rem !important;
   }
-  
-  /* Reduce padding in sections */
+
+  /* Search section */
   .search-section {
-    padding: 1.25rem !important;
-    margin-bottom: 1.5rem !important;
+    padding: 1.1rem !important;
+    margin-bottom: 1.25rem !important;
   }
-  
-  /* Metadata filters: already 3-column grid, collapse to 2 on tablet */
+
+  /* Metadata filters: collapse to 2 columns */
   .metadata-filters-grid,
   #metadataFiltersRow {
     grid-template-columns: repeat(2, 1fr) !important;
   }
-  
-  /* Latest Quotes section padding */
+
+  /* Quotes section */
   .quotes-section {
     padding: 0 !important;
   }
-  
+
   .quotes-section h2,
   .quotes-section-header {
     background: var(--surface) !important;
-    padding: 0.6rem 1.25rem !important;
-    margin: 0 0 1rem 0 !important;
+    padding: 0.5rem 1.1rem !important;
+    margin: 0 0 0.85rem 0 !important;
     border-radius: 8px !important;
     box-shadow: var(--shadow) !important;
   }
-  
+
   .quotes-section-header h2 {
     background: transparent !important;
     padding: 0 !important;
     box-shadow: none !important;
   }
-  
-  /* Equal width for quote cards in 2-column grid */
+
+  /* Card grid — equal row and column gap.
+     No !important on display so JS inline style can override it to hide the grid. */
   .quotes-list {
-    display: grid !important;
+    display: grid;
     grid-template-columns: 1fr 1fr !important;
-    gap: 0.75rem !important;
+    gap: 0.65rem !important;
     margin: 0 !important;
     padding: 0 !important;
   }
-  
-  /* Natural sizing still works on tablet - override grid */
+
   .quotes-list.natural-sizing {
     display: block !important;
     column-count: 2 !important;
-    column-gap: 0.75rem !important;
+    column-gap: 0.65rem !important;
   }
-  
+
+  /* Natural-sizing: card margin-bottom must match column-gap */
+  .quotes-list.natural-sizing .quote-card {
+    margin-bottom: 0.65rem !important;
+  }
+
   .quote-card {
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
     margin: 0 !important;
+    padding: 0.9rem !important;    /* base is 1.25rem — ~10% smaller */
+    font-size: 0.88rem !important;
   }
-  
-  /* Header alignment - keep back button and title on same line with consistent spacing */
+
+  /* Image cards use padding:0 outer + inner content padding — must override separately */
+  .quote-card.has-image {
+    padding: 0 !important;
+  }
+
+  .quote-card.has-image .quote-card-content {
+    padding: 0.9rem !important;
+  }
+
+  /* Strip / metadata bar inside training cards */
+  .training-strip,
+  .quote-strip,
+  .note-strip {
+    font-size: 0.8rem !important;
+    padding: 0.35rem 0.6rem !important;
+  }
+
+  /* Quote text inside cards */
+  .quote-text {
+    font-size: 0.88rem !important;
+    line-height: 1.5 !important;
+  }
+
+  /* Author / source line */
+  .quote-author,
+  .quote-source,
+  .quote-meta {
+    font-size: 0.8rem !important;
+  }
+
+  /* Tag pills on cards */
+  .tag-badge,
+  .quote-tag {
+    font-size: 0.72rem !important;
+    padding: 0.15rem 0.45rem !important;
+  }
+
+  /* Header layout */
   header {
     display: flex !important;
     flex-direction: row !important;
     flex-wrap: nowrap !important;
     align-items: center !important;
     justify-content: space-between !important;
-    gap: 0.75rem !important;
+    gap: 0.65rem !important;
   }
-  
+
   header h1 {
     margin: 0 !important;
     flex-grow: 0 !important;
     flex-shrink: 0 !important;
   }
-  
+
   header .header-actions {
     display: flex !important;
-    gap: 0.5rem !important;
+    gap: 0.4rem !important;
     margin-left: auto !important;
     flex-shrink: 0 !important;
   }
-  
-  /* Reduce input field height */
+
+  /* Form inputs */
   input[type="text"],
   input[type="date"],
   select {
-    padding: 0.45rem 0.6rem !important;
-    font-size: 0.95rem !important;
-  }
-  
-  /* Random Quote / Welcome Quote card */
-  .welcome-quote-card {
-    max-width: 90% !important;
-    padding: 2rem 1.5rem !important;
-  }
-  
-  .welcome-quote-text {
-    font-size: 1.1rem !important;
-  }
-  
-  .welcome-quote-author,
-  .welcome-quote-source {
-    font-size: 1rem !important;
-  }
-  
-  /* Tag cards - smaller font */
-  .tag-card-name {
-    font-size: 1rem !important;
-    font-weight: 600;
-  }
-  
-  .tag-card-count {
-    font-size: 0.9rem !important;
-    padding: 0.4rem 0.8rem !important;
-  }
-  
-  .tag-card {
-    padding: 1rem 1.25rem !important;
+    padding: 0.4rem 0.55rem !important;
+    font-size: 0.88rem !important;
   }
 
-  /* Fix Quill h2 white box in tablet mode */
+  /* Modal content (font size inside) */
+  .modal-body,
+  .modal-body label,
+  .modal-body input,
+  .modal-body select,
+  .modal-body textarea {
+    font-size: 0.88rem !important;
+  }
+
+  .modal-header h2 {
+    font-size: 1rem !important;
+    line-height: 1 !important;
+  }
+
+  .modal-header-icon {
+    font-size: 1.15rem !important;
+    line-height: 1 !important;
+  }
+
+  .quote-metadata-header {
+    font-size: 0.65rem;
+    padding-right: 0.45rem;
+  }
+
+  /* Random Note card */
+  .welcome-quote-card {
+    max-width: 90% !important;
+    padding: 1.75rem 1.35rem !important;
+  }
+
+  .welcome-quote-text {
+    font-size: 1rem !important;
+  }
+
+  .welcome-quote-author,
+  .welcome-quote-source {
+    font-size: 0.9rem !important;
+  }
+
+  /* Tag cards */
+  .tag-card-name {
+    font-size: 0.9rem !important;
+    font-weight: 600;
+  }
+
+  .tag-card-count {
+    font-size: 0.82rem !important;
+    padding: 0.35rem 0.7rem !important;
+  }
+
+  .tag-card {
+    padding: 0.9rem 1.1rem !important;
+  }
+
+  /* Fix Quill h2 white box in medium mode */
   .quote-text h2 {
     background: none !important;
     padding: 0 !important;
@@ -6109,6 +6278,25 @@ body.selection-mode .quote-card::after {
   /* No internal scroll — paging controls handle navigation; page scrolls naturally */
 }
 
+/* Header bar at the top of the list column — matches .lp-pane-nav height */
+.lp-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.9rem 0.75rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+  border-radius: 12px 12px 0 0;
+}
+.lp-list-header-type {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--primary-color);
+}
+.lp-list-header-count {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
 .lp-row {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -6188,7 +6376,7 @@ body.selection-mode .quote-card::after {
   background: var(--surface);
   border-radius: 12px;
   box-shadow: var(--shadow);
-  padding: 1.5rem;
+  padding: 0.5rem;
   min-height: 300px;
   /* Sticky so the pane stays in view as the user scrolls the list */
   position: sticky;
@@ -6241,29 +6429,24 @@ body.selection-mode .quote-card::after {
   color: var(--text-secondary);
 }
 
-.lp-pane-actions {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-  flex-wrap: wrap;
-}
-
-/* Inside the pane the card renders without hover effects or cursor */
+/* Inside the pane the card is clickable to open the edit modal */
 .lp-pane .quote-card {
-  cursor: default !important;
-  box-shadow: none !important;
-  border: none;
+  cursor: pointer;
+  box-shadow: none;
+  border: 2px solid transparent;
   margin: 0;
   width: 100%;
   box-sizing: border-box;
-  /* Allow text selection in read-mode pane */
+  transition: border-color 0.15s, box-shadow 0.15s;
+  /* Allow text selection */
   -webkit-user-select: text;
   -moz-user-select: text;
   user-select: text;
 }
 .lp-pane .quote-card:hover {
   transform: none !important;
-  box-shadow: none !important;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 15%, transparent) !important;
 }
 
 /* Remove border from the very last row so it doesn't bleed into the card's rounded corner */

@@ -133,16 +133,10 @@ function renderPane(pane, note, idx) {
       <button class="lp-nav-btn" id="lpNext" ${idx >= total - 1 ? 'disabled' : ''}>Next ▶</button>
     </div>`;
 
-  // Action buttons
-  const actionsHtml = `
-    <div class="lp-pane-actions">
-      <button class="btn btn-primary" id="lpEditBtn">✏️ Edit</button>
-    </div>`;
-
   // Full card HTML (reuse existing renderer)
   const cardHtml = createQuoteCard(note, currentNoteTypeFilter, getTrainingTypes, getQuoteTypes, globalSettings);
 
-  pane.innerHTML = navHtml + actionsHtml + cardHtml;
+  pane.innerHTML = navHtml + cardHtml;
 
   // ── Nav button handlers ──
   const prevBtn = pane.querySelector('#lpPrev');
@@ -150,9 +144,15 @@ function renderPane(pane, note, idx) {
   if (prevBtn) prevBtn.addEventListener('click', () => selectNote(idx - 1));
   if (nextBtn) nextBtn.addEventListener('click', () => selectNote(idx + 1));
 
-  // ── Edit button handler ──
-  const editBtn = pane.querySelector('#lpEditBtn');
-  if (editBtn) editBtn.addEventListener('click', () => openEditModal(note));
+  // ── Click card to edit (same as card-grid behaviour) ──
+  const card = pane.querySelector('.quote-card');
+  if (card) {
+    card.addEventListener('click', e => {
+      // Let tag, author/source links, expand buttons handle themselves
+      if (e.target.closest('.tag-clickable, .author-link, .source-link, .expand-btn, .lp-pane-nav')) return;
+      openEditModal(note);
+    });
+  }
 
   // ── Author / Source link handlers ──
   pane.querySelectorAll('.author-link').forEach(link => {
@@ -253,14 +253,29 @@ export function renderListPaneView(container, notes, opts) {
   const restoredIdx = wantedId != null ? notes.findIndex(n => n.id == wantedId) : -1;
   _selectedIndex = restoredIdx >= 0 ? restoredIdx : 0;
 
+  // Derive a display label for the list header
+  const TYPE_META = {
+    training:   { icon: '💪', label: 'Trainings' },
+    quote:      { icon: '💬', label: 'Quotes'    },
+    historical: { icon: '📖', label: 'Historical' },
+    lyrics:     { icon: '🎵', label: 'Lyrics'    },
+    note:       { icon: '📝', label: 'Notes'     },
+  };
+  const typeMeta = TYPE_META[opts.currentNoteTypeFilter] || { icon: '📋', label: opts.currentNoteTypeFilter || 'Notes' };
+  const headerHtml = `
+    <div class="lp-list-header">
+      <span class="lp-list-header-type">${typeMeta.icon} ${typeMeta.label}</span>
+      <span class="lp-list-header-count">${notes.length} notes</span>
+    </div>`;
+
   // Build skeleton
   container.innerHTML = `
     <div class="lp-layout">
-      <div class="lp-list" id="lpList"></div>
+      <div class="lp-list" id="lpList">${headerHtml}</div>
       <div class="lp-pane" id="lpPane"></div>
     </div>`;
 
-  // Fill list
+  // Fill list (rows appended after the header that's already in #lpList)
   const list = container.querySelector('#lpList');
   notes.forEach((note, idx) => {
     list.insertAdjacentHTML('beforeend', buildRowHtml(note, idx, idx === _selectedIndex, opts));

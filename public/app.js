@@ -477,6 +477,61 @@ function generateNoteTypeMenu() {
     });
   }
 
+  // ── Tablet landing page: rebuild note-type buttons ─────────────────────
+  const tabletGrid = document.getElementById('tabletBrowseGrid');
+  if (tabletGrid) {
+    // Wire up the static "All Notes" button (only once)
+    const allNotesBtn = document.getElementById('tabletAllNotesBtn');
+    if (allNotesBtn && !allNotesBtn.dataset.wired) {
+      allNotesBtn.dataset.wired = '1';
+      allNotesBtn.addEventListener('click', () => {
+        currentNoteTypeFilter = null;
+        window.currentNoteTypeFilter = null;
+        console.log('📱 Tablet: All Notes clicked');
+        currentPage = 1;
+        setLibCurrentPage(1);
+        updateViewModeToggle();
+        switchView('quotes');   // internally calls loadQuotes() + loadTotalCount()
+        saveCurrentView();
+        updateUrlHash();
+        updateAddButtonText();
+        updateMainTitle();
+        updateSourcesFilterVisibility();
+        clearSearchFields();
+        // Note: switchView already triggered loadQuotes() — no second call needed
+      });
+    }
+
+    // Remove previously injected type buttons
+    tabletGrid.querySelectorAll('.tablet-type-btn').forEach(b => b.remove());
+
+    // Inject one button per note type
+    types.forEach(type => {
+      const btn = document.createElement('button');
+      btn.className = 'tablet-menu-btn tablet-type-btn';
+      btn.innerHTML = `<span class="menu-btn-icon">${type.icon}</span><span class="menu-btn-text">${type.label}</span>`;
+      btn.addEventListener('click', () => {
+        currentNoteTypeFilter = type.value;
+        window.currentNoteTypeFilter = type.value;
+        console.log('📱 Tablet type button clicked:', type.value);
+        currentPage = 1;
+        setLibCurrentPage(1);
+        updateViewModeToggle();
+        switchView('quotes');   // internally calls loadQuotes() + loadTotalCount()
+        saveCurrentView();
+        updateUrlHash();
+        updateAddButtonText();
+        updateMainTitle();
+        updateSourcesFilterVisibility();
+        const metaSearchEnabled = globalSettings?.enableQuoteMetaSearches === true;
+        toggleMetadataSearchSection(metaSearchEnabled);
+        clearSearchFields();
+        // Note: switchView already triggered loadQuotes() — no second call needed
+      });
+      tabletGrid.appendChild(btn);
+    });
+  }
+
   // Also populate the "Add Note" type popup
   const noteTypePopup = document.getElementById('noteTypePopup');
   if (noteTypePopup) {
@@ -1099,13 +1154,30 @@ function updateViewModeToggle() {
     if (selectModeBtn) {
       selectModeBtn.style.display = currentViewMode === 'list-pane' ? 'none' : '';
     }
+
+    // Swap container visibility immediately so the page doesn't flash card-grid
+    // content while the fetch is still running in list-pane mode.
+    // Use setProperty('display','none','important') so that CSS rules like
+    // `.quotes-list.natural-sizing { display: block !important }` can't win.
+    if (currentViewMode === 'list-pane') {
+      if (quotesList) quotesList.style.setProperty('display', 'none', 'important');
+      if (lpWrapper) {
+        if (!lpWrapper.querySelector('.lp-layout')) {
+          // Only set placeholder while there's no rendered list yet
+          lpWrapper.innerHTML = '<div class="loading">Loading…</div>';
+        }
+        lpWrapper.style.display = 'block';
+      }
+    } else {
+      if (quotesList) quotesList.style.removeProperty('display');
+      if (lpWrapper) lpWrapper.style.display = 'none';
+    }
   } else {
     currentViewMode = 'cards';
     setQuotesPerPage(20);
-    // Restore Select button visibility for non-list-pane views
-    if (selectModeBtn) {
-      selectModeBtn.style.display = '';
-    }
+    if (selectModeBtn) selectModeBtn.style.display = '';
+    if (quotesList) quotesList.style.removeProperty('display');
+    if (lpWrapper) lpWrapper.style.display = 'none';
   }
 }
 
@@ -1535,7 +1607,7 @@ function displayQuotes(quotes) {
 
   if (quotes.length === 0) {
     // Show "empty" in quotesList, hide lpWrapper
-    quotesList.style.display = '';
+    quotesList.style.removeProperty('display');
     if (lpWrapper) lpWrapper.style.display = 'none';
     quotesList.innerHTML =
       '<div class="no-quotes">No quotes found. Add your first quote!</div>';
@@ -1545,12 +1617,12 @@ function displayQuotes(quotes) {
   // ── List-Pane view ──────────────────────────────────────────
   // Renders into #lpWrapper (a plain div, never a grid) — quotesList is hidden.
   if (currentViewMode === 'list-pane' && LIST_PANE_SUPPORTED_TYPES.has(currentNoteTypeFilter)) {
-    quotesList.style.display = 'none';
+    quotesList.style.setProperty('display', 'none', 'important');
     if (lpWrapper) {
       lpWrapper.style.display = 'block';
     } else {
       // lpWrapper missing — fall through to card grid as safety net
-      quotesList.style.display = '';
+      quotesList.style.removeProperty('display');
     }
     const currentSettings = getGlobalSettings();
     // Preserve selection across reloads (e.g. after save)
@@ -1574,7 +1646,7 @@ function displayQuotes(quotes) {
 
   // ── Card grid view (default) ────────────────────────────────
   if (lpWrapper) lpWrapper.style.display = 'none';
-  quotesList.style.display = '';
+  quotesList.style.removeProperty('display');
   const currentSettings = getGlobalSettings();
   
   // Use library for basic rendering (pass globalSettings for score display)

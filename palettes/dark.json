@@ -1,21 +1,21 @@
 {
-  "name": "Dark",
-  "description": "Dark charcoal background with purple/violet accents. Easy on the eyes at night.",
+  "name": "Midnight Ink",
+  "description": "Deep navy backgrounds with crisp cyan/teal accents. High contrast, easy on the eyes at night.",
   "colors": {
-    "appBg":         "#0d1117",
-    "menu":          "#161b22",
-    "card":          "#1c2128",
-    "cardHover":     "#262c36",
-    "inputBg":       "#161b22",
-    "inputBorder":   "#30363d",
-    "textColor":     "#e6edf3",
-    "header":        "#5b21b6",
-    "modalFooter":   "#21262d",
-    "button":        "#7c3aed",
-    "delete":        "#f85149",
-    "cancel":        "#8b949e",
-    "tag":           "#4c1d95",
-    "activeCounter": "#c084fc",
-    "totalCounter":  "#a78bfa"
+    "appBg":         "#0b1120",
+    "menu":          "#0f172a",
+    "card":          "#1e293b",
+    "cardHover":     "#263449",
+    "inputBg":       "#162032",
+    "inputBorder":   "#334155",
+    "textColor":     "#f1f5f9",
+    "header":        "#0e7490",
+    "modalFooter":   "#162032",
+    "button":        "#0891b2",
+    "delete":        "#f43f5e",
+    "cancel":        "#64748b",
+    "tag":           "#164e63",
+    "activeCounter": "#22d3ee",
+    "totalCounter":  "#67e8f9"
   }
 }
