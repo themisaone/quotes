@@ -1415,7 +1415,11 @@ function displayQuotes(quotes) {
   displayQuotesLib(quotes, currentNoteTypeFilter, getQuoteTypes, getTrainingTypes, currentSettings);
 
   // Apply app-specific settings and post-processing (per-type overrides respected)
-  const realSizeEnabled = getDisplaySetting('displayByRealSize', currentNoteTypeFilter);
+  // Training always uses row-ordered CSS Grid (never masonry column-count),
+  // because column-first ordering breaks chronological readability of training logs.
+  const realSizeEnabled = currentNoteTypeFilter === 'training'
+    ? false
+    : getDisplaySetting('displayByRealSize', currentNoteTypeFilter);
   applyQuoteSizingMode(realSizeEnabled);
 
   const imageLongEnabled = currentSettings?.displayImageQuotesLong === true;
