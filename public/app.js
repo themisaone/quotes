@@ -380,6 +380,7 @@ const quotesList = getElementByIdSafe("quotesList");
 const lpWrapper = getElementByIdSafe("lpWrapper");   // dedicated container for list-pane view
 const quoteCount = getElementByIdSafe("quoteCount");
 const viewModeToggleBtn = getElementByIdSafe("viewModeToggleBtn");
+const columnCountSelect = getElementByIdSafe("columnCountSelect");
 const modalTitle = getElementByIdSafe("modalTitle");
 
 // MIGRATED: Bulk import elements moved to bulkImport.js
@@ -791,6 +792,21 @@ function setupEventListeners() {
   const selectModeBtn = getElementByIdSafe("selectModeBtn");
   if (selectModeBtn) {
     selectModeBtn.addEventListener("click", toggleSelectionMode);
+  }
+
+  // Column count selector
+  if (columnCountSelect) {
+    const COLUMN_KEY = 'quotesColumnCount';
+    const saved = localStorage.getItem(COLUMN_KEY);
+    if (saved) {
+      columnCountSelect.value = saved;
+      document.documentElement.style.setProperty('--card-column-count', saved);
+    }
+    columnCountSelect.addEventListener('change', () => {
+      const val = columnCountSelect.value;
+      document.documentElement.style.setProperty('--card-column-count', val);
+      localStorage.setItem(COLUMN_KEY, val);
+    });
   }
 
   // View mode toggle (Cards ↔ List-Pane)

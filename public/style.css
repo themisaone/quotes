@@ -153,7 +153,7 @@ body {
 }
 
 .container {
-  max-width: 1400px;
+  max-width: 1800px;
   margin: 0 auto;
   padding: 2rem;
 }
@@ -275,6 +275,8 @@ header h1 {
 }
 
 @media (max-width: 768px) {
+  .column-count-select { display: none !important; }
+
   .sources-controls {
     flex-direction: column;
     align-items: stretch;
@@ -415,7 +417,7 @@ header h1 {
 
 .training-date-select:disabled {
   background-color: var(--bg-secondary, #f5f5f5);
-  color: var(--text-secondary);
+  color: var(--background);
   cursor: not-allowed;
   opacity: 0.6;
 }
@@ -1643,7 +1645,7 @@ textarea {
 /* Natural sizing mode - true masonry layout with columns */
 .quotes-list.natural-sizing {
   display: block;
-  column-count: 2;
+  column-count: var(--card-column-count, 2);
   column-gap: 1rem;
 }
 
@@ -1872,6 +1874,8 @@ body.selection-mode .quote-card::after {
 .btn-select-mode {
   background: var(--primary-color);
   color: white;
+  height: 2.5rem;
+  white-space: nowrap;
 }
 
 .btn-select-mode.active {
@@ -3044,7 +3048,8 @@ body.selection-mode .quote-card::after {
    ============================================ */
 @media (min-width: 769px) and (max-width: 1100px) {
   /* TABLET MODE: Hide side menu, show landing menu page instead */
-  
+  .column-count-select { display: none !important; }
+
   /* Hide the side menu completely */
   .side-menu {
     display: none !important;
@@ -6227,6 +6232,29 @@ body.selection-mode .quote-card::after {
 
 /* View-mode toggle button */
 /* View-mode toggle: icon-only button, same size as Back/Refresh, amber colour */
+.column-count-select {
+  height: 2.5rem;
+  padding: 0 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  text-align: center;
+  min-width: 3.5rem;
+  transition: border-color 0.2s;
+}
+.column-count-select:hover {
+  border-color: var(--primary-color);
+}
+.column-count-select option {
+  background: var(--surface);
+  color: var(--text-primary);
+}
+
 .view-mode-toggle {
   font-size: 1.3rem;
   padding: 0.5rem 0.6rem;
@@ -6263,8 +6291,8 @@ body.selection-mode .quote-card::after {
 /* Outer wrapper — two independent cards side by side */
 .lp-layout {
   display: grid;
-  grid-template-columns: 340px 1fr;
-  gap: 1.5rem;
+  grid-template-columns: 440px 1fr;
+  gap: 1rem;
   align-items: start;
 }
 
