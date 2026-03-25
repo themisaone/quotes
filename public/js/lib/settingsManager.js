@@ -311,6 +311,7 @@ function applySettingsToUI() {
   // Apply colors to CSS
   if (globalSettings.colors) {
     if (globalSettings.colors.button) applyButtonColor(globalSettings.colors.button);
+    if (globalSettings.colors.linkColor) applyLinkColor(globalSettings.colors.linkColor);
     if (globalSettings.colors.header) applyHeaderColor(globalSettings.colors.header);
     if (globalSettings.colors.tag) applyTagColor(globalSettings.colors.tag);
     if (globalSettings.colors.delete) applyDeleteColor(globalSettings.colors.delete);
@@ -325,6 +326,7 @@ function applySettingsToUI() {
   // Apply colors to color picker inputs
   const colorInputMappings = [
     { id: 'buttonColor', colorKey: 'button' },
+    { id: 'linkColorColor', colorKey: 'linkColor' },
     { id: 'headerColor', colorKey: 'header' },
     { id: 'tagColor', colorKey: 'tag' },
     { id: 'deleteColor', colorKey: 'delete' },
@@ -358,6 +360,7 @@ export function applyColorToCSS(colorType, colorValue) {
   // Apply to UI
   switch (colorType) {
     case 'button':        applyButtonColor(colorValue); break;
+    case 'linkColor':     applyLinkColor(colorValue); break;
     case 'header':        applyHeaderColor(colorValue); break;
     case 'tag':           applyTagColor(colorValue); break;
     case 'delete':        applyDeleteColor(colorValue); break;
@@ -783,6 +786,12 @@ function applyButtonColor(color) {
   document.documentElement.style.setProperty('--primary-hover', hoverColor);
 }
 
+function applyLinkColor(color) {
+  document.documentElement.style.setProperty('--link-color', color);
+  const hoverColor = darkenColor(color, 15);
+  document.documentElement.style.setProperty('--link-hover', hoverColor);
+}
+
 /**
  * Apply header color
  */
@@ -973,6 +982,7 @@ export {
   lightenColor,
   darkenColor,
   applyButtonColor,
+  applyLinkColor,
   applyHeaderColor,
   applyTagColor,
   applyDeleteColor,
@@ -1225,9 +1235,78 @@ export function initializeSettings(callbacks = {}) {
  * (Extracted to keep initializeSettings more readable)
  */
 function initializeColorCustomization() {
+  // ── Color pickers and their controls ─────────────────────────────────────
+  // Defined first so the palette loader can reference it directly (avoiding
+  // the race condition caused by dispatching 16 concurrent saveSettings calls).
+  const colorConfigs = [
+    { id: 'appBg',        default: '#f8fafc', apply: applyAppBgColor },
+    { id: 'menu',         default: '#2c3e50', apply: applyMenuColor },
+    { id: 'card',         default: '#ffffff', apply: applyCardColor },
+    { id: 'cardHover',    default: '#f0fff4', apply: applyCardHoverColor },
+    { id: 'inputBg',      default: '#ffffff', apply: applyInputBgColor },
+    { id: 'inputBorder',  default: '#e2e8f0', apply: applyInputBorderColor },
+    { id: 'textColor',    default: '#1e293b', apply: applyTextColor },
+    { id: 'header',       default: '#166534', apply: applyHeaderColor },
+    { id: 'modalFooter',  default: '#d4d4d4', apply: applyModalFooterColor },
+    { id: 'button',       default: '#1e40af', apply: applyButtonColor },
+    { id: 'linkColor',    default: '#1e40af', apply: applyLinkColor },
+    { id: 'delete',       default: '#ef4444', apply: applyDeleteColor },
+    { id: 'cancel',       default: '#6b7280', apply: applyCancelColor },
+    { id: 'tag',          default: '#2d6a4f', apply: applyTagColor },
+    { id: 'activeCounter',default: '#dc2626', apply: applyActiveCounterColor },
+    { id: 'totalCounter', default: '#047857', apply: applyTotalCounterColor },
+  ];
+
+  colorConfigs.forEach(config => {
+    const picker = getElementByIdSafe(`${config.id}Color`);
+    const text = getElementByIdSafe(`${config.id}ColorText`);
+    const resetBtn = getElementByIdSafe(`reset${config.id.charAt(0).toUpperCase() + config.id.slice(1)}Color`);
+
+    if (!picker) return;
+
+    // Load saved color from globalSettings
+    const savedColor = globalSettings?.colors?.[config.id] || config.default;
+    picker.value = savedColor;
+    if (text) text.value = savedColor;
+    config.apply(savedColor);
+
+    // Handle color picker changes
+    picker.addEventListener('input', (e) => {
+      const color = e.target.value;
+      if (text) text.value = color;
+      config.apply(color);
+      updateSetting(`colors.${config.id}`, color);
+    });
+
+    // Handle text input changes
+    if (text) {
+      text.addEventListener('change', (e) => {
+        const color = e.target.value;
+        if (/^#[0-9A-F]{6}$/i.test(color)) {
+          picker.value = color;
+          config.apply(color);
+          updateSetting(`colors.${config.id}`, color);
+        }
+      });
+    }
+
+    // Handle reset button
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => {
+        picker.value = config.default;
+        if (text) text.value = config.default;
+        config.apply(config.default);
+        updateSetting(`colors.${config.id}`, config.default);
+      });
+    }
+  });
+
   // ── Save / Load palette buttons ──────────────────────────────────────────
-  const savePaletteBtn  = getElementByIdSafe('savePaletteBtn');
-  const loadPaletteBtn  = getElementByIdSafe('loadPaletteBtn');
+  // The load handler uses colorConfigs directly to avoid the race condition
+  // that occurred when 16 concurrent updateSetting() calls all called
+  // saveSettings() and the last-to-arrive overwrote later colors with stale data.
+  const savePaletteBtn   = getElementByIdSafe('savePaletteBtn');
+  const loadPaletteBtn   = getElementByIdSafe('loadPaletteBtn');
   const paletteFileInput = getElementByIdSafe('paletteFileInput');
 
   if (savePaletteBtn) {
@@ -1256,7 +1335,7 @@ function initializeColorCustomization() {
       if (!file) return;
 
       const reader = new FileReader();
-      reader.onload = (ev) => {
+      reader.onload = async (ev) => {
         try {
           const palette = JSON.parse(ev.target.result);
           if (!palette.colors || typeof palette.colors !== 'object') {
@@ -1264,29 +1343,35 @@ function initializeColorCustomization() {
             return;
           }
 
-          // Apply each color by setting the picker value and firing its 'input' event.
-          // The existing event listener in initializeColorCustomization() will then call
-          // the correct apply() function (CSS variables) AND updateSetting() for us.
-          const validKeys = ['button','header','tag','delete','cancel','activeCounter','totalCounter','menu','appBg','modalFooter'];
+          // Apply every color synchronously via colorConfigs, update globalSettings,
+          // then do ONE saveSettings call — no race condition possible.
           let applied = 0;
-          for (const key of validKeys) {
-            const color = palette.colors[key];
+          for (const config of colorConfigs) {
+            const color = palette.colors[config.id];
             if (!color) continue;
-            const picker = document.getElementById(`${key}Color`);
-            const text   = document.getElementById(`${key}ColorText`);
-            if (picker) {
-              picker.value = color;
-              picker.dispatchEvent(new Event('input', { bubbles: true }));
+
+            // Apply CSS variable immediately
+            config.apply(color);
+
+            // Update picker + text display
+            const picker = document.getElementById(`${config.id}Color`);
+            const text   = document.getElementById(`${config.id}ColorText`);
+            if (picker) picker.value = color;
+            if (text)   text.value   = color;
+
+            // Accumulate into globalSettings (no save yet)
+            if (globalSettings) {
+              if (!globalSettings.colors) globalSettings.colors = {};
+              globalSettings.colors[config.id] = color;
             }
-            if (text) text.value = color;
             applied++;
           }
 
+          // Single atomic save for all color changes
+          if (applied > 0) await saveSettings(globalSettings);
+
           const name = palette.name ? `"${palette.name}"` : 'palette';
-          // Show brief confirmation; settings are already saved by the dispatched events
-          setTimeout(() => {
-            alert(`✅ Loaded ${name} — ${applied} colors applied.`);
-          }, 50);
+          alert(`✅ Loaded ${name} — ${applied} colors applied.`);
         } catch {
           alert('Could not read palette file — make sure it is a valid JSON file.');
         }
@@ -1295,67 +1380,4 @@ function initializeColorCustomization() {
       reader.readAsText(file);
     });
   }
-
-  // ── Color pickers and their controls ────────────────────────────────────
-  const colorConfigs = [
-    { id: 'appBg',        default: '#f8fafc', apply: applyAppBgColor },
-    { id: 'menu',         default: '#2c3e50', apply: applyMenuColor },
-    { id: 'card',         default: '#ffffff', apply: applyCardColor },
-    { id: 'cardHover',    default: '#f0fff4', apply: applyCardHoverColor },
-    { id: 'inputBg',      default: '#ffffff', apply: applyInputBgColor },
-    { id: 'inputBorder',  default: '#e2e8f0', apply: applyInputBorderColor },
-    { id: 'textColor',    default: '#1e293b', apply: applyTextColor },
-    { id: 'header',       default: '#166534', apply: applyHeaderColor },
-    { id: 'modalFooter',  default: '#d4d4d4', apply: applyModalFooterColor },
-    { id: 'button',       default: '#1e40af', apply: applyButtonColor },
-    { id: 'delete',       default: '#ef4444', apply: applyDeleteColor },
-    { id: 'cancel',       default: '#6b7280', apply: applyCancelColor },
-    { id: 'tag',          default: '#2d6a4f', apply: applyTagColor },
-    { id: 'activeCounter',default: '#dc2626', apply: applyActiveCounterColor },
-    { id: 'totalCounter', default: '#047857', apply: applyTotalCounterColor },
-  ];
-  
-  colorConfigs.forEach(config => {
-    const picker = getElementByIdSafe(`${config.id}Color`);
-    const text = getElementByIdSafe(`${config.id}ColorText`);
-    const resetBtn = getElementByIdSafe(`reset${config.id.charAt(0).toUpperCase() + config.id.slice(1)}Color`);
-    
-    if (!picker) return;
-    
-    // Load saved color from globalSettings
-    const savedColor = globalSettings?.colors?.[config.id] || config.default;
-    picker.value = savedColor;
-    if (text) text.value = savedColor;
-    config.apply(savedColor);
-    
-    // Handle color picker changes
-    picker.addEventListener('input', (e) => {
-      const color = e.target.value;
-      if (text) text.value = color;
-      config.apply(color);
-      updateSetting(`colors.${config.id}`, color);
-    });
-    
-    // Handle text input changes
-    if (text) {
-      text.addEventListener('change', (e) => {
-        const color = e.target.value;
-        if (/^#[0-9A-F]{6}$/i.test(color)) {
-          picker.value = color;
-          config.apply(color);
-          updateSetting(`colors.${config.id}`, color);
-        }
-      });
-    }
-    
-    // Handle reset button
-    if (resetBtn) {
-      resetBtn.addEventListener('click', () => {
-        picker.value = config.default;
-        if (text) text.value = config.default;
-        config.apply(config.default);
-        updateSetting(`colors.${config.id}`, config.default);
-      });
-    }
-  });
 }

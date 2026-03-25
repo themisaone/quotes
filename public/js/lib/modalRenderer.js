@@ -28,6 +28,7 @@
  */
 
 import { getNoteTypeConfig } from './noteTypes.js';
+import { normalizeTextColors } from './utils.js';
 
 /**
  * Format metadata display (created/updated timestamps)
@@ -163,10 +164,13 @@ export function setCommonFields(note, elements, quillEditor) {
   if (quillEditor) {
     if (note.note_text) {
       if (note.note_text.includes('<')) {
+        // Strip near-black inline colors before loading so the palette's
+        // --text-primary variable is respected in all themes (dark / light).
+        const normalizedText = normalizeTextColors(note.note_text);
         // Use dangerouslyPasteHTML so Quill converts HTML → Delta properly.
         // Direct root.innerHTML assignment causes Quill's MutationObserver to
         // sanitize away unsupported tags (e.g. <font>) and leaves the editor empty.
-        quillEditor.clipboard.dangerouslyPasteHTML(note.note_text);
+        quillEditor.clipboard.dangerouslyPasteHTML(normalizedText);
       } else {
         quillEditor.setText(note.note_text);
       }

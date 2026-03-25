@@ -7,6 +7,8 @@
 :root {
   --primary-color: #1e40af;
   --primary-hover: #1e3a8a;
+  --link-color: #1e40af;
+  --link-hover: #1e3a8a;
   --secondary-color: #64748b;
   --accent: #059669;
   --accent-hover: #047857;
@@ -705,21 +707,14 @@ h2 {
   box-shadow: var(--shadow-lg);
 }
 
-.btn-secondary {
-  background: var(--primary-color);
-  color: white;
-}
-
-.btn-secondary:hover {
-  background: var(--primary-hover);
-}
-
-/* Cancel button styling */
+/* Secondary / Cancel button styling — uses --cancel-color from palette */
+.btn-secondary,
 .btn-cancel {
   background: var(--cancel-color);
   color: white;
 }
 
+.btn-secondary:hover,
 .btn-cancel:hover {
   background: var(--cancel-hover);
 }
@@ -1489,45 +1484,16 @@ textarea {
 }
 
 /* Author modal - white cancel button */
-#authorModal .form-actions .btn-secondary {
-  background: white;
-  color: #374151; /* Dark gray text */
-  border: 1px solid #d1d5db; /* Light gray border */
-}
-
-#authorModal .form-actions .btn-secondary:hover {
-  background: #f9fafb; /* Very light gray on hover */
-}
-
-/* Source modal - white cancel button */
-#sourceModal .form-actions .btn-secondary {
-  background: white;
-  color: #374151; /* Dark gray text */
-  border: 1px solid #d1d5db; /* Light gray border */
-}
-
-#sourceModal .form-actions .btn-secondary:hover {
-  background: #f9fafb; /* Very light gray on hover */
-}
-
-/* Quote/Note modal - white cancel button */
-#quoteModal .form-actions .btn-secondary {
-  background: white;
-  color: #374151; /* Dark gray text */
-  border: 1px solid #d1d5db; /* Light gray border */
-}
-
-#quoteModal .form-actions .btn-secondary:hover {
-  background: #f9fafb; /* Very light gray on hover */
-}
+/* Modal cancel buttons inherit .btn-secondary → var(--cancel-color); no override needed */
 
 /* Search Section */
-.search-section {
+ .search-section {
   background: var(--surface);
   padding: 2rem;
   border-radius: 12px;
   margin-bottom: 2rem;
   box-shadow: var(--shadow);
+  border: 2px solid var(--border);
 }
 
 .search-grid {
@@ -1614,6 +1580,7 @@ textarea {
   margin: 0 0 1rem 0;
   border-radius: 8px;
   box-shadow: var(--shadow);
+  border: 2px solid var(--border);
 }
 
 .quotes-section-header h2 {
@@ -2239,12 +2206,12 @@ body.selection-mode .quote-card::after {
 .training-meta-top .meta-item {
   font-size: 1.5rem;
   font-weight: 600;
-  color: var(--primary-color);
+  color: var(--link-color);
 }
 .training-meta-top .meta-item-combined {
   font-size: 1.5rem;
   font-weight: 600;
-  color: var(--primary-color);
+  color: var(--link-color);
 }
 
 /* Dash separator — equal spacing on both sides, matching strip color/weight */
@@ -2253,13 +2220,13 @@ body.selection-mode .quote-card::after {
   font-weight: 600;
   font-style: normal;
   font-size: inherit;
-  color: var(--primary-color);
+  color: var(--link-color);
 }
 
 /* Date value inside training strip — match training type weight & color */
 .training-meta-top .meta-value {
   font-weight: 600;
-  color: var(--primary-color);
+  color: var(--link-color);
 }
 
 .quote-metadata-left {
@@ -2348,7 +2315,7 @@ body.selection-mode .quote-card::after {
 .quote-text h2 {
   font-size: 1.3em;
   background: none !important;
-  color: var(--primary-color);
+  color: var(--link-color);
 }
 
 .quote-text h3 {
@@ -2449,7 +2416,7 @@ body.selection-mode .quote-card::after {
   background: none !important;
   padding: 0 !important;
   margin: 0.5em 0 !important;
-  color: var(--primary-color);
+  color: var(--link-color);
 }
 
 /* Inline images inside Quill editor */
@@ -2491,7 +2458,7 @@ body.selection-mode .quote-card::after {
   display: block;
   background: none;
   border: none;
-  color: var(--primary-color);
+  color: var(--link-color);
   font-size: 0.875rem;
   cursor: pointer;
   padding: 0.1rem 0;
@@ -2504,7 +2471,7 @@ body.selection-mode .quote-card::after {
 }
 
 .expand-btn:hover {
-  color: var(--primary-hover);
+  color: var(--link-hover);
   text-decoration: underline;
 }
 
@@ -2537,14 +2504,14 @@ body.selection-mode .quote-card::after {
 }
 
 .meta-value.clickable {
-  color: var(--primary-color);
+  color: var(--link-color);
   cursor: pointer;
   text-decoration: underline;
   transition: color 0.2s;
 }
 
 .meta-value.clickable:hover {
-  color: var(--primary-hover);
+  color: var(--link-hover);
 }
 
 /* Image Upload */
@@ -3795,6 +3762,7 @@ body.selection-mode .quote-card::after {
   border-radius: 12px;
   padding: 0.35rem;
   box-shadow: var(--shadow);
+  border: 2px solid var(--border);
   transition: all 0.2s;
   cursor: pointer;
   display: flex;
@@ -3812,7 +3780,7 @@ body.selection-mode .quote-card::after {
 
 .author-card:hover,
 .source-card:hover {
-  background: #f0f5ff;
+  background: var(--card-hover-bg);
   transform: translateY(-4px);
   box-shadow: var(--shadow-lg);
 }
@@ -3887,13 +3855,13 @@ body.selection-mode .quote-card::after {
 }
 
 .card-author a {
-  color: var(--primary-color);
+  color: var(--link-color);
   text-decoration: none;
   transition: color 0.2s;
 }
 
 .card-author a:hover {
-  color: var(--primary-hover);
+  color: var(--link-hover);
   text-decoration: underline;
 }
 
@@ -3906,10 +3874,11 @@ body.selection-mode .quote-card::after {
 }
 
 .tag-card {
-  background: white;
+  background: var(--surface);
   border-radius: 12px;
   padding: 1.5rem 2rem;
   box-shadow: var(--shadow);
+  border: 2px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -3918,7 +3887,7 @@ body.selection-mode .quote-card::after {
 }
 
 .tag-card:hover {
-  background: #f0f5ff;
+  background: var(--card-hover-bg);
   transform: translateX(5px);
   box-shadow: var(--shadow-lg);
 }
@@ -4190,9 +4159,9 @@ body.selection-mode .quote-card::after {
 
 .btn-secondary {
   padding: 10px 20px;
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--text-primary);
+  border: none;
+  background: var(--cancel-color);
+  color: white;
   border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
@@ -4200,7 +4169,7 @@ body.selection-mode .quote-card::after {
 }
 
 .btn-secondary:hover {
-  background: var(--bg-secondary);
+  background: var(--cancel-hover);
 }
 
 .btn-primary {
@@ -4273,7 +4242,7 @@ body.selection-mode .quote-card::after {
 
 /* Source name as link */
 .card-link {
-  color: var(--primary-color);
+  color: var(--link-color);
   text-decoration: none;
   cursor: pointer;
   transition: all 0.2s;
@@ -4282,7 +4251,7 @@ body.selection-mode .quote-card::after {
 
 .card-link:hover {
   text-decoration: underline;
-  color: var(--primary-hover);
+  color: var(--link-hover);
 }
 
 /* Tag card updates */
@@ -4292,14 +4261,14 @@ body.selection-mode .quote-card::after {
   justify-content: space-between;
   padding: 12px 16px;
   border-radius: 8px;
-  background: white;
+  background: var(--surface);
   cursor: pointer;
   transition: all 0.2s;
-  border: 1px solid var(--border);
+  border: 2px solid var(--border);
 }
 
 .tag-card:hover {
-  background: var(--hover-bg);
+  background: var(--card-hover-bg);
   transform: translateX(4px);
 }
 
@@ -4499,8 +4468,8 @@ body.selection-mode .quote-card::after {
 /* ============= TAG OPERATIONS PANEL ============= */
 
 .tag-operations-panel {
-  background: white;
-  border: 1px solid var(--border);
+  background: var(--surface);
+  border: 2px solid var(--border);
   border-radius: 12px;
   padding: 24px;
   margin-bottom: 24px;
@@ -4514,8 +4483,8 @@ body.selection-mode .quote-card::after {
 }
 
 .operation-card {
-  background: #e8f5e9;
-  border: 1px solid #c8e6c9;
+  background: var(--card-hover-bg);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 16px;
@@ -4527,8 +4496,8 @@ body.selection-mode .quote-card::after {
 
 /* Search Tags Panel */
 .search-tags-panel {
-  background: white;
-  border: 1px solid var(--border);
+  background: var(--surface);
+  border: 2px solid var(--border);
   border-radius: 12px;
   padding: 24px;
   margin-bottom: 24px;
@@ -6195,13 +6164,12 @@ body.selection-mode .quote-card::after {
 .confirm-btn:active { transform: scale(0.97); }
 
 .confirm-btn-cancel {
-  background: #f1f5f9;
-  color: var(--text-secondary);
-  border: 1px solid var(--border);
+  background: var(--cancel-color);
+  color: white;
+  border: none;
 }
 .confirm-btn-cancel:hover {
-  background: #e2e8f0;
-  color: var(--text-primary);
+  background: var(--cancel-hover);
 }
 
 .confirm-btn-ok {
@@ -6290,7 +6258,7 @@ body.selection-mode .quote-card::after {
 .lp-list-header-type {
   font-size: 0.9rem;
   font-weight: 600;
-  color: var(--primary-color);
+  color: var(--link-color);
 }
 .lp-list-header-count {
   font-size: 0.8rem;
@@ -6334,7 +6302,7 @@ body.selection-mode .quote-card::after {
 .lp-row-date {
   font-size: 0.85rem;
   font-weight: 700;
-  color: var(--primary-color);
+  color: var(--link-color);
   white-space: nowrap;
   flex: 1 1 auto; /* expands to push badges to the right */
 }
@@ -6346,7 +6314,7 @@ body.selection-mode .quote-card::after {
   padding: 0.1rem 0.45rem;
   border-radius: 4px;
   background: transparent; 
-  color: var(--primary-color);
+  color: var(--link-color);
   white-space: nowrap;
 }
 .lp-row.lp-selected .lp-row-badge {

@@ -12,6 +12,7 @@
     "header":        "#1e3a5f",
     "modalFooter":   "#bfdbfe",
     "button":        "#1d4ed8",
+    "linkColor":     "#1e40af",
     "delete":        "#dc2626",
     "cancel":        "#64748b",
     "tag":           "#334155",

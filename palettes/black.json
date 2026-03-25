@@ -1,20 +1,22 @@
 {
   "name": "My Palette",
-  "exportedAt": "2026-03-24T17:55:16.768Z",
+  "exportedAt": "2026-03-25T13:48:33.040Z",
   "colors": {
-    "button": "#3d8f69",
-    "header": "#0e7490",
-    "tag": "#563434",
-    "delete": "#f43f5e",
-    "cancel": "#64748b",
-    "activeCounter": "#22d3ee",
-    "totalCounter": "#67e8f9",
+    "button": "#386e53",
+    "header": "#58486f",
+    "tag": "#885f34",
+    "delete": "#ef4444",
+    "cancel": "#6b7280",
+    "activeCounter": "#dc2626",
+    "totalCounter": "#2d6a4f",
     "menu": "#000000",
-    "appBg": "#262627",
-    "modalFooter": "#162032",
-    "inputBg": "#434342",
-    "card": "#616161",
-    "textColor": "#faf9f9",
-    "cardHover": "#566499"
+    "appBg": "#29292a",
+    "modalFooter": "#3c3d3e",
+    "inputBg": "#3c3d3e",
+    "card": "#1e1f20",
+    "textColor": "#ffffff",
+    "cardHover": "#404a43",
+    "inputBorder": "#5a5b5c",
+    "linkColor": "#16dba5"
   }
 }

@@ -28,7 +28,7 @@
  * - No hardcoded values - everything configurable!
  */
 
-import { escapeHtml, resolveAttachmentUrl } from './utils.js';
+import { escapeHtml, resolveAttachmentUrl, normalizeTextColors } from './utils.js';
 import { getNoteTypeBadgeHtml } from './noteTypes.js';
 
 /**
@@ -333,7 +333,7 @@ export function createQuoteCard(note, currentNoteTypeFilter, getTrainingTypes, g
                     <div class="quote-left-column">
                         ${noteScoreLine}
                         <div class="quote-text-wrapper">
-                            <div class="quote-text ${isLong ? "collapsible" : ""}" id="${quoteId}" data-expanded="false">${note.note_text}</div>
+                            <div class="quote-text ${isLong ? "collapsible" : ""}" id="${quoteId}" data-expanded="false">${normalizeTextColors(note.note_text)}</div>
                             ${isLong ? `<button class="expand-btn" id="${expandBtnId}" onclick="event.stopPropagation(); toggleQuoteExpand('${note.id}')">▼ Show more</button>` : ""}
                         </div>
                     </div>
