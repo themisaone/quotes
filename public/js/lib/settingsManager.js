@@ -175,7 +175,13 @@ export function renderPerTypeOverrides(containerId, settingKey, globalKey, callb
  * Migrate localStorage settings to file (one-time)
  */
 async function migrateLocalStorageToFile() {
-  // Check if localStorage has any settings
+  // Skip if this one-time migration has already completed.
+  // Without this guard the migration re-runs on every page load and
+  // overwrites palette colors saved in settings.json with stale
+  // localStorage values (e.g. old buttonColor / appBgColor entries).
+  if (localStorage.getItem('settingsMigratedToFile') === 'done') return;
+
+  // Check if localStorage has any settings worth migrating
   const hasLocalSettings = 
     localStorage.getItem('downscaleQuoteImages') !== null ||
     localStorage.getItem('externalStorageThreshold') !== null ||
@@ -189,7 +195,11 @@ async function migrateLocalStorageToFile() {
     localStorage.getItem('displayScoreInCards') !== null ||
     localStorage.getItem('buttonColor') !== null;
   
-  if (!hasLocalSettings) return;
+  if (!hasLocalSettings) {
+    // Nothing to migrate; mark as done so we never check again.
+    localStorage.setItem('settingsMigratedToFile', 'done');
+    return;
+  }
   
   console.log('🔄 Migrating localStorage settings to file...');
   
@@ -267,7 +277,9 @@ async function migrateLocalStorageToFile() {
   
   if (success) {
     console.log('✅ Migration complete - settings saved to file');
-    // Keep localStorage for now (don't break if offline)
+    // Mark migration as complete so it never re-runs and never
+    // overwrites palette colors with stale localStorage values.
+    localStorage.setItem('settingsMigratedToFile', 'done');
   }
 }
 
@@ -308,19 +320,27 @@ function applySettingsToUI() {
     thresholdSelect.value = globalSettings.externalStorageThreshold;
   }
   
-  // Apply colors to CSS
+  // Apply ALL saved colors to CSS on every page load.
+  // Every key that exists in colorConfigs must also appear here so that
+  // a hard-refresh restores the full palette without needing to open Settings.
   if (globalSettings.colors) {
-    if (globalSettings.colors.button) applyButtonColor(globalSettings.colors.button);
-    if (globalSettings.colors.linkColor) applyLinkColor(globalSettings.colors.linkColor);
-    if (globalSettings.colors.header) applyHeaderColor(globalSettings.colors.header);
-    if (globalSettings.colors.tag) applyTagColor(globalSettings.colors.tag);
-    if (globalSettings.colors.delete) applyDeleteColor(globalSettings.colors.delete);
-    if (globalSettings.colors.cancel) applyCancelColor(globalSettings.colors.cancel);
-    if (globalSettings.colors.activeCounter) applyActiveCounterColor(globalSettings.colors.activeCounter);
-    if (globalSettings.colors.totalCounter) applyTotalCounterColor(globalSettings.colors.totalCounter);
-    if (globalSettings.colors.menu) applyMenuColor(globalSettings.colors.menu);
-    if (globalSettings.colors.appBg) applyAppBgColor(globalSettings.colors.appBg);
-    if (globalSettings.colors.modalFooter) applyModalFooterColor(globalSettings.colors.modalFooter);
+    const c = globalSettings.colors;
+    if (c.appBg)         applyAppBgColor(c.appBg);
+    if (c.menu)          applyMenuColor(c.menu);
+    if (c.card)          applyCardColor(c.card);
+    if (c.cardHover)     applyCardHoverColor(c.cardHover);
+    if (c.inputBg)       applyInputBgColor(c.inputBg);
+    if (c.inputBorder)   applyInputBorderColor(c.inputBorder);
+    if (c.textColor)     applyTextColor(c.textColor);
+    if (c.header)        applyHeaderColor(c.header);
+    if (c.modalFooter)   applyModalFooterColor(c.modalFooter);
+    if (c.button)        applyButtonColor(c.button);
+    if (c.linkColor)     applyLinkColor(c.linkColor);
+    if (c.delete)        applyDeleteColor(c.delete);
+    if (c.cancel)        applyCancelColor(c.cancel);
+    if (c.tag)           applyTagColor(c.tag);
+    if (c.activeCounter) applyActiveCounterColor(c.activeCounter);
+    if (c.totalCounter)  applyTotalCounterColor(c.totalCounter);
   }
   
   // Apply colors to color picker inputs
@@ -796,10 +816,7 @@ function applyLinkColor(color) {
  * Apply header color
  */
 function applyHeaderColor(color) {
-  const modalHeaders = document.querySelectorAll('.modal-header');
-  modalHeaders.forEach(header => {
-    header.style.backgroundColor = color;
-  });
+  document.documentElement.style.setProperty('--header-color', color);
 }
 
 /**
@@ -813,18 +830,8 @@ function applyTagColor(color) {
  * Apply delete button color
  */
 function applyDeleteColor(color) {
-  const deleteButtons = document.querySelectorAll('.btn-danger');
-  deleteButtons.forEach(btn => {
-    btn.style.backgroundColor = color;
-    // Calculate darker hover color
-    const hoverColor = darkenColor(color, 10);
-    btn.addEventListener('mouseenter', () => {
-      btn.style.backgroundColor = hoverColor;
-    });
-    btn.addEventListener('mouseleave', () => {
-      btn.style.backgroundColor = color;
-    });
-  });
+  document.documentElement.style.setProperty('--delete-color', color);
+  document.documentElement.style.setProperty('--delete-hover', darkenColor(color, 10));
 }
 
 /**

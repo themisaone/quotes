@@ -4310,7 +4310,7 @@ function updateSelectedTagsDisplay() {
   }
   
   container.innerHTML = selectedTagsArray.map(tag => `
-    <span class="tag-removable" style="background: var(--tag-color); color: white; padding: 0.35rem 0.6rem; border-radius: 12px; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+    <span class="tag-removable" style="background: var(--tag-color); color: white; padding: 0.35rem 0.6rem; border-radius: 12px; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer;">
       ${escapeHtml(tag)}
       <span onclick="removeTag('${escapeHtml(tag).replace(/'/g, "\\'")}')" style="font-weight: bold; cursor: pointer;">&times;</span>
     </span>
