@@ -142,28 +142,46 @@ export function generateId() {
  * Return true when a CSS color string is "near-black" (≤ 40/255 per channel).
  * Handles: black, #000, #000000, rgb(0,0,0), rgba(0,0,0,1), hsl(0,0%,0%).
  */
+// Named CSS colors that are effectively "dark text" from Evernote imports
+const DARK_NAMED_COLORS = new Set([
+  'black', 'darkslategray', 'darkslategrey', 'dimgray', 'dimgrey',
+  'verydarkgray', 'darkgray', 'darkgrey', 'gray', 'grey',
+  'slategray', 'slategrey', 'lightslategray', 'lightslategrey',
+]);
+
 function isNearBlack(colorStr) {
   const s = (colorStr || '').trim().toLowerCase();
-  if (!s || s === 'black') return true;
+  if (!s) return false;
 
-  // #rgb  e.g. #000 #111
+  // Named dark colours
+  if (DARK_NAMED_COLORS.has(s)) return true;
+
+  // Threshold: strip any colour whose perceived brightness is ≤ 100/255 (~39%).
+  // This removes near-blacks like #333, rgb(51,51,51) etc. while keeping
+  // intentional saturated colours (red highlights, blue links, green badges…).
+  const THRESHOLD = 100;
+
+  // #rgb  e.g. #000 #111 #333
   const h3 = s.match(/^#([0-9a-f])([0-9a-f])([0-9a-f])$/);
   if (h3) {
-    return [h3[1], h3[2], h3[3]].every(c => parseInt(c, 16) * 17 <= 40);
+    const [r, g, b] = h3.slice(1).map(c => parseInt(c, 16) * 17);
+    return 0.299 * r + 0.587 * g + 0.114 * b <= THRESHOLD;
   }
-  // #rrggbb  e.g. #000000 #1a1a1a
+  // #rrggbb  e.g. #000000 #1a1a1a #333333
   const h6 = s.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/);
   if (h6) {
-    return [h6[1], h6[2], h6[3]].every(c => parseInt(c, 16) <= 40);
+    const [r, g, b] = h6.slice(1).map(c => parseInt(c, 16));
+    return 0.299 * r + 0.587 * g + 0.114 * b <= THRESHOLD;
   }
   // rgb(r,g,b) / rgba(r,g,b,a)
   const rgb = s.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
   if (rgb) {
-    return [rgb[1], rgb[2], rgb[3]].every(c => parseInt(c) <= 40);
+    const [r, g, b] = rgb.slice(1, 4).map(Number);
+    return 0.299 * r + 0.587 * g + 0.114 * b <= THRESHOLD;
   }
-  // hsl(h, 0%, very-low-lightness%)
+  // hsl(h, s%, l%)
   const hsl = s.match(/^hsla?\(\s*[\d.]+\s*,\s*[\d.]+%\s*,\s*([\d.]+)%/);
-  if (hsl) return parseFloat(hsl[1]) <= 15;
+  if (hsl) return parseFloat(hsl[1]) <= 40;
 
   return false;
 }

@@ -915,17 +915,7 @@ function applyTextColor(color) {
 }
 
 function applyModalFooterColor(color) {
-  // Apply to Author, Source, and Quote/Note modal footers
-  const style = document.getElementById('modalFooterStyle') || document.createElement('style');
-  style.id = 'modalFooterStyle';
-  style.textContent = `
-    #authorModal .form-actions { background: ${color} !important; }
-    #sourceModal .form-actions { background: ${color} !important; }
-    #quoteModal .form-actions { background: ${color} !important; }
-  `;
-  if (!style.parentNode) {
-    document.head.appendChild(style);
-  }
+  document.documentElement.style.setProperty('--modal-footer-bg', color);
 }
 
 /**

@@ -25,6 +25,7 @@
   --side-menu-width: 280px;
   --tag-color: #2d6a4f;
   --header-color: #166534;
+  --modal-footer-bg: #fde68a;
   --delete-color: #ef4444;
   --delete-hover: #dc2626;
   --cancel-color: #6b7280;
@@ -153,16 +154,15 @@ body {
 }
 
 .container {
-  max-width: 1800px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 0.5rem 1rem;
 }
 
 header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 3rem;
+  margin-bottom: 1rem;
   padding-bottom: 1.5rem;
   border-bottom: 2px solid var(--border);
   flex-wrap: wrap;
@@ -1067,7 +1067,7 @@ h2 {
 
 /* Modal body padding */
 .modal-body {
-  padding: 1rem 2rem 2rem 2rem;
+  padding: 1rem 1rem 1rem 1rem;
   background-color: var(--surface);
   border-radius: 0 0 12px 12px; /* Round bottom corners */
   overflow-y: auto; /* Allow scrolling within modal body */
@@ -1172,9 +1172,9 @@ h2 {
 .suggestions {
   position: absolute;
   top: 100%;
-  left: 0;
+  left: 80px;
   right: 0;
-  background: white;
+  background: var(--surface);
   color: var(--text-primary);
   border: 1px solid var(--border);
   border-top: none;
@@ -1204,7 +1204,7 @@ h2 {
 }
 
 .autocomplete-item:hover {
-  background: #f0f5ff;
+  background: var(--card-hover-bg);
 }
 
 .autocomplete-item.active {
@@ -1243,7 +1243,7 @@ h2 {
 
 label {
   display: block;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
   font-weight: 500;
   color: var(--text-primary);
 }
@@ -1491,28 +1491,14 @@ textarea {
   margin-top: 1.5rem; /* Add spacing before button row */
 }
 
-/* Author modal - yellowish footer bar with buttons */
-#authorModal .form-actions {
-  background: #fde68a; /* Lighter yellowish color (amber-200) */
-  margin: 1.5rem -2rem -2rem -2rem; /* Extend to modal edges */
-  padding: 1rem 2rem; /* Match modal body padding */
-  border-radius: 0 0 12px 12px; /* Round bottom corners */
-}
-
-/* Source modal - yellowish footer bar with buttons */
-#sourceModal .form-actions {
-  background: #fde68a; /* Lighter yellowish color (amber-200) */
-  margin: 1.5rem -2rem -2rem -2rem; /* Extend to modal edges */
-  padding: 1rem 2rem; /* Match modal body padding */
-  border-radius: 0 0 12px 12px; /* Round bottom corners */
-}
-
-/* Quote/Note modal - yellowish footer bar with buttons */
+/* Shared yellowish footer bar — negative margins must match .modal-body padding (1rem) */
+#authorModal .form-actions,
+#sourceModal .form-actions,
 #quoteModal .form-actions {
-  background: #fde68a; /* Lighter yellowish color (amber-200) */
-  margin: 1.5rem -2rem -2rem -2rem; /* Extend to modal edges */
-  padding: 1rem 2rem; /* Match modal body padding */
-  border-radius: 0 0 12px 12px; /* Round bottom corners */
+  background: var(--modal-footer-bg);
+  margin: 1.5rem -1rem -1rem -1rem; /* exactly cancels the 1rem modal-body padding */
+  padding: 1rem;
+  border-radius: 0 0 12px 12px;
 }
 
 /* Author modal - white cancel button */
@@ -1521,9 +1507,9 @@ textarea {
 /* Search Section */
  .search-section {
   background: var(--surface);
-  padding: 2rem;
+  padding: 1.5rem;
   border-radius: 12px;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
   box-shadow: var(--shadow);
   border: 2px solid var(--border);
 }
@@ -1608,7 +1594,7 @@ textarea {
   align-items: center;
   justify-content: space-between;
   background: var(--surface);
-  padding: 0.6rem 1.5rem;
+  padding: 1.0rem 1.5rem;
   margin: 0 0 1rem 0;
   border-radius: 8px;
   box-shadow: var(--shadow);
@@ -2371,7 +2357,7 @@ body.selection-mode .quote-card::after {
   border-radius: 8px;
   overflow: hidden; /* Prevent container from expanding */
   box-sizing: border-box;
-  background: white;
+  background: var(--input-bg);
 }
 
 .ql-container {
@@ -2411,6 +2397,24 @@ body.selection-mode .quote-card::after {
 .ql-toolbar.ql-snow button:hover .ql-fill,
 .ql-toolbar.ql-snow button.ql-active .ql-fill {
   fill: var(--primary-color) !important;
+}
+
+/* Picker dropdown panel (Heading, Font, Size selectors) */
+.ql-toolbar.ql-snow .ql-picker-options {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
+  padding: 4px 0 !important;
+}
+.ql-toolbar.ql-snow .ql-picker-options .ql-picker-item {
+  color: var(--text-primary) !important;
+  padding: 4px 10px !important;
+}
+.ql-toolbar.ql-snow .ql-picker-options .ql-picker-item:hover,
+.ql-toolbar.ql-snow .ql-picker-options .ql-picker-item.ql-selected {
+  color: var(--primary-color) !important;
+  background: var(--card-hover-bg) !important;
 }
 
 .ql-container.ql-snow {
@@ -3195,7 +3199,7 @@ body.selection-mode .quote-card::after {
   }
   
   .tablet-menu-btn {
-    background: linear-gradient(135deg, #178e26 0%, #6b6364 100%);
+    background: linear-gradient(135deg, #414c42 0%, #6b6364 100%);
     border: none;
     border-radius: 12px;
     padding: 0.5rem 1.5rem;
@@ -3693,6 +3697,24 @@ body.selection-mode .quote-card::after {
   color: #bbb;
 }
 
+/* Attachment viewer (PDF / video / audio) */
+.viewer-header {
+  background: var(--menu);
+  color: white;
+}
+.viewer-header-text {
+  color: white;
+}
+.viewer-close {
+  color: white !important;
+}
+.viewer-pdf-container {
+  background: var(--surface);
+}
+.viewer-media-container {
+  background: var(--surface);
+}
+
 /* Fullscreen Editor */
 .quote-editor-group.fullscreen {
   position: fixed;
@@ -3701,7 +3723,8 @@ body.selection-mode .quote-card::after {
   right: 0;
   bottom: 0;
   z-index: 10000;
-  background: white;
+  background: var(--surface);
+  color: var(--text-primary);
   padding: 2rem;
   margin: 0;
   overflow-y: auto; /* The fullscreen panel itself scrolls */
@@ -3735,10 +3758,11 @@ body.selection-mode .quote-card::after {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 2rem;
-  padding: 1.5rem;
+  margin-top: 0rem;
+  padding: 1rem;
   background: var(--surface);
   border-radius: 12px;
+  border: 2px solid var(--border);
   box-shadow: var(--shadow);
 }
 
@@ -3944,7 +3968,7 @@ body.selection-mode .quote-card::after {
   font-size: 1rem;
   color: var(--text-secondary);
   font-weight: 500;
-  background: var(--background);
+  background:  var(--input-bg);
   padding: 0.5rem 1rem;
   border-radius: 20px;
 }
@@ -5556,7 +5580,7 @@ body.selection-mode .quote-card::after {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  background: white;
+  background-color: var(--input-bg);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 0.4rem 0.6rem;
@@ -5576,7 +5600,7 @@ body.selection-mode .quote-card::after {
   padding: 0.3rem 0.4rem;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: white;
+  background-color: var(--background);
   cursor: pointer;
   font-size: 0.85rem;
   min-width: 110px;
@@ -5904,7 +5928,8 @@ body.selection-mode .quote-card::after {
   position: absolute;
   top: calc(100% + 0.5rem);
   right: 0;
-  background: white;
+  background: var(--surface);
+  color: var(--text-primary);
   border: 1px solid var(--border);
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -5918,7 +5943,8 @@ body.selection-mode .quote-card::after {
   width: 100%;
   padding: 0.75rem 1rem;
   text-align: left;
-  background: white;
+  background: var(--surface);
+  color: var(--text-primary);
   border: none;
   cursor: pointer;
   font-size: 1rem;
@@ -6310,7 +6336,7 @@ body.selection-mode .quote-card::after {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.5rem 0.9rem 0.75rem 0.9rem;
+  padding: 0.9rem 0.9rem 0.75rem 0.9rem;
   border-bottom: 1px solid var(--border);
   border-radius: 12px 12px 0 0;
 }
@@ -6337,16 +6363,16 @@ body.selection-mode .quote-card::after {
   background: var(--surface);
 }
 .lp-row:hover {
-  background: var(--bg-secondary, #f5f7fa);
+  background: var(--card-hover-bg);
 }
 .lp-row.lp-selected {
-  background: #bfdbfe; /* blue-200 — soft, readable, clearly selected */
-  color: #1e3a8a;      /* blue-900 — dark text stays legible */
+  background: color-mix(in srgb, var(--primary-color) 22%, var(--surface));
+  color: var(--text-primary);
 }
 .lp-row.lp-selected .lp-row-meta,
 .lp-row.lp-selected .lp-row-preview,
 .lp-row.lp-selected .lp-row-date {
-  color: #1e40af; /* blue-800 */
+  color: var(--link-color);
 }
 
 .lp-row-main { min-width: 0; }
@@ -6365,7 +6391,7 @@ body.selection-mode .quote-card::after {
   white-space: nowrap;
   flex: 1 1 auto; /* expands to push badges to the right */
 }
-.lp-row.lp-selected .lp-row-date { color: #1e3a8a; }
+.lp-row.lp-selected .lp-row-date { color: var(--link-color); }
 
 .lp-row-badge {
   font-size: 0.75rem;

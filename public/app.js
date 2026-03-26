@@ -449,6 +449,7 @@ function generateNoteTypeMenu() {
 
       // Sync view mode BEFORE switchView, which calls loadQuotes() internally
       updateViewModeToggle();
+      updateBulkButtonVisibility();
 
       switchView('quotes');
       saveCurrentView();
@@ -492,6 +493,7 @@ function generateNoteTypeMenu() {
         currentPage = 1;
         setLibCurrentPage(1);
         updateViewModeToggle();
+      updateBulkButtonVisibility();
         switchView('quotes');   // internally calls loadQuotes() + loadTotalCount()
         saveCurrentView();
         updateUrlHash();
@@ -518,6 +520,7 @@ function generateNoteTypeMenu() {
         currentPage = 1;
         setLibCurrentPage(1);
         updateViewModeToggle();
+      updateBulkButtonVisibility();
         switchView('quotes');   // internally calls loadQuotes() + loadTotalCount()
         saveCurrentView();
         updateUrlHash();
@@ -612,6 +615,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   updateMainTitle();
   updateSourcesFilterVisibility();
   updateViewModeToggle();
+  updateBulkButtonVisibility();
   
   // Show/hide metadata search section based on current filter and settings
   const metaSearchEnabled = globalSettings?.enableQuoteMetaSearches === true;
@@ -1132,6 +1136,16 @@ function updateAddButtonText() {
   updateAddButtonTextLib(currentNoteTypeFilter, updateSourcesFilterVisibility);
 }
 
+// Show "Add Multiple Quotes" only on the Quotes page
+function updateBulkButtonVisibility() {
+  const isQuotePage = currentNoteTypeFilter === 'quote';
+  const d = isQuotePage ? '' : 'none';
+  const addBulkBtn = getElementByIdSafe('addBulkBtn');
+  const addBulkBtnTablet = getElementByIdSafe('addBulkBtnTablet');
+  if (addBulkBtn) addBulkBtn.style.display = d;
+  if (addBulkBtnTablet) addBulkBtnTablet.style.display = d;
+}
+
 // Wrapper for filterManager library
 function updateSourcesFilterVisibility() {
   updateSourcesFilterVisibilityLib2(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes);
@@ -1615,6 +1629,7 @@ function displayQuotes(quotes) {
   if (LIST_PANE_SUPPORTED_TYPES.has(currentNoteTypeFilter)) {
     currentViewMode = getStoredViewMode(currentNoteTypeFilter);
     updateViewModeToggle();
+      updateBulkButtonVisibility();
   } else {
     currentViewMode = 'cards';
   }
@@ -2801,6 +2816,7 @@ function setupMenuNavigation() {
         updateMainTitle();
         updateSourcesFilterVisibility();
         updateViewModeToggle();
+      updateBulkButtonVisibility();
       }
       
       // MIGRATED: Core view switching logic now in pageCoordinator.js

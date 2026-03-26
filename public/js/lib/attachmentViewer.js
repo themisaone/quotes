@@ -77,15 +77,15 @@ const EXTENSION_TO_TYPE_NAME = {
   'zip': 'archive'
 };
 
-// Styling
+// Styling — layout-only inline styles; colors handled by CSS classes (viewer-*)
 const STYLES = {
-  HEADER: 'background: #333; padding: 1rem; display: flex; justify-content: space-between; align-items: center; border-radius: 8px 8px 0 0;',
-  HEADER_TEXT: 'color: white; font-weight: 500;',
-  CLOSE_BUTTON: 'position: static; color: white; font-size: 2rem; cursor: pointer;',
-  PDF_CONTAINER: 'background: white; padding: 0; height: 80vh; border-radius: 0 0 8px 8px;',
+  HEADER: 'padding: 1rem; display: flex; justify-content: space-between; align-items: center; border-radius: 8px 8px 0 0;',
+  HEADER_TEXT: 'font-weight: 500;',
+  CLOSE_BUTTON: 'position: static; font-size: 2rem; cursor: pointer;',
+  PDF_CONTAINER: 'padding: 0; height: 80vh; border-radius: 0 0 8px 8px;',
   PDF_EMBED: 'border: none; border-radius: 0 0 8px 8px;',
   VIDEO: 'max-width: 90vw; max-height: 80vh; border-radius: 0 0 8px 8px;',
-  AUDIO_CONTAINER: 'background: #f9f9f9; padding: 2rem; border-radius: 0 0 8px 8px;',
+  AUDIO_CONTAINER: 'padding: 2rem; border-radius: 0 0 8px 8px;',
   AUDIO: 'width: 100%;',
   AUDIO_CONTENT_WIDTH: 'max-width: 500px;',
   PDF_CONTENT_SIZE: 'max-width: 90vw; max-height: 90vh; width: auto; height: auto;',
@@ -443,11 +443,11 @@ function buildPDFViewerHTML(pdfSrc, filename) {
   
   return `
     <div class="${MODAL_CONFIG.CONTENT_CLASS}" style="${STYLES.PDF_CONTENT_SIZE}">
-      <div style="${STYLES.HEADER}">
-        <span style="${STYLES.HEADER_TEXT}">${ICONS.PDF} ${escapedFilename}</span>
-        <span class="${MODAL_CONFIG.CLOSE_CLASS}" onclick="this.parentElement.parentElement.parentElement.remove()" style="${STYLES.CLOSE_BUTTON}">${ICONS.CLOSE}</span>
+      <div class="viewer-header" style="${STYLES.HEADER}">
+        <span class="viewer-header-text" style="${STYLES.HEADER_TEXT}">${ICONS.PDF} ${escapedFilename}</span>
+        <span class="${MODAL_CONFIG.CLOSE_CLASS} viewer-close" onclick="this.parentElement.parentElement.parentElement.remove()" style="${STYLES.CLOSE_BUTTON}">${ICONS.CLOSE}</span>
       </div>
-      <div style="${STYLES.PDF_CONTAINER}">
+      <div class="viewer-pdf-container" style="${STYLES.PDF_CONTAINER}">
         <embed src="${pdfSrc}" type="application/pdf" width="100%" height="100%" style="${STYLES.PDF_EMBED}" />
       </div>
     </div>
@@ -465,9 +465,9 @@ function buildVideoPlayerHTML(videoSrc, filename) {
   
   return `
     <div class="${MODAL_CONFIG.CONTENT_CLASS}">
-      <div style="${STYLES.HEADER}">
-        <span style="${STYLES.HEADER_TEXT}">${ICONS.VIDEO} ${escapedFilename}</span>
-        <span class="${MODAL_CONFIG.CLOSE_CLASS}" onclick="this.parentElement.parentElement.parentElement.remove()" style="${STYLES.CLOSE_BUTTON}">${ICONS.CLOSE}</span>
+      <div class="viewer-header" style="${STYLES.HEADER}">
+        <span class="viewer-header-text" style="${STYLES.HEADER_TEXT}">${ICONS.VIDEO} ${escapedFilename}</span>
+        <span class="${MODAL_CONFIG.CLOSE_CLASS} viewer-close" onclick="this.parentElement.parentElement.parentElement.remove()" style="${STYLES.CLOSE_BUTTON}">${ICONS.CLOSE}</span>
       </div>
       <video controls style="${STYLES.VIDEO}">
         <source src="${videoSrc}">
@@ -488,11 +488,11 @@ function buildAudioPlayerHTML(audioSrc, filename) {
   
   return `
     <div class="${MODAL_CONFIG.CONTENT_CLASS}" style="${STYLES.AUDIO_CONTENT_WIDTH}">
-      <div style="${STYLES.HEADER}">
-        <span style="${STYLES.HEADER_TEXT}">${ICONS.AUDIO} ${escapedFilename}</span>
-        <span class="${MODAL_CONFIG.CLOSE_CLASS}" onclick="this.parentElement.parentElement.parentElement.remove()" style="${STYLES.CLOSE_BUTTON}">${ICONS.CLOSE}</span>
+      <div class="viewer-header" style="${STYLES.HEADER}">
+        <span class="viewer-header-text" style="${STYLES.HEADER_TEXT}">${ICONS.AUDIO} ${escapedFilename}</span>
+        <span class="${MODAL_CONFIG.CLOSE_CLASS} viewer-close" onclick="this.parentElement.parentElement.parentElement.remove()" style="${STYLES.CLOSE_BUTTON}">${ICONS.CLOSE}</span>
       </div>
-      <div style="${STYLES.AUDIO_CONTAINER}">
+      <div class="viewer-media-container" style="${STYLES.AUDIO_CONTAINER}">
         <audio controls style="${STYLES.AUDIO}">
           <source src="${audioSrc}">
           Your browser does not support the audio tag.
