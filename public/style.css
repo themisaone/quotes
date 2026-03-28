@@ -1254,7 +1254,6 @@ h2 {
 .form-row-with-separator {
   padding-top: 1rem;
   border-top: 1px solid var(--border);
-  margin-top: 1rem !important;
 }
 
 .form-group-with-separator {
@@ -1613,7 +1612,7 @@ textarea {
 
 .search-item button {
   width: auto;
-  min-height: 38px;
+  height: var(--d-btn-height);
   flex-shrink: 0;
 }
 
@@ -1821,7 +1820,7 @@ body.selection-mode .quote-card::after {
   align-items: center;
   justify-content: space-between;
   padding: 10px 16px;
-  background: #1e3a8a;
+  background: var(--primary-color);
   color: white;
   border-radius: 8px;
   margin-bottom: 12px;
@@ -3492,7 +3491,8 @@ body.selection-mode .quote-card::after {
   .btn-refresh,
   .btn-icon-only,
   .btn-select-mode,
-  .view-mode-toggle {
+  .view-mode-toggle,
+  .search-item button {
     height: var(--m-btn-height) !important;
     min-height: unset !important;
     line-height: 1 !important;
@@ -4634,6 +4634,10 @@ body.selection-mode .quote-card::after {
   padding: 3px 10px 3px 12px;
   font-size: 0.85rem;
   font-weight: 500;
+}
+/* NOT-tag: red background, strikethrough label */
+.browse-strip-tag--exclude {
+  background: #dc2626;
 }
 .browse-strip-remove {
   background: transparent;

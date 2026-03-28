@@ -304,10 +304,12 @@ function renderBrowseStrip() {
   strip.style.display = 'flex';
   strip.innerHTML =
     `<span class="browse-strip-label">🔍 Browsing:</span>` +
-    browseStack.map(tag =>
-      `<span class="browse-strip-tag">${escapeHtml(tag)
-      }<button class="browse-strip-remove" onclick="removeFromBrowseStack('${escapeHtml(tag).replace(/'/g, "\\'")}')" title="Remove">×</button></span>`
-    ).join('') +
+    browseStack.map(tag => {
+      const isExclude = tag.startsWith('!');
+      const cls = isExclude ? 'browse-strip-tag browse-strip-tag--exclude' : 'browse-strip-tag';
+      const label = isExclude ? `<s>${escapeHtml(tag.slice(1))}</s>` : escapeHtml(tag);
+      return `<span class="${cls}">${label}<button class="browse-strip-remove" onclick="removeFromBrowseStack('${escapeHtml(tag).replace(/'/g, "\\'")}')" title="Remove">×</button></span>`;
+    }).join('') +
     `<button class="browse-show-notes-btn" onclick="showNotesForStack()">Show notes →</button>` +
     `<button class="browse-clear-btn" onclick="clearBrowseStack()">✕ Clear</button>`;
 }

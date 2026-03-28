@@ -418,7 +418,7 @@ function shouldShowDownscaleButton(fileInfo, quoteId, attachmentType) {
  * @param {Object} callbacks - Callbacks
  */
 function attachDownscaleHandler(modal, quoteId, fileInfo, callbacks) {
-  const btn = getElementByIdSafe('downscaleImageBtn');
+  const btn = modal.querySelector('#downscaleImageBtn');
   if (!btn || !callbacks.onDownscale) return;
   
   btn.onclick = async (e) => {

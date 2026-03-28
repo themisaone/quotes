@@ -535,7 +535,7 @@ export function clearImagePreview(container, type = 'quote') {
  * @returns {Promise<void>}
  */
 export async function downscaleAndMoveToDb(quoteId, imageUrl, filePath, modal, apiUrl, onSuccess) {
-  const btn = getElementByIdSafe('downscaleImageBtn');
+  const btn = modal?.querySelector('#downscaleImageBtn') || getElementByIdSafe('downscaleImageBtn');
   if (!btn) return;
   
   try {
@@ -562,7 +562,7 @@ export async function downscaleAndMoveToDb(quoteId, imageUrl, filePath, modal, a
     console.log(`   New: max 1024px, size: ${(resized1024.length / 1024).toFixed(0)} KB`);
     
     // Send to server
-    const response = await fetch(`${apiUrl}/quotes/${quoteId}/downscale-image`, {
+    const response = await fetch(`${apiUrl}/quotes/${quoteId}/downscale-thumbnail`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

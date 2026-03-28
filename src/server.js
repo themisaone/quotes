@@ -785,18 +785,21 @@ function buildTagSearchCondition(searchQuery, paramCounter, params) {
   }
   
   if (operator === 'SIMPLE') {
-    // Simple tag search (legacy: comma-separated = AND)
+    // Simple tag search (comma-separated = AND; prefix ! = NOT)
     const searchTags = terms[0].split(',').map(t => t.trim()).filter(t => t);
     const conditions = searchTags.map((tag) => {
-      params.push(`%${tag}%`);
-      const condition = ` AND EXISTS (
+      const exclude = tag.startsWith('!');
+      const tagName = exclude ? tag.slice(1).trim() : tag;
+      if (!tagName) return '';
+      params.push(`%${tagName}%`);
+      const existsClause = `EXISTS (
         SELECT 1 FROM note_tags qt 
         JOIN tags t ON qt.tag_id = t.id 
         WHERE qt.note_id = q.id AND t.name ILIKE $${paramCounter}
       )`;
       paramCounter++;
-      return condition;
-    });
+      return exclude ? ` AND NOT ${existsClause}` : ` AND ${existsClause}`;
+    }).filter(c => c);
     return {
       condition: conditions.join(''),
       newParamCounter: paramCounter
@@ -804,17 +807,20 @@ function buildTagSearchCondition(searchQuery, paramCounter, params) {
   }
   
   if (operator === 'AND') {
-    // All tags must be present
+    // All positive tags must be present; !-prefixed tags must be absent
     const conditions = terms.map((tag) => {
-      params.push(`%${tag}%`);
-      const condition = ` AND EXISTS (
+      const exclude = tag.startsWith('!');
+      const tagName = exclude ? tag.slice(1).trim() : tag;
+      if (!tagName) return '';
+      params.push(`%${tagName}%`);
+      const existsClause = `EXISTS (
         SELECT 1 FROM note_tags qt 
         JOIN tags t ON qt.tag_id = t.id 
         WHERE qt.note_id = q.id AND t.name ILIKE $${paramCounter}
       )`;
       paramCounter++;
-      return condition;
-    });
+      return exclude ? ` AND NOT ${existsClause}` : ` AND ${existsClause}`;
+    }).filter(c => c);
     return {
       condition: conditions.join(''),
       newParamCounter: paramCounter
@@ -1919,20 +1925,30 @@ app.post("/api/quotes/:id/downscale-thumbnail", async (req, res) => {
     console.log(`   Old file: ${oldFilePath}`);
     console.log(`   New size: ${(attachment_full.length / 1024).toFixed(0)} KB`);
     
-    // Update quote with new base64 thumbnails (no need to process, already downscaled)
+    // Update flat columns on notes table (backward-compat)
     await pool.query(
       `UPDATE notes SET thumbnail = $1, attachment_full = $2 WHERE id = $3`,
       [thumbnail, attachment_full, id]
     );
-    
-    // Delete old files from attachments
+
+    // Also update note_attachments row that references the old file path
+    // (applyAttachments() prefers note_attachments over notes flat columns)
     if (oldFilePath) {
-      // Delete the full-size thumbnail
+      await pool.query(
+        `UPDATE note_attachments
+            SET thumbnail = $1, attachment_full = $2, storage_type = 'db'
+          WHERE note_id = $3
+            AND (attachment_full LIKE $4 OR thumbnail LIKE $4)`,
+        [thumbnail, attachment_full, id, `file:${oldFilePath}%`]
+      );
+    }
+
+    // Delete old files from filesystem
+    if (oldFilePath) {
       fileStorage.deleteFromFilesystem(oldFilePath);
-      
-      // Also delete the thumbnail if it exists
+      // Also delete the small thumbnail if it exists (named without _full)
       const thumbPath = oldFilePath.replace('_full.jpg', '.jpg');
-      fileStorage.deleteFromFilesystem(thumbPath);
+      if (thumbPath !== oldFilePath) fileStorage.deleteFromFilesystem(thumbPath);
     }
     
     res.json({ success: true });
@@ -2375,16 +2391,20 @@ function buildFilterQuery(filters) {
     paramCounter++;
   }
   
-  // Tag search (AND logic)
+  // Tag search (AND logic; prefix ! means NOT)
   if (filters.tag) {
     const searchTags = filters.tag.split(',').map(t => t.trim()).filter(t => t);
     searchTags.forEach((tag) => {
-      query += ` AND EXISTS (
+      const exclude = tag.startsWith('!');
+      const tagName = exclude ? tag.slice(1).trim() : tag;
+      if (!tagName) return;
+      const existsClause = `EXISTS (
         SELECT 1 FROM note_tags qt 
         JOIN tags t ON qt.tag_id = t.id 
         WHERE qt.note_id = q.id AND t.name ILIKE $${paramCounter}
       )`;
-      params.push(`%${tag}%`);
+      query += exclude ? ` AND NOT ${existsClause}` : ` AND ${existsClause}`;
+      params.push(`%${tagName}%`);
       paramCounter++;
     });
   }
