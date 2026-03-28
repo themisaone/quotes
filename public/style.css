@@ -30,6 +30,37 @@
   --delete-hover: #dc2626;
   --cancel-color: #6b7280;
   --cancel-hover: #4b5563;
+
+  /* ── Desktop size knobs — change these to rescale the desktop layout ──────
+     Values are 10% smaller than the original "full" sizes.
+     Original values noted in comments for easy reference.        ──────── */
+
+  /* Typography */
+  --d-font-xs:    0.675rem;  /* was 0.75  */
+  --d-font-sm:    0.788rem;  /* was 0.875 */
+  --d-font-base:  0.900rem;  /* was 1.0   */
+  --d-font-md:    0.990rem;  /* was 1.1   */
+  --d-font-lg:    1.013rem;  /* was 1.125 */
+  --d-font-xl:    1.350rem;  /* was 1.5   */
+  --d-font-2xl:   2.250rem;  /* was 2.5   */
+
+  /* Spacing */
+  --d-pad-xs:     0.225rem;  /* was 0.25  */
+  --d-pad-sm:     0.450rem;  /* was 0.5   */
+  --d-pad-base:   0.675rem;  /* was 0.75  */
+  --d-pad-md:     0.900rem;  /* was 1.0   */
+  --d-pad-lg:     1.125rem;  /* was 1.25  */
+  --d-pad-xl:     1.350rem;  /* was 1.5   */
+  --d-pad-2xl:    1.800rem;  /* was 2.0   */
+
+  /* Gaps */
+  --d-gap-sm:     0.450rem;  /* was 0.5   */
+  --d-gap-base:   0.900rem;  /* was 1.0   */
+  --d-gap-lg:     1.350rem;  /* was 1.5   */
+
+  /* Components */
+  --d-btn-height: 2.25rem;   /* was 2.5   */
+  --d-card-pad:   1.125rem;  /* was 1.25  */
 }
 
 body {
@@ -51,7 +82,7 @@ body {
   width: var(--side-menu-width);
   background: linear-gradient(135deg, #2c3e50 0%, #34495e 50%, #3d566e 100%);
   border-right: 1px solid #1a252f;
-  padding: 1.5rem;
+  padding: var(--d-pad-xl);
   position: fixed;
   height: 100vh;
   overflow-y: auto;
@@ -59,8 +90,8 @@ body {
 }
 
 .side-menu-title {
-  font-size: 1.25rem;
-  margin-bottom: 1.5rem;
+  font-size: var(--d-font-xl);
+  margin-bottom: var(--d-pad-xl);
   color: white;
 }
 
@@ -78,17 +109,17 @@ body {
 }
 
 .menu-operations .menu-item {
-  font-size: 0.95rem;
+  font-size: calc(var(--d-font-base) * 0.95);
 }
 
 .menu-item {
   width: 100%;
   text-align: left;
-  padding: 0.75rem 1rem;
+  padding: var(--d-pad-base) var(--d-pad-md);
   background: none;
   border: none;
   border-radius: 8px;
-  font-size: 1rem;
+  font-size: var(--d-font-base);
   color: rgba(255, 255, 255, 0.85);
   cursor: pointer;
   transition: all 0.2s;
@@ -133,19 +164,19 @@ body {
 }
 
 .menu-section-title {
-  font-size: 0.75rem;
+  font-size: var(--d-font-xs);
   font-weight: 600;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.7);
-  margin-bottom: 0.75rem;
-  margin-top: 0.5rem;
+  margin-bottom: var(--d-pad-base);
+  margin-top: var(--d-pad-sm);
   letter-spacing: 0.05em;
 }
 
 .main-content {
   margin-left: var(--side-menu-width);
   flex: 1;
-  padding: 2rem;
+  padding: var(--d-pad-2xl);
   width: calc(100% - var(--side-menu-width));
 }
 
@@ -162,11 +193,11 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
-  padding-bottom: 1.5rem;
+  margin-bottom: var(--d-pad-md);
+  padding-bottom: var(--d-pad-xl);
   border-bottom: 2px solid var(--border);
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: var(--d-gap-base);
 }
 
 header h1 {
@@ -550,93 +581,38 @@ header h1 {
 .quote-counts {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 1rem;
+  gap: var(--d-gap-sm);
+  font-size: var(--d-font-base);
 }
 
-.quote-counts #filteredQuotesCount {
-  background: #dc2626;
-  color: white;
-  padding: 0.35rem 0.75rem;
-  border-radius: 6px;
-  font-weight: 600;
-  font-size: 1.1rem;
-}
-
-.quote-counts #typeQuotesCount {
-  background: #60a5fa;
-  color: white;
-  padding: 0.35rem 0.75rem;
-  border-radius: 6px;
-  font-weight: 600;
-  font-size: 1.1rem;
-}
-
-.quote-counts #totalQuotesCount {
-  background: #047857;
-  color: white;
-  padding: 0.35rem 0.75rem;
-  border-radius: 6px;
-  font-weight: 600;
-  font-size: 1.1rem;
-}
-
-/* Authors counters */
-.quote-counts #filteredAuthorsCount {
-  background: #dc2626;
-  color: white;
-  padding: 0.35rem 0.75rem;
-  border-radius: 6px;
-  font-weight: 600;
-  font-size: 1.1rem;
-}
-
-.quote-counts #totalAuthorsCount {
-  background: #047857;
-  color: white;
-  padding: 0.35rem 0.75rem;
-  border-radius: 6px;
-  font-weight: 600;
-  font-size: 1.1rem;
-}
-
-/* Sources counters */
-.quote-counts #filteredSourcesCount {
-  background: #dc2626;
-  color: white;
-  padding: 0.35rem 0.75rem;
-  border-radius: 6px;
-  font-weight: 600;
-  font-size: 1.1rem;
-}
-
-.quote-counts #totalSourcesCount {
-  background: #047857;
-  color: white;
-  padding: 0.35rem 0.75rem;
-  border-radius: 6px;
-  font-weight: 600;
-  font-size: 1.1rem;
-}
-
-/* Tags counters */
-.quote-counts #filteredTagsCount {
-  background: #dc2626;
-  color: white;
-  padding: 0.35rem 0.75rem;
-  border-radius: 6px;
-  font-weight: 600;
-  font-size: 1.1rem;
-}
-
+/* Shared counter badge styles — all 10 badges use same sizing */
+.quote-counts #filteredQuotesCount,
+.quote-counts #typeQuotesCount,
+.quote-counts #totalQuotesCount,
+.quote-counts #filteredAuthorsCount,
+.quote-counts #totalAuthorsCount,
+.quote-counts #filteredSourcesCount,
+.quote-counts #totalSourcesCount,
+.quote-counts #filteredTagsCount,
 .quote-counts #totalTagsCount {
-  background: #047857;
   color: white;
-  padding: 0.35rem 0.75rem;
+  padding: 0.315rem var(--d-pad-base);
   border-radius: 6px;
   font-weight: 600;
-  font-size: 1.1rem;
+  font-size: var(--d-font-md);
 }
+
+.quote-counts #filteredQuotesCount,
+.quote-counts #filteredAuthorsCount,
+.quote-counts #filteredSourcesCount,
+.quote-counts #filteredTagsCount  { background: #dc2626; }
+
+.quote-counts #typeQuotesCount    { background: #60a5fa; }
+
+.quote-counts #totalQuotesCount,
+.quote-counts #totalAuthorsCount,
+.quote-counts #totalSourcesCount,
+.quote-counts #totalTagsCount     { background: #047857; }
 
 .header-actions {
   display: flex;
@@ -681,24 +657,24 @@ header h1 {
 }
 
 h1 {
-  font-size: 2.5rem;
+  font-size: var(--d-font-2xl);
   font-weight: 700;
   color: var(--text-primary);
 }
 
 h2 {
-  font-size: 1.5rem;
+  font-size: var(--d-font-xl);
   font-weight: 600;
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--d-pad-xl);
   color: var(--text-primary);
 }
 
 /* Buttons */
 .btn {
-  padding: 0.75rem 1.5rem;
+  padding: var(--d-pad-base) var(--d-pad-xl);
   border: none;
   border-radius: 8px;
-  font-size: 1rem;
+  font-size: var(--d-font-base);
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
@@ -741,10 +717,10 @@ h2 {
 
 /* Icon-only buttons (compact) */
 .btn-icon-only {
-  font-size: 1.3rem;
-  padding: 0.5rem 0.6rem;
-  min-width: 3rem; /* Ensure consistent width */
-  height: 2.5rem; /* Ensure consistent height */
+  font-size: 1.17rem;
+  padding: var(--d-pad-sm) 0.54rem;
+  min-width: 2.7rem;
+  height: var(--d-btn-height);
   text-align: center;
   display: inline-flex;
   align-items: center;
@@ -950,7 +926,7 @@ h2 {
 .modal-header {
   background: var(--header-color);
   color: white;
-  padding: 1rem 1.2rem;
+  padding: var(--d-pad-md) var(--d-pad-md);
   border-radius: 12px 12px 0 0;
   display: flex;
   align-items: center;
@@ -1067,7 +1043,7 @@ h2 {
 
 /* Modal body padding */
 .modal-body {
-  padding: 1rem 1rem 1rem 1rem;
+  padding: var(--d-pad-md);
   background-color: var(--surface);
   border-radius: 0 0 12px 12px; /* Round bottom corners */
   overflow-y: auto; /* Allow scrolling within modal body */
@@ -1143,7 +1119,7 @@ h2 {
 
 /* Form */
 .form-group {
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--d-pad-xl);
 }
 
 .quote-editor-group {
@@ -1454,10 +1430,10 @@ input[type="date"],
 textarea,
 select {
   width: 100%;
-  padding: 0.5rem;
+  padding: var(--d-pad-sm);
   border: 1px solid var(--input-border);
   border-radius: 8px;
-  font-size: 1rem;
+  font-size: var(--d-font-base);
   font-family: inherit;
   transition: all 0.2s;
   background-color: var(--input-bg);
@@ -1487,17 +1463,17 @@ textarea {
 
 .form-actions {
   display: flex;
-  gap: 1rem;
-  margin-top: 1.5rem; /* Add spacing before button row */
+  gap: var(--d-gap-base);
+  margin-top: var(--d-pad-xl);
 }
 
-/* Shared yellowish footer bar — negative margins must match .modal-body padding (1rem) */
+/* Shared yellowish footer bar — negative margins must match .modal-body padding (--d-pad-md) */
 #authorModal .form-actions,
 #sourceModal .form-actions,
 #quoteModal .form-actions {
   background: var(--modal-footer-bg);
-  margin: 1.5rem -1rem -1rem -1rem; /* exactly cancels the 1rem modal-body padding */
-  padding: 1rem;
+  margin: var(--d-pad-xl) calc(-1 * var(--d-pad-md)) calc(-1 * var(--d-pad-md)) calc(-1 * var(--d-pad-md));
+  padding: var(--d-pad-md);
   border-radius: 0 0 12px 12px;
 }
 
@@ -1507,7 +1483,7 @@ textarea {
 /* Search Section */
  .search-section {
   background: var(--surface);
-  padding: 1.5rem;
+  padding: var(--d-pad-xl);
   border-radius: 12px;
   margin-bottom: 1rem;
   box-shadow: var(--shadow);
@@ -1548,7 +1524,7 @@ textarea {
 }
 
 .search-item label {
-  font-size: 0.875rem;
+  font-size: var(--d-font-sm);
   display: block;
   margin-bottom: 0;
   white-space: nowrap;
@@ -1624,7 +1600,7 @@ textarea {
 
 .quotes-list {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(var(--card-column-count, 2), 1fr);
   gap: 1rem;
 }
 
@@ -1652,7 +1628,7 @@ textarea {
 
 .quote-card {
   background: var(--surface);
-  padding: 1.25rem;
+  padding: var(--d-card-pad);
   border-radius: 10px;
   border: 2px solid var(--border);
   transition: all 0.3s ease;
@@ -1689,7 +1665,7 @@ textarea {
 
 .quote-card.has-image .quote-card-content {
   flex: 1;
-  padding: 1.25rem;
+  padding: var(--d-card-pad);
   min-width: 0;
 }
 
@@ -1860,7 +1836,7 @@ body.selection-mode .quote-card::after {
 .btn-select-mode {
   background: var(--primary-color);
   color: white;
-  height: 2.5rem;
+  height: var(--d-btn-height);
   white-space: nowrap;
 }
 
@@ -2176,7 +2152,7 @@ body.selection-mode .quote-card::after {
 
 .quote-text {
   flex: 1;
-  font-size: 1.125rem;
+  font-size: var(--d-font-lg);
   font-style: italic;
   color: var(--text-primary);
   line-height: 1.4;
@@ -2202,7 +2178,7 @@ body.selection-mode .quote-card::after {
 .quote-separator {
   height: 1px;
   background: rgba(0, 0, 0, 0.1);
-  margin: 0.75rem 0;
+  margin: var(--d-pad-base) 0;
 }
 
 /* Metadata row below separator */
@@ -2224,12 +2200,12 @@ body.selection-mode .quote-card::after {
 
 /* ↑ Training date/type strip — same size & color as h2. To adjust, edit the two rules below */
 .training-meta-top .meta-item {
-  font-size: 1.5rem;
+  font-size: var(--d-font-xl);
   font-weight: 600;
   color: var(--link-color);
 }
 .training-meta-top .meta-item-combined {
-  font-size: 1.5rem;
+  font-size: var(--d-font-xl);
   font-weight: 600;
   color: var(--link-color);
 }
@@ -2267,8 +2243,8 @@ body.selection-mode .quote-card::after {
 }
 
 .quote-tags-inline .tag {
-  font-size: 0.9rem;
-  padding: 0.25rem 0.6rem;
+  font-size: var(--d-font-base);
+  padding: var(--d-pad-xs) var(--d-pad-base);
 }
 
 .meta-item-combined {
@@ -2961,9 +2937,9 @@ body.selection-mode .quote-card::after {
   display: inline-block;
   background: var(--tag-color);
   color: white;
-  padding: 0.25rem 0.75rem;
+  padding: var(--d-pad-xs) var(--d-pad-base);
   border-radius: 12px;
-  font-size: 0.75rem;
+  font-size: var(--d-font-xs);
 }
 
 .tag-clickable {
@@ -3052,7 +3028,43 @@ body.selection-mode .quote-card::after {
    ============================================ */
 @media (min-width: 769px) and (max-width: 1100px) {
   /* TABLET MODE: Hide side menu, show landing menu page instead */
-  .column-count-select { display: none !important; }
+
+  /* ── Size knobs — change these to rescale the whole medium layout ──────
+     Current values are ~10% smaller than desktop defaults.
+     To apply the planned 20% reduction, divide each value by 0.9 then
+     multiply by 0.8 (or just set them directly).               ──────── */
+  :root {
+    /* Typography */
+    --m-font-xs:    0.72rem;   /* tag pills, small metadata */
+    --m-font-sm:    0.80rem;   /* secondary text, labels, strips */
+    --m-font-base:  0.88rem;   /* body / card text, inputs */
+    --m-font-md:    0.90rem;   /* button text, minor headings */
+    --m-font-lg:    1.00rem;   /* modal header icons, welcome text */
+    --m-font-xl:    1.35rem;   /* section h2 */
+    --m-font-2xl:   1.60rem;   /* page h1 */
+
+    /* Spacing */
+    --m-pad-xs:     0.35rem;   /* strip padding, tight gaps */
+    --m-pad-sm:     0.50rem;   /* modal header, small elements */
+    --m-pad-base:   0.65rem;   /* form-group gap, card gap */
+    --m-pad-md:     0.85rem;   /* modal body padding */
+    --m-pad-lg:     0.90rem;   /* card inner padding */
+    --m-pad-xl:     1.10rem;   /* search section, section header */
+
+    /* Buttons */
+    --m-btn-height: 2.05rem;
+
+    /* Cards */
+    --m-card-pad:   0.90rem;
+    --m-card-gap:   0.65rem;
+
+    /* Tag pills */
+    --m-tag-pad-v:  0.15rem;
+    --m-tag-pad-h:  0.45rem;
+  }
+
+  /* Gallery option is available on medium screens; JS hides the numbered options */
+  .column-count-select { display: inline-block !important; }
 
   /* Hide the side menu completely */
   .side-menu {
@@ -3063,7 +3075,7 @@ body.selection-mode .quote-card::after {
   .main-content {
     margin-left: 0 !important;
     width: 100% !important;
-    padding: 1rem;
+    padding: var(--m-pad-xl);
   }
   
   /* Show tablet menu view and back buttons */
@@ -3079,18 +3091,18 @@ body.selection-mode .quote-card::after {
   }
 
   .modal-header {
-    padding: 0.35rem 0.85rem !important;
+    padding: var(--m-pad-xs) var(--m-pad-md) !important;
   }
 
   /* body side-padding drives yellow-footer negative-margin calculations */
   .modal-body {
-    padding: 0.5rem 0.85rem 0.85rem 0.85rem !important;
+    padding: var(--m-pad-sm) var(--m-pad-md) var(--m-pad-md) var(--m-pad-md) !important;
   }
 
   /* form-group vertical gap — only between independent groups */
   .modal-content .form-group,
   .form-group {
-    margin-bottom: 0.65rem !important;
+    margin-bottom: var(--m-pad-base) !important;
   }
 
   /* form-row items must stay gap-free */
@@ -3102,7 +3114,7 @@ body.selection-mode .quote-card::after {
 
   .modal-header-row {
     margin-bottom: 0.3rem !important;
-    padding-right: 0.85rem !important;
+    padding-right: var(--m-pad-md) !important;
     align-items: center !important;
   }
 
@@ -3116,17 +3128,17 @@ body.selection-mode .quote-card::after {
     line-height: 1 !important;
   }
 
-  /* Yellow footer: negative margins match body side-padding (0.85rem) */
+  /* Yellow footer: negative margins match body side-padding (--m-pad-md) */
   #quoteModal .form-actions,
   #authorModal .form-actions,
   #sourceModal .form-actions {
-    margin: 0.65rem -0.85rem -0.85rem -0.85rem !important;
-    padding: 0.55rem 0.85rem !important;
+    margin: var(--m-pad-base) calc(-1 * var(--m-pad-md)) calc(-1 * var(--m-pad-md)) calc(-1 * var(--m-pad-md)) !important;
+    padding: var(--m-pad-sm) var(--m-pad-md) !important;
   }
 
   .form-actions {
-    gap: 0.5rem !important;
-    margin-top: 0.65rem !important;
+    gap: var(--m-pad-sm) !important;
+    margin-top: var(--m-pad-base) !important;
   }
 
   /* Quote editor */
@@ -3302,12 +3314,12 @@ body.selection-mode .quote-card::after {
   }
 
   h1 {
-    font-size: 1.6rem;
+    font-size: var(--m-font-2xl);
   }
 
   /* Counter badges */
   .quote-counts {
-    font-size: 0.8rem;
+    font-size: var(--m-font-sm);
   }
 
   .quote-counts #filteredQuotesCount,
@@ -3319,12 +3331,11 @@ body.selection-mode .quote-card::after {
   .quote-counts #totalSourcesCount,
   .quote-counts #filteredTagsCount,
   .quote-counts #totalTagsCount {
-    font-size: 0.85rem;
+    font-size: var(--m-font-base);
     padding: 0.25rem 0.55rem;
   }
 
-  /* All toolbar buttons: uniform height, same padding baseline.
-     Exclude .desktop-text so the hide/show split still works. */
+  /* All toolbar buttons: uniform height, same padding baseline. */
   .btn:not(.desktop-text),
   .btn-primary:not(.desktop-text),
   .btn-secondary:not(.desktop-text),
@@ -3332,24 +3343,24 @@ body.selection-mode .quote-card::after {
   .btn-icon-only,
   .btn-select-mode,
   .view-mode-toggle {
-    height: 2.05rem !important;
-    min-height: unset !important;   /* cancels .search-item button { min-height: 38px } */
+    height: var(--m-btn-height) !important;
+    min-height: unset !important;
     line-height: 1 !important;
     padding-top: 0 !important;
     padding-bottom: 0 !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    font-size: 0.82rem !important;
+    font-size: var(--m-font-md) !important;
     box-sizing: border-box !important;
   }
 
   /* Icon-only: slightly larger icon character, compact horizontal padding */
   .btn-icon-only,
   .view-mode-toggle {
-    font-size: 1rem !important;
-    padding-left: 0.5rem !important;
-    padding-right: 0.5rem !important;
+    font-size: var(--m-font-lg) !important;
+    padding-left: var(--m-pad-sm) !important;
+    padding-right: var(--m-pad-sm) !important;
     min-width: 2.2rem !important;
   }
 
@@ -3360,19 +3371,19 @@ body.selection-mode .quote-card::after {
   }
 
   .btn-icon {
-    padding: 0.35rem;
-    font-size: 1rem;
+    padding: var(--m-pad-xs);
+    font-size: var(--m-font-lg);
   }
 
   /* Section headings */
   h2 {
-    font-size: 1.35rem !important;
-    margin-bottom: 0.85rem !important;
+    font-size: var(--m-font-xl) !important;
+    margin-bottom: var(--m-pad-md) !important;
   }
 
   /* Search section */
   .search-section {
-    padding: 1.1rem !important;
+    padding: var(--m-pad-xl) !important;
     margin-bottom: 1.25rem !important;
   }
 
@@ -3390,8 +3401,8 @@ body.selection-mode .quote-card::after {
   .quotes-section h2,
   .quotes-section-header {
     background: var(--surface) !important;
-    padding: 0.5rem 1.1rem !important;
-    margin: 0 0 0.85rem 0 !important;
+    padding: var(--m-pad-sm) var(--m-pad-xl) !important;
+    margin: 0 0 var(--m-pad-md) 0 !important;
     border-radius: 8px !important;
     box-shadow: var(--shadow) !important;
   }
@@ -3402,12 +3413,11 @@ body.selection-mode .quote-card::after {
     box-shadow: none !important;
   }
 
-  /* Card grid — equal row and column gap.
-     No !important on display so JS inline style can override it to hide the grid. */
+  /* Card grid */
   .quotes-list {
     display: grid;
     grid-template-columns: 1fr 1fr !important;
-    gap: 0.65rem !important;
+    gap: var(--m-card-gap) !important;
     margin: 0 !important;
     padding: 0 !important;
   }
@@ -3415,12 +3425,11 @@ body.selection-mode .quote-card::after {
   .quotes-list.natural-sizing {
     display: block !important;
     column-count: 2 !important;
-    column-gap: 0.65rem !important;
+    column-gap: var(--m-card-gap) !important;
   }
 
-  /* Natural-sizing: card margin-bottom must match column-gap */
   .quotes-list.natural-sizing .quote-card {
-    margin-bottom: 0.65rem !important;
+    margin-bottom: var(--m-card-gap) !important;
   }
 
   .quote-card {
@@ -3428,30 +3437,29 @@ body.selection-mode .quote-card::after {
     max-width: 100% !important;
     box-sizing: border-box !important;
     margin: 0 !important;
-    padding: 0.9rem !important;    /* base is 1.25rem — ~10% smaller */
-    font-size: 0.88rem !important;
+    padding: var(--m-card-pad) !important;
+    font-size: var(--m-font-base) !important;
   }
 
-  /* Image cards use padding:0 outer + inner content padding — must override separately */
   .quote-card.has-image {
     padding: 0 !important;
   }
 
   .quote-card.has-image .quote-card-content {
-    padding: 0.9rem !important;
+    padding: var(--m-card-pad) !important;
   }
 
   /* Strip / metadata bar inside training cards */
   .training-strip,
   .quote-strip,
   .note-strip {
-    font-size: 0.8rem !important;
-    padding: 0.35rem 0.6rem !important;
+    font-size: var(--m-font-sm) !important;
+    padding: var(--m-pad-xs) 0.6rem !important;
   }
 
   /* Quote text inside cards */
   .quote-text {
-    font-size: 0.88rem !important;
+    font-size: var(--m-font-base) !important;
     line-height: 1.5 !important;
   }
 
@@ -3459,14 +3467,14 @@ body.selection-mode .quote-card::after {
   .quote-author,
   .quote-source,
   .quote-meta {
-    font-size: 0.8rem !important;
+    font-size: var(--m-font-sm) !important;
   }
 
   /* Tag pills on cards */
   .tag-badge,
   .quote-tag {
-    font-size: 0.72rem !important;
-    padding: 0.15rem 0.45rem !important;
+    font-size: var(--m-font-xs) !important;
+    padding: var(--m-tag-pad-v) var(--m-tag-pad-h) !important;
   }
 
   /* Header layout */
@@ -3476,7 +3484,7 @@ body.selection-mode .quote-card::after {
     flex-wrap: nowrap !important;
     align-items: center !important;
     justify-content: space-between !important;
-    gap: 0.65rem !important;
+    gap: var(--m-pad-base) !important;
   }
 
   header h1 {
@@ -3497,20 +3505,20 @@ body.selection-mode .quote-card::after {
   input[type="date"],
   select {
     padding: 0.4rem 0.55rem !important;
-    font-size: 0.88rem !important;
+    font-size: var(--m-font-base) !important;
   }
 
-  /* Modal content (font size inside) */
+  /* Modal content */
   .modal-body,
   .modal-body label,
   .modal-body input,
   .modal-body select,
   .modal-body textarea {
-    font-size: 0.88rem !important;
+    font-size: var(--m-font-base) !important;
   }
 
   .modal-header h2 {
-    font-size: 1rem !important;
+    font-size: var(--m-font-lg) !important;
     line-height: 1 !important;
   }
 
@@ -3531,27 +3539,27 @@ body.selection-mode .quote-card::after {
   }
 
   .welcome-quote-text {
-    font-size: 1rem !important;
+    font-size: var(--m-font-lg) !important;
   }
 
   .welcome-quote-author,
   .welcome-quote-source {
-    font-size: 0.9rem !important;
+    font-size: var(--m-font-md) !important;
   }
 
   /* Tag cards */
   .tag-card-name {
-    font-size: 0.9rem !important;
+    font-size: var(--m-font-md) !important;
     font-weight: 600;
   }
 
   .tag-card-count {
-    font-size: 0.82rem !important;
-    padding: 0.35rem 0.7rem !important;
+    font-size: var(--m-font-base) !important;
+    padding: var(--m-pad-xs) 0.7rem !important;
   }
 
   .tag-card {
-    padding: 0.9rem 1.1rem !important;
+    padding: var(--m-card-pad) var(--m-pad-xl) !important;
   }
 
   /* Fix Quill h2 white box in medium mode */
@@ -6271,7 +6279,7 @@ body.selection-mode .quote-card::after {
   -webkit-appearance: none;
   text-align: center;
   min-width: 3.5rem;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, background 0.2s;
 }
 .column-count-select:hover {
   border-color: var(--primary-color);
@@ -6279,6 +6287,80 @@ body.selection-mode .quote-card::after {
 .column-count-select option {
   background: var(--surface);
   color: var(--text-primary);
+}
+/* Gallery mode active state — amber tint to signal implicit filter is on */
+.column-count-select.gallery-active {
+  background: #d97706;
+  color: white;
+  border-color: #b45309;
+}
+
+/* Gallery thumb is always in the DOM but hidden outside gallery mode */
+.gallery-thumb-wrap {
+  display: none;
+}
+
+/* ── Gallery / Thumbnail mode ─────────────────────────────────────── */
+.quotes-list.gallery-mode {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 0.4rem !important;
+  align-items: flex-start !important;
+}
+.quotes-list.gallery-mode .quote-card {
+  width: 130px !important;
+  height: 130px !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  border-radius: 6px !important;
+  position: relative !important;
+  cursor: pointer !important;
+  flex-shrink: 0 !important;
+}
+/* Hide everything except the primary image/file thumb */
+.quotes-list.gallery-mode .quote-card > *:not(.gallery-thumb-wrap) {
+  display: none !important;
+}
+/* Thumbnail fills the card */
+.quotes-list.gallery-mode .gallery-thumb-wrap {
+  display: block;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+.quotes-list.gallery-mode .gallery-thumb-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+/* No-image placeholder */
+.quotes-list.gallery-mode .gallery-thumb-no-image {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  background: var(--card-hover-bg);
+  color: var(--text-secondary);
+}
+/* Tag strip overlay at the bottom */
+.quotes-list.gallery-mode .gallery-tag-strip {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  font-size: 0.6rem;
+  padding: 2px 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
 }
 
 .view-mode-toggle {

@@ -50,7 +50,7 @@
       "core": true,
       "displaySettings": {
         "showLongExpanded": false,
-        "displayByRealSize": true
+        "displayByRealSize": false
       }
     },
     {
@@ -88,7 +88,7 @@
         }
       ],
       "displaySettings": {
-        "displayByRealSize": true,
+        "displayByRealSize": false,
         "showLongExpanded": true
       }
     },
@@ -117,7 +117,7 @@
   "compactMode": false,
   "enableTagOperations": true,
   "enableQuoteMetaSearches": true,
-  "displayQuotesByRealSize": true,
+  "displayQuotesByRealSize": false,
   "displayImageQuotesLong": false,
   "showLongQuotesExpanded": false,
   "displayScoreInCards": true,

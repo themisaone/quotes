@@ -628,17 +628,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Check if we're on a tablet (769px-1100px)
   const isTablet = window.matchMedia("(min-width: 769px) and (max-width: 1100px)").matches;
   
+  // Set up event listeners (including gallery mode) BEFORE first load
+  setupEventListeners();
+  setupMenuNavigation();
+
   if (isTablet) {
     // Show menu view on tablets
     switchView("menu");
   } else {
-    // Show quotes view on desktop/mobile
+    // Show quotes view on desktop/mobile — gallery filters already active if saved
     loadQuotes();
     loadTotalCount();
   }
-  
-  setupEventListeners();
-  setupMenuNavigation();
   
   // Initialize back button for history navigation
   initializeBackButton({
@@ -798,18 +799,87 @@ function setupEventListeners() {
     selectModeBtn.addEventListener("click", toggleSelectionMode);
   }
 
-  // Column count selector
+  // ── Column count / Gallery mode ──────────────────────────────────────────
+  let _galleryNormalPageSize = null;
+  let _galleryActive = false;
+
+  function applyGalleryMode(active) {
+    const quotesList = document.getElementById('quotesList');
+    if (!quotesList) return;
+    if (active) {
+      _galleryActive = true;
+      quotesList.classList.add('gallery-mode');
+      columnCountSelect.classList.add('gallery-active');
+      // Silently set image filters (no dispatchEvent — avoids premature loadQuotes calls)
+      const cbImg  = document.getElementById('searchHasImage');
+      const selImg = document.getElementById('searchImageCondition');
+      const cbType  = document.getElementById('searchHasImageType');
+      const selType = document.getElementById('searchImageTypeCondition');
+      if (cbImg)  cbImg.checked  = true;
+      if (selImg) selImg.value   = 'has';
+      // Re-enable dependent fields so the imageType checkbox isn't disabled/ignored
+      _syncImageTypeFilterState();
+      if (cbType)  { cbType.disabled = false; cbType.checked = true; }
+      if (selType) { selType.disabled = false; selType.value  = 'has'; }
+      // Set page size before any loadQuotes call
+      _galleryNormalPageSize = getQuotesPerPage();
+      setQuotesPerPage(64);
+    } else {
+      _galleryActive = false;
+      quotesList.classList.remove('gallery-mode');
+      columnCountSelect.classList.remove('gallery-active');
+      if (_galleryNormalPageSize !== null) {
+        setQuotesPerPage(_galleryNormalPageSize);
+        _galleryNormalPageSize = null;
+      }
+    }
+  }
+
   if (columnCountSelect) {
+    // On medium screens the grid is locked to 2 columns by CSS — hide numbered options,
+    // keep only gallery so the user can still activate gallery mode.
+    const isMediumScreen = window.matchMedia('(min-width: 769px) and (max-width: 1100px)').matches;
+    if (isMediumScreen) {
+      Array.from(columnCountSelect.options)
+        .filter(opt => opt.value !== 'gallery' && opt.value !== '2')
+        .forEach(opt => opt.remove());
+      // Default the select to gallery if a numbered value was previously saved
+      const currentSaved = localStorage.getItem('quotesColumnCount');
+      if (currentSaved && currentSaved !== 'gallery') {
+        columnCountSelect.value = 'gallery';
+      }
+    }
+
     const COLUMN_KEY = 'quotesColumnCount';
     const saved = localStorage.getItem(COLUMN_KEY);
     if (saved) {
       columnCountSelect.value = saved;
-      document.documentElement.style.setProperty('--card-column-count', saved);
+      if (saved === 'gallery') {
+        document.documentElement.style.setProperty('--card-column-count', '4');
+        applyGalleryMode(true); // sets filters + page size before the first loadQuotes fires
+      } else {
+        document.documentElement.style.setProperty('--card-column-count', saved);
+      }
     }
     columnCountSelect.addEventListener('change', () => {
       const val = columnCountSelect.value;
-      document.documentElement.style.setProperty('--card-column-count', val);
-      localStorage.setItem(COLUMN_KEY, val);
+      if (val === 'gallery') {
+        document.documentElement.style.setProperty('--card-column-count', '4');
+        applyGalleryMode(true);
+        localStorage.setItem(COLUMN_KEY, val);
+        loadQuotes();
+        loadTotalCount();
+      } else {
+        const wasGallery = _galleryActive;
+        applyGalleryMode(false);
+        document.documentElement.style.setProperty('--card-column-count', val);
+        localStorage.setItem(COLUMN_KEY, val);
+        if (wasGallery) {
+          loadQuotes();
+          loadTotalCount();
+        }
+        // Plain column change (1↔2↔3↔4): CSS variable update is instant, no reload needed
+      }
     });
   }
 
@@ -1157,6 +1227,7 @@ function updateSourcesFilterVisibility() {
 function updateViewModeToggle() {
   const supported = LIST_PANE_SUPPORTED_TYPES.has(currentNoteTypeFilter);
   const selectModeBtn = getElementByIdSafe('selectModeBtn');
+  const isGallery = quotesList && quotesList.classList.contains('gallery-mode');
 
   if (viewModeToggleBtn) {
     viewModeToggleBtn.style.display = supported ? '' : 'none';
@@ -1177,23 +1248,27 @@ function updateViewModeToggle() {
         viewModeToggleBtn.classList.remove('active');
       }
     }
-    // Use a compact page size in list-pane mode; restore normal size for cards
-    setQuotesPerPage(currentViewMode === 'list-pane' ? 12 : 20);
+
+    if (!isGallery) {
+      // Gallery manages its own page size — don't overwrite it
+      setQuotesPerPage(currentViewMode === 'list-pane' ? 12 : 20);
+    }
 
     // Hide Select button in list-pane mode (bulk ops require card mode)
     if (selectModeBtn) {
       selectModeBtn.style.display = currentViewMode === 'list-pane' ? 'none' : '';
     }
 
-    // Swap container visibility immediately so the page doesn't flash card-grid
-    // content while the fetch is still running in list-pane mode.
-    // Use setProperty('display','none','important') so that CSS rules like
-    // `.quotes-list.natural-sizing { display: block !important }` can't win.
-    if (currentViewMode === 'list-pane') {
+    if (isGallery) {
+      // Gallery always shows the card grid, never the list-pane
+      if (quotesList) quotesList.style.removeProperty('display');
+      if (lpWrapper) lpWrapper.style.display = 'none';
+    } else if (currentViewMode === 'list-pane') {
+      // Use setProperty('display','none','important') so that CSS rules like
+      // `.quotes-list.natural-sizing { display: block !important }` can't win.
       if (quotesList) quotesList.style.setProperty('display', 'none', 'important');
       if (lpWrapper) {
         if (!lpWrapper.querySelector('.lp-layout')) {
-          // Only set placeholder while there's no rendered list yet
           lpWrapper.innerHTML = '<div class="loading">Loading…</div>';
         }
         lpWrapper.style.display = 'block';
@@ -1204,7 +1279,7 @@ function updateViewModeToggle() {
     }
   } else {
     currentViewMode = 'cards';
-    setQuotesPerPage(20);
+    if (!isGallery) setQuotesPerPage(20);
     if (selectModeBtn) selectModeBtn.style.display = '';
     if (quotesList) quotesList.style.removeProperty('display');
     if (lpWrapper) lpWrapper.style.display = 'none';
@@ -1647,7 +1722,9 @@ function displayQuotes(quotes) {
 
   // ── List-Pane view ──────────────────────────────────────────
   // Renders into #lpWrapper (a plain div, never a grid) — quotesList is hidden.
-  if (currentViewMode === 'list-pane' && LIST_PANE_SUPPORTED_TYPES.has(currentNoteTypeFilter)) {
+  // Skip list-pane rendering when gallery mode is active (gallery always uses card grid).
+  const isGallery = quotesList && quotesList.classList.contains('gallery-mode');
+  if (!isGallery && currentViewMode === 'list-pane' && LIST_PANE_SUPPORTED_TYPES.has(currentNoteTypeFilter)) {
     quotesList.style.setProperty('display', 'none', 'important');
     if (lpWrapper) {
       lpWrapper.style.display = 'block';

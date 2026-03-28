@@ -340,8 +340,26 @@ export function createQuoteCard(note, currentNoteTypeFilter, getTrainingTypes, g
                     ${attachmentSection}
                 </div>`;
 
+  // Gallery-mode thumbnail overlay (hidden unless .gallery-mode is active)
+  const galleryThumbHtml = (() => {
+    const tagText = note.tags ? note.tags.split(',').map(t => t.trim()).filter(Boolean).join(', ') : '';
+    const tagStrip = tagText ? `<div class="gallery-tag-strip">${tagText}</div>` : '';
+    if (note.attachment_type === 'image' && imageUrl) {
+      return `<div class="gallery-thumb-wrap">
+        <img src="${imageUrl}" alt="" loading="lazy">
+        ${tagStrip}
+      </div>`;
+    }
+    const icon = note.attachment_full ? (FILE_ICONS[note.attachment_type] || '📁') : '📝';
+    return `<div class="gallery-thumb-wrap">
+      <div class="gallery-thumb-no-image">${icon}</div>
+      ${tagStrip}
+    </div>`;
+  })();
+
   return `
         <div class="quote-card ${note.image || note.attachment_full ? 'has-image' : ''}" data-quote-id="${note.id}" data-note-type="${note.note_type || ''}" style="cursor: pointer;">
+            ${galleryThumbHtml}
             <div class="quote-card-content">
                 ${isTraining ? metaRow + '<div class="quote-separator"></div>' + topSection
                              : topSection + '<div class="quote-separator"></div>' + metaRow}
