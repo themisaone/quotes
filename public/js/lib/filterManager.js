@@ -387,9 +387,9 @@ function updateTrainingTypesDropdownLabel(isAllNotesView) {
   if (!labelSpan) return;
   
   if (isAllNotesView) {
-    labelSpan.textContent = '📚 Select Note Types/Sources';
+    labelSpan.textContent = '📚 Note Types/Sources';
   } else {
-    labelSpan.textContent = '🏋️ Select Training Types';
+    labelSpan.textContent = '🏋️ Training Types';
   }
 }
 

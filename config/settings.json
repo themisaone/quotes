@@ -39,7 +39,8 @@
         }
       ],
       "displaySettings": {
-        "showLongExpanded": false
+        "showLongExpanded": false,
+        "displayByRealSize": true
       }
     },
     {

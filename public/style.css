@@ -159,8 +159,8 @@ body {
 
 .menu-divider {
   height: 1px;
-  background: rgba(255, 255, 255, 0.2);
-  margin: 1.25rem 0;
+  background: rgba(255, 255, 255, 0.25);
+  margin: 1.0rem 0;
 }
 
 .menu-section-title {
@@ -186,7 +186,7 @@ body {
 
 .container {
   margin: 0 auto;
-  padding: 0.5rem 1rem;
+  padding: 0rem 1rem;
 }
 
 header {
@@ -305,7 +305,7 @@ header h1 {
   border-color: var(--primary-color);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .column-count-select { display: none !important; }
 
   .sources-controls {
@@ -463,7 +463,7 @@ header h1 {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.65rem 1.25rem;
+  padding: 0.5rem 1.25rem;
   background: var(--input-bg);
   color: var(--text-primary);
   border: 1px solid var(--border);
@@ -1493,7 +1493,7 @@ textarea {
 .search-grid {
   display: grid;
   grid-template-columns: 2fr 1fr 1fr;
-  gap: 0.75rem 3rem;
+  gap: 0.75rem 2rem;
   align-items: center;
 }
 
@@ -2942,6 +2942,18 @@ body.selection-mode .quote-card::after {
   font-size: var(--d-font-xs);
 }
 
+.tag-removable {
+  background: var(--tag-color);
+  color: white;
+  padding: var(--d-pad-xs) var(--d-pad-base);
+  border-radius: 12px;
+  font-size: var(--d-font-xs);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+}
+
 .tag-clickable {
   cursor: pointer;
   transition: opacity 0.2s, transform 0.1s;
@@ -3026,7 +3038,7 @@ body.selection-mode .quote-card::after {
    TABLET STYLES (769px - 1023px)
    iPad and similar medium-sized devices
    ============================================ */
-@media (min-width: 769px) and (max-width: 1100px) {
+@media (min-width: 768px) and (max-width: 1100px) {
   /* TABLET MODE: Hide side menu, show landing menu page instead */
 
   /* ── Size knobs — change these to rescale the whole medium layout ──────
@@ -3035,52 +3047,72 @@ body.selection-mode .quote-card::after {
      multiply by 0.8 (or just set them directly).               ──────── */
   :root {
     /* Typography */
-    --m-font-xs:    0.72rem;   /* tag pills, small metadata */
-    --m-font-sm:    0.80rem;   /* secondary text, labels, strips */
-    --m-font-base:  0.88rem;   /* body / card text, inputs */
-    --m-font-md:    0.90rem;   /* button text, minor headings */
+    --m-font-xs:    0.85rem;   /* tag pills (.tag) AND menu section titles */
+    --m-font-sm:    0.85rem;   /* meny, secondary text, labels, strips */
+    --m-font-base:  0.85rem;   /* main ...body / card text, inputs - MISA */
+    --m-font-md:    0.85rem;   /* button text, minor headings - MISA, can be biger than base */
+    --m-font-meny-top:    1.4rem;   /* meny top title - MISA */
     --m-font-lg:    1.00rem;   /* modal header icons, welcome text */
-    --m-font-xl:    1.35rem;   /* section h2 */
-    --m-font-2xl:   1.60rem;   /* page h1 */
+    --m-font-xl:    1.2rem;   /* section h2 - MISA */
+    --m-font-2xl:   1.4rem;   /* page h1 */
+    --m-font-tts:   0.80rem;  /* filter-type-summary line (training types / quote sources) */
 
     /* Spacing */
-    --m-pad-xs:     0.35rem;   /* strip padding, tight gaps */
-    --m-pad-sm:     0.50rem;   /* modal header, small elements */
+    --m-pad-xs:     0.40rem;   /* strip padding, tight gaps */
+    --m-pad-sm:     0.70rem;   /* modal header, small elements - MISA */
     --m-pad-base:   0.65rem;   /* form-group gap, card gap */
     --m-pad-md:     0.85rem;   /* modal body padding */
     --m-pad-lg:     0.90rem;   /* card inner padding */
-    --m-pad-xl:     1.10rem;   /* search section, section header */
+    --m-pad-xl:     1.10rem;   /* main poadding inside cards,search section, section header */
 
     /* Buttons */
-    --m-btn-height: 2.05rem;
+    --m-btn-height: 2.0rem;
 
     /* Cards */
-    --m-card-pad:   0.90rem;
-    --m-card-gap:   0.65rem;
+    --m-card-pad:   0.70rem; /* MISA */
+    --m-card-gap:   0.55rem; /* MISA */
 
     /* Tag pills */
-    --m-tag-pad-v:  0.15rem;
-    --m-tag-pad-h:  0.45rem;
+    --m-tag-pad-v:  0.2rem;
+    --m-tag-pad-h:  1.0rem;
+
+    --m-pad-2xl:    0.5rem 0rem;  /* was 2.0   */
   }
 
   /* Gallery option is available on medium screens; JS hides the numbered options */
   .column-count-select { display: inline-block !important; }
 
-  /* Hide the side menu completely */
+  /* Side menu: slightly narrower on medium screens */
+  :root {
+    --side-menu-width: 210px;
+  }
   .side-menu {
-    display: none !important;
+    display: flex !important;
+    flex-direction: column;
+    padding: var(--m-pad-xl) var(--m-pad-base) !important;
   }
-  
-  /* Main content takes full width */
+  .side-menu-title {
+    font-size: var(--m-font-meny-top) !important;
+    margin-bottom: var(--m-pad-xs) !important;
+  }
+  .menu-item {
+    font-size: var(--m-font-sm) !important;
+    padding: var(--m-pad-xs) var(--m-pad-sm) !important;
+  }
+  .menu-section-title {
+    font-size: var(--m-font-xs) !important;
+  }
+
+  /* Main content uses side-menu width */
   .main-content {
-    margin-left: 0 !important;
-    width: 100% !important;
-    padding: var(--m-pad-xl);
+    margin-left: var(--side-menu-width) !important;
+    width: calc(100% - var(--side-menu-width)) !important;
+    padding: var(--m-pad-2xl) !important;
   }
-  
-  /* Show tablet menu view and back buttons */
+
+  /* Landing-page tablet elements hidden (side menu replaces them) */
   .tablet-only {
-    display: block !important;
+    display: none !important;
   }
   
   /* Modal — medium screens: wider + tall (internal padding does the compacting) */
@@ -3280,7 +3312,7 @@ body.selection-mode .quote-card::after {
   }
   
   .container {
-    padding: 1rem;
+    padding: 0.5rem 1rem;
   }
   
   .side-menu-title {
@@ -3299,6 +3331,8 @@ body.selection-mode .quote-card::after {
   }
   
   .menu-divider {
+    display: block !important;
+    height: 1px;
     margin: 0.8rem 0;
   }
   
@@ -3463,6 +3497,15 @@ body.selection-mode .quote-card::after {
     line-height: 1.5 !important;
   }
 
+  /* Modal Quill editor — match card text size */
+  .ql-editor {
+    font-size: var(--m-font-base) !important;
+    line-height: 1.5 !important;
+  }
+  .ql-editor h2 {
+    font-size: 1.3em !important;
+  }
+
   /* Author / source line */
   .quote-author,
   .quote-source,
@@ -3470,11 +3513,53 @@ body.selection-mode .quote-card::after {
     font-size: var(--m-font-sm) !important;
   }
 
-  /* Tag pills on cards */
-  .tag-badge,
-  .quote-tag {
+  /* Tag pills on cards and modal — actual class is .tag / .tag-removable */
+  .tag,
+  .tag-removable {
     font-size: var(--m-font-xs) !important;
     padding: var(--m-tag-pad-v) var(--m-tag-pad-h) !important;
+  }
+
+  /* Type-filter toggle button ("Select Quote Sources" / "Select Training Types") */
+  .type-filter-toggle {
+    font-size: var(--m-font-md) !important;
+    gap: 0.5rem;
+    padding: 0.5rem var(--m-pad-base);
+    min-width: 160px;
+  }
+  .dropdown-arrow {
+    font-size: 0.6rem !important;
+  }
+  /* Dropdown panel */
+  .type-filter-dropdown {
+    min-width: 220px !important;
+    padding: var(--m-pad-xs) 0 !important;
+  }
+  /* Each checkbox row inside the dropdown */
+  .type-filter-option {
+    font-size: var(--m-font-sm) !important;
+    padding: var(--m-pad-xs) var(--m-pad-base) !important;
+    gap: var(--m-pad-xs) !important;
+  }
+  .type-filter-option .type-icon {
+    font-size: var(--m-font-base) !important;
+  }
+  /* Select All / Clear All action buttons */
+  .type-action-btn {
+    font-size: var(--m-font-sm) !important;
+    padding: var(--m-pad-xs) var(--m-pad-sm) !important;
+    gap: var(--m-pad-xs) !important;
+  }
+  .type-action-btn .type-icon {
+    font-size: var(--m-font-base) !important;
+  }
+
+  /* Training-type / quote-source summary line */
+  .filter-type-summary {
+    font-size: var(--m-font-tts) !important;
+  }
+  .tts-sep {
+    font-size: calc(var(--m-font-tts) * 0.85) !important;
   }
 
   /* Header layout */
@@ -3575,7 +3660,7 @@ body.selection-mode .quote-card::after {
    Phones and narrow screens
    ============================================ */
 /* Responsive */
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .container {
     padding: 1rem;
   }
@@ -3802,7 +3887,7 @@ body.selection-mode .quote-card::after {
   color: var(--text-primary);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .pagination-container {
     flex-direction: column;
     gap: 1rem;
@@ -4130,7 +4215,7 @@ body.selection-mode .quote-card::after {
   display: none;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .welcome-quote-card {
     padding: 3rem 2rem;
   }
@@ -4510,7 +4595,7 @@ body.selection-mode .quote-card::after {
 }
 
 /* Mobile adjustments for rename */
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .rename-modal-content {
     margin: 20px;
   }
@@ -4732,7 +4817,7 @@ body.selection-mode .quote-card::after {
   font-size: 0.85em;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .tag-operations-panel {
     padding: 16px;
   }
@@ -4758,7 +4843,7 @@ body.selection-mode .quote-card::after {
 
 /* ============= ENHANCED MOBILE OPTIMIZATION ============= */
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   /* Hide desktop-only elements on mobile */
   .desktop-only,
   .menu-operations.desktop-only,
@@ -5572,7 +5657,7 @@ body.selection-mode .quote-card::after {
 .metadata-filters-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 0.6rem 1rem;
+  gap: 0.8rem 2rem;
   margin: 0;
   padding: 0;
 }
@@ -5591,7 +5676,7 @@ body.selection-mode .quote-card::after {
   background-color: var(--input-bg);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 0.4rem 0.6rem;
+  padding: 0.2rem 0.6rem;
   flex: 0 1 auto;
   white-space: nowrap;
 }
@@ -6267,7 +6352,7 @@ body.selection-mode .quote-card::after {
 /* View-mode toggle button */
 /* View-mode toggle: icon-only button, same size as Back/Refresh, amber colour */
 .column-count-select {
-  height: 2.5rem;
+  height: var(--d-btn-height);
   padding: 0 0.5rem;
   border: 1px solid var(--border);
   border-radius: 6px;

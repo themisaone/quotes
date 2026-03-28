@@ -626,20 +626,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   quillEditor = initializeQuillEditor();
   
   // Check if we're on a tablet (769px-1100px)
-  const isTablet = window.matchMedia("(min-width: 769px) and (max-width: 1100px)").matches;
+  const isTablet = window.matchMedia("(min-width: 768px) and (max-width: 1100px)").matches;
   
   // Set up event listeners (including gallery mode) BEFORE first load
   setupEventListeners();
   setupMenuNavigation();
 
-  if (isTablet) {
-    // Show menu view on tablets
-    switchView("menu");
-  } else {
-    // Show quotes view on desktop/mobile — gallery filters already active if saved
-    loadQuotes();
-    loadTotalCount();
-  }
+  // Side-menu layout active on medium screens — no landing page needed
+  // (landing page code kept; isTablet flag preserved for future use)
+  loadQuotes();
+  loadTotalCount();
   
   // Initialize back button for history navigation
   initializeBackButton({
@@ -838,7 +834,7 @@ function setupEventListeners() {
   if (columnCountSelect) {
     // On medium screens the grid is locked to 2 columns by CSS — hide numbered options,
     // keep only gallery so the user can still activate gallery mode.
-    const isMediumScreen = window.matchMedia('(min-width: 769px) and (max-width: 1100px)').matches;
+    const isMediumScreen = window.matchMedia('(min-width: 768px) and (max-width: 1100px)').matches;
     if (isMediumScreen) {
       Array.from(columnCountSelect.options)
         .filter(opt => opt.value !== 'gallery' && opt.value !== '2')
@@ -4419,7 +4415,7 @@ function updateSelectedTagsDisplay() {
   }
   
   container.innerHTML = selectedTagsArray.map(tag => `
-    <span class="tag-removable" style="background: var(--tag-color); color: white; padding: 0.35rem 0.6rem; border-radius: 12px; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+    <span class="tag-removable">
       ${escapeHtml(tag)}
       <span onclick="removeTag('${escapeHtml(tag).replace(/'/g, "\\'")}')" style="font-weight: bold; cursor: pointer;">&times;</span>
     </span>
