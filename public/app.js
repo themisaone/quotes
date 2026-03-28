@@ -433,14 +433,53 @@ function generateNoteTypeMenu() {
 
   const types = getNoteTypes();
   types.forEach(type => {
+    const highlightedTags = (globalSettings?.highlightedTags?.[type.value] || []);
+    const hasSubTags = highlightedTags.length > 0;
+
     const li = document.createElement('li');
     li.className = 'note-type-filter-li';
-    li.innerHTML = `<button class="menu-item note-type-filter" data-note-type="${type.value}">
-      <span class="menu-icon">${type.icon}</span><span class="menu-text"> ${type.label}</span>
-    </button>`;
+
+    // Button row: type button + optional expand arrow
+    const btn = document.createElement('button');
+    btn.className = 'menu-item note-type-filter';
+    btn.dataset.noteType = type.value;
+    btn.innerHTML = `<span class="menu-icon">${type.icon}</span><span class="menu-text"> ${type.label}</span>`;
+
+    if (hasSubTags) {
+      const expandBtn = document.createElement('button');
+      expandBtn.className = 'note-type-expand-btn';
+      expandBtn.title = 'Toggle shortcuts';
+      expandBtn.textContent = '▶';
+      expandBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const subList = li.querySelector('.menu-sub-list');
+        const isOpen = subList.classList.toggle('expanded');
+        expandBtn.classList.toggle('open', isOpen);
+      });
+      btn.appendChild(expandBtn);
+    }
+    li.appendChild(btn);
+
+    // Sub-list of highlighted tags
+    if (hasSubTags) {
+      const subUl = document.createElement('ul');
+      subUl.className = 'menu-sub-list';
+      highlightedTags.forEach(tag => {
+        const subLi = document.createElement('li');
+        subLi.className = 'menu-sub-item';
+        subLi.textContent = tag;
+        subLi.title = `Filter ${type.label} by "${tag}"`;
+        subLi.addEventListener('click', () => {
+          window.filterByTag(tag, type.value);
+        });
+        subUl.appendChild(subLi);
+      });
+      li.appendChild(subUl);
+    }
+
     ul.insertBefore(li, separator);
 
-    li.querySelector('button').addEventListener('click', () => {
+    btn.addEventListener('click', () => {
       const noteType = type.value;
       currentNoteTypeFilter = noteType;
       window.currentNoteTypeFilter = noteType;
@@ -455,9 +494,9 @@ function generateNoteTypeMenu() {
       saveCurrentView();
       updateUrlHash();
 
-      document.querySelectorAll('.note-type-filter').forEach(btn => btn.classList.remove('active'));
-      li.querySelector('button').classList.add('active');
-      document.querySelectorAll('.menu-item[data-view]').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.note-type-filter').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.menu-item[data-view]').forEach(b => b.classList.remove('active'));
 
       updateAddButtonText();
       updateMainTitle();
@@ -627,7 +666,26 @@ document.addEventListener("DOMContentLoaded", async () => {
   
   // Check if we're on a tablet (769px-1100px)
   const isTablet = window.matchMedia("(min-width: 768px) and (max-width: 1100px)").matches;
-  
+
+  // Medium-screen sidebar collapse toggle
+  const sideMenuToggle = document.getElementById('sideMenuToggle');
+  if (sideMenuToggle && isTablet) {
+    const sideMenuEl  = document.querySelector('.side-menu');
+    const appLayoutEl = document.querySelector('.app-layout');
+    const applyCollapsed = (collapsed) => {
+      sideMenuEl.classList.toggle('menu-collapsed', collapsed);
+      appLayoutEl.classList.toggle('menu-collapsed', collapsed);
+      sideMenuToggle.innerHTML = collapsed ? '&#9654;' : '&#9664;';
+    };
+    // Restore saved state
+    applyCollapsed(localStorage.getItem('sideMenuCollapsed') === 'true');
+    sideMenuToggle.addEventListener('click', () => {
+      const nowCollapsed = !sideMenuEl.classList.contains('menu-collapsed');
+      applyCollapsed(nowCollapsed);
+      localStorage.setItem('sideMenuCollapsed', nowCollapsed);
+    });
+  }
+
   // Set up event listeners (including gallery mode) BEFORE first load
   setupEventListeners();
   setupMenuNavigation();

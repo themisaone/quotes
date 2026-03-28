@@ -78,6 +78,7 @@
     <div class="app-layout">
         <!-- Side Menu -->
         <nav class="side-menu">
+            <button id="sideMenuToggle" class="menu-toggle-btn" title="Toggle menu">&#9664;</button>
             <h2 class="side-menu-title">📚 My Collection</h2>
 
         <div class="menu-divider"></div>
@@ -391,7 +392,7 @@
                   />
                 </div>
                 <div class="search-item" id="searchClearContainer">
-                  <button id="clearBtn" class="btn btn-primary">Clear filter</button>
+                  <button id="clearBtn" class="btn btn-primary">Clear</button>
                 </div>
               </div>
               
@@ -878,6 +879,22 @@
               </div>
             </div>
             </div><!-- end settings-row: Tag Management + Search Features -->
+
+            <!-- Quick Tag Shortcuts -->
+            <div class="settings-row">
+            <div class="settings-section" style="flex: 1;">
+              <h2>⭐ Quick Tag Shortcuts</h2>
+              <p class="setting-description" style="margin-bottom:0.75rem;">Tags shown as sub-menu items under each note type. Click one to jump straight to filtered results.</p>
+              <div class="setting-item" style="flex-direction:column; align-items:stretch; gap:0.6rem;">
+                <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                  <select id="shortcutNoteTypeSelect" class="training-date-select" style="flex:0 0 auto; width:auto; min-width:130px;"></select>
+                  <input type="text" id="shortcutTagInput" placeholder="Tag name…" class="search-input" style="flex:1; min-width:120px;" autocomplete="off" />
+                  <button id="shortcutTagAddBtn" class="btn btn-primary" style="flex-shrink:0;">Add</button>
+                </div>
+                <div id="shortcutTagsList" style="display:flex; flex-wrap:wrap; gap:0.4rem; min-height:1.5rem;"></div>
+              </div>
+            </div>
+            </div><!-- end settings-row: Quick Tag Shortcuts -->
 
             <div class="settings-row">
             <!-- Note Types -->

@@ -346,15 +346,16 @@ export function updateSourcesFilterVisibility(currentNoteTypeFilter, getQuoteTyp
 function updateSearchGridLayout(noteType) {
   const grid = document.querySelector('.search-grid');
   if (!grid) return;
-  grid.classList.remove('layout-notes', 'layout-training');
+  grid.classList.remove('layout-notes', 'layout-training', 'layout-quote');
   if (!noteType) return; // "All Notes" — default 3-col layout
   const behavior = getNoteTypeConfig(noteType).behavior || 'generic';
   if (behavior === 'generic') {
     grid.classList.add('layout-notes');
   } else if (behavior === 'training') {
     grid.classList.add('layout-training');
+  } else if (behavior === 'quote') {
+    grid.classList.add('layout-quote');
   }
-  // behavior === 'quote' → default grid (no extra class needed)
 }
 
 /**

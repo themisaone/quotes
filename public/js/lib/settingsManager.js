@@ -1225,6 +1225,66 @@ export function initializeSettings(callbacks = {}) {
   renderTrainingTypesList(populateTrainingTypeFilterCheckboxes);
   if (renderNoteTypesListCb) renderNoteTypesListCb();
   setupTypeManagementListeners(populateTypeDropdowns, populateTypeFilterCheckboxes, populateTrainingTypeFilterCheckboxes, rebuildNoteTypeMenu);
+
+  // ── Quick Tag Shortcuts ──────────────────────────────────────────────────
+  const shortcutTypeSelect = getElementByIdSafe('shortcutNoteTypeSelect');
+  const shortcutTagInput   = getElementByIdSafe('shortcutTagInput');
+  const shortcutAddBtn     = getElementByIdSafe('shortcutTagAddBtn');
+  const shortcutList       = getElementByIdSafe('shortcutTagsList');
+
+  function renderShortcutTags() {
+    if (!shortcutList || !shortcutTypeSelect) return;
+    const type = shortcutTypeSelect.value;
+    const tags = globalSettings?.highlightedTags?.[type] || [];
+    shortcutList.innerHTML = tags.map(tag => `
+      <span style="display:inline-flex;align-items:center;gap:0.3rem;background:var(--tag-color);color:white;padding:0.2rem 0.55rem;border-radius:12px;font-size:0.85rem;">
+        ${tag}
+        <span data-remove="${tag}" style="cursor:pointer;font-weight:bold;opacity:0.8;" title="Remove">&times;</span>
+      </span>`).join('');
+    shortcutList.querySelectorAll('[data-remove]').forEach(x => {
+      x.addEventListener('click', async () => {
+        const t = x.dataset.remove;
+        if (!globalSettings.highlightedTags) globalSettings.highlightedTags = {};
+        globalSettings.highlightedTags[type] = (globalSettings.highlightedTags[type] || []).filter(v => v !== t);
+        await saveSettings(globalSettings);
+        renderShortcutTags();
+        if (rebuildNoteTypeMenu) rebuildNoteTypeMenu();
+      });
+    });
+  }
+
+  if (shortcutTypeSelect) {
+    // Populate the note-type selector
+    const noteTypes = globalSettings?.noteTypes || [];
+    noteTypes.forEach(nt => {
+      const opt = document.createElement('option');
+      opt.value = nt.value;
+      opt.textContent = `${nt.icon || ''} ${nt.label}`;
+      shortcutTypeSelect.appendChild(opt);
+    });
+    shortcutTypeSelect.addEventListener('change', renderShortcutTags);
+    renderShortcutTags();
+  }
+
+  if (shortcutAddBtn && shortcutTagInput && shortcutTypeSelect) {
+    const doAdd = async () => {
+      const tag  = shortcutTagInput.value.trim();
+      const type = shortcutTypeSelect.value;
+      if (!tag || !type) return;
+      if (!globalSettings.highlightedTags) globalSettings.highlightedTags = {};
+      const arr = globalSettings.highlightedTags[type] || [];
+      if (!arr.includes(tag)) {
+        arr.push(tag);
+        globalSettings.highlightedTags[type] = arr;
+        await saveSettings(globalSettings);
+        if (rebuildNoteTypeMenu) rebuildNoteTypeMenu();
+      }
+      shortcutTagInput.value = '';
+      renderShortcutTags();
+    };
+    shortcutAddBtn.addEventListener('click', doAdd);
+    shortcutTagInput.addEventListener('keydown', e => { if (e.key === 'Enter') doAdd(); });
+  }
 }
 
 /**

@@ -141,5 +141,21 @@
     "linkColor": "#16dba5"
   },
   "wordWrapChars": 82,
-  "enableWordWrap": true
+  "enableWordWrap": true,
+  "highlightedTags": {
+    "historical": [
+      "cale",
+      "keva",
+      "misa",
+      "aleks",
+      "sandra",
+      "lill",
+      "johanne",
+      "leah"
+    ],
+    "note": [
+      "recepti",
+      "jugoserbia"
+    ]
+  }
 }

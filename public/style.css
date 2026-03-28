@@ -109,7 +109,7 @@ body {
 }
 
 .menu-operations .menu-item {
-  font-size: calc(var(--d-font-base) * 0.95);
+  font-size: var(--d-font-md);
 }
 
 .menu-item {
@@ -119,7 +119,7 @@ body {
   background: none;
   border: none;
   border-radius: 8px;
-  font-size: var(--d-font-base);
+  font-size: var(--d-font-md);
   color: rgba(255, 255, 255, 0.85);
   cursor: pointer;
   transition: all 0.2s;
@@ -162,6 +162,63 @@ body {
   background: rgba(255, 255, 255, 0.25);
   margin: 1.0rem 0;
 }
+
+/* Sidebar collapse toggle — only visible on medium screens */
+.menu-toggle-btn {
+  display: none;
+}
+
+/* ── Highlighted-tag sub-menu ── */
+.menu-sub-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.22s ease;
+}
+.menu-sub-list.expanded {
+  max-height: 300px; /* enough for 6 items */
+}
+.menu-sub-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.28rem 0.5rem 0.28rem 1.8rem;
+  font-size: var(--d-font-md);
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.menu-sub-item:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: white;
+}
+.menu-sub-item::before {
+  content: "🏷";
+  font-size: 0.7em;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+/* Expand arrow on the note-type button */
+.note-type-expand-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.6rem;
+  cursor: pointer;
+  padding: 0 0.2rem;
+  line-height: 1;
+  transition: transform 0.2s, color 0.2s;
+  flex-shrink: 0;
+}
+.note-type-expand-btn:hover { color: white; }
+.note-type-expand-btn.open  { transform: rotate(90deg); color: rgba(255,255,255,0.85); }
 
 .menu-section-title {
   font-size: var(--d-font-xs);
@@ -1499,23 +1556,34 @@ textarea {
 
 /* Notes / Puzzles / Jokes: Text+Clear on row 1, Tags+Score on row 2 */
 .search-grid.layout-notes {
-  grid-template-columns: 2fr auto;
+  grid-template-columns: 3fr 3fr 2fr 1fr;
 }
-.search-grid.layout-notes #searchTextContainer { grid-column: 1; grid-row: 1; }
-.search-grid.layout-notes #searchClearContainer { grid-column: 2; grid-row: 1; }
-.search-grid.layout-notes #searchTagsContainer  { grid-column: 1; grid-row: 2; }
-.search-grid.layout-notes #searchScoreContainer { grid-column: 2; grid-row: 2; }
+.search-grid.layout-notes #searchTextContainer  { grid-column: 1; grid-row: 1; }
+.search-grid.layout-notes #searchTagsContainer  { grid-column: 2; grid-row: 1; }
+.search-grid.layout-notes #searchScoreContainer { grid-column: 3; grid-row: 1; }
+.search-grid.layout-notes #searchClearContainer { grid-column: 4; grid-row: 1; }
 
-/* Training: Text+Year+Month on row 1, Tags+Score+Clear on row 2 */
+/* Training: Text+Tags+Score on row 1, Year+Month+Clear on row 2 */
 .search-grid.layout-training {
-  grid-template-columns: 2fr 1fr 1fr;
+  grid-template-columns: 3fr 3fr 2fr;
 }
 .search-grid.layout-training #searchTextContainer    { grid-column: 1; grid-row: 1; }
-.search-grid.layout-training #trainingYearContainer  { grid-column: 2; grid-row: 1; }
-.search-grid.layout-training #trainingMonthContainer { grid-column: 3; grid-row: 1; }
-.search-grid.layout-training #searchTagsContainer    { grid-column: 1; grid-row: 2; }
-.search-grid.layout-training #searchScoreContainer   { grid-column: 2; grid-row: 2; }
+.search-grid.layout-training #searchTagsContainer    { grid-column: 2; grid-row: 1; }
+.search-grid.layout-training #searchScoreContainer   { grid-column: 3; grid-row: 1; }
+.search-grid.layout-training #trainingYearContainer  { grid-column: 1; grid-row: 2; }
+.search-grid.layout-training #trainingMonthContainer { grid-column: 2; grid-row: 2; }
 .search-grid.layout-training #searchClearContainer   { grid-column: 3; grid-row: 2; }
+
+/* Quote: Text+Tags+Score on row 1, Author+Source+Clear on row 2 */
+.search-grid.layout-quote {
+  grid-template-columns: 3fr 3fr 2fr;
+}
+.search-grid.layout-quote #searchTextContainer   { grid-column: 1; grid-row: 1; }
+.search-grid.layout-quote #searchTagsContainer   { grid-column: 2; grid-row: 1; }
+.search-grid.layout-quote #searchScoreContainer  { grid-column: 3; grid-row: 1; }
+.search-grid.layout-quote #searchAuthorContainer { grid-column: 1; grid-row: 2; }
+.search-grid.layout-quote #searchSourceContainer { grid-column: 2; grid-row: 2; }
+.search-grid.layout-quote #searchClearContainer  { grid-column: 3; grid-row: 2; }
 
 .search-item {
   display: flex;
@@ -3090,6 +3158,50 @@ body.selection-mode .quote-card::after {
     display: flex !important;
     flex-direction: column;
     padding: var(--m-pad-xl) var(--m-pad-base) !important;
+    transition: width 0.25s ease, padding 0.25s ease;
+    overflow: hidden;
+  }
+
+  /* Collapse toggle button */
+  .menu-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    align-self: flex-end;
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 50%;
+    color: white;
+    cursor: pointer;
+    font-size: 0.65rem;
+    margin-bottom: 0.25rem;
+    transition: background 0.2s;
+  }
+  .menu-toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+  }
+
+  /* Collapsed state — slim strip showing only the toggle arrow */
+  .side-menu.menu-collapsed {
+    width: 38px !important;
+    padding: 0.5rem 0.3rem !important;
+    align-items: center !important;
+  }
+  .side-menu.menu-collapsed > *:not(.menu-toggle-btn) {
+    display: none !important;
+  }
+  .side-menu.menu-collapsed .menu-toggle-btn {
+    align-self: center;
+    margin-bottom: 0;
+  }
+
+  /* Main content expands when menu is collapsed */
+  .app-layout.menu-collapsed .main-content {
+    margin-left: 38px !important;
+    width: calc(100% - 38px) !important;
   }
   .side-menu-title {
     font-size: var(--m-font-meny-top) !important;
@@ -3101,6 +3213,10 @@ body.selection-mode .quote-card::after {
   }
   .menu-section-title {
     font-size: var(--m-font-xs) !important;
+  }
+  .menu-sub-item {
+    font-size: var(--m-font-xs) !important;
+    padding: 0.24rem 0.4rem 0.24rem 1.6rem !important;
   }
 
   /* Main content uses side-menu width */
@@ -3409,10 +3525,10 @@ body.selection-mode .quote-card::after {
     font-size: var(--m-font-lg);
   }
 
-  /* Section headings */
+  /* Section headings 
+   margin-bottom: var(--m-pad-md) !important; */
   h2 {
     font-size: var(--m-font-xl) !important;
-    margin-bottom: var(--m-pad-md) !important;
   }
 
   /* Search section */
@@ -3427,6 +3543,13 @@ body.selection-mode .quote-card::after {
     grid-template-columns: repeat(2, 1fr) !important;
   }
 
+  /* Metadata filter item — label, select and its options use medium font */
+  .metadata-filter-item span,
+  .metadata-filter-item select,
+  .metadata-filter-item select option {
+    font-size: var(--m-font-base) !important;
+  }
+
   /* Quotes section */
   .quotes-section {
     padding: 0 !important;
@@ -3436,7 +3559,7 @@ body.selection-mode .quote-card::after {
   .quotes-section-header {
     background: var(--surface) !important;
     padding: var(--m-pad-sm) var(--m-pad-xl) !important;
-    margin: 0 0 var(--m-pad-md) 0 !important;
+    margin: 0 !important;
     border-radius: 8px !important;
     box-shadow: var(--shadow) !important;
   }
@@ -3685,7 +3808,11 @@ body.selection-mode .quote-card::after {
   }
 
   .search-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 3fr 3fr 2fr 1fr;
+  }
+
+  .search-grid.layout-notes {
+    gap: 0.75rem 0rem;
   }
 
   .quote-meta {
@@ -5689,13 +5816,17 @@ body.selection-mode .quote-card::after {
   flex-shrink: 0;
 }
 
+.metadata-filter-item select,
+.metadata-filter-item select option {
+  font-size: var(--d-font-base);
+}
+
 .metadata-filter-item select {
   padding: 0.3rem 0.4rem;
   border: 1px solid var(--border);
   border-radius: 6px;
   background-color: var(--background);
   cursor: pointer;
-  font-size: 0.85rem;
   min-width: 110px;
   width: auto;
   flex-shrink: 0;
@@ -5704,7 +5835,7 @@ body.selection-mode .quote-card::after {
 .metadata-filter-item span {
   font-weight: 500;
   color: var(--text-primary);
-  font-size: 0.9rem;
+  font-size: var(--d-font-base);
   flex-shrink: 0;
 }
 
