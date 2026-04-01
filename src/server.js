@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
+const multer = require("multer");
 const pool = require("./db");
 const fileStorage = require("./fileStorage");
 const {
@@ -20,6 +21,7 @@ const PORT = process.env.PORT || 4000;
 // Settings file path
 const SETTINGS_FILE = path.join(__dirname, '../config/settings.json');
 
+
 // Ensure config directory exists
 const configDir = path.dirname(SETTINGS_FILE);
 if (!fs.existsSync(configDir)) {
@@ -28,8 +30,8 @@ if (!fs.existsSync(configDir)) {
 
 // Middleware
 app.use(cors());
-app.use(express.json({ limit: "100mb" })); // Increased limit for bulk imports with attachments
-app.use(express.urlencoded({ limit: "100mb", extended: true })); // Also increase URL-encoded limit
+app.use(express.json({ limit: "100mb" }));
+app.use(express.urlencoded({ limit: "100mb", extended: true }));
 
 // Serve JS and CSS with no-cache so edits take effect on hard-refresh
 app.use((req, res, next) => {
@@ -191,6 +193,42 @@ function applyAttachments(note, attachments) {
     attachment_type: first ? first.attachment_type : note.attachment_type,
   };
 }
+
+// ============= LARGE FILE DIRECT UPLOAD =============
+// Multer: store directly on disk (no base64, no memory pressure)
+const multerStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const folder = req.body.folder || 'notes';
+    const dir = path.join(fileStorage.ATTACHMENTS_DIR, folder);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    // Temp name — server will rename after the note is saved
+    const ext = path.extname(file.originalname) || '.' + (fileStorage.MIME_TO_EXT[file.mimetype] || 'bin');
+    cb(null, `tmp_${Date.now()}${ext}`);
+  }
+});
+const upload = multer({ storage: multerStorage });
+
+// POST /api/upload-attachment
+// Accepts: multipart/form-data with field "file" + optional field "folder"
+// Returns: { fileRef: "file:notes/tmp_12345.pdf:application/pdf", filename, sizeMB }
+app.post('/api/upload-attachment', upload.single('file'), (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    const folder  = req.body.folder || 'notes';
+    const relPath = `${folder}/${req.file.filename}`;
+    const mimeType = req.file.mimetype || fileStorage.getMimeFromExtension(path.extname(req.file.filename).slice(1));
+    const sizeMB  = (req.file.size / 1024 / 1024).toFixed(2);
+    const fileRef = fileStorage.createFileReference(relPath, mimeType);
+    console.log(`📁 Direct upload: ${relPath} (${sizeMB} MB)`);
+    res.json({ fileRef, filename: req.file.originalname, sizeMB });
+  } catch (err) {
+    console.error('Upload error:', err);
+    res.status(500).json({ error: 'Upload failed' });
+  }
+});
 
 // ============= AUTHORS API =============
 
@@ -1056,7 +1094,7 @@ app.get("/api/quotes/count", async (req, res) => {
     const grandTotal = parseInt(totalResult.rows[0].count);
     
     res.json({ 
-      count: filteredCount,
+      count:     filteredCount,
       typeTotal: typeTotal,
       grandTotal: grandTotal
     });
@@ -1557,8 +1595,11 @@ app.post("/api/quotes", async (req, res) => {
 
     // Process attachments with hybrid storage using user's threshold
     const storageFolder = note_type || 'quote';
-    const processedImage = fileStorage.processForStorage(thumbnail, storageFolder, quoteId, '', storageThresholdMB);
-    const processedImageFull = fileStorage.processForStorage(attachment_full, storageFolder, quoteId, '_full', storageThresholdMB);
+    // Rename any directly-uploaded tmp_ files to use the real note ID
+    const renamedThumb = fileStorage.finalizeUploadedFile(thumbnail, quoteId, '');
+    const renamedFull  = fileStorage.finalizeUploadedFile(attachment_full, quoteId, '_full');
+    const processedImage = fileStorage.processForStorage(renamedThumb, storageFolder, quoteId, '', storageThresholdMB);
+    const processedImageFull = fileStorage.processForStorage(renamedFull, storageFolder, quoteId, '_full', storageThresholdMB);
 
     console.log(`📦 Quote ${quoteId} attachment processing (type: ${attachment_type}, threshold: ${storageThresholdMB} MB):`);
     console.log(`   Thumbnail: ${thumbnail ? `${(thumbnail.length/1024).toFixed(0)}KB` : 'none'} → ${processedImage ? (processedImage.startsWith('file:') ? processedImage : `${(processedImage.length/1024).toFixed(0)}KB base64`) : 'none'}`);
@@ -3939,3 +3980,11 @@ async function startServer() {
 }
 
 startServer();
+
+// Keep the server alive — log unhandled errors instead of crashing
+process.on('uncaughtException', (err) => {
+  console.error('🔴 Uncaught Exception (server kept alive):', err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('🔴 Unhandled Rejection (server kept alive):', reason);
+});

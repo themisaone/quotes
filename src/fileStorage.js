@@ -327,6 +327,37 @@ function copyAttachmentFile(value, oldId, newId) {
   return createFileReference(newRelativePath, mimeType);
 }
 
+/**
+ * If `value` is a file: reference with a tmp_ filename, rename it to use noteId.
+ * Returns the updated file: reference (or original value unchanged if not applicable).
+ * @param {string} value - "file:notes/tmp_123.pdf:application/pdf"
+ * @param {number|string} noteId - The real note ID
+ * @param {string} suffix - e.g. '' or '_full'
+ * @returns {string} Updated reference
+ */
+function finalizeUploadedFile(value, noteId, suffix = '') {
+  if (!isFilePath(value)) return value;
+  const { path: relPath, mimeType } = parseFilePath(value);
+  const basename = path.basename(relPath);
+  if (!basename.startsWith('tmp_')) return value; // already named correctly
+
+  const dir = path.dirname(relPath);
+  const ext = path.extname(basename);
+  const newBasename = `${noteId}${suffix}${ext}`;
+  const newRelPath = path.join(dir, newBasename).replace(/\\/g, '/');
+
+  const oldFull = path.join(ATTACHMENTS_DIR, relPath);
+  const newFull = path.join(ATTACHMENTS_DIR, newRelPath);
+
+  if (fs.existsSync(oldFull)) {
+    // If target already exists (unlikely), delete it first
+    if (fs.existsSync(newFull)) fs.unlinkSync(newFull);
+    fs.renameSync(oldFull, newFull);
+    console.log(`Renamed upload: ${relPath} → ${newRelPath}`);
+  }
+  return createFileReference(newRelPath, mimeType);
+}
+
 module.exports = {
   DEFAULT_MAX_SIZE_MB,
   ATTACHMENTS_DIR,
@@ -349,4 +380,5 @@ module.exports = {
   retrieveFromStorage,
   deleteAttachment,
   copyAttachmentFile,
+  finalizeUploadedFile,
 };

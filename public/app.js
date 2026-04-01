@@ -175,6 +175,20 @@ import {
 const API_URL = `${window.location.protocol}//${window.location.hostname}:${window.location.port || '4000'}/api`;
 window.API_URL = API_URL; // Make available to modules that need it
 
+// ── Global UI helpers ────────────────────────────────────────────────────────
+
+let _fetchErrorTimer = null;
+window.showFetchError = function showFetchError(message) {
+  const banner = document.getElementById('fetchErrorBanner');
+  const msg    = document.getElementById('fetchErrorMsg');
+  if (!banner || !msg) return;
+  msg.textContent = `⚠️ Server error: ${message} — try restarting the server.`;
+  banner.style.display = 'flex';
+  clearTimeout(_fetchErrorTimer);
+  _fetchErrorTimer = setTimeout(() => { banner.style.display = 'none'; }, 12000);
+}
+
+
 // Quill editor instance
 let quillEditor = null;
 
@@ -886,6 +900,16 @@ function setupEventListeners() {
         setQuotesPerPage(_galleryNormalPageSize);
         _galleryNormalPageSize = null;
       }
+      // Clear the image filters that gallery mode silently set
+      const cbImg  = document.getElementById('searchHasImage');
+      const selImg = document.getElementById('searchImageCondition');
+      const cbType  = document.getElementById('searchHasImageType');
+      const selType = document.getElementById('searchImageTypeCondition');
+      if (cbImg)  cbImg.checked  = false;
+      if (selImg) selImg.value   = 'has';
+      if (cbType)  cbType.checked = false;
+      if (selType) selType.value  = 'has';
+      _syncImageTypeFilterState();
     }
   }
 
@@ -2043,7 +2067,9 @@ function readAttachmentFile(file, type) {
     }
   };
   
-  return readAttachmentFileLib(file, type, globalSettings, callbacks);
+  // Pass the current note-type as the storage folder hint for large-file direct upload
+  const folder = currentNoteTypeFilter || 'notes';
+  return readAttachmentFileLib(file, type, globalSettings, callbacks, folder);
 }
 
 function readImageFile(file, type) {
@@ -3065,8 +3091,9 @@ async function loadAuthors() {
     }
   } catch (error) {
     console.error("Error loading authors:", error);
-    getElementByIdSafe("authorsList").innerHTML =
-      '<div class="no-items">Failed to load authors.</div>';
+    showFetchError(error.message || 'Failed to load authors');
+    const el = getElementByIdSafe("authorsList");
+    if (el) el.innerHTML = '<div class="no-items">Failed to load authors.</div>';
   }
 }
 
@@ -3200,8 +3227,9 @@ async function loadSources() {
     }
   } catch (error) {
     console.error("Error loading sources:", error);
-    getElementByIdSafe("sourcesList").innerHTML =
-      '<div class="no-items">Failed to load sources.</div>';
+    showFetchError(error.message || 'Failed to load sources');
+    const el = getElementByIdSafe("sourcesList");
+    if (el) el.innerHTML = '<div class="no-items">Failed to load sources.</div>';
   }
 }
 

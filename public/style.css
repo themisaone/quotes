@@ -6820,3 +6820,45 @@ body.selection-mode .quote-card::after {
     max-height: 300px;
   }
 }
+
+/* ── Fetch-error & result-limit banners ─────────────────────────────────── */
+.fetch-error-banner,
+.result-limit-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  animation: slideDown 0.25s ease;
+}
+.fetch-error-banner {
+  background: #dc2626;
+  color: #fff;
+}
+.result-limit-banner {
+  background: #d97706;
+  color: #fff;
+}
+.fetch-error-banner span,
+.result-limit-banner span {
+  flex: 1;
+}
+.fetch-error-close {
+  background: rgba(255,255,255,0.25);
+  border: none;
+  color: #fff;
+  border-radius: 4px;
+  padding: 0.2rem 0.5rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+.fetch-error-close:hover {
+  background: rgba(255,255,255,0.4);
+}

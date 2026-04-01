@@ -26,6 +26,10 @@ const FULL_SIZE_LIMIT = 1024;
 const AUTHOR_SOURCE_IMAGE_SIZE = 300;
 const JPEG_QUALITY = 0.85;
 
+// Files larger than this (in bytes) are uploaded directly as binary (FormData)
+// instead of being base64-encoded in the JSON body, to avoid the body-size limit.
+const DIRECT_UPLOAD_THRESHOLD_BYTES = 50 * 1024 * 1024; // 50 MB
+
 const ATTACHMENT_TYPES = {
   IMAGE: 'image',
   PDF: 'pdf',
@@ -262,14 +266,39 @@ export function createIconThumbnail(icon, filename, size) {
 // ============= FILE READING =============
 
 /**
+ * Upload a large file directly to the server via FormData (binary, no base64).
+ * Returns a file: reference string, e.g. "file:notes/tmp_1234.pdf:application/pdf"
+ */
+async function uploadLargeFileDirect(file, folder = 'notes') {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('folder', folder);
+
+  const response = await fetch('/api/upload-attachment', {
+    method: 'POST',
+    body: formData
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error || `Upload failed (${response.status})`);
+  }
+
+  const data = await response.json();
+  console.log(`📁 Direct upload complete: ${data.filename} (${data.sizeMB} MB) → ${data.fileRef}`);
+  return data.fileRef;
+}
+
+/**
  * Read attachment file (handles all types: images, PDFs, documents, etc.)
  * @param {File} file - File object from input
  * @param {string} type - Context type ('quote', 'author', 'source')
  * @param {Object} state - State object to update
  * @param {Object} callbacks - Callback functions
+ * @param {string} folder - Storage folder hint for large-file direct upload (e.g. 'historical')
  * @returns {Promise<Object>} Processed attachment data
  */
-export async function readAttachmentFile(file, type, state, callbacks) {
+export async function readAttachmentFile(file, type, state, callbacks, folder = 'notes') {
   // For author/source, only images allowed
   if (type !== "quote") {
     return await readImageFile(file, type, state, callbacks);
@@ -278,15 +307,39 @@ export async function readAttachmentFile(file, type, state, callbacks) {
   // Determine attachment type
   const mimeType = file.type;
   const attachmentType = detectAttachmentType(mimeType);
+  const sizeMB = (file.size / 1024 / 1024).toFixed(2);
   
-  console.log(`📎 Reading ${attachmentType} file: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+  console.log(`📎 Reading ${attachmentType} file: ${file.name} (${sizeMB} MB)`);
   
   // Handle images differently - downscale if needed
   if (attachmentType === ATTACHMENT_TYPES.IMAGE) {
     return await readImageFile(file, type, state, callbacks);
   }
+
+  // For large non-image files: stream directly to server (no base64 in JSON body)
+  if (file.size >= DIRECT_UPLOAD_THRESHOLD_BYTES) {
+    console.log(`🚀 Large file (${sizeMB} MB) — uploading directly to server...`);
+    if (callbacks?.onProgress) callbacks.onProgress(`Uploading ${sizeMB} MB file directly...`);
+
+    const fileRef = await uploadLargeFileDirect(file, folder);
+    const icon = getAttachmentIcon(attachmentType);
+    const sizeText = formatFileSize(file.size);
+    const thumbnail = createIconThumbnail(icon, file.name, sizeText);
+
+    const result = {
+      thumbnail,
+      full: fileRef,   // already a file: reference — no base64 ever in memory
+      type: attachmentType,
+      filename: file.name
+    };
+
+    if (callbacks?.onAttachmentLoaded) {
+      callbacks.onAttachmentLoaded(result, icon, file.name, sizeText);
+    }
+    return result;
+  }
   
-  // For non-images (PDF, docs, videos), read as-is
+  // For small non-images (PDF, docs, videos), read as base64 as usual
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {

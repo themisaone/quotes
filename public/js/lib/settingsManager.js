@@ -319,7 +319,6 @@ function applySettingsToUI() {
   if (thresholdSelect && globalSettings.externalStorageThreshold) {
     thresholdSelect.value = globalSettings.externalStorageThreshold;
   }
-  
   // Apply ALL saved colors to CSS on every page load.
   // Every key that exists in colorConfigs must also appear here so that
   // a hard-refresh restores the full palette without needing to open Settings.
@@ -1109,6 +1108,7 @@ export function initializeSettings(callbacks = {}) {
       .catch(err => console.log('Could not fetch storage config:', err));
   }
   
+
   // Quote Meta Searches setting
   if (enableQuoteMetaSearchesCheckbox) {
     // Load saved setting from globalSettings (default: false)

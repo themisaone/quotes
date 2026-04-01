@@ -215,15 +215,15 @@ export async function loadQuotes(currentNoteTypeFilter, getQuoteTypes, getTraini
     const params = buildQuotesParams(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes);
     const response = await fetchWithRetry(`${API_URL}/quotes?${params.toString()}`);
     const quotes = await response.json();
-
     currentQuotesData = quotes;
     await loadTotalCount(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes);
     
     return quotes; // Return quotes for caller to display
   } catch (error) {
     console.error("Error loading quotes:", error);
+    if (window.showFetchError) window.showFetchError(error.message || 'Failed to load notes');
     if (quotesList) {
-      quotesList.innerHTML = '<div class="no-quotes">Failed to load quotes. Please try again.</div>';
+      quotesList.innerHTML = '<div class="no-quotes">Failed to load notes. Please try again.</div>';
     }
     return []; // Return empty array on error
   }
@@ -246,6 +246,8 @@ export async function loadTotalCount(currentNoteTypeFilter, getQuoteTypes, getTr
     if (totalCountElement) totalCountElement.textContent = data.grandTotal || 0;
     if (typeCountElement) typeCountElement.textContent = data.typeTotal || 0;
     if (filteredCountElement) filteredCountElement.textContent = data.count || 0;
+
+
   } catch (error) {
     console.error("Error loading count:", error);
     if (totalCountElement) totalCountElement.textContent = "?";

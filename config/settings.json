@@ -40,7 +40,7 @@
       ],
       "displaySettings": {
         "showLongExpanded": false,
-        "displayByRealSize": true
+        "displayByRealSize": false
       }
     },
     {
@@ -115,9 +115,10 @@
   ],
   "downscaleQuoteImages": true,
   "externalStorageThreshold": 1,
+  "maxResultsLimit": 500,
   "compactMode": false,
   "enableTagOperations": true,
-  "enableQuoteMetaSearches": true,
+  "enableQuoteMetaSearches": false,
   "displayQuotesByRealSize": false,
   "displayImageQuotesLong": false,
   "showLongQuotesExpanded": false,
@@ -130,11 +131,11 @@
     "cancel": "#6b7280",
     "activeCounter": "#dc2626",
     "totalCounter": "#2d6a4f",
-    "menu": "#000000",
+    "menu": "#1f1f21",
     "appBg": "#29292a",
     "modalFooter": "#3c3d3e",
-    "inputBg": "#3c3d3e",
-    "card": "#1e1f20",
+    "inputBg": "#191a1d",
+    "card": "#2b2c2f",
     "textColor": "#ffffff",
     "cardHover": "#404a43",
     "inputBorder": "#5a5b5c",
@@ -152,8 +153,13 @@
       "lill"
     ],
     "note": [
-      "recepti",
-      "jugoserbia"
+      "jugoserbia",
+      "nole",
+      "bakklandet",
+      "imageonly"
+    ],
+    "puzzle": [
+      "cards"
     ]
   }
 }

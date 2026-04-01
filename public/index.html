@@ -5,13 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Quotes Collection</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
-    <link rel="stylesheet" href="style.css?v=202603281402" />
+    <link rel="stylesheet" href="style.css?v=202604010001" />
     <!-- Font Awesome for dice icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <!-- Quill Editor -->
     <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet" />
   </head>
   <body>
+    <!-- Global fetch-error banner -->
+    <div id="fetchErrorBanner" class="fetch-error-banner" style="display:none">
+      <span id="fetchErrorMsg"></span>
+      <button onclick="document.getElementById('fetchErrorBanner').style.display='none'" class="fetch-error-close">✕</button>
+    </div>
+
+
     <!-- Welcome Quote Overlay -->
     <div id="welcomeQuoteOverlay" class="welcome-overlay" style="display: none;">
       <div class="welcome-quote-container"></div>
@@ -1886,6 +1893,6 @@ Quote number three..."
     <!-- Quill Editor Script -->
     <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
     <script type="module" src="js/lib/confirmDialog.js"></script>
-    <script type="module" src="app.js?v=20260328"></script>
+    <script type="module" src="app.js?v=20260317a"></script>
   </body>
 </html>
