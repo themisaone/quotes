@@ -18,15 +18,37 @@ require("dotenv").config();
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// Settings file path
-const SETTINGS_FILE = path.join(__dirname, '../config/settings.json');
+// ── Local config (vault path only — stays inside the app, never synced) ──
+const LOCAL_FILE      = path.join(__dirname, '../config/local.json');
+const DEFAULT_SETTINGS_FILE = path.join(__dirname, '../config/settings.json');
+const DEFAULT_PALETTES_DIR  = path.join(__dirname, '../palettes');
 
-
-// Ensure config directory exists
-const configDir = path.dirname(SETTINGS_FILE);
-if (!fs.existsSync(configDir)) {
-  fs.mkdirSync(configDir, { recursive: true });
+function readLocalConfig() {
+  try {
+    if (fs.existsSync(LOCAL_FILE)) return JSON.parse(fs.readFileSync(LOCAL_FILE, 'utf8'));
+  } catch (_) {}
+  return {};
 }
+function writeLocalConfig(obj) {
+  fs.mkdirSync(path.dirname(LOCAL_FILE), { recursive: true });
+  fs.writeFileSync(LOCAL_FILE, JSON.stringify(obj, null, 2));
+}
+
+// Derive vault-relative paths
+function getSettingsFile() {
+  const { vaultPath } = readLocalConfig();
+  return vaultPath ? path.join(vaultPath, 'config', 'settings.json') : DEFAULT_SETTINGS_FILE;
+}
+function getPalettesDir() {
+  const { vaultPath } = readLocalConfig();
+  return vaultPath ? path.join(vaultPath, 'palettes') : DEFAULT_PALETTES_DIR;
+}
+
+// Keep SETTINGS_FILE as a compat alias (resolved at first use)
+const SETTINGS_FILE = DEFAULT_SETTINGS_FILE; // only used during startup before vault init
+
+// Ensure local config dir exists
+fs.mkdirSync(path.dirname(LOCAL_FILE), { recursive: true });
 
 // Middleware
 app.use(cors());
@@ -41,8 +63,27 @@ app.use((req, res, next) => {
   next();
 });
 app.use(express.static(path.join(__dirname, "../public")));
-// Serve attachments folder for large files
-app.use('/attachments', express.static(path.join(__dirname, '../attachments')));
+// Serve attachment files from the configured vault (dynamic — honours vaultPath setting)
+app.get('/attachments/*', (req, res) => {
+  const relativePath = req.params[0];
+  const filePath = path.join(fileStorage.getAttachmentsDir(), relativePath);
+  if (!fs.existsSync(filePath)) return res.status(404).send('Attachment not found');
+  res.sendFile(filePath);
+});
+// Serve PDF.js library for client-side PDF thumbnail generation
+app.use('/pdfjs', express.static(path.join(__dirname, '../node_modules/pdfjs-dist/build')));
+
+// Initialise vault path from local.json (called once at startup)
+function initVaultPath() {
+  try {
+    const { vaultPath } = readLocalConfig();
+    if (vaultPath) fileStorage.setAttachmentsDir(vaultPath);
+  } catch (e) {
+    console.warn('Could not read vault path from local.json:', e.message);
+  }
+}
+initVaultPath();
+fileStorage.ensureDirectories();
 
 // API to get storage configuration (returns default, actual value set by user in Settings)
 app.get('/api/config/storage', (req, res) => {
@@ -98,14 +139,15 @@ app.get('/api/settings', (req, res) => {
       }
     };
     
-    // Read from file if exists
-    if (fs.existsSync(SETTINGS_FILE)) {
-      const fileContent = fs.readFileSync(SETTINGS_FILE, 'utf8');
-      const settings = JSON.parse(fileContent);
+    // Read from vault-aware path
+    const settingsFile = getSettingsFile();
+    if (fs.existsSync(settingsFile)) {
+      const settings = JSON.parse(fs.readFileSync(settingsFile, 'utf8'));
       res.json(settings);
     } else {
       // Create file with defaults
-      fs.writeFileSync(SETTINGS_FILE, JSON.stringify(defaultSettings, null, 2));
+      fs.mkdirSync(path.dirname(settingsFile), { recursive: true });
+      fs.writeFileSync(settingsFile, JSON.stringify(defaultSettings, null, 2));
       res.json(defaultSettings);
     }
   } catch (error) {
@@ -124,9 +166,44 @@ app.put('/api/settings', (req, res) => {
       return res.status(400).json({ error: 'Invalid settings structure: noteTypes array required' });
     }
     
-    // Write to file
-    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2));
-    
+    // If vault path is changing, save it to local.json and migrate settings file
+    if (settings.vaultPath !== undefined) {
+      const oldVaultPath = readLocalConfig().vaultPath || '';
+      const newVaultPath = settings.vaultPath || '';
+      if (newVaultPath !== oldVaultPath) {
+        // Save vault path locally
+        writeLocalConfig({ vaultPath: newVaultPath });
+        // If moving to a vault, copy current settings.json there first
+        if (newVaultPath) {
+          const destSettings = path.join(newVaultPath, 'config', 'settings.json');
+          fs.mkdirSync(path.dirname(destSettings), { recursive: true });
+          if (!fs.existsSync(destSettings) && fs.existsSync(DEFAULT_SETTINGS_FILE)) {
+            fs.copyFileSync(DEFAULT_SETTINGS_FILE, destSettings);
+          }
+          // Also copy palettes
+          const destPalettes = path.join(newVaultPath, 'palettes');
+          fs.mkdirSync(destPalettes, { recursive: true });
+          if (fs.existsSync(DEFAULT_PALETTES_DIR)) {
+            for (const f of fs.readdirSync(DEFAULT_PALETTES_DIR)) {
+              if (f.endsWith('.json')) {
+                const dest = path.join(destPalettes, f);
+                if (!fs.existsSync(dest)) fs.copyFileSync(path.join(DEFAULT_PALETTES_DIR, f), dest);
+              }
+            }
+          }
+        }
+        fileStorage.setAttachmentsDir(newVaultPath);
+        fileStorage.ensureDirectories();
+      }
+      // Don't store vaultPath inside settings.json — it lives in local.json only
+      delete settings.vaultPath;
+    }
+
+    // Write settings to vault-aware path
+    const settingsFile = getSettingsFile();
+    fs.mkdirSync(path.dirname(settingsFile), { recursive: true });
+    fs.writeFileSync(settingsFile, JSON.stringify(settings, null, 2));
+
     res.json({ success: true, settings });
   } catch (error) {
     console.error('Error saving settings:', error);
@@ -198,7 +275,9 @@ function applyAttachments(note, attachments) {
 // Multer: store directly on disk (no base64, no memory pressure)
 const multerStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const folder = req.body.folder || 'notes';
+    // Use req.query.folder — req.body fields are not parsed yet when
+    // this callback runs (the file field precedes text fields in FormData).
+    const folder = req.query.folder || 'notes';
     const dir = path.join(fileStorage.ATTACHMENTS_DIR, folder);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     cb(null, dir);
@@ -212,12 +291,13 @@ const multerStorage = multer.diskStorage({
 const upload = multer({ storage: multerStorage });
 
 // POST /api/upload-attachment
-// Accepts: multipart/form-data with field "file" + optional field "folder"
+// Accepts: multipart/form-data with field "file" + query param ?folder=
 // Returns: { fileRef: "file:notes/tmp_12345.pdf:application/pdf", filename, sizeMB }
 app.post('/api/upload-attachment', upload.single('file'), (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-    const folder  = req.body.folder || 'notes';
+    // folder comes from query param (consistent with what multer's destination used)
+    const folder  = req.query.folder || 'notes';
     const relPath = `${folder}/${req.file.filename}`;
     const mimeType = req.file.mimetype || fileStorage.getMimeFromExtension(path.extname(req.file.filename).slice(1));
     const sizeMB  = (req.file.size / 1024 / 1024).toFixed(2);
@@ -227,6 +307,135 @@ app.post('/api/upload-attachment', upload.single('file'), (req, res) => {
   } catch (err) {
     console.error('Upload error:', err);
     res.status(500).json({ error: 'Upload failed' });
+  }
+});
+
+// ============= PALETTE API =============
+
+// GET /api/palettes — list all palette names
+app.get('/api/palettes', (req, res) => {
+  try {
+    const dir = getPalettesDir();
+    if (!fs.existsSync(dir)) return res.json([]);
+    const files = fs.readdirSync(dir)
+      .filter(f => f.endsWith('.json'))
+      .map(f => f.replace(/\.json$/, ''))
+      .sort();
+    res.json(files);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /api/palettes/:name — load a palette
+app.get('/api/palettes/:name', (req, res) => {
+  try {
+    const file = path.join(getPalettesDir(), `${req.params.name}.json`);
+    if (!fs.existsSync(file)) return res.status(404).json({ error: 'Palette not found' });
+    res.json(JSON.parse(fs.readFileSync(file, 'utf8')));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// PUT /api/palettes/:name — save/overwrite a palette
+app.put('/api/palettes/:name', (req, res) => {
+  try {
+    const dir = getPalettesDir();
+    fs.mkdirSync(dir, { recursive: true });
+    const file = path.join(dir, `${req.params.name}.json`);
+    fs.writeFileSync(file, JSON.stringify(req.body, null, 2));
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// DELETE /api/palettes/:name — delete a palette
+app.delete('/api/palettes/:name', (req, res) => {
+  try {
+    const file = path.join(getPalettesDir(), `${req.params.name}.json`);
+    if (fs.existsSync(file)) fs.unlinkSync(file);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ============= VAULT API =============
+
+// GET /api/vault/info — current vault path + file stats
+app.get('/api/vault/info', (req, res) => {
+  const attachDir = fileStorage.getAttachmentsDir();
+  const { vaultPath } = readLocalConfig();
+  try {
+    let totalFiles = 0, totalBytes = 0;
+    const walk = (d) => {
+      if (!fs.existsSync(d)) return;
+      for (const f of fs.readdirSync(d)) {
+        const full = path.join(d, f);
+        const stat = fs.statSync(full);
+        if (stat.isDirectory()) { walk(full); }
+        else { totalFiles++; totalBytes += stat.size; }
+      }
+    };
+    walk(attachDir);
+    res.json({
+      vaultPath: vaultPath || '',
+      attachmentsDir: attachDir,
+      settingsFile: getSettingsFile(),
+      palettesDir: getPalettesDir(),
+      isDefault: !vaultPath,
+      totalFiles,
+      totalSizeMB: (totalBytes / 1024 / 1024).toFixed(1)
+    });
+  } catch (e) {
+    res.json({ vaultPath: vaultPath || '', error: e.message });
+  }
+});
+
+// POST /api/vault/validate — check if a path exists and is writable
+app.post('/api/vault/validate', (req, res) => {
+  const { vaultPath } = req.body;
+  if (!vaultPath || !vaultPath.trim()) {
+    return res.json({ valid: true, isDefault: true, message: 'Will use default: ' + fileStorage.DEFAULT_ATTACHMENTS_DIR });
+  }
+  const p = vaultPath.trim();
+  try {
+    if (!fs.existsSync(p)) {
+      fs.mkdirSync(p, { recursive: true });
+    }
+    // Test write access
+    const testFile = path.join(p, '.write-test');
+    fs.writeFileSync(testFile, 'ok');
+    fs.unlinkSync(testFile);
+    res.json({ valid: true, message: 'Path is accessible ✓' });
+  } catch (e) {
+    res.json({ valid: false, message: 'Cannot access path: ' + e.message });
+  }
+});
+
+// POST /api/vault/move — copy all files from current vault to a new path
+app.post('/api/vault/move', async (req, res) => {
+  const { newPath } = req.body;
+  if (!newPath || !newPath.trim()) {
+    return res.status(400).json({ error: 'newPath required' });
+  }
+  const dest = newPath.trim();
+  const src  = fileStorage.getAttachmentsDir();
+  if (dest === src) return res.json({ success: true, moved: 0, message: 'Already at that path' });
+
+  try {
+    let moved = 0, errors = [];
+    const copyDir = (from, to) => {
+      if (!fs.existsSync(from)) return;
+      fs.mkdirSync(to, { recursive: true });
+      for (const f of fs.readdirSync(from)) {
+        const srcF = path.join(from, f);
+        const dstF = path.join(to, f);
+        if (fs.statSync(srcF).isDirectory()) {
+          copyDir(srcF, dstF);
+        } else {
+          try { fs.copyFileSync(srcF, dstF); moved++; } catch(e) { errors.push(f + ': ' + e.message); }
+        }
+      }
+    };
+    copyDir(src, dest);
+    res.json({ success: true, moved, errors, message: `Copied ${moved} file(s) to ${dest}` });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 });
 
@@ -1763,7 +1972,8 @@ app.put("/api/quotes/:id", async (req, res) => {
     // Process thumbnails through hybrid storage if provided
     const updateStorageFolder = note_type || 'quote';
     if (thumbnail !== undefined && thumbnail) {
-      const processedImage = fileStorage.processForStorage(thumbnail, updateStorageFolder, id, '', storageThresholdMB);
+      const renamedThumb   = fileStorage.finalizeUploadedFile(thumbnail, id, '');
+      const processedImage = fileStorage.processForStorage(renamedThumb, updateStorageFolder, id, '', storageThresholdMB);
       updateFields.push(`thumbnail = $${paramCounter}`);
       params.push(processedImage);
       paramCounter++;
@@ -1775,7 +1985,8 @@ app.put("/api/quotes/:id", async (req, res) => {
     }
 
     if (attachment_full !== undefined && attachment_full) {
-      const processedImageFull = fileStorage.processForStorage(attachment_full, updateStorageFolder, id, '_full', storageThresholdMB);
+      const renamedFull        = fileStorage.finalizeUploadedFile(attachment_full, id, '_full');
+      const processedImageFull = fileStorage.processForStorage(renamedFull, updateStorageFolder, id, '_full', storageThresholdMB);
       updateFields.push(`attachment_full = $${paramCounter}`);
       params.push(processedImageFull);
       paramCounter++;
@@ -2031,8 +2242,10 @@ app.post("/api/notes/:id/attachments", async (req, res) => {
     const noteRow = await client.query(`SELECT note_type FROM notes WHERE id = $1`, [id]);
     const folder  = noteRow.rows[0]?.note_type || 'historical';
 
-    const processedThumb = fileStorage.processForStorage(thumbnail, folder, `${id}_a${position}`, '', storageThresholdMB);
-    const processedFull  = fileStorage.processForStorage(attachment_full, folder, `${id}_a${position}`, '_full', storageThresholdMB);
+    const renamedThumb   = fileStorage.finalizeUploadedFile(thumbnail, `${id}_a${position}`, '');
+    const renamedFull    = fileStorage.finalizeUploadedFile(attachment_full, `${id}_a${position}`, '_full');
+    const processedThumb = fileStorage.processForStorage(renamedThumb, folder, `${id}_a${position}`, '', storageThresholdMB);
+    const processedFull  = fileStorage.processForStorage(renamedFull, folder, `${id}_a${position}`, '_full', storageThresholdMB);
 
     const ins = await client.query(
       `INSERT INTO note_attachments (note_id, position, thumbnail, attachment_full, attachment_type, storage_type, filename)

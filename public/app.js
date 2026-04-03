@@ -4,12 +4,12 @@ import {
   updateUrlHash as updateUrlHashLib,
   updateActiveMenuState as updateActiveMenuStateLib,
   updatePageTitle as updatePageTitleLib
-} from './js/lib/viewManager.js';
+} from './js/lib/viewManager.js?v=20260317f';
 
 import {
   escapeHtml,
   getAttachmentIcon
-} from './js/lib/utils.js';
+} from './js/lib/utils.js?v=20260317f';
 
 import {
   readAttachmentFile as readAttachmentFileLib,
@@ -20,7 +20,7 @@ import {
   displayAttachmentPreview as displayAttachmentPreviewLib,
   downscaleAndMoveToDb as downscaleAndMoveToDbLib,
   resizeImage as resizeImageLib
-} from './js/lib/attachments.js';
+} from './js/lib/attachments.js?v=20260318a';
 
 import {
   getNoteTypeConfig,
@@ -29,22 +29,22 @@ import {
   updateModalFieldVisibility,
   updateModalLabels,
   updateAddButtonText as updateAddButtonTextLib
-} from './js/lib/noteTypes.js';
+} from './js/lib/noteTypes.js?v=20260317f';
 
 import {
   createQuoteCard as createQuoteCardLib
-} from './js/lib/cardRenderer.js';
+} from './js/lib/cardRenderer.js?v=20260318a';
 
 import {
   setupAddModal,
   setupEditModal
-} from './js/lib/modalRenderer.js';
+} from './js/lib/modalRenderer.js?v=20260317f';
 
 import {
   exportToPdf as exportToPdfLib,
   exportToJson as exportToJsonLib,
   handleImportFile as handleImportFileLib
-} from './js/lib/dataManager.js';
+} from './js/lib/dataManager.js?v=20260317f';
 
 import {
   loadSettings,
@@ -61,17 +61,17 @@ import {
   toggleTagOperationsPanel,
   getDisplaySetting,
   initializeSettings as initializeSettingsLib
-} from './js/lib/settingsManager.js';
+} from './js/lib/settingsManager.js?v=20260318a';
 
 import {
   openAuthorModal as openAuthorModalLib,
   setupAuthorModalHandlers
-} from './js/lib/authorModal.js';
+} from './js/lib/authorModal.js?v=20260317f';
 
 import {
   openSourceModal as openSourceModalLib,
   setupSourceModalHandlers
-} from './js/lib/sourceModal.js';
+} from './js/lib/sourceModal.js?v=20260317f';
 
 import {
   loadTags as loadTagsLib,
@@ -82,7 +82,7 @@ import {
   removeFromBrowseStack as removeFromBrowseStackLib,
   clearBrowseStack as clearBrowseStackLib,
   showNotesForStack as showNotesForStackLib
-} from './js/lib/tagsManager.js';
+} from './js/lib/tagsManager.js?v=20260317f';
 
 import {
   loadQuotes as loadQuotesLib,
@@ -92,7 +92,7 @@ import {
   setCurrentPage as setLibCurrentPage,
   setQuotesPerPage,
   getQuotesPerPage
-} from './js/lib/displayManager.js';
+} from './js/lib/displayManager.js?v=20260318a';
 
 import {
   populateTypeFilterCheckboxes as populateTypeFilterCheckboxesLib,
@@ -102,7 +102,7 @@ import {
   clearFilters as clearFiltersLib,
   updateSourcesFilterVisibility as updateSourcesFilterVisibilityLib2,
   initializeFilterHandlers
-} from './js/lib/filterManager.js';
+} from './js/lib/filterManager.js?v=20260317f';
 
 import {
   filterByAuthor as filterByAuthorLib,
@@ -110,12 +110,12 @@ import {
   initializeSearchHandlers,
   registerGlobalSearchFunctions,
   clearSearchFields
-} from './js/lib/searchManager.js';
+} from './js/lib/searchManager.js?v=20260317f';
 
 import {
   initializeAutocomplete,
   setupAutocompleteInput
-} from './js/lib/autocompleteManager.js';
+} from './js/lib/autocompleteManager.js?v=20260317f';
 
 import {
   FILTER_IDS,
@@ -1505,11 +1505,10 @@ function openEditModal(quote) {
   
   // Display attachment preview (app-specific)
   if (currentQuoteImage || currentQuoteImageFull) {
-    // Check if it's an icon thumbnail (non-image attachment)
     if (currentAttachmentType !== 'image') {
-      // Show icon preview for PDFs, docs, etc.
+      // Non-image: show PDF/rendered thumbnail if available, else icon fallback
       const icon = getAttachmentIcon(currentAttachmentType);
-      displayAttachmentPreview(quoteImagePreview, icon, "Attachment", "");
+      displayAttachmentPreview(quoteImagePreview, icon, currentAttachmentFileName || "Attachment", "", currentQuoteImage);
     } else if (currentQuoteImage) {
       displayImage(quoteImagePreview, currentQuoteImage);
     }
@@ -2062,7 +2061,7 @@ function readAttachmentFile(file, type) {
       currentQuoteImage = result.thumbnail;
       currentAttachmentType = result.type;
       currentAttachmentFileName = result.filename;
-      displayAttachmentPreview(quoteImagePreview, icon, filename, size);
+      displayAttachmentPreview(quoteImagePreview, icon, filename, size, result.thumbnail);
       updateAttachmentPanelVisibility(); // Update panel visibility when attachment loads
     }
   };
@@ -2179,8 +2178,8 @@ function clearImagePreview(container, type) {
 }
 
 // Display Attachment Preview - wrapper for library function
-function displayAttachmentPreview(container, icon, filename, size) {
-  displayAttachmentPreviewLib(container, icon, filename, size, escapeHtml);
+function displayAttachmentPreview(container, icon, filename, size, thumbnail = null) {
+  displayAttachmentPreviewLib(container, icon, filename, size, escapeHtml, thumbnail);
 }
 
 // Resize Image - wrapper for library function

@@ -319,6 +319,8 @@ function applySettingsToUI() {
   if (thresholdSelect && globalSettings.externalStorageThreshold) {
     thresholdSelect.value = globalSettings.externalStorageThreshold;
   }
+
+  // Vault path is loaded asynchronously from /api/vault/info (lives in local.json)
   // Apply ALL saved colors to CSS on every page load.
   // Every key that exists in colorConfigs must also appear here so that
   // a hard-refresh restores the full palette without needing to open Settings.
@@ -1107,7 +1109,61 @@ export function initializeSettings(callbacks = {}) {
       })
       .catch(err => console.log('Could not fetch storage config:', err));
   }
-  
+
+  // ── Vault Path ─────────────────────────────────────────────────────────
+  const vaultInput    = getElementByIdSafe('vaultPathInput');
+  const vaultStatus   = getElementByIdSafe('vaultStatus');
+  const vaultInfo     = getElementByIdSafe('vaultInfo');
+  const vaultValidBtn = getElementByIdSafe('vaultValidateBtn');
+
+  function setVaultStatus(msg, ok) {
+    if (!vaultStatus) return;
+    vaultStatus.textContent = msg;
+    vaultStatus.style.color = ok === true ? 'var(--primary-color)' : ok === false ? 'var(--delete-color)' : 'var(--text-secondary)';
+  }
+
+  async function loadVaultInfo() {
+    try {
+      const r = await fetch(`${API_URL}/vault/info`);
+      const d = await r.json();
+      if (vaultInput && !vaultInput.dataset.userEditing) {
+        vaultInput.value = d.vaultPath || '';
+      }
+      if (vaultInfo) {
+        if (d.error) { vaultInfo.textContent = '⚠️ ' + d.error; return; }
+        const label = d.isDefault ? ' (default, inside app folder)' : '';
+        vaultInfo.textContent = `Active vault: ${d.vaultPath || '(default)'}${label} — ${d.totalFiles} files, ${d.totalSizeMB} MB | Settings: ${d.settingsFile} | Palettes: ${d.palettesDir}`;
+      }
+    } catch(e) { if (vaultInfo) vaultInfo.textContent = ''; }
+  }
+
+  if (vaultInput) {
+    vaultInput.addEventListener('focus', () => { vaultInput.dataset.userEditing = '1'; });
+    vaultInput.addEventListener('blur',  () => { delete vaultInput.dataset.userEditing; });
+    // Vault path is saved via the settings save (updateSetting), which the server
+    // now routes to local.json. Mark it pending change on blur.
+    vaultInput.addEventListener('change', () => {
+      updateSetting('vaultPath', vaultInput.value.trim());
+    });
+  }
+
+  if (vaultValidBtn) {
+    vaultValidBtn.addEventListener('click', async () => {
+      const p = vaultInput?.value.trim() || '';
+      setVaultStatus('Checking…', null);
+      try {
+        const r = await fetch(`${API_URL}/vault/validate`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ vaultPath: p })
+        });
+        const d = await r.json();
+        setVaultStatus(d.message, d.valid);
+      } catch(e) { setVaultStatus('Error: ' + e.message, false); }
+    });
+  }
+
+  loadVaultInfo();
+  // ── End Vault Path ──────────────────────────────────────────────────────
 
   // Quote Meta Searches setting
   if (enableQuoteMetaSearchesCheckbox) {
@@ -1358,77 +1414,142 @@ function initializeColorCustomization() {
     }
   });
 
-  // ── Save / Load palette buttons ──────────────────────────────────────────
-  // The load handler uses colorConfigs directly to avoid the race condition
-  // that occurred when 16 concurrent updateSetting() calls all called
-  // saveSettings() and the last-to-arrive overwrote later colors with stale data.
+  // ── Palette toolbar: server-side select / save / delete + file import ────
   const savePaletteBtn   = getElementByIdSafe('savePaletteBtn');
   const loadPaletteBtn   = getElementByIdSafe('loadPaletteBtn');
   const paletteFileInput = getElementByIdSafe('paletteFileInput');
+  const paletteSelect    = getElementByIdSafe('paletteSelect');
+  const applyPaletteBtn  = getElementByIdSafe('applyPaletteBtn');
+  const deletePaletteBtn = getElementByIdSafe('deletePaletteBtn');
+  const paletteSaveStatus = getElementByIdSafe('paletteSaveStatus');
 
-  if (savePaletteBtn) {
-    savePaletteBtn.addEventListener('click', () => {
-      const colors = globalSettings?.colors || {};
-      const palette = {
-        name: 'My Palette',
-        exportedAt: new Date().toISOString(),
-        colors
-      };
-      const blob = new Blob([JSON.stringify(palette, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `palette-${new Date().toISOString().slice(0, 10)}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
+  function setPaletteStatus(msg, ok) {
+    if (!paletteSaveStatus) return;
+    paletteSaveStatus.textContent = msg;
+    paletteSaveStatus.style.color = ok === true ? 'var(--primary-color)' : ok === false ? 'var(--delete-color)' : 'var(--text-secondary)';
+  }
+
+  async function refreshPaletteList(selectName) {
+    if (!paletteSelect) return;
+    try {
+      const r = await fetch(`${API_URL}/palettes`);
+      const names = await r.json();
+      // Rebuild options
+      paletteSelect.innerHTML = '<option value="">— select saved palette —</option>';
+      for (const n of names) {
+        const opt = document.createElement('option');
+        opt.value = n;
+        opt.textContent = n;
+        if (n === selectName) opt.selected = true;
+        paletteSelect.appendChild(opt);
+      }
+    } catch (_) {}
+  }
+
+  // Helper: apply a palette object to UI + globalSettings (no save)
+  async function applyPaletteObj(palette) {
+    if (!palette.colors || typeof palette.colors !== 'object') {
+      alert('Invalid palette — missing "colors" object.');
+      return 0;
+    }
+    let applied = 0;
+    for (const config of colorConfigs) {
+      const color = palette.colors[config.id];
+      if (!color) continue;
+      config.apply(color);
+      const picker = document.getElementById(`${config.id}Color`);
+      const text   = document.getElementById(`${config.id}ColorText`);
+      if (picker) picker.value = color;
+      if (text)   text.value   = color;
+      if (globalSettings) {
+        if (!globalSettings.colors) globalSettings.colors = {};
+        globalSettings.colors[config.id] = color;
+      }
+      applied++;
+    }
+    if (applied > 0) await saveSettings(globalSettings);
+    return applied;
+  }
+
+  // Apply button — load from server and apply
+  if (applyPaletteBtn) {
+    applyPaletteBtn.addEventListener('click', async () => {
+      const name = paletteSelect?.value;
+      if (!name) { setPaletteStatus('Select a palette first.', false); return; }
+      setPaletteStatus('Loading…', null);
+      try {
+        const r = await fetch(`${API_URL}/palettes/${encodeURIComponent(name)}`);
+        if (!r.ok) { setPaletteStatus('Palette not found.', false); return; }
+        const palette = await r.json();
+        const applied = await applyPaletteObj(palette);
+        setPaletteStatus(`✅ "${name}" applied — ${applied} colors.`, true);
+      } catch (e) { setPaletteStatus('Error: ' + e.message, false); }
     });
   }
 
+  // Delete button
+  if (deletePaletteBtn) {
+    deletePaletteBtn.addEventListener('click', async () => {
+      const name = paletteSelect?.value;
+      if (!name) { setPaletteStatus('Select a palette first.', false); return; }
+      if (!confirm(`Delete palette "${name}"?`)) return;
+      try {
+        await fetch(`${API_URL}/palettes/${encodeURIComponent(name)}`, { method: 'DELETE' });
+        setPaletteStatus(`Deleted "${name}".`, true);
+        await refreshPaletteList('');
+      } catch (e) { setPaletteStatus('Error: ' + e.message, false); }
+    });
+  }
+
+  // Save as… button — save current colors to server
+  if (savePaletteBtn) {
+    savePaletteBtn.addEventListener('click', async () => {
+      const suggestedName = paletteSelect?.value || 'my-palette';
+      const name = prompt('Save palette as:', suggestedName);
+      if (!name) return;
+      const safeName = name.trim().replace(/[^a-zA-Z0-9_-]/g, '-');
+      if (!safeName) { setPaletteStatus('Invalid name.', false); return; }
+      const palette = {
+        name: safeName,
+        savedAt: new Date().toISOString(),
+        colors: globalSettings?.colors || {}
+      };
+      setPaletteStatus('Saving…', null);
+      try {
+        const r = await fetch(`${API_URL}/palettes/${encodeURIComponent(safeName)}`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(palette)
+        });
+        if (!r.ok) throw new Error(await r.text());
+        setPaletteStatus(`✅ Saved as "${safeName}".`, true);
+        await refreshPaletteList(safeName);
+      } catch (e) { setPaletteStatus('Error: ' + e.message, false); }
+    });
+  }
+
+  // Import JSON (file picker) — same as before but also offers to save to server
   if (loadPaletteBtn && paletteFileInput) {
     loadPaletteBtn.addEventListener('click', () => paletteFileInput.click());
 
     paletteFileInput.addEventListener('change', (e) => {
       const file = e.target.files?.[0];
       if (!file) return;
-
       const reader = new FileReader();
       reader.onload = async (ev) => {
         try {
           const palette = JSON.parse(ev.target.result);
-          if (!palette.colors || typeof palette.colors !== 'object') {
-            alert('Invalid palette file — missing "colors" object.');
-            return;
-          }
-
-          // Apply every color synchronously via colorConfigs, update globalSettings,
-          // then do ONE saveSettings call — no race condition possible.
-          let applied = 0;
-          for (const config of colorConfigs) {
-            const color = palette.colors[config.id];
-            if (!color) continue;
-
-            // Apply CSS variable immediately
-            config.apply(color);
-
-            // Update picker + text display
-            const picker = document.getElementById(`${config.id}Color`);
-            const text   = document.getElementById(`${config.id}ColorText`);
-            if (picker) picker.value = color;
-            if (text)   text.value   = color;
-
-            // Accumulate into globalSettings (no save yet)
-            if (globalSettings) {
-              if (!globalSettings.colors) globalSettings.colors = {};
-              globalSettings.colors[config.id] = color;
-            }
-            applied++;
-          }
-
-          // Single atomic save for all color changes
-          if (applied > 0) await saveSettings(globalSettings);
-
+          const applied = await applyPaletteObj(palette);
           const name = palette.name ? `"${palette.name}"` : 'palette';
-          alert(`✅ Loaded ${name} — ${applied} colors applied.`);
+          const saveIt = applied > 0 && confirm(`✅ Imported ${name} — ${applied} colors applied.\n\nSave to vault as "${palette.name || 'imported'}"?`);
+          if (saveIt) {
+            const safeName = (palette.name || 'imported').replace(/[^a-zA-Z0-9_-]/g, '-');
+            await fetch(`${API_URL}/palettes/${encodeURIComponent(safeName)}`, {
+              method: 'PUT', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ...palette, name: safeName, savedAt: new Date().toISOString() })
+            });
+            await refreshPaletteList(safeName);
+            setPaletteStatus(`Saved as "${safeName}".`, true);
+          }
         } catch {
           alert('Could not read palette file — make sure it is a valid JSON file.');
         }
@@ -1437,4 +1558,7 @@ function initializeColorCustomization() {
       reader.readAsText(file);
     });
   }
+
+  // Initial palette list load
+  refreshPaletteList('');
 }

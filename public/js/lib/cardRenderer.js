@@ -28,8 +28,8 @@
  * - No hardcoded values - everything configurable!
  */
 
-import { escapeHtml, resolveAttachmentUrl, normalizeTextColors } from './utils.js';
-import { getNoteTypeBadgeHtml } from './noteTypes.js';
+import { escapeHtml, resolveAttachmentUrl, normalizeTextColors } from './utils.js?v=20260318a';
+import { getNoteTypeBadgeHtml } from './noteTypes.js?v=20260318a';
 
 /**
  * Get quote source icon and label (dynamic from settings)
@@ -205,15 +205,23 @@ function buildSingleAttachmentTile(att, noteId, isMain = true) {
   const type    = att.attachment_type || 'image';
   const fullUrl = att.attachment_full || att.thumbnail || '';
   const cls     = isMain ? 'quote-image-thumb' : 'att-strip-thumb';
+  const onclick = `event.stopPropagation(); showFullImage('${fullUrl}', ${noteId}, '${type}')`;
 
   if (type === 'image') {
     const displayUrl = resolveAttachmentUrl(att.thumbnail || att.attachment_full);
-    return `<div class="${cls}" onclick="event.stopPropagation(); showFullImage('${fullUrl}', ${noteId}, '${type}')"><img src="${displayUrl}" alt="attachment"></div>`;
+    return `<div class="${cls}" onclick="${onclick}"><img src="${displayUrl}" alt="attachment"></div>`;
   }
+
+  // For non-image types: show the rendered thumbnail (e.g. PDF first-page from PDF.js) if available
+  const thumb = att.thumbnail;
+  if (thumb && thumb.startsWith('data:image/')) {
+    return `<div class="${cls}" onclick="${onclick}"><img src="${thumb}" alt="${type} preview" style="width:100%;height:100%;object-fit:cover;"></div>`;
+  }
+
   const icon  = FILE_ICONS[type]  || '📁';
   const label = FILE_LABELS[type] || 'File';
   const fileCls = isMain ? 'quote-file-thumb' : 'att-strip-thumb att-strip-file';
-  return `<div class="${fileCls}" onclick="event.stopPropagation(); showFullImage('${fullUrl}', ${noteId}, '${type}')"><div class="file-icon">${icon}</div>${isMain ? `<div class="file-label">${label}</div>` : ''}</div>`;
+  return `<div class="${fileCls}" onclick="${onclick}"><div class="file-icon">${icon}</div>${isMain ? `<div class="file-label">${label}</div>` : ''}</div>`;
 }
 
 /**
@@ -251,13 +259,18 @@ function buildAttachmentSection(note, imageUrl, imageFullUrl) {
   const attachmentType = note.attachment_type || 'image';
   const url = note.attachment_full || note.thumbnail;
   const displayUrl = imageUrl || imageFullUrl;
+  const onclick = `event.stopPropagation(); showFullImage('${url}', ${note.id}, '${attachmentType}')`;
 
   if (attachmentType === 'image') {
-    return `<div class="quote-image-thumb" onclick="event.stopPropagation(); showFullImage('${url}', ${note.id}, '${attachmentType}')"><img src="${displayUrl}" alt="Quote attachment"></div>`;
+    return `<div class="quote-image-thumb" onclick="${onclick}"><img src="${displayUrl}" alt="Quote attachment"></div>`;
+  }
+  // Show rendered thumbnail (e.g. PDF first-page) if available
+  if (note.thumbnail && note.thumbnail.startsWith('data:image/')) {
+    return `<div class="quote-image-thumb" onclick="${onclick}"><img src="${note.thumbnail}" alt="${attachmentType} preview" style="width:100%;height:100%;object-fit:cover;"></div>`;
   }
   const fileIcon  = FILE_ICONS[attachmentType]  || '📁';
   const fileLabel = FILE_LABELS[attachmentType] || 'File';
-  return `<div class="quote-file-thumb" onclick="event.stopPropagation(); showFullImage('${url}', ${note.id}, '${attachmentType}')"><div class="file-icon">${fileIcon}</div><div class="file-label">${fileLabel}</div></div>`;
+  return `<div class="quote-file-thumb" onclick="${onclick}"><div class="file-icon">${fileIcon}</div><div class="file-label">${fileLabel}</div></div>`;
 }
 
 /**

@@ -30,6 +30,9 @@
   --delete-hover: #dc2626;
   --cancel-color: #6b7280;
   --cancel-hover: #4b5563;
+  --bradius: 8px; /* 12 */
+  --bradius-medium: 8px; /* 10 */
+  --bradius-small: 8px;
 
   /* ── Desktop size knobs — change these to rescale the desktop layout ──────
      Values are 10% smaller than the original "full" sizes.
@@ -345,7 +348,7 @@ header h1 {
   border: 1px solid var(--border);
   background: var(--background);
   color: var(--text-primary);
-  border-radius: 6px;
+  border-radius: var(--bradius-small);
   cursor: pointer;
   transition: all 0.2s;
   font-size: 0.9rem;
@@ -730,7 +733,7 @@ h2 {
 .btn {
   padding: var(--d-pad-base) var(--d-pad-xl);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--bradius-small);
   font-size: var(--d-font-base);
   font-weight: 500;
   cursor: pointer;
@@ -1488,7 +1491,7 @@ select {
   width: 100%;
   padding: var(--d-pad-sm);
   border: 1px solid var(--input-border);
-  border-radius: 8px;
+  border-radius: var(--bradius-small);
   font-size: var(--d-font-base);
   font-family: inherit;
   transition: all 0.2s;
@@ -1540,7 +1543,7 @@ textarea {
  .search-section {
   background: var(--surface);
   padding: var(--d-pad-xl);
-  border-radius: 12px;
+  border-radius: var(--bradius);
   margin-bottom: 1rem;
   box-shadow: var(--shadow);
   border: 2px solid var(--border);
@@ -1639,7 +1642,7 @@ textarea {
   background: var(--surface);
   padding: 1.0rem 1.5rem;
   margin: 0 0 1rem 0;
-  border-radius: 8px;
+  border-radius: var(--bradius-medium);
   box-shadow: var(--shadow);
   border: 2px solid var(--border);
 }
@@ -1696,7 +1699,7 @@ textarea {
 .quote-card {
   background: var(--surface);
   padding: var(--d-card-pad);
-  border-radius: 10px;
+  border-radius: var(--bradius-medium);
   border: 2px solid var(--border);
   transition: all 0.3s ease;
   position: relative;
@@ -1753,7 +1756,7 @@ textarea {
   width: auto;
   height: auto !important;
   object-fit: contain !important;
-  border-radius: 8px;
+  border-radius: var(--bradius-small);
   box-shadow: var(--shadow);
   margin: 0 !important;
   padding: 0 !important;
@@ -3559,7 +3562,7 @@ body.selection-mode .quote-card::after {
   .quotes-section-header {
     background: var(--surface) !important;
     padding: var(--m-pad-sm) var(--m-pad-xl) !important;
-    margin: 0 !important;
+    margin: 0 0 1rem 0 !important;
     border-radius: 8px !important;
     box-shadow: var(--shadow) !important;
   }
@@ -3776,6 +3779,7 @@ body.selection-mode .quote-card::after {
     padding: 0 !important;
     margin: 0.5em 0 !important;
   }
+
 }
 
 /* ============================================
@@ -3978,10 +3982,10 @@ body.selection-mode .quote-card::after {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 0rem;
+  margin-top: 1rem;
   padding: 1rem;
   background: var(--surface);
-  border-radius: 12px;
+  border-radius: var(--bradius);
   border: 2px solid var(--border);
   box-shadow: var(--shadow);
 }
@@ -4038,7 +4042,7 @@ body.selection-mode .quote-card::after {
 .author-card,
 .source-card {
   background: var(--surface);
-  border-radius: 12px;
+  border-radius: var(--bradius);
   padding: 0.35rem;
   box-shadow: var(--shadow);
   border: 2px solid var(--border);
@@ -4441,7 +4445,7 @@ body.selection-mode .quote-card::after {
   border: none;
   background: var(--cancel-color);
   color: white;
-  border-radius: 6px;
+  border-radius: var(--bradius-small);
   cursor: pointer;
   font-size: 1rem ;
   transition: all 0.2s;
@@ -4456,7 +4460,7 @@ body.selection-mode .quote-card::after {
   border: none;
   background: var(--primary-color);
   color: white;
-  border-radius: 6px;
+  border-radius: var(--bradius-small);
   cursor: pointer;
   font-size: 1rem;
   transition: all 0.2s;
@@ -4834,7 +4838,7 @@ body.selection-mode .quote-card::after {
   padding: 8px 16px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--bradius-small);
   cursor: pointer;
   transition: all 0.2s;
   font-size: 0.9rem;
@@ -5677,7 +5681,8 @@ body.selection-mode .quote-card::after {
 /* Settings Page */
 .settings-section {
   background: var(--surface);
-  border-radius: 12px;
+  border-radius: var(--bradius);
+  border: 2px solid var(--border);
   padding: 1.5rem;
   margin-top: 2rem;
   box-shadow: var(--shadow);
@@ -6619,15 +6624,15 @@ body.selection-mode .quote-card::after {
 /* Outer wrapper — two independent cards side by side */
 .lp-layout {
   display: grid;
-  grid-template-columns: 440px 1fr;
+  grid-template-columns: 540px 1fr;
   gap: 1rem;
-  align-items: start;
+  align-items: stretch;
 }
 
 /* ── Left: list card ── */
 .lp-list {
   background: var(--surface);
-  border-radius: 12px;
+  border-radius: var(--bradius);
   box-shadow: var(--shadow);
   border: 2px solid var(--border);
   /* No internal scroll — paging controls handle navigation; page scrolls naturally */
@@ -6729,15 +6734,13 @@ body.selection-mode .quote-card::after {
 /* ── Right: pane card ── */
 .lp-pane {
   background: var(--surface);
-  border-radius: 12px;
+  border-radius: var(--bradius);
   box-shadow: var(--shadow);
   border: 2px solid var(--border);
   padding: 0.5rem;
-  min-height: 300px;
-  /* Sticky so the pane stays in view as the user scrolls the list */
-  position: sticky;
-  top: 1rem;
-  max-height: calc(100vh - 2rem);
+  /* Stretch to match the list column height */
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
 }
 
@@ -6793,6 +6796,7 @@ body.selection-mode .quote-card::after {
   margin: 0;
   width: 100%;
   box-sizing: border-box;
+  flex: 1;
   transition: border-color 0.15s, box-shadow 0.15s;
   /* Allow text selection */
   -webkit-user-select: text;
@@ -6800,9 +6804,18 @@ body.selection-mode .quote-card::after {
   user-select: text;
 }
 .lp-pane .quote-card:hover {
+  background: var(--surface) !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
   transform: none !important;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 15%, transparent) !important;
+}
+
+/* Pane scrolls internally — no need for inner text truncation or expand button */
+.lp-pane .quote-text.collapsible {
+  max-height: none !important;
+}
+.lp-pane .expand-btn {
+  display: none !important;
 }
 
 /* Remove border from the very last row so it doesn't bleed into the card's rounded corner */
@@ -6818,6 +6831,13 @@ body.selection-mode .quote-card::after {
   }
   .lp-list {
     max-height: 300px;
+  }
+}
+
+/* List-pane: narrower list column on medium screens */
+@media (min-width: 768px) and (max-width: 1100px) {
+  .lp-layout {
+    grid-template-columns: 300px 1fr;
   }
 }
 

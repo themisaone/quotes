@@ -16,8 +16,8 @@
  * - Requires resolveAttachmentUrl, getAttachmentIcon, escapeHtml from utils
  */
 
-import { resolveAttachmentUrl, getAttachmentIcon } from './utils.js';
-import { getElementByIdSafe } from '../constants.js';
+import { resolveAttachmentUrl, getAttachmentIcon } from './utils.js?v=20260318a';
+import { getElementByIdSafe } from '../constants.js?v=20260318a';
 
 // ============= CONSTANTS =============
 
@@ -263,6 +263,90 @@ export function createIconThumbnail(icon, filename, size) {
   return canvas.toDataURL("image/png");
 }
 
+// ============= PDF THUMBNAIL =============
+
+const PDF_THUMB_WIDTH = 220; // px
+let _pdfjsLib = null; // cached after first load
+
+/**
+ * Render page 1 of a PDF File as a base64 JPEG thumbnail.
+ * Returns null on failure (caller falls back to icon thumbnail).
+ */
+async function generatePdfThumbnail(file) {
+  try {
+    if (!_pdfjsLib) {
+      // Load from local server (served from node_modules/pdfjs-dist/build)
+      const mod = await import('/pdfjs/pdf.mjs');
+      mod.GlobalWorkerOptions.workerSrc = '/pdfjs/pdf.worker.min.mjs';
+      _pdfjsLib = mod;
+    }
+
+    const url = URL.createObjectURL(file);
+    try {
+      const pdf    = await _pdfjsLib.getDocument(url).promise;
+      const page   = await pdf.getPage(1);
+      const vp0    = page.getViewport({ scale: 1 });
+      const scale  = PDF_THUMB_WIDTH / vp0.width;
+      const vp     = page.getViewport({ scale });
+
+      const canvas = document.createElement('canvas');
+      canvas.width  = Math.round(vp.width);
+      canvas.height = Math.round(vp.height);
+      await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+      return canvas.toDataURL('image/jpeg', 0.82);
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  } catch (e) {
+    console.warn('PDF thumbnail generation failed:', e);
+    return null;
+  }
+}
+
+// ============= VIDEO THUMBNAIL =============
+
+/**
+ * Extract a frame from a video File as a base64 JPEG thumbnail (client-side, no server needed).
+ * Seeks to 10% of the duration for a meaningful frame.
+ * Returns null on failure.
+ */
+async function generateVideoThumbnail(file) {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.muted   = true;
+    video.playsInline = true;
+
+    video.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+
+    video.onloadedmetadata = () => {
+      const seekTo = Math.min(Math.max(video.duration * 0.1, 2), 30);
+      video.currentTime = isFinite(seekTo) ? seekTo : 2;
+    };
+
+    video.onseeked = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        const MAX_W  = 320;
+        const scale  = Math.min(1, MAX_W / video.videoWidth);
+        canvas.width  = Math.round(video.videoWidth  * scale);
+        canvas.height = Math.round(video.videoHeight * scale);
+        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+        resolve(dataUrl);
+      } catch (e) {
+        console.warn('Video thumbnail generation failed:', e);
+        resolve(null);
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    };
+
+    video.src = url;
+  });
+}
+
 // ============= FILE READING =============
 
 /**
@@ -272,9 +356,9 @@ export function createIconThumbnail(icon, filename, size) {
 async function uploadLargeFileDirect(file, folder = 'notes') {
   const formData = new FormData();
   formData.append('file', file);
-  formData.append('folder', folder);
-
-  const response = await fetch('/api/upload-attachment', {
+  // Pass folder as query param — req.body.folder isn't available in multer's
+  // destination callback (file field precedes text fields in FormData).
+  const response = await fetch(`/api/upload-attachment?folder=${encodeURIComponent(folder)}`, {
     method: 'POST',
     body: formData
   });
@@ -316,19 +400,27 @@ export async function readAttachmentFile(file, type, state, callbacks, folder = 
     return await readImageFile(file, type, state, callbacks);
   }
 
-  // For large non-image files: stream directly to server (no base64 in JSON body)
-  if (file.size >= DIRECT_UPLOAD_THRESHOLD_BYTES) {
-    console.log(`🚀 Large file (${sizeMB} MB) — uploading directly to server...`);
+  // All non-image files go directly to disk — no base64 encoding ever
+  {
+    console.log(`🚀 Non-image file (${sizeMB} MB) — uploading directly to server...`);
     if (callbacks?.onProgress) callbacks.onProgress(`Uploading ${sizeMB} MB file directly...`);
 
-    const fileRef = await uploadLargeFileDirect(file, folder);
-    const icon = getAttachmentIcon(attachmentType);
+    const icon    = getAttachmentIcon(attachmentType);
     const sizeText = formatFileSize(file.size);
-    const thumbnail = createIconThumbnail(icon, file.name, sizeText);
+
+    // Upload file and optionally generate a preview thumbnail in parallel
+    const [fileRef, previewThumb] = await Promise.all([
+      uploadLargeFileDirect(file, folder),
+      attachmentType === ATTACHMENT_TYPES.PDF   ? generatePdfThumbnail(file)   :
+      attachmentType === ATTACHMENT_TYPES.VIDEO ? generateVideoThumbnail(file) :
+      Promise.resolve(null)
+    ]);
+
+    const thumbnail = previewThumb || createIconThumbnail(icon, file.name, sizeText);
 
     const result = {
       thumbnail,
-      full: fileRef,   // already a file: reference — no base64 ever in memory
+      full: fileRef,   // file: reference — no base64 ever
       type: attachmentType,
       filename: file.name
     };
@@ -338,26 +430,21 @@ export async function readAttachmentFile(file, type, state, callbacks, folder = 
     }
     return result;
   }
-  
-  // For small non-images (PDF, docs, videos), read as base64 as usual
+
+  // (unreachable — kept for reference)
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const base64Data = e.target.result;
-      
-      // Get icon and create thumbnail
       const icon = getAttachmentIcon(attachmentType);
       const sizeText = formatFileSize(base64Data.length);
       const thumbnail = createIconThumbnail(icon, file.name, sizeText);
-      
       const result = {
         thumbnail,
         full: base64Data,
         type: attachmentType,
         filename: file.name
       };
-      
-      // Update UI if callback provided
       if (callbacks?.onAttachmentLoaded) {
         callbacks.onAttachmentLoaded(result, icon, file.name, sizeText);
       }
@@ -523,9 +610,16 @@ export function displayImage(container, imageUrl, escapeHtmlFn) {
 /**
  * Display attachment preview (for non-image files)
  */
-export function displayAttachmentPreview(container, icon, filename, size, escapeHtmlFn) {
+export function displayAttachmentPreview(container, icon, filename, size, escapeHtmlFn, thumbnail = null) {
   if (!container) return;
-  
+
+  // If we have a real image thumbnail (e.g. PDF first-page from PDF.js), show it directly
+  if (thumbnail && thumbnail.startsWith('data:image/')) {
+    container.innerHTML = `<img src="${thumbnail}" alt="${filename}" style="width:100%;height:100%;object-fit:contain;border-radius:4px;">`;
+    container.classList.add('has-image');
+    return;
+  }
+
   const truncated = filename.length > 30 ? filename.substring(0, 27) + "..." : filename;
   const safeFilename = escapeHtmlFn ? escapeHtmlFn(truncated) : truncated;
   

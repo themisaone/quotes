@@ -8,7 +8,26 @@ const path = require("path");
 
 // Default threshold (can be overridden per request)
 const DEFAULT_MAX_SIZE_MB = 1;
-const ATTACHMENTS_DIR = path.join(__dirname, "../attachments");
+const DEFAULT_ATTACHMENTS_DIR = path.join(__dirname, "../attachments");
+
+// Mutable vault dir — updated at runtime when settings change
+let _attachmentsDir = DEFAULT_ATTACHMENTS_DIR;
+
+function getAttachmentsDir() { return _attachmentsDir; }
+
+/**
+ * Set the vault root (user-supplied path like /home/user/Dropbox/MisaVault).
+ * The actual attachments directory is always <vaultRoot>/attachments.
+ * Pass empty/null to reset to the default (./attachments inside the app).
+ */
+function setAttachmentsDir(vaultRoot) {
+  if (vaultRoot && vaultRoot.trim()) {
+    _attachmentsDir = path.join(vaultRoot.trim(), 'attachments');
+  } else {
+    _attachmentsDir = DEFAULT_ATTACHMENTS_DIR;
+  }
+  console.log(`📁 Vault attachments dir: ${_attachmentsDir}`);
+}
 
 // MIME type mappings (centralized to avoid duplication)
 const MIME_TO_EXT = {
@@ -37,14 +56,16 @@ const EXT_TO_MIME = {
 
 // Ensure attachments directories exist
 function ensureDirectories() {
+  const base = getAttachmentsDir();
   const dirs = [
-    ATTACHMENTS_DIR,
-    path.join(ATTACHMENTS_DIR, "quotes"),
-    path.join(ATTACHMENTS_DIR, "authors"),
-    path.join(ATTACHMENTS_DIR, "sources"),
-    path.join(ATTACHMENTS_DIR, "training"),
-    path.join(ATTACHMENTS_DIR, "notes"),
-    path.join(ATTACHMENTS_DIR, "puzzles"),
+    base,
+    path.join(base, "quotes"),
+    path.join(base, "authors"),
+    path.join(base, "sources"),
+    path.join(base, "training"),
+    path.join(base, "notes"),
+    path.join(base, "puzzles"),
+    path.join(base, "historical"),
   ];
 
   dirs.forEach((dir) => {
@@ -130,7 +151,7 @@ function saveToFilesystem(base64String, type, id, suffix = "") {
   const ext = getExtensionFromMime(mimeType);
   const filename = `${id}${suffix}.${ext}`;
   const relativePath = path.join(type, filename);
-  const fullPath = path.join(ATTACHMENTS_DIR, relativePath);
+  const fullPath = path.join(getAttachmentsDir(), relativePath);
 
   // Convert base64 to buffer and save
   const buffer = Buffer.from(data, "base64");
@@ -147,7 +168,7 @@ function saveToFilesystem(base64String, type, id, suffix = "") {
  * @returns {string} Base64 encoded string with data URL prefix
  */
 function readFromFilesystem(relativePath) {
-  const fullPath = path.join(ATTACHMENTS_DIR, relativePath);
+  const fullPath = path.join(getAttachmentsDir(), relativePath);
 
   if (!fs.existsSync(fullPath)) {
     console.warn(`File not found: ${relativePath}`);
@@ -171,7 +192,7 @@ function readFromFilesystem(relativePath) {
 function deleteFromFilesystem(relativePath) {
   if (!relativePath) return;
 
-  const fullPath = path.join(ATTACHMENTS_DIR, relativePath);
+  const fullPath = path.join(getAttachmentsDir(), relativePath);
 
   if (fs.existsSync(fullPath)) {
     fs.unlinkSync(fullPath);
@@ -307,7 +328,7 @@ function copyAttachmentFile(value, oldId, newId) {
   if (!value || !isFilePath(value)) return value;
 
   const { path: relativePath, mimeType } = parseFilePath(value);
-  const oldFullPath = path.join(ATTACHMENTS_DIR, relativePath);
+  const oldFullPath = path.join(getAttachmentsDir(), relativePath);
 
   if (!fs.existsSync(oldFullPath)) {
     console.warn(`copyAttachmentFile: source file not found: ${relativePath}`);
@@ -319,7 +340,7 @@ function copyAttachmentFile(value, oldId, newId) {
   // Replace only the first occurrence of oldId in the basename (ID is always the prefix)
   const newBasename = basename.replace(String(oldId), String(newId));
   const newRelativePath = path.join(dir, newBasename);
-  const newFullPath = path.join(ATTACHMENTS_DIR, newRelativePath);
+  const newFullPath = path.join(getAttachmentsDir(), newRelativePath);
 
   fs.copyFileSync(oldFullPath, newFullPath);
   console.log(`Copied attachment: ${relativePath} → ${newRelativePath}`);
@@ -346,8 +367,8 @@ function finalizeUploadedFile(value, noteId, suffix = '') {
   const newBasename = `${noteId}${suffix}${ext}`;
   const newRelPath = path.join(dir, newBasename).replace(/\\/g, '/');
 
-  const oldFull = path.join(ATTACHMENTS_DIR, relPath);
-  const newFull = path.join(ATTACHMENTS_DIR, newRelPath);
+  const oldFull = path.join(getAttachmentsDir(), relPath);
+  const newFull = path.join(getAttachmentsDir(), newRelPath);
 
   if (fs.existsSync(oldFull)) {
     // If target already exists (unlikely), delete it first
@@ -360,7 +381,10 @@ function finalizeUploadedFile(value, noteId, suffix = '') {
 
 module.exports = {
   DEFAULT_MAX_SIZE_MB,
-  ATTACHMENTS_DIR,
+  DEFAULT_ATTACHMENTS_DIR,
+  get ATTACHMENTS_DIR() { return _attachmentsDir; }, // backwards-compatible getter
+  getAttachmentsDir,
+  setAttachmentsDir,
   MIME_TO_EXT,
   EXT_TO_MIME,
   ensureDirectories,

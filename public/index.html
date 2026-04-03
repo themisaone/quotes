@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Quotes Collection</title>
+    <title>Note Archive</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <link rel="stylesheet" href="style.css?v=202604010001" />
     <!-- Font Awesome for dice icons -->
@@ -86,7 +86,7 @@
         <!-- Side Menu -->
         <nav class="side-menu">
             <button id="sideMenuToggle" class="menu-toggle-btn" title="Toggle menu">&#9664;</button>
-            <h2 class="side-menu-title">📚 My Collection</h2>
+            <h2 class="side-menu-title">📚 My Note Archive</h2>
 
         <div class="menu-divider"></div>
 
@@ -922,17 +922,26 @@
             </div>
             <div class="settings-section">
               <h2>🎨 Color Customization</h2>
-              <div style="display: flex; gap: 1rem; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 2px solid var(--border);">
-                <button type="button" id="savePaletteBtn" class="btn btn-primary" style="padding: 0.5rem 1rem;">
-                  💾 Save Palette
+              <!-- Palette selector row -->
+              <div style="display: flex; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 2px solid var(--border); flex-wrap: wrap;">
+                <select id="paletteSelect" style="min-width: 180px; width: auto; height: 36px;">
+                  <option value="">— select saved palette —</option>
+                </select>
+                <button type="button" id="applyPaletteBtn" class="btn btn-primary">
+                  ✅ Apply
                 </button>
-                <button type="button" id="loadPaletteBtn" class="btn btn-primary" style="padding: 0.5rem 1rem;">
-                  📂 Load Palette
+                <button type="button" id="deletePaletteBtn" class="btn btn-danger">
+                  🗑 Delete
+                </button>
+                <div style="width: 1px; height: 28px; background: var(--border);"></div>
+                <button type="button" id="savePaletteBtn" class="btn btn-primary">
+                  💾 Save as…
+                </button>
+                <button type="button" id="loadPaletteBtn" class="btn btn-secondary">
+                  📂 Import JSON
                 </button>
                 <input type="file" id="paletteFileInput" accept=".json" style="display: none;" />
-                <span style="color: var(--text-secondary); font-size: 0.85rem; display: flex; align-items: center; margin-left: auto;">
-                  Save your color palette as JSON and load it anytime to switch themes
-                </span>
+                <span id="paletteSaveStatus" style="color: var(--text-secondary); font-size: 0.82rem; margin-left: auto;"></span>
               </div>
               <div style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin: 0.25rem 0 0.5rem; padding-bottom: 0.25rem; border-bottom: 1px solid var(--border);">Background &amp; Surface</div>
               <div style="display: grid; grid-template-columns: 140px 50px 90px 70px 1fr; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem;">
@@ -1101,6 +1110,28 @@
             
             <div class="settings-section">
               <h2>📦 Storage & Performance</h2>
+
+              <!-- Vault Path -->
+              <div class="setting-item">
+                <label class="setting-label" style="flex-direction:column; align-items:flex-start; gap:0.4rem;">
+                  <span style="font-weight:600;">📂 Path to Vault</span>
+                  <div style="display:flex; gap:0.5rem; width:100%; align-items:center; flex-wrap:wrap;">
+                    <input type="text" id="vaultPathInput"
+                      placeholder="(default: ./attachments inside app folder)"
+                      style="flex:1; min-width:220px; padding:0.4rem 0.6rem; border:1px solid var(--border); border-radius:4px; background:var(--input-bg); color:var(--text-primary); font-size:0.9em;">
+                    <button id="vaultValidateBtn" class="btn btn-secondary" style="white-space:nowrap;">Verify</button>
+                  </div>
+                  <span id="vaultStatus" style="font-size:0.82em; margin-top:0.2rem;"></span>
+                  <span id="vaultInfo" style="font-size:0.82em; color:var(--text-secondary);"></span>
+                </label>
+                <p class="setting-description">
+                  Set a custom folder for all attachment files (PDFs, videos, large images).
+                  Leave empty to use the default <code>attachments/</code> folder inside the app.
+                  <br><strong>Dropbox / NAS / external drive:</strong> copy the <code>attachments/</code> folder there manually, enter the parent path here, click <em>Verify</em>, then Save Settings.
+                  <br><em>File references in the database use relative sub-paths, so they work automatically after moving.</em>
+                </p>
+              </div>
+
               <div class="setting-item">
                 <label class="setting-label">
                   <input type="checkbox" id="downscaleQuoteImages" checked />
@@ -1123,7 +1154,7 @@
                   </select>
                 </label>
                 <p class="setting-description">
-                  Files larger than this will be stored in the <code>attachments/</code> folder instead of database.
+                  Files larger than this will be stored in the vault folder instead of database.
                   <br><strong>1 MB (recommended)</strong> - Best balance: smaller DB, manageable exports, only very large files external.
                   <br><strong>Lower (0.5 MB)</strong> - More files external, tiny JSON exports.
                   <br><strong>Higher (2-5 MB)</strong> - More files in database, larger JSON exports.
@@ -1893,6 +1924,6 @@ Quote number three..."
     <!-- Quill Editor Script -->
     <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
     <script type="module" src="js/lib/confirmDialog.js"></script>
-    <script type="module" src="app.js?v=20260317a"></script>
+    <script type="module" src="app.js?v=20260318a"></script>
   </body>
 </html>
