@@ -131,8 +131,9 @@ export function updateFilterVisibility(noteTypeFilter) {
   const trainingYearContainer = getElementByIdSafe('trainingYearContainer', 'updateFilterVisibility');
   const trainingMonthContainer = getElementByIdSafe('trainingMonthContainer', 'updateFilterVisibility');
   
-  const showTrainingFilters = noteTypeFilter === 'training';
-  
+  const trainingInMode = !window._modeAllowedTypes || window._modeAllowedTypes.includes('training');
+  const showTrainingFilters = trainingInMode && noteTypeFilter === 'training';
+
   if (trainingTypesContainer) {
     trainingTypesContainer.style.display = showTrainingFilters ? 'block' : 'none';
   }

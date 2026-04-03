@@ -20,7 +20,7 @@ import {
   displayAttachmentPreview as displayAttachmentPreviewLib,
   downscaleAndMoveToDb as downscaleAndMoveToDbLib,
   resizeImage as resizeImageLib
-} from './js/lib/attachments.js?v=20260318a';
+} from './js/lib/attachments.js?v=20260318h';
 
 import {
   getNoteTypeConfig,
@@ -33,7 +33,7 @@ import {
 
 import {
   createQuoteCard as createQuoteCardLib
-} from './js/lib/cardRenderer.js?v=20260318a';
+} from './js/lib/cardRenderer.js?v=20260318h';
 
 import {
   setupAddModal,
@@ -61,7 +61,7 @@ import {
   toggleTagOperationsPanel,
   getDisplaySetting,
   initializeSettings as initializeSettingsLib
-} from './js/lib/settingsManager.js?v=20260318a';
+} from './js/lib/settingsManager.js?v=20260318h';
 
 import {
   openAuthorModal as openAuthorModalLib,
@@ -92,7 +92,7 @@ import {
   setCurrentPage as setLibCurrentPage,
   setQuotesPerPage,
   getQuotesPerPage
-} from './js/lib/displayManager.js?v=20260318a';
+} from './js/lib/displayManager.js?v=20260318h';
 
 import {
   populateTypeFilterCheckboxes as populateTypeFilterCheckboxesLib,
@@ -339,11 +339,46 @@ function restoreLastView() {
 
 // Handle URL hash navigation
 // ============= NAVIGATION (Now using viewManager.js) =============
-function handleHashNavigation() {
-  // MIGRATED: Now using parseUrlHash() from viewManager.js
-  currentNoteTypeFilter = parseUrlHash();
-  window.currentNoteTypeFilter = currentNoteTypeFilter; // Sync with global
+function handleHashNavigation(allowModeSwitch = false) {
+  const parsed = parseUrlHash();
+  // If the hash type is not in the current mode…
+  if (parsed && window._modeAllowedTypes && !window._modeAllowedTypes.includes(parsed)) {
+    if (allowModeSwitch) {
+      // User explicitly changed the URL during the session → find best mode and switch
+      const targetMode = findModeForType(parsed, activeMode.allModes);
+      if (targetMode) {
+        console.log(`🎛️ Switching mode to "${targetMode}" for hash type "${parsed}"`);
+        fetch(`${API_URL}/mode`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mode: targetMode })
+        }).then(() => window.location.reload())
+          .catch(() => window.location.reload());
+        return;
+      }
+    }
+    // Startup or no matching mode → fall back silently to first allowed type
+    currentNoteTypeFilter = window._modeAllowedTypes[0];
+    updateUrlHashLib(currentNoteTypeFilter);
+    console.log(`⚠️ Hash type "${parsed}" not in mode — using "${currentNoteTypeFilter}"`);
+  } else {
+    currentNoteTypeFilter = parsed;
+  }
+  window.currentNoteTypeFilter = currentNoteTypeFilter;
   console.log('✅ Set view from hash:', currentNoteTypeFilter || 'all');
+}
+
+// Find the most specific mode (fewest types) that contains a given note type
+function findModeForType(noteType, allModes) {
+  if (!allModes) return null;
+  let best = null, bestLen = Infinity;
+  for (const [name, types] of Object.entries(allModes)) {
+    if (types.includes(noteType) && types.length < bestLen) {
+      best = name;
+      bestLen = types.length;
+    }
+  }
+  return best;
 }
 
 // Update URL hash when view changes
@@ -362,7 +397,7 @@ function updateMainTitle() {
 // MIGRATED: Hash change handling moved to pageCoordinator.js
 initializeHashChangeListener(
   {
-    handleHashNavigation,
+    handleHashNavigation: () => handleHashNavigation(true), // user-initiated: allow mode switch
     updateActiveMenuState,
     updateAddButtonText,
     updateMainTitle,
@@ -612,12 +647,16 @@ function generateNoteTypeMenu() {
     });
   }
 
-  // Populate the Tags view type filter dropdown
+  // Populate the Tags view type filter dropdown (filtered to mode's allowed types)
   const tagTypeFilter = document.getElementById('tagTypeFilter');
   if (tagTypeFilter) {
-    // Keep the "All Types" option, replace the rest
-    tagTypeFilter.innerHTML = `<option value="">🏷️ All Types</option>` +
+    const isSingleMode = types.length === 1;
+    // Show "All Types" only when there are multiple types in this mode
+    const allTypesOpt = isSingleMode ? '' : `<option value="">🏷️ All Types</option>`;
+    tagTypeFilter.innerHTML = allTypesOpt +
       types.map(type => `<option value="${type.value}">${type.icon} ${type.label}</option>`).join('');
+    // Pre-select the only type in single-type mode
+    if (isSingleMode) tagTypeFilter.value = types[0].value;
   }
 
   // Populate the note-type selector inside the edit/add modal
@@ -629,16 +668,116 @@ function generateNoteTypeMenu() {
   }
 }
 
+// ── Mode handling ─────────────────────────────────────────────────────────
+let activeMode = { mode: 'DEFAULT', allowedTypes: null };
+// Exposed globally so filterManager / viewManager can gate training-specific UI
+window._modeAllowedTypes = null;
+
+async function loadAndApplyMode() {
+  try {
+    const r = await fetch(`${API_URL}/mode`);
+    if (!r.ok) return;
+    activeMode = await r.json();
+  } catch (_) { return; }
+
+  const { mode, allowedTypes } = activeMode;
+  if (!allowedTypes || allowedTypes.length === 0) return;
+
+  // Make allowed types available globally for filter managers
+  window._modeAllowedTypes = allowedTypes;
+
+  // Populate mode selector with all known modes, mark current
+  const modeSwitcher = document.getElementById('modeSwitcher');
+  if (modeSwitcher && activeMode.allModes) {
+    modeSwitcher.innerHTML = Object.keys(activeMode.allModes)
+      .map(m => `<option value="${m}"${m === mode ? ' selected' : ''}>${m}</option>`)
+      .join('');
+    modeSwitcher.addEventListener('change', async () => {
+      const newMode = modeSwitcher.value;
+      if (!newMode || newMode === mode) return;
+      try {
+        await fetch(`${API_URL}/mode`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mode: newMode })
+        });
+      } catch (_) {}
+      window.location.reload();
+    });
+  }
+
+  // Filter noteTypes down to allowed ones
+  if (globalSettings?.noteTypes) {
+    const filtered = globalSettings.noteTypes.filter(t => allowedTypes.includes(t.value));
+    initNoteTypes(filtered.length ? filtered : globalSettings.noteTypes);
+  }
+
+  const has = (type) => allowedTypes.includes(type);
+  const hasQuotes   = has('quote');
+  const hasTraining = has('training');
+  const isSingle    = allowedTypes.length === 1;
+
+  // ── Single-type mode: hide "All Notes" row + its separator, auto-activate
+  //    the one note-type button instead (it has the right icon and label)
+  const elAllNotes  = document.getElementById('menuItemAllNotes');
+  const elAllNotesSep = document.getElementById('menuSepAllNotes');
+  if (isSingle) {
+    if (elAllNotes)    elAllNotes.style.display    = 'none';
+    if (elAllNotesSep) elAllNotesSep.style.display = 'none';
+    // The note-type button is created by generateNoteTypeMenu() which runs after
+    // this function. Schedule the auto-click for after it renders.
+    setTimeout(() => {
+      const typeBtn = document.querySelector(`.note-type-filter[data-note-type="${allowedTypes[0]}"]`);
+      if (typeBtn && !typeBtn.classList.contains('active')) typeBtn.click();
+    }, 0);
+  } else {
+    if (elAllNotes)    elAllNotes.style.display    = '';
+    if (elAllNotesSep) elAllNotesSep.style.display = '';
+  }
+
+  // Authors & Sources — only relevant for quotes
+  const elAuthors = document.getElementById('menuItemAuthors');
+  const elSources = document.getElementById('menuItemSources');
+  if (elAuthors) elAuthors.style.display = hasQuotes ? '' : 'none';
+  if (elSources) elSources.style.display = hasQuotes ? '' : 'none';
+
+  // Random Quote — only relevant when quotes are visible
+  const elRandom    = document.getElementById('menuItemRandomQuote');
+  const elUtilDiv   = document.getElementById('menuDividerUtilities');
+  const elUtilTitle = document.getElementById('menuTitleUtilities');
+  const elUtilList  = document.getElementById('menuListUtilities');
+  if (elRandom) elRandom.style.display = hasQuotes ? '' : 'none';
+  const utilsVisible = hasQuotes;
+  if (elUtilDiv)   elUtilDiv.style.display   = utilsVisible ? '' : 'none';
+  if (elUtilTitle) elUtilTitle.style.display  = utilsVisible ? '' : 'none';
+  if (elUtilList)  elUtilList.style.display   = utilsVisible ? '' : 'none';
+
+  // Training type filter row — only show when training is in the mode
+  const elTrainingFilter  = document.getElementById('trainingTypesFilterContainer');
+  const elTrainingSummary = document.getElementById('trainingTypeSummary');
+  if (elTrainingFilter)  elTrainingFilter.style.display  = hasTraining ? '' : 'none';
+  if (elTrainingSummary) elTrainingSummary.style.display = hasTraining ? '' : 'none';
+
+  // Quote source filter row — only show when quotes are in the mode
+  const elQuoteFilter  = document.getElementById('quoteSourcesFilterContainer');
+  const elQuoteSummary = document.getElementById('quoteSourcesSummary');
+  if (elQuoteFilter)  elQuoteFilter.style.display  = hasQuotes ? '' : 'none';
+  if (elQuoteSummary) elQuoteSummary.style.display = hasQuotes ? '' : 'none';
+}
+
 // Initialize
 document.addEventListener("DOMContentLoaded", async () => {
   // Load settings from file first (using settingsManager library)
   await loadSettings();
   globalSettings = getGlobalSettings(); // Sync local reference
 
-  // Initialize dynamic note types from settings
+  // Initialize dynamic note types from settings (may be narrowed by mode below)
   if (globalSettings && globalSettings.noteTypes) {
     initNoteTypes(globalSettings.noteTypes);
   }
+
+  // Fetch active mode and filter menu accordingly
+  await loadAndApplyMode();
 
   // Generate note type menu items dynamically
   generateNoteTypeMenu();

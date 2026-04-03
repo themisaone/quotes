@@ -275,12 +275,14 @@ function setElementVisibility(elementId, shouldShow) {
 export function updateSourcesFilterVisibility(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes) {
   const isAllNotesView = currentNoteTypeFilter === null;
   
-  // Show quote sources for quotes view only (not all notes)
-  const showQuoteSources = currentNoteTypeFilter === 'quote';
+  // Show quote sources only when quotes are in the active mode
+  const quotesInMode = !window._modeAllowedTypes || window._modeAllowedTypes.includes('quote');
+  const showQuoteSources = quotesInMode && currentNoteTypeFilter === 'quote';
   setElementVisibility(ELEMENT_IDS.sourcesFilterContainer, showQuoteSources);
   
-  // Show training types for training view OR all notes view (combined)
-  const showTrainingTypes = currentNoteTypeFilter === 'training' || isAllNotesView;
+  // Show training types only when training is in the active mode
+  const trainingInMode = !window._modeAllowedTypes || window._modeAllowedTypes.includes('training');
+  const showTrainingTypes = trainingInMode && (currentNoteTypeFilter === 'training' || isAllNotesView);
   setElementVisibility(ELEMENT_IDS.trainingTypesFilterContainer, showTrainingTypes);
   
   // Update the training types dropdown label based on view

@@ -18,6 +18,40 @@ require("dotenv").config();
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+// ── Active mode (set via MODE env var or PUT /api/mode, persisted in local.json) ──
+const MODES_FILE = path.join(__dirname, '../config/modes.json');
+function loadModes() {
+  try {
+    if (fs.existsSync(MODES_FILE)) return JSON.parse(fs.readFileSync(MODES_FILE, 'utf8'));
+  } catch (_) {}
+  return { DEFAULT: ['quote', 'note', 'historical'], ALL: ['quote', 'note', 'historical', 'puzzle', 'training'] };
+}
+const _modes = loadModes();
+
+// Priority: MODE env var (npm run <mode>) > local.json activeMode (UI selector) > DEFAULT
+function resolveInitialMode() {
+  if (process.env.MODE) return process.env.MODE.toUpperCase();
+  try {
+    const local = JSON.parse(fs.readFileSync(LOCAL_FILE, 'utf8'));
+    if (local.activeMode) return local.activeMode.toUpperCase();
+  } catch (_) {}
+  return 'DEFAULT';
+}
+
+let _modeName    = resolveInitialMode();
+let _allowedTypes = _modes[_modeName] || _modes['DEFAULT'] || Object.values(_modes)[0];
+
+function applyMode(newMode) {
+  const name = newMode.toUpperCase();
+  const types = _modes[name];
+  if (!types) return false;
+  _modeName    = name;
+  _allowedTypes = types;
+  return true;
+}
+
+console.log(`🎛️  Mode: ${_modeName} — types: [${_allowedTypes.join(', ')}]`);
+
 // ── Local config (vault path only — stays inside the app, never synced) ──
 const LOCAL_FILE      = path.join(__dirname, '../config/local.json');
 const DEFAULT_SETTINGS_FILE = path.join(__dirname, '../config/settings.json');
@@ -90,6 +124,33 @@ app.get('/api/config/storage', (req, res) => {
   res.json({
     defaultMaxDbSizeMB: fileStorage.DEFAULT_MAX_SIZE_MB
   });
+});
+
+// GET /api/mode — returns current mode and allowed note types
+app.get('/api/mode', (req, res) => {
+  res.json({
+    mode:         _modeName,
+    allowedTypes: _allowedTypes,
+    allModes:     _modes
+  });
+});
+
+// PUT /api/mode — switch mode at runtime and persist to local.json
+app.put('/api/mode', (req, res) => {
+  const { mode } = req.body;
+  if (!mode) return res.status(400).json({ error: 'mode required' });
+  if (!applyMode(mode)) {
+    return res.status(400).json({ error: `Unknown mode "${mode}". Available: ${Object.keys(_modes).join(', ')}` });
+  }
+  // Persist so the next plain "npm start" resumes this mode
+  // (npm run <mode> always overrides via env var, so this only affects bare "npm start")
+  try {
+    const local = fs.existsSync(LOCAL_FILE) ? JSON.parse(fs.readFileSync(LOCAL_FILE, 'utf8')) : {};
+    local.activeMode = _modeName;
+    fs.writeFileSync(LOCAL_FILE, JSON.stringify(local, null, 2));
+  } catch (e) { console.warn('Could not persist mode:', e.message); }
+  console.log(`🎛️  Mode switched to: ${_modeName} — types: [${_allowedTypes.join(', ')}]`);
+  res.json({ mode: _modeName, allowedTypes: _allowedTypes });
 });
 
 // Get all settings
@@ -1110,10 +1171,14 @@ app.get("/api/quotes/count", async (req, res) => {
     const params = [];
     let paramCounter = 1;
 
-    // Note type filter
+    // Note type filter (also applies mode restriction when no specific type is requested)
     if (note_type) {
       query += ` AND q.note_type = $${paramCounter}`;
       params.push(note_type);
+      paramCounter++;
+    } else {
+      query += ` AND q.note_type = ANY($${paramCounter})`;
+      params.push(_allowedTypes);
       paramCounter++;
     }
 
@@ -1516,13 +1581,17 @@ app.get("/api/quotes", async (req, res) => {
       paramCounter++;
     }
     
-    // Note type filter
+    // Note type filter (also applies mode restriction when no specific type is requested)
     if (note_type) {
       query += ` AND q.note_type = $${paramCounter}`;
       params.push(note_type);
       paramCounter++;
+    } else {
+      query += ` AND q.note_type = ANY($${paramCounter})`;
+      params.push(_allowedTypes);
+      paramCounter++;
     }
-    
+
     // Training types filter
     if (training_types) {
       const trainingTypeArray = training_types.split(",").filter((t) => t);
@@ -2615,13 +2684,15 @@ function buildFilterQuery(filters) {
   const params = [];
   let paramCounter = 1;
   
-  // Note type filter
+  // Note type filter (also applies mode restriction when no specific type is requested)
   if (filters.note_type) {
     query += ` WHERE q.note_type = $${paramCounter}`;
     params.push(filters.note_type);
     paramCounter++;
   } else {
-    query += ` WHERE 1=1`;
+    query += ` WHERE q.note_type = ANY($${paramCounter})`;
+    params.push(_allowedTypes);
+    paramCounter++;
   }
   
   // Author filter

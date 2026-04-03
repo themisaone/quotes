@@ -1,0 +1,9 @@
+{
+  "DEFAULT":    ["quote", "note", "historical"],
+  "ALL":        ["quote", "note", "historical", "puzzle", "training"],
+  "QUOTES":     ["quote"],
+  "NOTES":      ["note"],
+  "HISTORICAL": ["historical"],
+  "BRAIN":      ["puzzle"],
+  "TRAINING":   ["training"]
+}
