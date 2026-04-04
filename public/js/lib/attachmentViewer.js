@@ -120,7 +120,7 @@ export function showFullImage(imageSrc, quoteId = null, attachmentType = 'image'
   }
   
   if (isAudio(attachmentType, fileInfo.mimeType)) {
-    showAudioPlayer(fileInfo.actualSrc, fileInfo.filePath);
+    showAudioPlayer(fileInfo.actualSrc, fileInfo.filePath, fileInfo.mimeType);
     return;
   }
   
@@ -167,14 +167,23 @@ export function showVideoPlayer(videoSrc, filePath = null) {
  * Show audio player in modal
  * @param {string} audioSrc - Audio source URL
  * @param {string|null} filePath - File path (for filename extraction)
+ * @param {string|null} mimeType - MIME type (used for base64 filename)
  */
-export function showAudioPlayer(audioSrc, filePath = null) {
-  const filename = extractFilename(filePath, DEFAULT_FILENAMES.AUDIO);
+export function showAudioPlayer(audioSrc, filePath = null, mimeType = null) {
+  const resolvedMime = mimeType || extractMimeFromDataUrl(audioSrc);
+  const filename = filePath
+    ? filePath.split('/').pop()
+    : buildFilenameFromMime(DEFAULT_FILENAMES.AUDIO, resolvedMime);
   const modal = createModal();
-  
-  modal.innerHTML = buildAudioPlayerHTML(audioSrc, filename);
-  
+
+  // Convert data URL → Blob URL for reliable browser playback
+  // (large data URLs set via innerHTML are often silently ignored by <audio>)
+  const { playbackSrc, blobUrl } = dataUrlToBlobUrl(audioSrc, resolvedMime || 'audio/wav');
+
+  modal.innerHTML = buildAudioPlayerHTML(playbackSrc, audioSrc, filename);
+
   attachModalHandlers(modal);
+  if (blobUrl) scheduleRevokeOnClose(modal, blobUrl);
   showModal(modal);
 }
 
@@ -213,11 +222,17 @@ function handleDownloadError(error) {
  */
 function parseFileSource(src) {
   if (!src || !src.startsWith('file:')) {
+    // Extract real MIME type from data: URL if available
+    let mimeType = 'application/octet-stream';
+    if (src && src.startsWith('data:')) {
+      const m = src.match(/^data:([^;]+);/);
+      if (m) mimeType = m[1];
+    }
     return {
       actualSrc: src,
       isExternalFile: false,
       filePath: null,
-      mimeType: 'image/jpeg'
+      mimeType
     };
   }
   
@@ -242,6 +257,61 @@ function parseFileSource(src) {
  */
 function extractFilename(filePath, defaultName) {
   return filePath ? filePath.split('/').pop() : defaultName;
+}
+
+/**
+ * Convert a data: URL to a Blob URL for reliable media playback.
+ * Returns { playbackSrc, blobUrl } — blobUrl is null if conversion fails or not needed.
+ */
+function dataUrlToBlobUrl(src, mimeType) {
+  if (!src || !src.startsWith('data:')) return { playbackSrc: src, blobUrl: null };
+  try {
+    const base64 = src.split(',')[1];
+    const binary  = atob(base64);
+    const bytes   = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const blob    = new Blob([bytes], { type: mimeType });
+    const blobUrl = URL.createObjectURL(blob);
+    return { playbackSrc: blobUrl, blobUrl };
+  } catch (e) {
+    console.warn('Blob URL conversion failed, falling back to data URL', e);
+    return { playbackSrc: src, blobUrl: null };
+  }
+}
+
+/**
+ * Revoke a Blob URL once its modal is removed from the DOM.
+ */
+function scheduleRevokeOnClose(modal, blobUrl) {
+  const observer = new MutationObserver(() => {
+    if (!document.body.contains(modal)) {
+      URL.revokeObjectURL(blobUrl);
+      observer.disconnect();
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: false });
+}
+
+
+function extractMimeFromDataUrl(src) {
+  if (!src || !src.startsWith('data:')) return '';
+  const m = src.match(/^data:([^;]+);/);
+  return m ? m[1] : '';
+}
+
+/**
+ * Build a filename with the proper extension derived from a MIME type.
+ * e.g. buildFilenameFromMime('audio', 'audio/wav') → 'audio.wav'
+ * @param {string} base - Base name without extension
+ * @param {string} mimeType
+ * @returns {string}
+ */
+function buildFilenameFromMime(base, mimeType) {
+  if (!mimeType) return base;
+  const sub = mimeType.split('/')[1] || '';
+  // Remove codec qualifiers like "wav; codecs=pcm"
+  const ext = sub.split(';')[0].trim();
+  return ext ? `${base}.${ext}` : base;
 }
 
 // ============================================
@@ -438,14 +508,16 @@ function attachDownscaleHandler(modal, quoteId, fileInfo, callbacks) {
  * @returns {string} HTML string
  */
 function buildPDFViewerHTML(pdfSrc, filename) {
-  // Use escapeHtml from utils - assume it's imported by the app
   const escapedFilename = typeof escapeHtml === 'function' ? escapeHtml(filename) : filename;
   
   return `
     <div class="${MODAL_CONFIG.CONTENT_CLASS}" style="${STYLES.PDF_CONTENT_SIZE}">
       <div class="viewer-header" style="${STYLES.HEADER}">
         <span class="viewer-header-text" style="${STYLES.HEADER_TEXT}">${ICONS.PDF} ${escapedFilename}</span>
-        <span class="${MODAL_CONFIG.CLOSE_CLASS} viewer-close" onclick="this.parentElement.parentElement.parentElement.remove()" style="${STYLES.CLOSE_BUTTON}">${ICONS.CLOSE}</span>
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+          <a href="${pdfSrc}" download="${filename}" class="btn btn-secondary" style="font-size:0.8rem;padding:0.25rem 0.6rem;" title="Download">⬇ Download</a>
+          <span class="${MODAL_CONFIG.CLOSE_CLASS} viewer-close" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()" style="${STYLES.CLOSE_BUTTON}">${ICONS.CLOSE}</span>
+        </div>
       </div>
       <div class="viewer-pdf-container" style="${STYLES.PDF_CONTAINER}">
         <embed src="${pdfSrc}" type="application/pdf" width="100%" height="100%" style="${STYLES.PDF_EMBED}" />
@@ -467,10 +539,12 @@ function buildVideoPlayerHTML(videoSrc, filename) {
     <div class="${MODAL_CONFIG.CONTENT_CLASS}">
       <div class="viewer-header" style="${STYLES.HEADER}">
         <span class="viewer-header-text" style="${STYLES.HEADER_TEXT}">${ICONS.VIDEO} ${escapedFilename}</span>
-        <span class="${MODAL_CONFIG.CLOSE_CLASS} viewer-close" onclick="this.parentElement.parentElement.parentElement.remove()" style="${STYLES.CLOSE_BUTTON}">${ICONS.CLOSE}</span>
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+          <a href="${videoSrc}" download="${filename}" class="btn btn-secondary" style="font-size:0.8rem;padding:0.25rem 0.6rem;" title="Download">⬇ Download</a>
+          <span class="${MODAL_CONFIG.CLOSE_CLASS} viewer-close" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()" style="${STYLES.CLOSE_BUTTON}">${ICONS.CLOSE}</span>
+        </div>
       </div>
-      <video controls style="${STYLES.VIDEO}">
-        <source src="${videoSrc}">
+      <video controls src="${videoSrc}" style="${STYLES.VIDEO}">
         Your browser does not support the video tag.
       </video>
     </div>
@@ -483,18 +557,20 @@ function buildVideoPlayerHTML(videoSrc, filename) {
  * @param {string} filename - Filename
  * @returns {string} HTML string
  */
-function buildAudioPlayerHTML(audioSrc, filename) {
+function buildAudioPlayerHTML(audioSrc, downloadSrc, filename) {
   const escapedFilename = typeof escapeHtml === 'function' ? escapeHtml(filename) : filename;
   
   return `
     <div class="${MODAL_CONFIG.CONTENT_CLASS}" style="${STYLES.AUDIO_CONTENT_WIDTH}">
       <div class="viewer-header" style="${STYLES.HEADER}">
         <span class="viewer-header-text" style="${STYLES.HEADER_TEXT}">${ICONS.AUDIO} ${escapedFilename}</span>
-        <span class="${MODAL_CONFIG.CLOSE_CLASS} viewer-close" onclick="this.parentElement.parentElement.parentElement.remove()" style="${STYLES.CLOSE_BUTTON}">${ICONS.CLOSE}</span>
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+          <a href="${downloadSrc}" download="${filename}" class="btn btn-secondary" style="font-size:0.8rem;padding:0.25rem 0.6rem;" title="Download">⬇ Download</a>
+          <span class="${MODAL_CONFIG.CLOSE_CLASS} viewer-close" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()" style="${STYLES.CLOSE_BUTTON}">${ICONS.CLOSE}</span>
+        </div>
       </div>
       <div class="viewer-media-container" style="${STYLES.AUDIO_CONTAINER}">
-        <audio controls style="${STYLES.AUDIO}">
-          <source src="${audioSrc}">
+        <audio controls src="${audioSrc}" style="${STYLES.AUDIO}">
           Your browser does not support the audio tag.
         </audio>
       </div>

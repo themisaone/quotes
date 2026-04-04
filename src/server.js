@@ -2009,6 +2009,13 @@ app.put("/api/quotes/:id", async (req, res) => {
       }
     }
 
+    // Fetch existing attachment values so we can delete old files if they are cleared
+    const existingRow = await client.query(
+      `SELECT thumbnail, attachment_full FROM notes WHERE id = $1`, [id]
+    );
+    const existingThumb = existingRow.rows[0]?.thumbnail || null;
+    const existingFull  = existingRow.rows[0]?.attachment_full || null;
+
     // Update the quote
     const updateFields = [];
     const params = [];
@@ -2146,6 +2153,14 @@ app.put("/api/quotes/:id", async (req, res) => {
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: "Quote not found" });
+    }
+
+    // Delete old files from disk if the attachment fields were explicitly cleared
+    if (thumbnail !== undefined && !thumbnail && existingThumb) {
+      fileStorage.deleteAttachment(existingThumb);
+    }
+    if (attachment_full !== undefined && !attachment_full && existingFull) {
+      fileStorage.deleteAttachment(existingFull);
     }
 
     // Handle tags update if provided (only if new tables exist)

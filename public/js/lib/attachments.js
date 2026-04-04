@@ -400,62 +400,54 @@ export async function readAttachmentFile(file, type, state, callbacks, folder = 
     return await readImageFile(file, type, state, callbacks);
   }
 
-  // All non-image files go directly to disk — no base64 encoding ever
-  {
-    console.log(`🚀 Non-image file (${sizeMB} MB) — uploading directly to server...`);
+  // For non-image files: respect the storage threshold.
+  // Files >= threshold → upload directly to disk (file: reference).
+  // Files < threshold  → read as base64 for DB storage.
+  const thresholdMB = state?.globalSettings?.externalStorageThreshold || 1;
+  const shouldUploadToDisk = file.size >= thresholdMB * 1024 * 1024;
+
+  const icon     = getAttachmentIcon(attachmentType);
+  const sizeText = formatFileSize(file.size);
+
+  // Generate thumbnail in parallel (only for PDF and Video)
+  const thumbPromise =
+    attachmentType === ATTACHMENT_TYPES.PDF   ? generatePdfThumbnail(file)   :
+    attachmentType === ATTACHMENT_TYPES.VIDEO ? generateVideoThumbnail(file) :
+    Promise.resolve(null);
+
+  let fullData;
+  let previewThumb;
+
+  if (shouldUploadToDisk) {
+    console.log(`🚀 Large non-image file (${sizeMB} MB ≥ ${thresholdMB} MB threshold) — uploading directly to server...`);
     if (callbacks?.onProgress) callbacks.onProgress(`Uploading ${sizeMB} MB file directly...`);
-
-    const icon    = getAttachmentIcon(attachmentType);
-    const sizeText = formatFileSize(file.size);
-
-    // Upload file and optionally generate a preview thumbnail in parallel
-    const [fileRef, previewThumb] = await Promise.all([
-      uploadLargeFileDirect(file, folder),
-      attachmentType === ATTACHMENT_TYPES.PDF   ? generatePdfThumbnail(file)   :
-      attachmentType === ATTACHMENT_TYPES.VIDEO ? generateVideoThumbnail(file) :
-      Promise.resolve(null)
+    [fullData, previewThumb] = await Promise.all([uploadLargeFileDirect(file, folder), thumbPromise]);
+  } else {
+    console.log(`📦 Small non-image file (${sizeMB} MB < ${thresholdMB} MB threshold) — reading as base64 for DB...`);
+    [fullData, previewThumb] = await Promise.all([
+      new Promise((res, rej) => {
+        const reader = new FileReader();
+        reader.onload  = (e) => res(e.target.result);
+        reader.onerror = (e) => rej(e);
+        reader.readAsDataURL(file);
+      }),
+      thumbPromise
     ]);
-
-    const thumbnail = previewThumb || createIconThumbnail(icon, file.name, sizeText);
-
-    const result = {
-      thumbnail,
-      full: fileRef,   // file: reference — no base64 ever
-      type: attachmentType,
-      filename: file.name
-    };
-
-    if (callbacks?.onAttachmentLoaded) {
-      callbacks.onAttachmentLoaded(result, icon, file.name, sizeText);
-    }
-    return result;
   }
 
-  // (unreachable — kept for reference)
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const base64Data = e.target.result;
-      const icon = getAttachmentIcon(attachmentType);
-      const sizeText = formatFileSize(base64Data.length);
-      const thumbnail = createIconThumbnail(icon, file.name, sizeText);
-      const result = {
-        thumbnail,
-        full: base64Data,
-        type: attachmentType,
-        filename: file.name
-      };
-      if (callbacks?.onAttachmentLoaded) {
-        callbacks.onAttachmentLoaded(result, icon, file.name, sizeText);
-      }
-      
-      console.log(`✅ Loaded ${attachmentType}: ${file.name}, Size: ${sizeText}`);
-      resolve(result);
-    };
-    
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
+  const thumbnail = previewThumb || createIconThumbnail(icon, file.name, sizeText);
+
+  const result = {
+    thumbnail,
+    full: fullData,
+    type: attachmentType,
+    filename: file.name
+  };
+
+  if (callbacks?.onAttachmentLoaded) {
+    callbacks.onAttachmentLoaded(result, icon, file.name, sizeText);
+  }
+  return result;
 }
 
 /**
@@ -613,10 +605,17 @@ export function displayImage(container, imageUrl, escapeHtmlFn) {
 export function displayAttachmentPreview(container, icon, filename, size, escapeHtmlFn, thumbnail = null) {
   if (!container) return;
 
+  // Helper: reveal the X / clear button next to the preview container
+  const showXBtn = () => {
+    const xButton = container.parentElement?.querySelector('.image-clear-x, .clear-image-btn');
+    if (xButton) xButton.style.display = 'flex';
+  };
+
   // If we have a real image thumbnail (e.g. PDF first-page from PDF.js), show it directly
   if (thumbnail && thumbnail.startsWith('data:image/')) {
     container.innerHTML = `<img src="${thumbnail}" alt="${filename}" style="width:100%;height:100%;object-fit:contain;border-radius:4px;">`;
     container.classList.add('has-image');
+    showXBtn();
     return;
   }
 
@@ -631,6 +630,7 @@ export function displayAttachmentPreview(container, icon, filename, size, escape
     </div>
   `;
   container.classList.add('has-image');
+  showXBtn();
 }
 
 /**

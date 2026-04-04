@@ -20,7 +20,7 @@ import {
   displayAttachmentPreview as displayAttachmentPreviewLib,
   downscaleAndMoveToDb as downscaleAndMoveToDbLib,
   resizeImage as resizeImageLib
-} from './js/lib/attachments.js?v=20260318h';
+} from './js/lib/attachments.js?v=20260318k';
 
 import {
   getNoteTypeConfig,
@@ -154,7 +154,7 @@ import {
   showVideoPlayer,
   showAudioPlayer,
   downloadAttachment
-} from './js/lib/attachmentViewer.js';
+} from './js/lib/attachmentViewer.js?v=20260318e';
 
 import {
   switchView as switchViewLib,
@@ -2559,6 +2559,12 @@ getElementByIdSafe("quoteModal").addEventListener("paste", (e) => {
 // Clear quote image
 clearQuoteImageBtn.addEventListener("click", async (e) => {
   e.stopPropagation();
+  // If editing an existing note that has a saved attachment record, use the proper
+  // delete API so the file is removed from disk and note_attachments is cleaned up.
+  if (editingQuoteId && currentModalAttachments.length > 0) {
+    await deleteModalAttachment(0);
+    return;
+  }
   if (!await showConfirm('Remove the main attachment from this note?', { icon: '📎', title: 'Remove attachment', danger: true })) return;
   currentQuoteImage = "";
   currentQuoteImageFull = "";

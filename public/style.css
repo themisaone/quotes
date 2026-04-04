@@ -1741,7 +1741,7 @@ textarea {
 
 .quote-card.has-image .quote-image-thumb {
   width: auto;
-  max-width: 250px;
+  max-width: 200px;
   flex-shrink: 0;
   margin: 0;
   padding: 0;
@@ -1752,7 +1752,7 @@ textarea {
 }
 
 .quote-card.has-image .quote-image-thumb img {
-  max-width: 250px;
+  max-width: 200px;
   width: auto;
   height: auto !important;
   object-fit: contain !important;
@@ -3186,6 +3186,13 @@ body.selection-mode .quote-card::after {
   }
   .menu-toggle-btn:hover {
     background: rgba(255, 255, 255, 0.25);
+  }
+
+  .quote-card.has-image .quote-image-thumb {
+    max-width: 160px;
+  }
+  .quote-card.has-image .quote-image-thumb img {
+    max-width: 160px;
   }
 
   /* Collapsed state — slim strip showing only the toggle arrow */
