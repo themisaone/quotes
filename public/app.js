@@ -61,7 +61,7 @@ import {
   toggleTagOperationsPanel,
   getDisplaySetting,
   initializeSettings as initializeSettingsLib
-} from './js/lib/settingsManager.js?v=20260318h';
+} from './js/lib/settingsManager.js?v=20260318i';
 
 import {
   openAuthorModal as openAuthorModalLib,

@@ -1165,6 +1165,42 @@ export function initializeSettings(callbacks = {}) {
   loadVaultInfo();
   // ── End Vault Path ──────────────────────────────────────────────────────
 
+  // ── Export DB Attachments ────────────────────────────────────────────────
+  const exportDbAttachmentsBtn    = getElementByIdSafe('exportDbAttachmentsBtn');
+  const exportDbAttachmentsResult = getElementByIdSafe('exportDbAttachmentsResult');
+
+  if (exportDbAttachmentsBtn) {
+    exportDbAttachmentsBtn.addEventListener('click', async () => {
+      exportDbAttachmentsBtn.disabled = true;
+      exportDbAttachmentsBtn.textContent = '⏳ Exporting…';
+      if (exportDbAttachmentsResult) exportDbAttachmentsResult.textContent = '';
+      try {
+        const resp = await fetch('/api/export/db-attachments', { method: 'POST' });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || 'Export failed');
+        const msg = `✅ Exported ${data.exported} file(s), skipped ${data.skipped}.\nOutput: ${data.outputDir}`;
+        if (exportDbAttachmentsResult) {
+          exportDbAttachmentsResult.style.color = 'var(--success, green)';
+          exportDbAttachmentsResult.textContent = msg;
+        } else {
+          alert(msg);
+        }
+      } catch (err) {
+        const msg = `❌ Export failed: ${err.message}`;
+        if (exportDbAttachmentsResult) {
+          exportDbAttachmentsResult.style.color = 'var(--danger, red)';
+          exportDbAttachmentsResult.textContent = msg;
+        } else {
+          alert(msg);
+        }
+      } finally {
+        exportDbAttachmentsBtn.disabled = false;
+        exportDbAttachmentsBtn.textContent = '📤 Export DB Attachments';
+      }
+    });
+  }
+  // ── End Export DB Attachments ────────────────────────────────────────────
+
   // Quote Meta Searches setting
   if (enableQuoteMetaSearchesCheckbox) {
     // Load saved setting from globalSettings (default: false)

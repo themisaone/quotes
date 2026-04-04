@@ -1166,6 +1166,23 @@
                   <br><strong>Higher (2-5 MB)</strong> - More files in database, larger JSON exports.
                 </p>
               </div>
+
+              <div class="setting-item">
+                <label class="setting-label">
+                  <span>Export DB-stored Attachments</span>
+                </label>
+                <p class="setting-description">
+                  Writes all attachments currently stored as base64 in the database to
+                  <code>~/Downloads/DB-attachments/</code>, mirroring the vault sub-folder layout
+                  (<code>historical/</code>, <code>notes/</code>, etc.).
+                  Naming: <code>noteId.ext</code> for single, <code>noteId_0.ext</code> / <code>noteId_1.ext</code> for multiple.
+                  Already-exported files are skipped.
+                </p>
+                <button id="exportDbAttachmentsBtn" class="btn btn-secondary" style="margin-top:0.4rem;">
+                  📤 Export DB Attachments
+                </button>
+                <div id="exportDbAttachmentsResult" style="margin-top:0.5rem; font-size:0.85em;"></div>
+              </div>
             </div>
             </div><!-- end settings-row: Note Display Options + Storage & Performance -->
 
@@ -1930,6 +1947,6 @@ Quote number three..."
     <!-- Quill Editor Script -->
     <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
     <script type="module" src="js/lib/confirmDialog.js"></script>
-    <script type="module" src="app.js?v=20260318n"></script>
+    <script type="module" src="app.js?v=20260318o"></script>
   </body>
 </html>
