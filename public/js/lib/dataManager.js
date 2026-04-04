@@ -341,6 +341,39 @@ async function fetchJsonBackup(currentNoteTypeFilter) {
 }
 
 /**
+ * Fetch the big-files report generated during the last export.
+ * Returns a Blob (text/plain) if there were big files, or null if none.
+ */
+async function fetchBigFilesReport() {
+  const response = await fetch(`${API_URL}/export/big-files-report`);
+  if (response.status === 204) return null; // no big files
+  if (!response.ok) return null;
+  return await response.blob();
+}
+
+/**
+ * Fetch info about big files from the last export (count + totalMB).
+ */
+async function fetchBigFilesInfo() {
+  const response = await fetch(`${API_URL}/export/big-files-info`);
+  if (!response.ok) return { count: 0, totalMB: 0 };
+  return await response.json();
+}
+
+/**
+ * Stream the ZIP of large attachments from the last export.
+ * Uses a hidden <a> to trigger the browser download so we don't buffer it in JS.
+ */
+function triggerBigFilesZipDownload(date) {
+  const a = document.createElement('a');
+  a.href = `${API_URL}/export/big-files-zip`;
+  a.download = `big_files_${date}.zip`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+/**
  * Export to JSON (backup data)
  * @param {Object} config - Configuration object
  * @param {string} config.currentNoteTypeFilter - Current note type (null for all)
@@ -360,14 +393,44 @@ export async function exportToJson(config) {
 
     const originalText = setButtonLoading(exportBtn, "⏳ Exporting...");
 
-    // Fetch and download backup
+    // Fetch and download backup JSON
     const blob = await fetchJsonBackup(currentNoteTypeFilter);
     const filePrefix = currentNoteTypeFilter || 'all_notes';
+    const dateSuffix = new Date().toISOString().split('T')[0];
     const filename = generateFilename(`${filePrefix}_backup`, 'json');
     downloadBlob(blob, filename);
 
     resetButton(exportBtn, originalText);
-    alert(`✅ ${typeLabel} backup created successfully!`);
+
+    // Check if there are big files that weren't embedded
+    const info = await fetchBigFilesInfo();
+    if (info.count === 0) {
+      alert(`✅ ${typeLabel} backup created. All attachments are embedded — fully self-contained!`);
+      return;
+    }
+
+    // Ask the user whether to also download the large attachments as a ZIP
+    const doZip = await showConfirm(
+      `✅ JSON backup saved.\n\n` +
+      `⚠️ ${info.count} large attachment(s) (${info.totalMB} MB total) exceed the embed threshold and were not included in the JSON.\n\n` +
+      `Download them now as a ZIP archive to create a complete backup?\n` +
+      `(This may take a while for large collections.)`,
+      { icon: '📦', title: 'Download large attachments?', confirmLabel: 'Download ZIP', cancelLabel: 'Skip (JSON only)' }
+    );
+
+    if (doZip) {
+      // Stream ZIP via a direct browser download (avoids buffering GBs in JS memory)
+      triggerBigFilesZipDownload(dateSuffix);
+      alert(`📦 ZIP download started — it may take a few minutes.\n\nJSON + ZIP together form a complete backup.`);
+    } else {
+      // Just download the text report so they know which files need separate backup
+      const reportBlob = await fetchBigFilesReport();
+      if (reportBlob) {
+        await new Promise(r => setTimeout(r, 300));
+        downloadBlob(reportBlob, `big_files_${dateSuffix}.txt`);
+      }
+      alert(`✅ ${typeLabel} backup created.\n\n⚠️ "big_files_${dateSuffix}.txt" lists the ${info.count} large file(s) not in the JSON.\nMake sure your vault folder is also backed up separately.`);
+    }
   } catch (error) {
     console.error("Error exporting JSON:", error);
     alert("Failed to create backup. Please try again.");

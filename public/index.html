@@ -1151,7 +1151,7 @@
               </div>
               <div class="setting-item">
                 <label class="setting-label">
-                  <span>External Storage Threshold (MB)</span>
+                  <span>Export Embed Threshold (MB)</span>
                   <select id="externalStorageThreshold" style="margin-left: 1rem; padding: 0.5rem; border: 1px solid var(--border); border-radius: 4px;">
                     <option value="0.5">0.5 MB</option>
                     <option value="1" selected>1 MB (Recommended)</option>
@@ -1160,28 +1160,28 @@
                   </select>
                 </label>
                 <p class="setting-description">
-                  Files larger than this will be stored in the vault folder instead of database.
-                  <br><strong>1 MB (recommended)</strong> - Best balance: smaller DB, manageable exports, only very large files external.
-                  <br><strong>Lower (0.5 MB)</strong> - More files external, tiny JSON exports.
-                  <br><strong>Higher (2-5 MB)</strong> - More files in database, larger JSON exports.
+                  Attachments up to this size are embedded as base64 in JSON exports (self-contained backup).
+                  Attachments larger than this are kept as file references and listed in a separate <em>big_files.txt</em> report.
+                  <br><strong>1 MB (recommended)</strong> — compact exports, only large files need separate backup.
+                  <br><strong>Lower (0.5 MB)</strong> — smaller JSON exports, more files need separate backup.
+                  <br><strong>Higher (2–5 MB)</strong> — larger JSON exports, fewer files need separate backup.
                 </p>
               </div>
 
               <div class="setting-item">
                 <label class="setting-label">
-                  <span>Export DB-stored Attachments</span>
+                  <span>Migrate DB Attachments → Disk</span>
                 </label>
                 <p class="setting-description">
-                  Writes all attachments currently stored as base64 in the database to
-                  <code>~/Downloads/DB-attachments/</code>, mirroring the vault sub-folder layout
-                  (<code>historical/</code>, <code>notes/</code>, etc.).
-                  Naming: <code>noteId.ext</code> for single, <code>noteId_0.ext</code> / <code>noteId_1.ext</code> for multiple.
-                  Already-exported files are skipped.
+                  One-time migration: converts every <code>attachment_full</code> still stored as
+                  base64 in the database into a file on the vault disk, updating the DB reference.
+                  Thumbnails are <strong>not</strong> touched — they stay in DB.
+                  Safe to re-run: notes already pointing to a file are skipped.
                 </p>
-                <button id="exportDbAttachmentsBtn" class="btn btn-secondary" style="margin-top:0.4rem;">
-                  📤 Export DB Attachments
+                <button id="migrateAttachmentsBtn" class="btn btn-secondary" style="margin-top:0.4rem;">
+                  🔄 Migrate Attachments to Disk
                 </button>
-                <div id="exportDbAttachmentsResult" style="margin-top:0.5rem; font-size:0.85em;"></div>
+                <div id="migrateAttachmentsResult" style="margin-top:0.5rem; font-size:0.85em;"></div>
               </div>
             </div>
             </div><!-- end settings-row: Note Display Options + Storage & Performance -->
@@ -1947,6 +1947,6 @@ Quote number three..."
     <!-- Quill Editor Script -->
     <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
     <script type="module" src="js/lib/confirmDialog.js"></script>
-    <script type="module" src="app.js?v=20260318o"></script>
+    <script type="module" src="app.js?v=20260318v"></script>
   </body>
 </html>

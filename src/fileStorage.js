@@ -59,13 +59,13 @@ function ensureDirectories() {
   const base = getAttachmentsDir();
   const dirs = [
     base,
-    path.join(base, "quotes"),
-    path.join(base, "authors"),
-    path.join(base, "sources"),
-    path.join(base, "training"),
-    path.join(base, "notes"),
-    path.join(base, "puzzles"),
-    path.join(base, "historical"),
+    path.join(base, "quote"),       // note_type = 'quote'
+    path.join(base, "note"),        // note_type = 'note'
+    path.join(base, "training"),    // note_type = 'training'
+    path.join(base, "puzzle"),      // note_type = 'puzzle'
+    path.join(base, "historical"),  // note_type = 'historical'
+    path.join(base, "authors"),     // author images
+    path.join(base, "sources"),     // source images
   ];
 
   dirs.forEach((dir) => {
@@ -152,6 +152,9 @@ function saveToFilesystem(base64String, type, id, suffix = "") {
   const filename = `${id}${suffix}.${ext}`;
   const relativePath = path.join(type, filename);
   const fullPath = path.join(getAttachmentsDir(), relativePath);
+
+  // Ensure the target directory exists (handles any note_type folder dynamically)
+  fs.mkdirSync(path.dirname(fullPath), { recursive: true });
 
   // Convert base64 to buffer and save
   const buffer = Buffer.from(data, "base64");
@@ -245,34 +248,31 @@ function getMimeTypeFromBase64(base64String) {
 }
 
 /**
- * Process attachment for storage - decides DB vs filesystem
- * Returns EITHER base64 string OR file reference string
- * @param {string} base64String - Base64 encoded file
- * @param {string} type - 'quotes', 'authors', or 'sources'
- * @param {number} id - ID of the entity
- * @param {string} suffix - Optional suffix (e.g., '_full')
- * @param {number} maxSizeMB - Maximum size in MB for DB storage (optional, default 1)
- * @returns {string|null} Base64 string OR "file:path:mimetype" string
+ * Process attachment for storage.
+ * For thumbnails (forceExternal=false): keeps small values in DB, large ones on disk (legacy threshold).
+ * For full attachments (forceExternal=true): always writes to disk regardless of size.
+ * @param {string} base64String - Base64 data URL OR existing "file:..." reference
+ * @param {string} type - storage sub-folder (e.g. 'historical', 'notes')
+ * @param {number|string} id - note ID (used for filename)
+ * @param {string} suffix - filename suffix, e.g. '' for full attachments (no longer '_full')
+ * @param {number} maxSizeMB - threshold for DB storage (only used when forceExternal=false)
+ * @param {boolean} forceExternal - if true, always save to filesystem (use for attachment_full)
+ * @returns {string|null} Base64 string (for DB) OR "file:path:mimetype" string (for disk)
  */
-function processForStorage(base64String, type, id, suffix = "", maxSizeMB = DEFAULT_MAX_SIZE_MB) {
-  if (!base64String) {
-    return null;
-  }
+function processForStorage(base64String, type, id, suffix = "", maxSizeMB = DEFAULT_MAX_SIZE_MB, forceExternal = false) {
+  if (!base64String) return null;
 
-  // If it's already a file reference, return as-is
-  if (isFilePath(base64String)) {
-    return base64String;
-  }
+  // Already a file reference — return as-is (rename already handled by finalizeUploadedFile)
+  if (isFilePath(base64String)) return base64String;
 
-  if (shouldStoreExternally(base64String, maxSizeMB)) {
-    // Store in filesystem and return file reference
+  if (forceExternal || shouldStoreExternally(base64String, maxSizeMB)) {
     const mimeType = getMimeTypeFromBase64(base64String);
-    const path = saveToFilesystem(base64String, type, id, suffix);
-    return createFileReference(path, mimeType);
-  } else {
-    // Store in database as base64
-    return base64String;
+    const filePath = saveToFilesystem(base64String, type, id, suffix);
+    return createFileReference(filePath, mimeType);
   }
+
+  // Keep in database as base64
+  return base64String;
 }
 
 /**

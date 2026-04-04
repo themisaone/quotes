@@ -587,7 +587,7 @@ function buildAudioPlayerHTML(audioSrc, downloadSrc, filename) {
 function buildImageViewerHTML(imageSrc, showDownscaleButton) {
   const downscaleButton = showDownscaleButton ? `
     <button id="downscaleImageBtn" class="btn btn-primary" style="${STYLES.DOWNSCALE_BUTTON}">
-      📦 Downscale to 1024px & Move to DB
+      📦 Downscale to 1024px
     </button>
   ` : '';
   

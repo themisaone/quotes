@@ -1165,41 +1165,38 @@ export function initializeSettings(callbacks = {}) {
   loadVaultInfo();
   // ── End Vault Path ──────────────────────────────────────────────────────
 
-  // ── Export DB Attachments ────────────────────────────────────────────────
-  const exportDbAttachmentsBtn    = getElementByIdSafe('exportDbAttachmentsBtn');
-  const exportDbAttachmentsResult = getElementByIdSafe('exportDbAttachmentsResult');
+  // ── Migrate DB Attachments → Disk ────────────────────────────────────────
+  const migrateAttachmentsBtn    = getElementByIdSafe('migrateAttachmentsBtn');
+  const migrateAttachmentsResult = getElementByIdSafe('migrateAttachmentsResult');
 
-  if (exportDbAttachmentsBtn) {
-    exportDbAttachmentsBtn.addEventListener('click', async () => {
-      exportDbAttachmentsBtn.disabled = true;
-      exportDbAttachmentsBtn.textContent = '⏳ Exporting…';
-      if (exportDbAttachmentsResult) exportDbAttachmentsResult.textContent = '';
+  if (migrateAttachmentsBtn) {
+    migrateAttachmentsBtn.addEventListener('click', async () => {
+      if (!confirm('This will write all DB-stored attachment_full values to disk and update the database references. Continue?')) return;
+      migrateAttachmentsBtn.disabled = true;
+      migrateAttachmentsBtn.textContent = '⏳ Migrating…';
+      if (migrateAttachmentsResult) migrateAttachmentsResult.textContent = '';
       try {
-        const resp = await fetch('/api/export/db-attachments', { method: 'POST' });
+        const resp = await fetch('/api/migrate/attachments-to-disk', { method: 'POST' });
         const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error || 'Export failed');
-        const msg = `✅ Exported ${data.exported} file(s), skipped ${data.skipped}.\nOutput: ${data.outputDir}`;
-        if (exportDbAttachmentsResult) {
-          exportDbAttachmentsResult.style.color = 'var(--success, green)';
-          exportDbAttachmentsResult.textContent = msg;
-        } else {
-          alert(msg);
+        if (!resp.ok) throw new Error(data.error || 'Migration failed');
+        const msg = `✅ Migrated ${data.migrated} attachment(s) to disk, skipped ${data.skipped} (already on disk or invalid).`;
+        if (migrateAttachmentsResult) {
+          migrateAttachmentsResult.style.color = 'var(--success, green)';
+          migrateAttachmentsResult.textContent = msg;
         }
       } catch (err) {
-        const msg = `❌ Export failed: ${err.message}`;
-        if (exportDbAttachmentsResult) {
-          exportDbAttachmentsResult.style.color = 'var(--danger, red)';
-          exportDbAttachmentsResult.textContent = msg;
-        } else {
-          alert(msg);
+        const msg = `❌ Migration failed: ${err.message}`;
+        if (migrateAttachmentsResult) {
+          migrateAttachmentsResult.style.color = 'var(--danger, red)';
+          migrateAttachmentsResult.textContent = msg;
         }
       } finally {
-        exportDbAttachmentsBtn.disabled = false;
-        exportDbAttachmentsBtn.textContent = '📤 Export DB Attachments';
+        migrateAttachmentsBtn.disabled = false;
+        migrateAttachmentsBtn.textContent = '🔄 Migrate Attachments to Disk';
       }
     });
   }
-  // ── End Export DB Attachments ────────────────────────────────────────────
+  // ── End Migrate DB Attachments ────────────────────────────────────────────
 
   // Quote Meta Searches setting
   if (enableQuoteMetaSearchesCheckbox) {

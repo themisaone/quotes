@@ -20,7 +20,7 @@ import {
   displayAttachmentPreview as displayAttachmentPreviewLib,
   downscaleAndMoveToDb as downscaleAndMoveToDbLib,
   resizeImage as resizeImageLib
-} from './js/lib/attachments.js?v=20260318k';
+} from './js/lib/attachments.js?v=20260318l';
 
 import {
   getNoteTypeConfig,
@@ -33,7 +33,7 @@ import {
 
 import {
   createQuoteCard as createQuoteCardLib
-} from './js/lib/cardRenderer.js?v=20260318h';
+} from './js/lib/cardRenderer.js?v=20260318i';
 
 import {
   setupAddModal,
@@ -44,7 +44,7 @@ import {
   exportToPdf as exportToPdfLib,
   exportToJson as exportToJsonLib,
   handleImportFile as handleImportFileLib
-} from './js/lib/dataManager.js?v=20260317f';
+} from './js/lib/dataManager.js?v=20260318u';
 
 import {
   loadSettings,
@@ -61,7 +61,7 @@ import {
   toggleTagOperationsPanel,
   getDisplaySetting,
   initializeSettings as initializeSettingsLib
-} from './js/lib/settingsManager.js?v=20260318i';
+} from './js/lib/settingsManager.js?v=20260318j';
 
 import {
   openAuthorModal as openAuthorModalLib,
@@ -154,7 +154,7 @@ import {
   showVideoPlayer,
   showAudioPlayer,
   downloadAttachment
-} from './js/lib/attachmentViewer.js?v=20260318e';
+} from './js/lib/attachmentViewer.js?v=20260318f';
 
 import {
   switchView as switchViewLib,
@@ -2206,7 +2206,7 @@ function readAttachmentFile(file, type) {
   };
   
   // Pass the current note-type as the storage folder hint for large-file direct upload
-  const folder = currentNoteTypeFilter || 'notes';
+  const folder = currentNoteTypeFilter || 'note';
   return readAttachmentFileLib(file, type, globalSettings, callbacks, folder);
 }
 
@@ -2953,6 +2953,9 @@ async function fetchNotesByIds(ids) {
  */
 async function addAttachmentFromFile(file, noteId) {
   const globalSettings = getGlobalSettings();
+  // Use the note type currently selected in the modal as the upload folder
+  // so files land in the correct vault subfolder (historical/, notes/, etc.)
+  const folder = document.getElementById('noteType')?.value || currentNoteTypeFilter || 'note';
 
   return new Promise((resolve) => {
     const callbacks = {
@@ -2985,7 +2988,7 @@ async function addAttachmentFromFile(file, noteId) {
         }
       },
     };
-    readAttachmentFileLib(file, 'quote', globalSettings, callbacks);
+    readAttachmentFileLib(file, 'quote', globalSettings, callbacks, folder);
   });
 }
 

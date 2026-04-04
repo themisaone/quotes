@@ -203,9 +203,12 @@ const FILE_LABELS = { pdf: 'PDF', video: 'Video', document: 'File' };
 
 function buildSingleAttachmentTile(att, noteId, isMain = true) {
   const type    = att.attachment_type || 'image';
-  const fullUrl = att.attachment_full || att.thumbnail || '';
+  // For non-image types, only the full attachment can be played — never fall back to thumbnail
+  const fullUrl = att.attachment_full || (type === 'image' ? att.thumbnail || '' : '');
   const cls     = isMain ? 'quote-image-thumb' : 'att-strip-thumb';
-  const onclick = `event.stopPropagation(); showFullImage('${fullUrl}', ${noteId}, '${type}')`;
+  const onclick = fullUrl
+    ? `event.stopPropagation(); showFullImage('${fullUrl}', ${noteId}, '${type}')`
+    : '';
 
   if (type === 'image') {
     const displayUrl = resolveAttachmentUrl(att.thumbnail || att.attachment_full);

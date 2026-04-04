@@ -3,6 +3,7 @@ const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
 const multer = require("multer");
+const archiver = require("archiver");
 const pool = require("./db");
 const fileStorage = require("./fileStorage");
 const {
@@ -338,7 +339,7 @@ const multerStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     // Use req.query.folder — req.body fields are not parsed yet when
     // this callback runs (the file field precedes text fields in FormData).
-    const folder = req.query.folder || 'notes';
+    const folder = req.query.folder || 'note';
     const dir = path.join(fileStorage.ATTACHMENTS_DIR, folder);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     cb(null, dir);
@@ -354,14 +355,39 @@ const upload = multer({ storage: multerStorage });
 // POST /api/upload-attachment
 // Accepts: multipart/form-data with field "file" + query param ?folder=
 // Returns: { fileRef: "file:notes/tmp_12345.pdf:application/pdf", filename, sizeMB }
-app.post('/api/upload-attachment', upload.single('file'), (req, res) => {
+app.post('/api/upload-attachment', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-    // folder comes from query param (consistent with what multer's destination used)
-    const folder  = req.query.folder || 'notes';
-    const relPath = `${folder}/${req.file.filename}`;
-    const mimeType = req.file.mimetype || fileStorage.getMimeFromExtension(path.extname(req.file.filename).slice(1));
-    const sizeMB  = (req.file.size / 1024 / 1024).toFixed(2);
+    const folder  = req.query.folder || 'note';
+    let   relPath = `${folder}/${req.file.filename}`;
+    let   mimeType = req.file.mimetype || fileStorage.getMimeFromExtension(path.extname(req.file.filename).slice(1));
+
+    // Transcode non-PCM audio (e.g. IMA ADPCM WAV) to PCM WAV so browsers can play it.
+    // Only applies to WAV uploads — other formats are left as-is.
+    if (mimeType === 'audio/wav' || mimeType === 'audio/x-wav' || mimeType === 'audio/wave') {
+      const fullPath = path.join(fileStorage.getAttachmentsDir(), relPath);
+      const pcmPath  = fullPath.replace(/\.wav$/i, '_pcm.wav');
+      try {
+        await new Promise((resolve, reject) => {
+          const { execFile } = require('child_process');
+          execFile('ffmpeg', ['-y', '-i', fullPath, '-acodec', 'pcm_s16le', pcmPath],
+            (err, stdout, stderr) => {
+              if (err) reject(err); else resolve();
+            }
+          );
+        });
+        // Replace original with PCM version
+        fs.renameSync(pcmPath, fullPath);
+        mimeType = 'audio/wav';
+        console.log(`🎵 Transcoded to PCM WAV: ${relPath}`);
+      } catch (transcodeErr) {
+        // ffmpeg not available or failed — keep original, warn
+        console.warn(`⚠️  WAV transcode failed (file kept as-is): ${transcodeErr.message}`);
+        if (fs.existsSync(pcmPath)) fs.unlinkSync(pcmPath);
+      }
+    }
+
+    const sizeMB  = (fs.statSync(path.join(fileStorage.getAttachmentsDir(), relPath)).size / 1024 / 1024).toFixed(2);
     const fileRef = fileStorage.createFileReference(relPath, mimeType);
     console.log(`📁 Direct upload: ${relPath} (${sizeMB} MB)`);
     res.json({ fileRef, filename: req.file.originalname, sizeMB });
@@ -1875,9 +1901,9 @@ app.post("/api/quotes", async (req, res) => {
     const storageFolder = note_type || 'quote';
     // Rename any directly-uploaded tmp_ files to use the real note ID
     const renamedThumb = fileStorage.finalizeUploadedFile(thumbnail, quoteId, '');
-    const renamedFull  = fileStorage.finalizeUploadedFile(attachment_full, quoteId, '_full');
-    const processedImage = fileStorage.processForStorage(renamedThumb, storageFolder, quoteId, '', storageThresholdMB);
-    const processedImageFull = fileStorage.processForStorage(renamedFull, storageFolder, quoteId, '_full', storageThresholdMB);
+    const renamedFull  = fileStorage.finalizeUploadedFile(attachment_full, quoteId, '');
+    const processedImage     = fileStorage.processForStorage(renamedThumb, storageFolder, quoteId, '', storageThresholdMB, false);
+    const processedImageFull = fileStorage.processForStorage(renamedFull,  storageFolder, quoteId, '', storageThresholdMB, true);
 
     console.log(`📦 Quote ${quoteId} attachment processing (type: ${attachment_type}, threshold: ${storageThresholdMB} MB):`);
     console.log(`   Thumbnail: ${thumbnail ? `${(thumbnail.length/1024).toFixed(0)}KB` : 'none'} → ${processedImage ? (processedImage.startsWith('file:') ? processedImage : `${(processedImage.length/1024).toFixed(0)}KB base64`) : 'none'}`);
@@ -2047,27 +2073,31 @@ app.put("/api/quotes/:id", async (req, res) => {
 
     // Process thumbnails through hybrid storage if provided
     const updateStorageFolder = note_type || 'quote';
+    // These hold the final processed values so the note_attachments sync below can reuse them
+    let processedSyncThumb = undefined;
+    let processedSyncFull  = undefined;
+
     if (thumbnail !== undefined && thumbnail) {
       const renamedThumb   = fileStorage.finalizeUploadedFile(thumbnail, id, '');
-      const processedImage = fileStorage.processForStorage(renamedThumb, updateStorageFolder, id, '', storageThresholdMB);
+      processedSyncThumb   = fileStorage.processForStorage(renamedThumb, updateStorageFolder, id, '', storageThresholdMB, false);
       updateFields.push(`thumbnail = $${paramCounter}`);
-      params.push(processedImage);
+      params.push(processedSyncThumb);
       paramCounter++;
     } else if (thumbnail !== undefined) {
-      // Empty string means clear the thumbnail
+      processedSyncThumb = null;
       updateFields.push(`thumbnail = $${paramCounter}`);
       params.push(thumbnail);
       paramCounter++;
     }
 
     if (attachment_full !== undefined && attachment_full) {
-      const renamedFull        = fileStorage.finalizeUploadedFile(attachment_full, id, '_full');
-      const processedImageFull = fileStorage.processForStorage(renamedFull, updateStorageFolder, id, '_full', storageThresholdMB);
+      const renamedFull = fileStorage.finalizeUploadedFile(attachment_full, id, '');
+      processedSyncFull = fileStorage.processForStorage(renamedFull, updateStorageFolder, id, '', storageThresholdMB, true);
       updateFields.push(`attachment_full = $${paramCounter}`);
-      params.push(processedImageFull);
+      params.push(processedSyncFull);
       paramCounter++;
     } else if (attachment_full !== undefined) {
-      // Empty string means clear the thumbnail
+      processedSyncFull = null;
       updateFields.push(`attachment_full = $${paramCounter}`);
       params.push(attachment_full);
       paramCounter++;
@@ -2185,14 +2215,10 @@ app.put("/api/quotes/:id", async (req, res) => {
 
     // Sync note_attachments position=0 with updated flat attachment fields
     if (thumbnail !== undefined || attachment_full !== undefined || attachment_type !== undefined) {
-      const updatedNote = result.rows[0];
-      const updateStorageFolder2 = updatedNote.note_type || 'quote';
-      const syncThumb = thumbnail !== undefined
-        ? fileStorage.processForStorage(thumbnail || null, updateStorageFolder2, id, '', storageThresholdMB || 1)
-        : undefined;
-      const syncFull  = attachment_full !== undefined
-        ? fileStorage.processForStorage(attachment_full || null, updateStorageFolder2, id, '_full', storageThresholdMB || 1)
-        : undefined;
+      // Use the already-finalized+processed values computed above — NOT the raw request values
+      // (which would still contain tmp_ filenames before finalizeUploadedFile ran)
+      const syncThumb = processedSyncThumb;
+      const syncFull  = processedSyncFull;
 
       const existing = await client.query(
         `SELECT id FROM note_attachments WHERE note_id = $1 AND position = 0`, [id]
@@ -2327,9 +2353,9 @@ app.post("/api/notes/:id/attachments", async (req, res) => {
     const folder  = noteRow.rows[0]?.note_type || 'historical';
 
     const renamedThumb   = fileStorage.finalizeUploadedFile(thumbnail, `${id}_a${position}`, '');
-    const renamedFull    = fileStorage.finalizeUploadedFile(attachment_full, `${id}_a${position}`, '_full');
-    const processedThumb = fileStorage.processForStorage(renamedThumb, folder, `${id}_a${position}`, '', storageThresholdMB);
-    const processedFull  = fileStorage.processForStorage(renamedFull, folder, `${id}_a${position}`, '_full', storageThresholdMB);
+    const renamedFull    = fileStorage.finalizeUploadedFile(attachment_full, `${id}_a${position}`, '');
+    const processedThumb = fileStorage.processForStorage(renamedThumb, folder, `${id}_a${position}`, '', storageThresholdMB, false);
+    const processedFull  = fileStorage.processForStorage(renamedFull,  folder, `${id}_a${position}`, '', storageThresholdMB, true);
 
     const ins = await client.query(
       `INSERT INTO note_attachments (note_id, position, thumbnail, attachment_full, attachment_type, storage_type, filename)
@@ -3525,6 +3551,37 @@ app.post("/api/tags/bulk-add", async (req, res) => {
 
 // ============= DATA EXPORT/IMPORT (JSON) =============
 
+// Remembers big-file entries from the most recent export so the companion
+// big-files report can be served immediately after without reprocessing.
+let _lastExportBigFiles = [];
+
+/**
+ * Resolve a single attachment value for JSON export:
+ *  - null / undefined / base64 string  → returned as-is
+ *  - file: reference, file ≤ 2 MB      → read from disk, return as base64 data URL
+ *  - file: reference, file  > 2 MB     → push to bigFiles list, return original ref
+ */
+function resolveAttachmentForExport(value, noteId, bigFiles, thresholdMB = 1) {
+  if (!value || !fileStorage.isFilePath(value)) return value;
+
+  const { path: relPath, mimeType } = fileStorage.parseFilePath(value);
+  const fullPath = path.join(fileStorage.getAttachmentsDir(), relPath);
+
+  if (!fs.existsSync(fullPath)) return value; // missing file — keep ref, don't crash
+
+  const sizeBytes = fs.statSync(fullPath).size;
+  const sizeMB    = sizeBytes / 1024 / 1024;
+
+  if (sizeMB > thresholdMB) {
+    bigFiles.push({ noteId, path: relPath, sizeMB: sizeMB.toFixed(2) });
+    return value; // keep file: reference — too large to embed
+  }
+
+  // Small enough — embed as base64 data URL (same format the import already handles)
+  const buffer = fs.readFileSync(fullPath);
+  return `data:${mimeType};base64,${buffer.toString('base64')}`;
+}
+
 // Export all data as JSON
 app.get("/api/export/json", async (req, res) => {
   const { note_type } = req.query;
@@ -3539,6 +3596,18 @@ app.get("/api/export/json", async (req, res) => {
   );
 
   try {
+    _lastExportBigFiles = []; // reset for this run
+
+    // Read the embed-threshold from settings (repurposed from old DB storage threshold)
+    let exportEmbedThresholdMB = 1; // default: 1 MB
+    try {
+      const settingsRaw = fs.readFileSync(getSettingsFile(), 'utf8');
+      const settings    = JSON.parse(settingsRaw);
+      if (typeof settings.externalStorageThreshold === 'number') {
+        exportEmbedThresholdMB = settings.externalStorageThreshold;
+      }
+    } catch (_) { /* use default if settings unreadable */ }
+
     // ── Small tables: authors, sources, tags ─────────────────────────────────
     const authorsResult = await pool.query("SELECT * FROM authors ORDER BY id");
     const sourcesResult = await pool.query("SELECT * FROM sources ORDER BY id");
@@ -3604,6 +3673,9 @@ app.get("/api/export/json", async (req, res) => {
       if (batch.rows.length === 0) break;
 
       for (const note of batch.rows) {
+        // Resolve file: references → base64 (≤ threshold) or keep as-is (> threshold → big-files list)
+        note.attachment_full = resolveAttachmentForExport(note.attachment_full, note.id, _lastExportBigFiles, exportEmbedThresholdMB);
+        note.thumbnail       = resolveAttachmentForExport(note.thumbnail,       note.id, _lastExportBigFiles, exportEmbedThresholdMB);
         if (!first) res.write(',');
         res.write(JSON.stringify(note));
         first = false;
@@ -3613,7 +3685,7 @@ app.get("/api/export/json", async (req, res) => {
       if (batch.rows.length < BATCH) break;
     }
 
-    res.write(']}}');
+    res.write(`],"_bigFilesCount":${_lastExportBigFiles.length}}}`);
     res.end();
 
   } catch (error) {
@@ -3625,6 +3697,72 @@ app.get("/api/export/json", async (req, res) => {
       res.end();
     }
   }
+});
+
+// Returns a human-readable .txt report of large files that were NOT embedded
+// in the most recent JSON export (because they exceeded the 2 MB threshold).
+app.get("/api/export/big-files-report", (req, res) => {
+  if (_lastExportBigFiles.length === 0) {
+    return res.status(204).end(); // no content — no big files
+  }
+
+  const ts = new Date().toISOString();
+  const lines = [
+    `NoteArchive Export — ${ts}`,
+    `Large attachments NOT embedded in JSON (> 2 MB):`,
+    `These files must be present in your vault to be usable after import.`,
+    ``,
+  ];
+
+  let totalMB = 0;
+  for (const f of _lastExportBigFiles) {
+    lines.push(`Note ${String(f.noteId).padEnd(6)}  ${f.path.padEnd(50)}  ${f.sizeMB} MB`);
+    totalMB += parseFloat(f.sizeMB);
+  }
+  lines.push('');
+  lines.push(`Total: ${_lastExportBigFiles.length} file(s), ${totalMB.toFixed(1)} MB`);
+
+  const date = ts.split('T')[0];
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="big_files_${date}.txt"`);
+  res.send(lines.join('\n'));
+});
+
+// Returns count + total MB of big files (from last export run) so the client
+// can warn the user before starting the potentially large ZIP download.
+app.get("/api/export/big-files-info", (req, res) => {
+  const totalMB = _lastExportBigFiles.reduce((s, f) => s + parseFloat(f.sizeMB), 0);
+  res.json({ count: _lastExportBigFiles.length, totalMB: parseFloat(totalMB.toFixed(1)) });
+});
+
+// Streams a ZIP archive of all large attachments that were not embedded in the
+// most recent JSON export.  Uses archiver for streaming — no temp file on disk.
+app.get("/api/export/big-files-zip", (req, res) => {
+  if (_lastExportBigFiles.length === 0) {
+    return res.status(204).end();
+  }
+
+  const date = new Date().toISOString().split('T')[0];
+  res.setHeader('Content-Type', 'application/zip');
+  res.setHeader('Content-Disposition', `attachment; filename="big_files_${date}.zip"`);
+
+  const archive = archiver('zip', { zlib: { level: 1 } }); // level 1: fast, minimal compression (files are already compressed)
+  archive.pipe(res);
+
+  for (const f of _lastExportBigFiles) {
+    const fullPath = path.join(fileStorage.getAttachmentsDir(), f.path);
+    if (fs.existsSync(fullPath)) {
+      // Preserve the subfolder structure inside the ZIP (e.g. historical/5236.wav)
+      archive.file(fullPath, { name: f.path });
+    }
+  }
+
+  archive.finalize();
+
+  archive.on('error', (err) => {
+    console.error('ZIP archive error:', err);
+    if (!res.headersSent) res.status(500).json({ error: err.message });
+  });
 });
 
 // Import data from JSON
@@ -3916,8 +4054,8 @@ app.post("/api/import/json", async (req, res) => {
           for (const att of attachmentRows) {
             const pos = att.position ?? 0;
             const suffix = pos === 0 ? '' : `_${pos}`;
-            const procThumb = fileStorage.processForStorage(att.thumbnail, storageFolder, quoteId, suffix ? `${suffix}` : '', storageThresholdMB);
-            const procFull  = fileStorage.processForStorage(att.attachment_full, storageFolder, quoteId, pos === 0 ? '_full' : `_${pos}_full`, storageThresholdMB);
+            const procThumb = fileStorage.processForStorage(att.thumbnail,       storageFolder, quoteId, suffix ? `${suffix}` : '', storageThresholdMB, false);
+            const procFull  = fileStorage.processForStorage(att.attachment_full, storageFolder, quoteId, pos === 0 ? '' : `_${pos}`,              storageThresholdMB, true);
 
             await client.query(
               `INSERT INTO note_attachments (note_id, position, thumbnail, attachment_full, attachment_type, storage_type, filename)
@@ -4077,6 +4215,212 @@ app.post("/api/export/db-attachments", async (req, res) => {
   } catch (err) {
     console.error('Export DB attachments error:', err);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ============= MIGRATE: DB base64 attachment_full → disk files =============
+// One-time migration: writes every base64 attachment_full to disk and updates the DB
+// reference to a "file:..." path.  Thumbnails are left in DB untouched.
+// Safe to re-run: notes whose attachment_full is already a file: reference are skipped.
+
+app.post("/api/migrate/attachments-to-disk", async (req, res) => {
+  const client = await pool.connect();
+
+  // Consolidate old plural folder names to singular (matching note_type values)
+  const FOLDER_RENAMES = { 'quotes': 'quote', 'notes': 'note', 'puzzles': 'puzzle' };
+
+  try {
+    await client.query("BEGIN");
+
+    // ── 0. Consolidate plural → singular folder names ─────────────────────
+    // Old code created attachments/quotes/, attachments/notes/, attachments/puzzles/.
+    // Current code uses note_type directly: quote/, note/, puzzle/.
+    // Move any files still in old plural folders and update DB references.
+    let consolidated = 0;
+    for (const [oldFolder, newFolder] of Object.entries(FOLDER_RENAMES)) {
+      const oldDir = path.join(fileStorage.getAttachmentsDir(), oldFolder);
+      const newDir = path.join(fileStorage.getAttachmentsDir(), newFolder);
+      if (!fs.existsSync(oldDir)) continue;
+      fs.mkdirSync(newDir, { recursive: true });
+
+      // Find all DB refs pointing to the old folder
+      const oldPrefix = `file:${oldFolder}/`;
+      const newPrefix = `file:${newFolder}/`;
+      const [naRefs, nRefs] = await Promise.all([
+        client.query(
+          `SELECT id, attachment_full FROM note_attachments WHERE attachment_full LIKE $1`,
+          [`${oldPrefix}%`]
+        ),
+        client.query(
+          `SELECT id, attachment_full FROM notes WHERE attachment_full LIKE $1`,
+          [`${oldPrefix}%`]
+        ),
+      ]);
+
+      for (const row of [...naRefs.rows, ...nRefs.rows]) {
+        const newRef = row.attachment_full.replace(oldPrefix, newPrefix);
+        const oldRelPath = row.attachment_full.replace(/^file:/, '').split(':')[0];
+        const newRelPath = newRef.replace(/^file:/, '').split(':')[0];
+        const oldFileFull = path.join(fileStorage.getAttachmentsDir(), oldRelPath);
+        const newFileFull = path.join(fileStorage.getAttachmentsDir(), newRelPath);
+        if (fs.existsSync(oldFileFull) && !fs.existsSync(newFileFull)) {
+          fs.renameSync(oldFileFull, newFileFull);
+        }
+        const tbl = naRefs.rows.includes(row) ? 'note_attachments' : 'notes';
+        await client.query(`UPDATE ${tbl} SET attachment_full = $1 WHERE id = $2`, [newRef, row.id]);
+        consolidated++;
+      }
+    }
+
+    // ── 1. Migrate note_attachments rows (base64 → disk) ──────────────────
+    const naRows = await client.query(`
+      SELECT na.id, na.note_id, na.position, na.attachment_full, na.attachment_type,
+             n.note_type
+      FROM note_attachments na
+      JOIN notes n ON n.id = na.note_id
+      WHERE na.attachment_full IS NOT NULL
+        AND na.attachment_full NOT LIKE 'file:%'
+        AND LENGTH(na.attachment_full) > 100
+      ORDER BY na.note_id, na.position
+    `);
+
+    let migrated = 0, skipped = 0;
+
+    for (const row of naRows.rows) {
+      const raw = row.attachment_full;
+      if (!raw || !raw.startsWith('data:')) { skipped++; continue; }
+
+      const folder = row.note_type || 'note';
+      const fileId = row.position === 0 ? `${row.note_id}` : `${row.note_id}_a${row.position}`;
+      const newRef = fileStorage.processForStorage(raw, folder, fileId, '', 0, true);
+      if (!newRef || !fileStorage.isFilePath(newRef)) { skipped++; continue; }
+
+      await client.query(
+        `UPDATE note_attachments SET attachment_full = $1 WHERE id = $2`,
+        [newRef, row.id]
+      );
+      migrated++;
+    }
+
+    // ── 2. Migrate flat notes.attachment_full (no note_attachments row) ──
+    const flatRows = await client.query(`
+      SELECT n.id, n.note_type, n.attachment_full
+      FROM notes n
+      WHERE n.attachment_full IS NOT NULL
+        AND n.attachment_full NOT LIKE 'file:%'
+        AND LENGTH(n.attachment_full) > 100
+        AND NOT EXISTS (
+          SELECT 1 FROM note_attachments na
+          WHERE na.note_id = n.id AND na.attachment_full = n.attachment_full
+        )
+    `);
+
+    for (const row of flatRows.rows) {
+      const raw = row.attachment_full;
+      if (!raw || !raw.startsWith('data:')) { skipped++; continue; }
+
+      const folder = row.note_type || 'note';
+      const newRef = fileStorage.processForStorage(raw, folder, `${row.id}`, '', 0, true);
+      if (!newRef || !fileStorage.isFilePath(newRef)) { skipped++; continue; }
+
+      await client.query(
+        `UPDATE notes SET attachment_full = $1 WHERE id = $2`,
+        [newRef, row.id]
+      );
+      migrated++;
+    }
+
+    // ── 3. Fix stale file:.../tmp_... references ──────────────────────────
+    // These are file: references where the tmp_ rename never completed.
+    // Try to rename the tmp_ file on disk.
+    // If the file is gone but notes.attachment_full already has a valid non-tmp
+    // reference for the same note, use that instead of clearing to null.
+    const tmpRefRows = await client.query(`
+      SELECT 'na' AS tbl, na.id AS row_id, na.note_id, na.position,
+             na.attachment_full, n.attachment_full AS notes_full, n.note_type
+      FROM note_attachments na
+      JOIN notes n ON n.id = na.note_id
+      WHERE na.attachment_full LIKE 'file:%/tmp_%:%'
+      UNION ALL
+      SELECT 'note' AS tbl, n.id AS row_id, n.id AS note_id, -1 AS position,
+             n.attachment_full, n.attachment_full AS notes_full, n.note_type
+      FROM notes n
+      WHERE n.attachment_full LIKE 'file:%/tmp_%:%'
+    `);
+
+    let fixed = 0, cleared = 0;
+    for (const row of tmpRefRows.rows) {
+      const { path: relPath, mimeType } = fileStorage.parseFilePath(row.attachment_full);
+      const basename    = path.basename(relPath);
+      const dir         = path.dirname(relPath);
+      const ext         = path.extname(basename);
+      const fileId      = row.position <= 0 ? `${row.note_id}` : `${row.note_id}_a${row.position}`;
+      const newBasename = `${fileId}${ext}`;
+      const newRelPath  = `${dir}/${newBasename}`;
+
+      const oldFull = path.join(fileStorage.getAttachmentsDir(), relPath);
+      const newFull = path.join(fileStorage.getAttachmentsDir(), newRelPath);
+
+      let newRef = null;
+      if (fs.existsSync(oldFull)) {
+        if (fs.existsSync(newFull)) fs.unlinkSync(newFull);
+        fs.renameSync(oldFull, newFull);
+        newRef = fileStorage.createFileReference(newRelPath, mimeType);
+        fixed++;
+      } else if (row.tbl === 'na' && row.notes_full &&
+                 fileStorage.isFilePath(row.notes_full) &&
+                 !row.notes_full.includes('/tmp_')) {
+        // Tmp file is gone, but notes.attachment_full already has the correct ref — use it
+        newRef = row.notes_full;
+        fixed++;
+      } else {
+        cleared++;
+      }
+
+      if (row.tbl === 'na') {
+        await client.query(
+          `UPDATE note_attachments SET attachment_full = $1 WHERE id = $2`,
+          [newRef, row.row_id]
+        );
+      } else {
+        await client.query(
+          `UPDATE notes SET attachment_full = $1 WHERE id = $2`,
+          [newRef, row.row_id]
+        );
+      }
+    }
+
+    // ── 4. Sync notes.attachment_full ↔ note_attachments (bidirectional) ──
+    // Forward: note_attachments pos=0 → notes (when notes is empty/null)
+    await client.query(`
+      UPDATE notes n
+      SET attachment_full = na.attachment_full,
+          attachment_type  = na.attachment_type
+      FROM note_attachments na
+      WHERE na.note_id = n.id AND na.position = 0
+        AND na.attachment_full LIKE 'file:%'
+        AND (n.attachment_full IS NULL OR n.attachment_full = '' OR n.attachment_full NOT LIKE 'file:%')
+    `);
+
+    // Reverse: notes → note_attachments pos=0 (when note_attachments is empty/null)
+    await client.query(`
+      UPDATE note_attachments na
+      SET attachment_full = n.attachment_full,
+          attachment_type  = n.attachment_type
+      FROM notes n
+      WHERE na.note_id = n.id AND na.position = 0
+        AND n.attachment_full LIKE 'file:%'
+        AND (na.attachment_full IS NULL OR na.attachment_full = '')
+    `);
+
+    await client.query("COMMIT");
+    res.json({ ok: true, migrated, consolidated, fixed, cleared, skipped });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("Migration error:", err);
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
   }
 });
 

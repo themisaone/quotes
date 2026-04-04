@@ -400,14 +400,12 @@ export async function readAttachmentFile(file, type, state, callbacks, folder = 
     return await readImageFile(file, type, state, callbacks);
   }
 
-  // For non-image files: respect the storage threshold.
-  // Files >= threshold → upload directly to disk (file: reference).
-  // Files < threshold  → read as base64 for DB storage.
-  const thresholdMB = state?.globalSettings?.externalStorageThreshold || 1;
-  const shouldUploadToDisk = file.size >= thresholdMB * 1024 * 1024;
-
+  // All non-image files always go directly to disk — simple, no threshold needed.
   const icon     = getAttachmentIcon(attachmentType);
   const sizeText = formatFileSize(file.size);
+
+  console.log(`🚀 Non-image file (${sizeMB} MB) — uploading directly to server...`);
+  if (callbacks?.onProgress) callbacks.onProgress(`Uploading ${sizeMB} MB file...`);
 
   // Generate thumbnail in parallel (only for PDF and Video)
   const thumbPromise =
@@ -415,25 +413,9 @@ export async function readAttachmentFile(file, type, state, callbacks, folder = 
     attachmentType === ATTACHMENT_TYPES.VIDEO ? generateVideoThumbnail(file) :
     Promise.resolve(null);
 
-  let fullData;
   let previewThumb;
-
-  if (shouldUploadToDisk) {
-    console.log(`🚀 Large non-image file (${sizeMB} MB ≥ ${thresholdMB} MB threshold) — uploading directly to server...`);
-    if (callbacks?.onProgress) callbacks.onProgress(`Uploading ${sizeMB} MB file directly...`);
-    [fullData, previewThumb] = await Promise.all([uploadLargeFileDirect(file, folder), thumbPromise]);
-  } else {
-    console.log(`📦 Small non-image file (${sizeMB} MB < ${thresholdMB} MB threshold) — reading as base64 for DB...`);
-    [fullData, previewThumb] = await Promise.all([
-      new Promise((res, rej) => {
-        const reader = new FileReader();
-        reader.onload  = (e) => res(e.target.result);
-        reader.onerror = (e) => rej(e);
-        reader.readAsDataURL(file);
-      }),
-      thumbPromise
-    ]);
-  }
+  let fullData;
+  [fullData, previewThumb] = await Promise.all([uploadLargeFileDirect(file, folder), thumbPromise]);
 
   const thumbnail = previewThumb || createIconThumbnail(icon, file.name, sizeText);
 

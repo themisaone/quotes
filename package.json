@@ -4,16 +4,16 @@
   "description": "Quote collection and management system",
   "main": "src/server.js",
   "scripts": {
-    "start":      "npm run migrate && node src/server.js",
-    "dev":        "npm run migrate && nodemon src/server.js",
-    "migrate":    "node migrations/run-migrations.js",
-    "default":    "npm run migrate && MODE=DEFAULT node src/server.js",
-    "all":        "npm run migrate && MODE=ALL node src/server.js",
-    "quotes":     "npm run migrate && MODE=QUOTES node src/server.js",
-    "notes":      "npm run migrate && MODE=NOTES node src/server.js",
+    "start": "npm run migrate && node src/server.js",
+    "dev": "npm run migrate && nodemon src/server.js",
+    "migrate": "node migrations/run-migrations.js",
+    "default": "npm run migrate && MODE=DEFAULT node src/server.js",
+    "all": "npm run migrate && MODE=ALL node src/server.js",
+    "quotes": "npm run migrate && MODE=QUOTES node src/server.js",
+    "notes": "npm run migrate && MODE=NOTES node src/server.js",
     "historical": "npm run migrate && MODE=HISTORICAL node src/server.js",
-    "brain":      "npm run migrate && MODE=BRAIN node src/server.js",
-    "training":   "npm run migrate && MODE=TRAINING node src/server.js"
+    "brain": "npm run migrate && MODE=BRAIN node src/server.js",
+    "training": "npm run migrate && MODE=TRAINING node src/server.js"
   },
   "keywords": [
     "quotes",
@@ -23,6 +23,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "archiver": "^7.0.1",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
