@@ -1560,8 +1560,8 @@ textarea {
 .search-grid.layout-notes {
   grid-template-columns: 3fr 3fr 2fr 1fr;
 }
-.search-grid.layout-notes #searchTextContainer  { grid-column: 1; grid-row: 1; }
-.search-grid.layout-notes #searchTagsContainer  { grid-column: 2; grid-row: 1; }
+.search-grid.layout-notes #searchTagsContainer  { grid-column: 1; grid-row: 1; }
+.search-grid.layout-notes #searchTextContainer  { grid-column: 2; grid-row: 1; }
 .search-grid.layout-notes #searchScoreContainer { grid-column: 3; grid-row: 1; }
 .search-grid.layout-notes #searchClearContainer { grid-column: 4; grid-row: 1; }
 
@@ -1569,8 +1569,8 @@ textarea {
 .search-grid.layout-training {
   grid-template-columns: 3fr 3fr 2fr;
 }
-.search-grid.layout-training #searchTextContainer    { grid-column: 1; grid-row: 1; }
-.search-grid.layout-training #searchTagsContainer    { grid-column: 2; grid-row: 1; }
+.search-grid.layout-training #searchTagsContainer    { grid-column: 1; grid-row: 1; }
+.search-grid.layout-training #searchTextContainer    { grid-column: 2; grid-row: 1; }
 .search-grid.layout-training #searchScoreContainer   { grid-column: 3; grid-row: 1; }
 .search-grid.layout-training #trainingYearContainer  { grid-column: 1; grid-row: 2; }
 .search-grid.layout-training #trainingMonthContainer { grid-column: 2; grid-row: 2; }
@@ -1580,8 +1580,8 @@ textarea {
 .search-grid.layout-quote {
   grid-template-columns: 3fr 3fr 2fr;
 }
-.search-grid.layout-quote #searchTextContainer   { grid-column: 1; grid-row: 1; }
-.search-grid.layout-quote #searchTagsContainer   { grid-column: 2; grid-row: 1; }
+.search-grid.layout-quote #searchTagsContainer   { grid-column: 1; grid-row: 1; }
+.search-grid.layout-quote #searchTextContainer   { grid-column: 2; grid-row: 1; }
 .search-grid.layout-quote #searchScoreContainer  { grid-column: 3; grid-row: 1; }
 .search-grid.layout-quote #searchAuthorContainer { grid-column: 1; grid-row: 2; }
 .search-grid.layout-quote #searchSourceContainer { grid-column: 2; grid-row: 2; }
@@ -1617,6 +1617,27 @@ textarea {
   width: auto;
   height: var(--d-btn-height);
   flex-shrink: 0;
+}
+
+/* ── Active filter highlight: inputs/selects that currently filter ── */
+.search-item input[type="text"]:not(:placeholder-shown) {
+  background-color: #fffde7;
+  border-color: #f0b429;
+  color: #1e293b;
+}
+
+/* Note ID field uses inline styles so needs !important */
+#searchNoteId:not(:placeholder-shown) {
+  background-color: #fffde7 !important;
+  border-color: #f0b429 !important;
+  color: #1e293b !important;
+}
+
+/* Year / Month selects: class added by JS when a value is selected */
+.training-date-select.filter-active {
+  background-color: #fffde7;
+  border-color: #f0b429;
+  color: #1e293b;
 }
 
 /* Quotes List */
@@ -1716,6 +1737,11 @@ textarea {
   -moz-user-select: text;
   -ms-user-select: text;
   user-select: text;
+}
+
+.welcome-quote-container .quote-card {
+  max-width: 600px;
+  border: 8px double #f0b429;
 }
 
 /* Expanded card - takes full width */
@@ -5855,6 +5881,17 @@ body.selection-mode .quote-card::after {
   color: var(--text-primary);
   font-size: var(--d-font-base);
   flex-shrink: 0;
+}
+
+/* Metadata filter item: highlighted when its checkbox is checked */
+.metadata-filter-item:has(input[type="checkbox"]:checked) {
+  background-color: #fffde7;
+  border-color: #f0b429;
+}
+
+/* The span label inside also needs explicit dark color (overrides var(--text-primary)) */
+.metadata-filter-item:has(input[type="checkbox"]:checked) span {
+  color: #1e293b;
 }
 
 /* Disabled state for the Image Type filter (depends on Attachment = Have) */

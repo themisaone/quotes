@@ -29,7 +29,7 @@ import {
   updateModalFieldVisibility,
   updateModalLabels,
   updateAddButtonText as updateAddButtonTextLib
-} from './js/lib/noteTypes.js?v=20260317f';
+} from './js/lib/noteTypes.js';
 
 import {
   createQuoteCard as createQuoteCardLib
@@ -110,7 +110,7 @@ import {
   initializeSearchHandlers,
   registerGlobalSearchFunctions,
   clearSearchFields
-} from './js/lib/searchManager.js?v=20260317f';
+} from './js/lib/searchManager.js?v=20260317g';
 
 import {
   initializeAutocomplete,

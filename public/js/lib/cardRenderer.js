@@ -29,7 +29,7 @@
  */
 
 import { escapeHtml, resolveAttachmentUrl, normalizeTextColors } from './utils.js?v=20260318a';
-import { getNoteTypeBadgeHtml } from './noteTypes.js?v=20260318a';
+import { getNoteTypeBadgeHtml } from './noteTypes.js';
 
 /**
  * Get quote source icon and label (dynamic from settings)

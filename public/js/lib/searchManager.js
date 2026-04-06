@@ -108,6 +108,15 @@ async function populateTrainingYears() {
 }
 
 /**
+ * Toggle .filter-active class on a select element based on whether it has a value.
+ * Used to visually highlight year/month selects when a filter is active.
+ */
+function updateSelectFilterClass(el) {
+  if (!el) return;
+  el.classList.toggle('filter-active', el.value !== '');
+}
+
+/**
  * Toggle month filter enabled/disabled based on year selection
  */
 function updateMonthFilterState(yearValue, monthFilter) {
@@ -118,6 +127,7 @@ function updateMonthFilterState(yearValue, monthFilter) {
   } else {
     monthFilter.disabled = true;
     monthFilter.value = '';
+    updateSelectFilterClass(monthFilter);
   }
 }
 
@@ -142,6 +152,7 @@ function setupYearFilter() {
   // Enable/disable month filter and reload on change
   trainingYearFilter.addEventListener('change', () => {
     updateMonthFilterState(trainingYearFilter.value, trainingMonthFilter);
+    updateSelectFilterClass(trainingYearFilter);
     reloadQuotesWithCounts();
   });
 }
@@ -154,7 +165,10 @@ function setupMonthFilter() {
 
   if (!trainingMonthFilter) return;
 
-  trainingMonthFilter.addEventListener('change', reloadQuotesWithCounts);
+  trainingMonthFilter.addEventListener('change', () => {
+    updateSelectFilterClass(trainingMonthFilter);
+    reloadQuotesWithCounts();
+  });
 }
 
 // ============= TEXT SEARCH =============
@@ -333,12 +347,17 @@ export function clearSearchFields() {
   SEARCH_FIELD_IDS.forEach(clearInputField);
 
   // Clear year/month filters using constants
-  setElementValue(FILTER_IDS.YEAR_FILTER, '');
-  
+  const yearFilter  = getElementByIdSafe(FILTER_IDS.YEAR_FILTER,  'clearSearchFields');
   const monthFilter = getElementByIdSafe(FILTER_IDS.MONTH_FILTER, 'clearSearchFields');
+
+  if (yearFilter) {
+    setElementValue(FILTER_IDS.YEAR_FILTER, '');
+    updateSelectFilterClass(yearFilter);
+  }
   if (monthFilter) {
-    monthFilter.value = "";
+    monthFilter.value    = '';
     monthFilter.disabled = true;
+    updateSelectFilterClass(monthFilter);
   }
 }
 

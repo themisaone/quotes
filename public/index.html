@@ -323,6 +323,20 @@
               </div>
 
               <div class="search-grid">
+                <div class="search-item autocomplete-wrapper" id="searchTagsContainer">
+                  <label>🏷️ Tags</label>
+                  <input
+                    type="text"
+                    id="searchTags"
+                    placeholder="Search tags (tag1 && tag2 for AND, tag1 || tag2 for OR)..."
+                    title="Use spaces around operators: 'tag1 && tag2' (both required), 'tag1 || tag2' (either required)"
+                    autocomplete="off"
+                  />
+                  <div
+                    id="tagsSuggestions"
+                    class="autocomplete-suggestions"
+                  ></div>
+                </div>
                 <div class="search-item" id="searchTextContainer">
                   <label>💬 Text</label>
                   <input
@@ -330,6 +344,14 @@
                     id="searchQuote"
                     placeholder="Search text (word1 && word2 for AND, word1 || word2 for OR)..."
                     title="Use spaces around operators: 'term1 && term2' (both required), 'term1 || term2' (either required)"
+                  />
+                </div>
+                <div class="search-item" id="searchScoreContainer">
+                  <label><i class="fa-solid fa-dice-five" style="color:#e74c3c;"></i> Score</label>
+                  <input
+                    type="text"
+                    id="searchScore"
+                    placeholder="5, 5+, or 3-5..."
                   />
                 </div>
                 <div class="search-item autocomplete-wrapper" id="searchAuthorContainer">
@@ -351,20 +373,6 @@
                     autocomplete="off"
                   />
                   <div id="searchSourceSuggestions" class="autocomplete-suggestions"></div>
-                </div>
-                <div class="search-item autocomplete-wrapper" id="searchTagsContainer">
-                  <label>🏷️ Tags</label>
-                  <input
-                    type="text"
-                    id="searchTags"
-                    placeholder="Search tags (tag1 && tag2 for AND, tag1 || tag2 for OR)..."
-                    title="Use spaces around operators: 'tag1 && tag2' (both required), 'tag1 || tag2' (either required)"
-                    autocomplete="off"
-                  />
-                  <div
-                    id="tagsSuggestions"
-                    class="autocomplete-suggestions"
-                  ></div>
                 </div>
                 
                 <!-- Training Year Filter -->
@@ -396,14 +404,7 @@
                   </select>
                 </div>
                 
-                <div class="search-item" id="searchScoreContainer">
-                  <label><i class="fa-solid fa-dice-five" style="color:#e74c3c;"></i> Score</label>
-                  <input
-                    type="text"
-                    id="searchScore"
-                    placeholder="5, 5+, or 3-5..."
-                  />
-                </div>
+ 
                 <div class="search-item" id="searchClearContainer">
                   <button id="clearBtn" class="btn btn-primary">Clear</button>
                 </div>

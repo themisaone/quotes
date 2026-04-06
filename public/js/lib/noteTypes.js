@@ -6,35 +6,31 @@
 
 import { getElementByIdSafe, CONTAINER_IDS } from '../constants.js';
 
-// Dynamic note types — populated by initNoteTypes() after settings load.
-// Defaults cover the app before settings arrive.
-let _noteTypesList = [
-  { value: 'quote',    label: 'Quotes',   icon: '💬', behavior: 'quote',    core: true },
-  { value: 'note',     label: 'Notes',    icon: '📝', behavior: 'generic',  core: true },
-  { value: 'training', label: 'Training', icon: '💪', behavior: 'training', core: true },
-  { value: 'puzzle',   label: 'Puzzles',  icon: '🧩', behavior: 'generic',  core: true },
-];
+// Populated by initNoteTypes() once settings are loaded. Never hardcoded here.
+let _noteTypesList = [];
+let _noteTypesMap  = {};
 
-let _noteTypesMap = _buildMap(_noteTypesList);
+// Used when a type value isn't found in the loaded config.
+// Deliberately generic so no quote-specific fields (author, source) are shown.
+const _UNKNOWN_TYPE_FALLBACK = { value: '', label: 'Note', icon: '📝', behavior: 'generic', core: false };
 
 function _buildMap(list) {
   const map = {};
-  for (const t of list) {
-    map[t.value] = t;
-  }
+  for (const t of list) map[t.value] = t;
   return map;
 }
 
 /**
- * Initialize note types from settings.  Call once after settings are loaded.
+ * Initialize note types from settings. Call once after settings are loaded.
  */
 export function initNoteTypes(noteTypesConfig) {
   if (!Array.isArray(noteTypesConfig) || noteTypesConfig.length === 0) {
-    console.warn('⚠️ noteTypes config empty or invalid — using defaults');
+    console.warn('⚠️ noteTypes config empty or invalid — skipping init');
     return;
   }
   _noteTypesList = noteTypesConfig;
-  _noteTypesMap = _buildMap(noteTypesConfig);
+  _noteTypesMap  = _buildMap(noteTypesConfig);
+  console.log(`✅ Note types initialized: ${_noteTypesList.map(t => t.value).join(', ')}`);
 }
 
 /**
@@ -46,9 +42,11 @@ export function getNoteTypes() {
 
 /**
  * Get note type config by value key.
+ * Falls back to a generic (non-quote) config so unknown types never
+ * accidentally inherit author/source fields.
  */
 export function getNoteTypeConfig(noteType) {
-  return _noteTypesMap[noteType] || _noteTypesMap['quote'] || _noteTypesList[0];
+  return _noteTypesMap[noteType] ?? _UNKNOWN_TYPE_FALLBACK;
 }
 
 // ───── Behavior helpers ─────
