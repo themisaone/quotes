@@ -94,6 +94,7 @@ body {
 
 .side-menu-title {
   font-size: var(--d-font-xl);
+  margin-top: var(--d-pad-sm);;
   margin-bottom: var(--d-pad-xl);
   color: white;
 }
@@ -656,10 +657,10 @@ header h1 {
 .quote-counts #filteredTagsCount,
 .quote-counts #totalTagsCount {
   color: white;
-  padding: 0.315rem var(--d-pad-base);
+  padding: 0.115rem var(--d-pad-base);
   border-radius: 6px;
   font-weight: 600;
-  font-size: var(--d-font-md);
+  font-size: var(--d-font-base);
 }
 
 .quote-counts #filteredQuotesCount,
@@ -717,7 +718,7 @@ header h1 {
 }
 
 h1 {
-  font-size: var(--d-font-2xl);
+  font-size: var(--d-font-xl);
   font-weight: 700;
   color: var(--text-primary);
 }
@@ -1594,7 +1595,7 @@ textarea {
 }
 
 .search-item label {
-  font-size: var(--d-font-sm);
+  font-size: var(--m-font-base);
   display: block;
   margin-bottom: 0;
   white-space: nowrap;

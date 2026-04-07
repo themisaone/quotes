@@ -2282,37 +2282,34 @@ app.post("/api/quotes/:id/downscale-thumbnail", async (req, res) => {
   try {
     const { id } = req.params;
     const { thumbnail, attachment_full, oldFilePath } = req.body;
-    
-    console.log(`📦 Downscaling and moving external thumbnail to DB for quote ${id}`);
-    console.log(`   Old file: ${oldFilePath}`);
+
+    console.log(`📦 Downscaling image for quote ${id}`);
+    console.log(`   File: ${oldFilePath}`);
     console.log(`   New size: ${(attachment_full.length / 1024).toFixed(0)} KB`);
-    
-    // Update flat columns on notes table (backward-compat)
+
+    // Overwrite the existing file on disk with the downscaled version.
+    // The file: reference in the DB stays unchanged — same path, smaller file.
+    if (oldFilePath) {
+      const { data } = fileStorage.parseBase64Data(attachment_full);
+      const buffer   = Buffer.from(data, 'base64');
+      const fullPath = path.join(fileStorage.getAttachmentsDir(), oldFilePath);
+      fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+      fs.writeFileSync(fullPath, buffer);
+      console.log(`   ✅ Overwritten on disk: ${oldFilePath} (${(buffer.length / 1024).toFixed(0)} KB)`);
+    }
+
+    // Only the thumbnail changes in the DB (attachment_full file: ref stays the same)
     await pool.query(
-      `UPDATE notes SET thumbnail = $1, attachment_full = $2 WHERE id = $3`,
-      [thumbnail, attachment_full, id]
+      `UPDATE notes SET thumbnail = $1 WHERE id = $2`,
+      [thumbnail, id]
     );
 
-    // Also update note_attachments row that references the old file path
-    // (applyAttachments() prefers note_attachments over notes flat columns)
-    if (oldFilePath) {
-      await pool.query(
-        `UPDATE note_attachments
-            SET thumbnail = $1, attachment_full = $2, storage_type = 'db'
-          WHERE note_id = $3
-            AND (attachment_full LIKE $4 OR thumbnail LIKE $4)`,
-        [thumbnail, attachment_full, id, `file:${oldFilePath}%`]
-      );
-    }
+    await pool.query(
+      `UPDATE note_attachments SET thumbnail = $1
+         WHERE note_id = $2 AND (attachment_full LIKE $3 OR thumbnail LIKE $3)`,
+      [thumbnail, id, `file:${oldFilePath}%`]
+    );
 
-    // Delete old files from filesystem
-    if (oldFilePath) {
-      fileStorage.deleteFromFilesystem(oldFilePath);
-      // Also delete the small thumbnail if it exists (named without _full)
-      const thumbPath = oldFilePath.replace('_full.jpg', '.jpg');
-      if (thumbPath !== oldFilePath) fileStorage.deleteFromFilesystem(thumbPath);
-    }
-    
     res.json({ success: true });
   } catch (error) {
     console.error("Error downscaling thumbnail:", error);
