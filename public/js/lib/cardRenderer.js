@@ -198,14 +198,28 @@ function buildGenericMetadata(noteTypeBadge, translationBadge) {
   return `<div class="meta-item">${noteTypeBadge}${translationBadge}</div>`;
 }
 
-const FILE_ICONS  = { pdf: '📄', video: '🎬', document: '📎' };
-const FILE_LABELS = { pdf: 'PDF', video: 'Video', document: 'File' };
+const FILE_ICONS  = { pdf: '📄', video: '🎬', document: '📎', encrypted: '🔒' };
+const FILE_LABELS = { pdf: 'PDF', video: 'Video', document: 'File', encrypted: 'Encrypted' };
 
 function buildSingleAttachmentTile(att, noteId, isMain = true) {
   const type    = att.attachment_type || 'image';
   // For non-image types, only the full attachment can be played — never fall back to thumbnail
   const fullUrl = att.attachment_full || (type === 'image' ? att.thumbnail || '' : '');
   const cls     = isMain ? 'quote-image-thumb' : 'att-strip-thumb';
+
+  // Encrypted attachments: derive original name from path (strip leading folder/ and trailing .enc)
+  if (type === 'encrypted') {
+    const rawPath    = (fullUrl || '').replace(/^file:/, '').split('/').pop();   // e.g. "123.note.txt.enc"
+    const origName   = rawPath.replace(/^\d+\./, '').replace(/\.enc$/i, '');     // "note.txt"
+    const onclick    = fullUrl
+      ? `event.stopPropagation(); window.openEncryptedAttachment('${fullUrl}', '${origName}')`
+      : '';
+    const fileCls    = isMain ? 'quote-file-thumb enc-attach-thumb' : 'att-strip-thumb att-strip-file';
+    return `<div class="${fileCls}" onclick="${onclick}" title="Encrypted: ${origName}">
+      <div class="file-icon">🔒</div>${isMain ? `<div class="file-label enc-attach-label">${origName}</div>` : ''}
+    </div>`;
+  }
+
   const onclick = fullUrl
     ? `event.stopPropagation(); showFullImage('${fullUrl}', ${noteId}, '${type}')`
     : '';
@@ -262,6 +276,17 @@ function buildAttachmentSection(note, imageUrl, imageFullUrl) {
   const attachmentType = note.attachment_type || 'image';
   const url = note.attachment_full || note.thumbnail;
   const displayUrl = imageUrl || imageFullUrl;
+
+  if (attachmentType === 'encrypted') {
+    const rawPath  = (url || '').replace(/^file:/, '').split('/').pop();
+    const origName = rawPath.replace(/^\d+\./, '').replace(/\.enc$/i, '');
+    return `<div class="quote-file-thumb enc-attach-thumb"
+      onclick="event.stopPropagation(); window.openEncryptedAttachment('${url}', '${origName}')"
+      title="Encrypted: ${origName}">
+      <div class="file-icon">🔒</div><div class="file-label enc-attach-label">${origName}</div>
+    </div>`;
+  }
+
   const onclick = `event.stopPropagation(); showFullImage('${url}', ${note.id}, '${attachmentType}')`;
 
   if (attachmentType === 'image') {

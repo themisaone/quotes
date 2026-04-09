@@ -163,6 +163,7 @@ import {
   initializeHashChangeListener
 } from './js/lib/pageCoordinator.js';
 import { showConfirm } from './js/lib/confirmDialog.js';
+import { encryptFileBuffer, decryptFileBuffer } from './js/lib/cryptoUtils.js';
 import {
   renderListPaneView,
   refreshPaneNote,
@@ -1660,7 +1661,8 @@ function openEditModal(quote) {
   
   // Update attachment panel visibility
   updateAttachmentPanelVisibility();
-  
+
+
   // Show modal
   quoteModal.style.display = "block";
 }
@@ -1680,6 +1682,7 @@ function closeQuoteModal() {
   currentModalAttachments = [];
   currentModalAttachIdx = 0;
   pendingExtraAttachments = [];
+  window._primaryEncAttData = null;
   authorSuggestions.classList.remove("show");
   sourceSuggestions.classList.remove("show");
   // Hide HTML source panel
@@ -1788,7 +1791,8 @@ async function loadQuotes() {
 
 // Load total count
 async function loadTotalCount() {
-  await loadTotalCountLib(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes);
+  const currentSettings = getGlobalSettings();
+  await loadTotalCountLib(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes, currentSettings);
   
   // Sync local state for pagination
   const filteredCountElement = getElementByIdSafe("filteredQuotesCount");
@@ -1845,12 +1849,14 @@ async function handleSubmit(e) {
   // do NOT send attachment fields in PUT — they are handled by note_attachments.
   // Sending them would overwrite position=0 with whatever strip item was last previewed.
   const attachmentsAlreadyManaged = editingQuoteId && currentModalAttachments.length > 1;
+  // Pending encrypted primary attachment — do not send sentinel to server
+  const hasPrimaryEncPending = !editingQuoteId && currentQuoteImageFull === '_pending_enc_';
 
   const state = {
     editingQuoteId,
-    currentQuoteImage:    attachmentsAlreadyManaged ? undefined : currentQuoteImage,
-    currentQuoteImageFull: attachmentsAlreadyManaged ? undefined : currentQuoteImageFull,
-    currentAttachmentType: attachmentsAlreadyManaged ? undefined : currentAttachmentType,
+    currentQuoteImage:    (attachmentsAlreadyManaged || hasPrimaryEncPending) ? undefined : currentQuoteImage,
+    currentQuoteImageFull: (attachmentsAlreadyManaged || hasPrimaryEncPending) ? undefined : currentQuoteImageFull,
+    currentAttachmentType: (attachmentsAlreadyManaged || hasPrimaryEncPending) ? undefined : currentAttachmentType,
     globalSettings
   };
 
@@ -1860,11 +1866,39 @@ async function handleSubmit(e) {
       if (pendingExtraAttachments.length > 0) {
         const noteId = newNote?.id || editingQuoteId;
         if (noteId) {
+          const folder = document.getElementById('noteType')?.value || currentNoteTypeFilter || 'note';
           for (const att of pendingExtraAttachments) {
-            try { await postAttachmentToNote(noteId, att); } catch (_) {}
+            try {
+              if (att._encryptedBlob) {
+                // Encrypted attachment: multipart upload to preserve .enc extension
+                const fd = new FormData();
+                fd.append('file', new File([att._encryptedBlob], att.filename, { type: 'application/octet-stream' }), att.filename);
+                fd.append('attachment_type', 'encrypted');
+                fd.append('original_name', att._origName);
+                fd.append('folder', folder);
+                await fetch(`/api/notes/${noteId}/attachments/file`, { method: 'POST', body: fd });
+              } else {
+                await postAttachmentToNote(noteId, att);
+              }
+            } catch (_) {}
           }
           pendingExtraAttachments = [];
         }
+      }
+      // Handle primary encrypted attachment queued for a new note
+      if (window._primaryEncAttData?._encryptedBlob) {
+        const noteId = newNote?.id || editingQuoteId;
+        if (noteId) {
+          const att    = window._primaryEncAttData;
+          const folder = document.getElementById('noteType')?.value || currentNoteTypeFilter || 'note';
+          const fd     = new FormData();
+          fd.append('file', new File([att._encryptedBlob], att.filename, { type: 'application/octet-stream' }), att.filename);
+          fd.append('attachment_type', 'encrypted');
+          fd.append('original_name', att._origName);
+          fd.append('folder', folder);
+          try { await fetch(`/api/notes/${noteId}/attachments/file`, { method: 'POST', body: fd }); } catch (_) {}
+        }
+        window._primaryEncAttData = null;
       }
       closeQuoteModal();
       loadQuotes();
@@ -2604,7 +2638,7 @@ function renderModalAttachmentStrip(note) {
     const thumb  = att.thumbnail || att.attachment_full || '';
     const thumbTag = isImg && thumb
       ? `<img src="${thumb}" alt="attachment ${idx+1}">`
-      : `<div class="modal-att-icon">${att.attachment_type === 'pdf' ? '📄' : att.attachment_type === 'video' ? '🎬' : '📎'}</div>`;
+      : `<div class="modal-att-icon">${att.attachment_type === 'pdf' ? '📄' : att.attachment_type === 'video' ? '🎬' : att.attachment_type === 'encrypted' ? '🔒' : '📎'}</div>`;
     const activeCls = idx === 0 ? ' active' : '';
     const primaryBadge = idx === 0 ? `<div class="modal-att-primary-badge" title="Primary">★</div>` : '';
     return `<div class="modal-att-item${activeCls}" data-att-idx="${idx}" title="${idx === 0 ? 'Primary (click others to change)' : 'Click to make primary'}">
@@ -2641,8 +2675,18 @@ async function selectModalAttachment(idx) {
   // Show selected attachment in main preview immediately
   const previewThumb = att.thumbnail || att.attachment_full || '';
   const previewType  = att.attachment_type || 'image';
+
+  // Keep current* state in sync so the preview click handler works
+  currentAttachmentType = previewType;
+  currentQuoteImageFull = att.attachment_full || '';
+  currentQuoteImage     = att.thumbnail || '';
+  if (previewType === 'encrypted') {
+    const rawPath = (att.attachment_full || '').replace(/^file:/, '').split('/').pop();
+    currentAttachmentFileName = rawPath.replace(/^\d+\./, '').replace(/\.enc$/i, '');
+  }
+
   if (previewType !== 'image') {
-    displayAttachmentPreview(quoteImagePreview, getAttachmentIcon(previewType), 'Attachment', '');
+    displayAttachmentPreview(quoteImagePreview, getAttachmentIcon(previewType), currentAttachmentFileName || 'Attachment', '');
   } else if (previewThumb) {
     displayImage(quoteImagePreview, previewThumb);
   }
@@ -2791,7 +2835,7 @@ function renderPendingStrip() {
     const thumb = att.thumbnail || att.attachment_full || '';
     const thumbTag = isImg && thumb
       ? `<img src="${thumb}" alt="attachment ${idx + 1}">`
-      : `<div class="modal-att-icon">${att.attachment_type === 'pdf' ? '📄' : att.attachment_type === 'video' ? '🎬' : '📎'}</div>`;
+      : `<div class="modal-att-icon">${att.attachment_type === 'pdf' ? '📄' : att.attachment_type === 'video' ? '🎬' : att.attachment_type === 'encrypted' ? '🔒' : '📎'}</div>`;
     const activeCls  = idx === 0 ? ' active' : '';
     const titleAttr  = idx === 0 ? 'Primary — click others to change' : 'Click to make this the primary attachment';
     const primaryBadge = idx === 0 ? `<div class="modal-att-primary-badge" title="Primary">★</div>` : '';
@@ -3019,14 +3063,275 @@ if (toggleAttachmentBtn) {
   toggleAttachmentBtn.addEventListener('click', toggleAttachmentPanel);
 }
 
+// Encrypt & attach button — opens a file picker, then encrypts the file before uploading
+const addEncryptedAttachBtn  = document.getElementById('addEncryptedAttachBtn');
+const encryptedAttachFileInput = document.getElementById('encryptedAttachFileInput');
+if (addEncryptedAttachBtn && encryptedAttachFileInput) {
+  addEncryptedAttachBtn.addEventListener('click', () => encryptedAttachFileInput.click());
+  encryptedAttachFileInput.addEventListener('change', async () => {
+    const file = encryptedAttachFileInput.files[0];
+    encryptedAttachFileInput.value = ''; // reset so same file can be selected again
+    if (file) await window.addEncryptedAttachment(file);
+  });
+}
+
+// ── Attachment encryption ──────────────────────────────────────────────────
+
+/**
+ * Show the passphrase modal.
+ * mode: 'encrypt' | 'decrypt'
+ * Returns a Promise<string|null> — null means cancelled.
+ */
+function _promptPassword(mode) {
+  return new Promise((resolve) => {
+    const modal       = document.getElementById('encPasswordModal');
+    const titleEl     = document.getElementById('encPwModalTitle');
+    const hintEl      = document.getElementById('encPwModalHint');
+    const iconEl      = document.getElementById('encPwModalIcon');
+    const pwInput     = document.getElementById('encPwField');
+    const confirmGrp  = document.getElementById('encPwConfirmGroup');
+    const confirmInput = document.getElementById('encPwConfirmField');
+    const errEl       = document.getElementById('encPwError');
+    const okBtn       = document.getElementById('encPwOkBtn');
+    const cancelBtn   = document.getElementById('encPwCancelBtn');
+
+    if (!modal) { resolve(null); return; }
+
+    const isEncrypt = mode === 'encrypt';
+    iconEl.textContent  = isEncrypt ? '🔒' : '🔓';
+    titleEl.textContent = isEncrypt ? 'Encrypt selected text' : 'Decrypt note';
+    hintEl.textContent  = isEncrypt
+      ? 'Enter a password to encrypt the selected text.'
+      : 'Enter the password used when encrypting.';
+    // Use visibility+max-height instead of display:none so LastPass always
+    // sees two password fields in the DOM (single-field = LP injects icon).
+    if (isEncrypt) {
+      confirmGrp.style.visibility = '';
+      confirmGrp.style.maxHeight  = '';
+      confirmGrp.style.overflow   = '';
+      confirmGrp.style.margin     = '';
+    } else {
+      confirmGrp.style.visibility = 'hidden';
+      confirmGrp.style.maxHeight  = '0';
+      confirmGrp.style.overflow   = 'hidden';
+      confirmGrp.style.margin     = '0';
+    }
+    errEl.style.display = 'none';
+    pwInput.value = '';
+    confirmInput.value = '';
+
+    modal.style.display = 'block';
+
+    // Remove readonly after a tick so autofill triggers on load are ignored,
+    // but the user can still type. Re-apply readonly on next open (handled
+    // by HTML attribute staying until JS removes it each time).
+    [pwInput, confirmInput].forEach(el => el.setAttribute('readonly', 'true'));
+    setTimeout(() => {
+      [pwInput, confirmInput].forEach(el => el.removeAttribute('readonly'));
+      pwInput.focus();
+    }, 80);
+
+    function cleanup() {
+      modal.style.display = 'none';
+      okBtn.removeEventListener('click', onOk);
+      cancelBtn.removeEventListener('click', onCancel);
+      modal.removeEventListener('keydown', onKey);
+    }
+
+    function onOk() {
+      const pw = pwInput.value;
+      if (!pw) { errEl.textContent = 'Password cannot be empty.'; errEl.style.display = ''; return; }
+      if (isEncrypt && pw !== confirmInput.value) {
+        errEl.textContent = 'Passwords do not match.'; errEl.style.display = ''; return;
+      }
+      cleanup(); resolve(pw);
+    }
+
+    function onCancel() { cleanup(); resolve(null); }
+
+    function onKey(e) {
+      if (e.key === 'Enter') { e.preventDefault(); onOk(); }
+      if (e.key === 'Escape') { onCancel(); }
+    }
+
+    okBtn.addEventListener('click', onOk);
+    cancelBtn.addEventListener('click', onCancel);
+    modal.addEventListener('keydown', onKey);
+  });
+}
+
+// ── Encrypted attachment: encrypt a File → upload as .enc ─────────────────
+
+/**
+ * Encrypt a File object, then upload it as an encrypted attachment.
+ * The original extension is preserved in the filename: e.g. note.txt → note.txt.enc
+ */
+window.addEncryptedAttachment = async function(file) {
+  const password = await _promptPassword('encrypt');
+  if (!password) return;
+
+  try {
+    const buf      = await file.arrayBuffer();
+    const encBytes = await encryptFileBuffer(buf, password);
+
+    if (editingQuoteId) {
+      // ── Existing note: upload straight to the server ──────────────────
+      const encFilename = file.name + '.enc';
+      const folder      = document.getElementById('noteType')?.value || currentNoteTypeFilter || 'note';
+      const formData    = new FormData();
+      formData.append('file', new File([encBytes], encFilename, { type: 'application/octet-stream' }), encFilename);
+      formData.append('attachment_type', 'encrypted');
+      formData.append('original_name', file.name);
+      formData.append('folder', folder);
+
+      const resp = await fetch(`/api/notes/${editingQuoteId}/attachments/file`, {
+        method: 'POST',
+        body: formData,
+      });
+      if (!resp.ok) throw new Error(await resp.text());
+
+      const updated = await fetch(`/api/quotes/${editingQuoteId}`).then(r => r.json());
+      renderModalAttachmentStrip(updated);
+
+      // Update the primary preview area for the encrypted attachment
+      const primary = updated.attachments?.[0];
+      if (primary?.attachment_type === 'encrypted') {
+        const rawPath = (primary.attachment_full || '').replace(/^file:/, '').split('/').pop();
+        const origName = rawPath.replace(/^\d+\./, '').replace(/\.enc$/i, '');
+        currentAttachmentType     = 'encrypted';
+        currentAttachmentFileName = origName;
+        currentQuoteImageFull     = primary.attachment_full;
+        currentQuoteImage         = null;
+        displayAttachmentPreview(quoteImagePreview, '🔒', origName, '', null);
+        updateAttachmentPanelVisibility();
+      }
+      loadQuotes();
+
+    } else {
+      // ── New (unsaved) note: queue as pending attachment ───────────────
+      // Store the encrypted Blob so the save flow can multipart-upload it
+      // via the dedicated file endpoint (preserving .enc extension).
+      const encBlob = new Blob([encBytes], { type: 'application/octet-stream' });
+      const attData = {
+        thumbnail:        null,
+        attachment_full:  null,        // filled in after note creation
+        attachment_type:  'encrypted',
+        filename:         file.name + '.enc',
+        _encryptedBlob:   encBlob,     // raw blob, handled by save flow
+        _origName:        file.name,
+      };
+
+      // Show in the primary preview
+      if (!currentQuoteImage && !currentQuoteImageFull) {
+        currentAttachmentType     = 'encrypted';
+        currentAttachmentFileName = file.name;
+        currentQuoteImage         = null;
+        currentQuoteImageFull     = '_pending_enc_';
+        displayAttachmentPreview(quoteImagePreview, '🔒', file.name, '', null);
+        updateAttachmentPanelVisibility();
+      } else {
+        pendingExtraAttachments.push(attData);
+      }
+      // Stash as the "primary" pending encrypted attachment on the modal state
+      if (!currentQuoteImageFull || currentQuoteImageFull === '_pending_enc_') {
+        window._primaryEncAttData = attData;
+      }
+    }
+  } catch (err) {
+    alert('Encryption failed: ' + err.message);
+  }
+};
+
+// ── Encrypted attachment: open / decrypt for viewing ──────────────────────
+
+/**
+ * Fetch, decrypt, and display an encrypted attachment.
+ * Determines how to show the result from the original filename (before .enc).
+ */
+window.openEncryptedAttachment = async function(fileUrl, originalName) {
+  const password = await _promptPassword('decrypt');
+  if (!password) return;
+
+  try {
+    // Resolve file: references to HTTP paths the browser can fetch
+    const httpUrl = fileUrl && fileUrl.startsWith('file:')
+      ? `/attachments/${fileUrl.slice('file:'.length)}`
+      : fileUrl;
+    const resp     = await fetch(httpUrl);
+    if (!resp.ok) throw new Error('Could not fetch file');
+    const encBytes = new Uint8Array(await resp.arrayBuffer());
+    const plainBuf = await decryptFileBuffer(encBytes, password);
+
+    // Determine MIME type from original filename extension
+    const ext  = (originalName || '').split('.').pop().toLowerCase();
+    const mime = _extToMime(ext);
+    const blob = new Blob([plainBuf], { type: mime });
+    const url  = URL.createObjectURL(blob);
+
+    if (mime.startsWith('image/')) {
+      showFullImage(url, null, 'image', {});
+    } else if (mime === 'application/pdf') {
+      showPDFViewer(url);
+    } else if (mime.startsWith('video/')) {
+      showVideoPlayer(url);
+    } else if (mime.startsWith('audio/')) {
+      showAudioPlayer(url, originalName, mime);
+    } else {
+      // Text or unknown — show in a simple overlay
+      const text = await blob.text();
+      _showTextViewer(text, originalName || 'Decrypted file');
+    }
+  } catch {
+    alert('Wrong passphrase or corrupted file.');
+  }
+};
+
+function _extToMime(ext) {
+  const map = {
+    jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif',
+    webp: 'image/webp', svg: 'image/svg+xml',
+    pdf: 'application/pdf',
+    mp4: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime',
+    mp3: 'audio/mpeg', ogg: 'audio/ogg', wav: 'audio/wav', m4a: 'audio/mp4', flac: 'audio/flac',
+    txt: 'text/plain', md: 'text/plain', csv: 'text/plain', json: 'application/json',
+  };
+  return map[ext] || 'application/octet-stream';
+}
+
+/** Show decrypted text in a simple full-screen overlay. */
+function _showTextViewer(text, title) {
+  const existing = document.getElementById('encTextViewerOverlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'encTextViewerOverlay';
+  overlay.className = 'enc-text-viewer-overlay';
+  overlay.innerHTML = `
+    <div class="enc-text-viewer-box">
+      <div class="enc-text-viewer-header">
+        <span>🔓 ${title}</span>
+        <button type="button" class="modal-close-x" onclick="document.getElementById('encTextViewerOverlay').remove()">✕</button>
+      </div>
+      <pre class="enc-text-viewer-body"></pre>
+    </div>`;
+  overlay.querySelector('.enc-text-viewer-body').textContent = text;
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
 // Handle click on modal image preview - open full-size viewer if image exists, otherwise open file dialog
 quoteImagePreview.addEventListener('click', (e) => {
-  // If there's an image attached, open the viewer
   if (currentQuoteImage || currentQuoteImageFull) {
     e.preventDefault();
     e.stopPropagation();
-    const imageSrc = currentQuoteImageFull || currentQuoteImage;
-    showFullImage(imageSrc, editingQuoteId, currentAttachmentType);
+    if (currentAttachmentType === 'encrypted') {
+      // Encrypted attachment: decrypt and display
+      const fileUrl = currentQuoteImageFull || currentQuoteImage;
+      window.openEncryptedAttachment(fileUrl, currentAttachmentFileName || 'file');
+    } else {
+      const imageSrc = currentQuoteImageFull || currentQuoteImage;
+      showFullImage(imageSrc, editingQuoteId, currentAttachmentType);
+    }
   } else {
     // No image - open file dialog
     quoteImageFile.click();

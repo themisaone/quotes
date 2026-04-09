@@ -46,6 +46,7 @@
   --d-font-lg:    1.013rem;  /* was 1.125 */
   --d-font-xl:    1.350rem;  /* was 1.5   */
   --d-font-2xl:   2.250rem;  /* was 2.5   */
+  --d-font-h2-quote: 1.3rem; 
 
   /* Spacing */
   --d-pad-xs:     0.225rem;  /* was 0.25  */
@@ -404,6 +405,38 @@ header h1 {
 
 .search-title-row h2 {
   margin: 0;
+}
+
+/* Clear button sits in the title row, right-aligned */
+.search-clear-btn {
+  flex-shrink: 0;
+  height: var(--d-btn-height);
+  padding: 0 1rem;
+  white-space: nowrap;
+}
+
+/* Outer wrapper — flex row like all other .search-item fields */
+.search-grid-dropdown {
+  /* inherits display:flex align-items:center from .search-item */
+}
+/* Inner container: position:relative so dropdown panel anchors to the button */
+.search-grid-dropdown .type-filter-dropdown-container {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+/* Arrow-only toggle button fills its container */
+.search-grid-dropdown .type-filter-toggle {
+  width: 100%;
+  min-width: 0;
+  padding: 0.4rem 0.6rem;
+  justify-content: center;
+  height: var(--d-btn-height);
+}
+/* Dropdown panel opens downward from the button, not from the label */
+.search-grid-dropdown .type-filter-dropdown {
+  top: 100%;
+  min-width: 220px;
 }
 
 .quote-type-filter {
@@ -1339,7 +1372,7 @@ label {
 }
 
 .score-radio-label span {
-  font-size: 1.3rem;
+  font-size: var(--d-font-h2-quote);
   color: #9ca3af;
   display: flex;
   align-items: center;
@@ -1392,13 +1425,13 @@ label {
 /* Dice score dropdown styling (legacy, may not be needed) */
 #quoteScore,
 .score-dropdown {
-  font-size: 1.3rem;
+  font-size: var(--d-font-h2-quote);
   font-family: 'Segoe UI Symbol', 'DejaVu Sans', Arial, sans-serif;
 }
 
 #quoteScore option,
 .score-dropdown option {
-  font-size: 1.3rem;
+  font-size: var(--d-font-h2-quote);
   padding: 0.5rem;
 }
 
@@ -1530,7 +1563,8 @@ textarea {
 /* Shared yellowish footer bar — negative margins must match .modal-body padding (--d-pad-md) */
 #authorModal .form-actions,
 #sourceModal .form-actions,
-#quoteModal .form-actions {
+#quoteModal .form-actions,
+#encPasswordModal .form-actions {
   background: var(--modal-footer-bg);
   margin: var(--d-pad-xl) calc(-1 * var(--d-pad-md)) calc(-1 * var(--d-pad-md)) calc(-1 * var(--d-pad-md));
   padding: var(--d-pad-md);
@@ -1558,35 +1592,35 @@ textarea {
 }
 
 /* Notes / Puzzles / Jokes: Text+Clear on row 1, Tags+Score on row 2 */
+/* Generic notes: single row only — Clear is in the title row, no dropdown needed */
 .search-grid.layout-notes {
-  grid-template-columns: 3fr 3fr 2fr 1fr;
+  grid-template-columns: 3fr 3fr 2fr;
 }
 .search-grid.layout-notes #searchTagsContainer  { grid-column: 1; grid-row: 1; }
 .search-grid.layout-notes #searchTextContainer  { grid-column: 2; grid-row: 1; }
 .search-grid.layout-notes #searchScoreContainer { grid-column: 3; grid-row: 1; }
-.search-grid.layout-notes #searchClearContainer { grid-column: 4; grid-row: 1; }
 
-/* Training: Text+Tags+Score on row 1, Year+Month+Clear on row 2 */
+/* Training: Text+Tags+Score on row 1, Year+Month+TrainingDropdown on row 2 */
 .search-grid.layout-training {
   grid-template-columns: 3fr 3fr 2fr;
 }
-.search-grid.layout-training #searchTagsContainer    { grid-column: 1; grid-row: 1; }
-.search-grid.layout-training #searchTextContainer    { grid-column: 2; grid-row: 1; }
-.search-grid.layout-training #searchScoreContainer   { grid-column: 3; grid-row: 1; }
-.search-grid.layout-training #trainingYearContainer  { grid-column: 1; grid-row: 2; }
-.search-grid.layout-training #trainingMonthContainer { grid-column: 2; grid-row: 2; }
-.search-grid.layout-training #searchClearContainer   { grid-column: 3; grid-row: 2; }
+.search-grid.layout-training #searchTagsContainer           { grid-column: 1; grid-row: 1; }
+.search-grid.layout-training #searchTextContainer           { grid-column: 2; grid-row: 1; }
+.search-grid.layout-training #searchScoreContainer          { grid-column: 3; grid-row: 1; }
+.search-grid.layout-training #trainingYearContainer         { grid-column: 1; grid-row: 2; }
+.search-grid.layout-training #trainingMonthContainer        { grid-column: 2; grid-row: 2; }
+.search-grid.layout-training #trainingTypesFilterContainer  { grid-column: 3; grid-row: 2; }
 
-/* Quote: Text+Tags+Score on row 1, Author+Source+Clear on row 2 */
+/* Quote: Text+Tags+Score on row 1, Author+Source+QuoteSourcesDropdown on row 2 */
 .search-grid.layout-quote {
   grid-template-columns: 3fr 3fr 2fr;
 }
-.search-grid.layout-quote #searchTagsContainer   { grid-column: 1; grid-row: 1; }
-.search-grid.layout-quote #searchTextContainer   { grid-column: 2; grid-row: 1; }
-.search-grid.layout-quote #searchScoreContainer  { grid-column: 3; grid-row: 1; }
-.search-grid.layout-quote #searchAuthorContainer { grid-column: 1; grid-row: 2; }
-.search-grid.layout-quote #searchSourceContainer { grid-column: 2; grid-row: 2; }
-.search-grid.layout-quote #searchClearContainer  { grid-column: 3; grid-row: 2; }
+.search-grid.layout-quote #searchTagsContainer          { grid-column: 1; grid-row: 1; }
+.search-grid.layout-quote #searchTextContainer          { grid-column: 2; grid-row: 1; }
+.search-grid.layout-quote #searchScoreContainer         { grid-column: 3; grid-row: 1; }
+.search-grid.layout-quote #searchAuthorContainer        { grid-column: 1; grid-row: 2; }
+.search-grid.layout-quote #searchSourceContainer        { grid-column: 2; grid-row: 2; }
+.search-grid.layout-quote #quoteSourcesFilterContainer  { grid-column: 3; grid-row: 2; }
 
 .search-item {
   display: flex;
@@ -2302,7 +2336,7 @@ body.selection-mode .quote-card::after {
   color: var(--link-color);
 }
 .training-meta-top .meta-item-combined {
-  font-size: var(--d-font-xl);
+  font-size: var(--d-font-h2-quote);
   font-weight: 600;
   color: var(--link-color);
 }
@@ -2406,7 +2440,7 @@ body.selection-mode .quote-card::after {
 }
 
 .quote-text h2 {
-  font-size: 1.3em;
+  font-size: var(--d-font-h2-quote);
   background: none !important;
   color: var(--link-color);
 }
@@ -3675,6 +3709,12 @@ body.selection-mode .quote-card::after {
     font-size: var(--m-font-sm) !important;
   }
 
+  /* Training card top line — match medium h2 size */
+  .training-meta-top .meta-item,
+  .training-meta-top .meta-item-combined {
+    font-size: var(--m-font-xl) !important;
+  }
+
   /* Tag pills on cards and modal — actual class is .tag / .tag-removable */
   .tag,
   .tag-removable {
@@ -3699,7 +3739,6 @@ body.selection-mode .quote-card::after {
   }
   /* Each checkbox row inside the dropdown */
   .type-filter-option {
-    font-size: var(--m-font-sm) !important;
     padding: var(--m-pad-xs) var(--m-pad-base) !important;
     gap: var(--m-pad-xs) !important;
   }
@@ -3848,7 +3887,7 @@ body.selection-mode .quote-card::after {
   }
 
   .search-grid {
-    grid-template-columns: 3fr 3fr 2fr 1fr;
+    grid-template-columns: 3fr 3fr 2fr;
   }
 
   .search-grid.layout-notes {
@@ -6929,3 +6968,78 @@ body.selection-mode .quote-card::after {
 .fetch-error-close:hover {
   background: rgba(255,255,255,0.4);
 }
+
+/* ── Passphrase modal (attachment encryption) ───────────────────────────── */
+#encPasswordModal { z-index: 10000; }
+.enc-pw-modal-content { width: min(420px, 92vw) !important; }
+.enc-pw-hint  { margin: 0 0 1rem; font-size: 0.9rem; color: var(--text-secondary); }
+.enc-pw-error { color: #dc2626; margin: 0.5rem 0 0; font-size: 0.85rem; }
+
+/* ── Encrypted attachment tile (cards + modal strip) ────────────────────── */
+.enc-attach-thumb {
+  cursor: pointer;
+  background: linear-gradient(135deg, #0f172a 60%, #1e3a5f);
+  border: 2px solid #334155;
+  color: #f8fafc;
+  border-radius: 8px;
+  transition: border-color 0.15s, background 0.15s;
+}
+.enc-attach-thumb:hover {
+  border-color: #64748b;
+  background: linear-gradient(135deg, #1e293b 60%, #1e3a5f);
+}
+.enc-attach-thumb .file-icon { font-size: 1.6rem; }
+.enc-attach-label {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+/* ── Decrypted text viewer overlay ─────────────────────────────────────── */
+.enc-text-viewer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10001;
+  background: rgba(0,0,0,0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.enc-text-viewer-box {
+  background: var(--surface, #fff);
+  border: 2px solid var(--border, #e2e8f0);
+  border-radius: 12px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+  width: min(760px, 92vw);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.enc-text-viewer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: var(--header-color, #1e293b);
+  color: #fff;
+  font-weight: 600;
+  border-radius: 10px 10px 0 0;
+}
+.enc-text-viewer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem 1.25rem;
+  margin: 0;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text-primary);
+  background: var(--surface);
+}
+

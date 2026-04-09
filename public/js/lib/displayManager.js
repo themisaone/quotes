@@ -84,7 +84,7 @@ function getSelectedCheckboxValues(selector) {
 /**
  * Add basic search filters to params
  */
-function addSearchFilters(params) {
+function addSearchFilters(params, globalSettings) {
   const searchValues = getSearchValues();
   
   if (searchValues.quote) params.append('quote', searchValues.quote);
@@ -93,6 +93,8 @@ function addSearchFilters(params) {
   if (searchValues.tags) params.append('tags', searchValues.tags);
   if (searchValues.score) params.append('score', searchValues.score);
   if (searchValues.noteId && !isNaN(parseInt(searchValues.noteId))) params.append('noteId', searchValues.noteId.trim());
+
+  if (globalSettings?.hideEncryptedNotes) params.append('hideEncryptedNotes', 'true');
 }
 
 /**
@@ -174,10 +176,10 @@ function addPaginationParams(params) {
 /**
  * Build URL parameters for quotes API based on current filters
  */
-function buildQuotesParams(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes) {
+function buildQuotesParams(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes, globalSettings) {
   const params = new URLSearchParams();
   
-  addSearchFilters(params);
+  addSearchFilters(params, globalSettings);
   
   if (currentNoteTypeFilter) {
     params.append("note_type", currentNoteTypeFilter);
@@ -193,9 +195,9 @@ function buildQuotesParams(currentNoteTypeFilter, getQuoteTypes, getTrainingType
 /**
  * Build URL parameters for export (same as display but without pagination limit)
  */
-export function buildExportParams(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes, limit = 10000) {
+export function buildExportParams(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes, limit = 10000, globalSettings) {
   const params = new URLSearchParams();
-  addSearchFilters(params);
+  addSearchFilters(params, globalSettings);
   if (currentNoteTypeFilter) params.append("note_type", currentNoteTypeFilter);
   addQuoteTypeFilters(params, currentNoteTypeFilter, getQuoteTypes);
   addTrainingTypeFilters(params, currentNoteTypeFilter);
@@ -212,11 +214,11 @@ export async function loadQuotes(currentNoteTypeFilter, getQuoteTypes, getTraini
   const quotesList = getElementByIdSafe(CONTAINER_IDS.QUOTES_CONTAINER, 'loadQuotes');
   
   try {
-    const params = buildQuotesParams(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes);
+    const params = buildQuotesParams(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes, globalSettings);
     const response = await fetchWithRetry(`${API_URL}/quotes?${params.toString()}`);
     const quotes = await response.json();
     currentQuotesData = quotes;
-    await loadTotalCount(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes);
+    await loadTotalCount(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes, globalSettings);
     
     return quotes; // Return quotes for caller to display
   } catch (error) {
@@ -232,13 +234,13 @@ export async function loadQuotes(currentNoteTypeFilter, getQuoteTypes, getTraini
 /**
  * Load and update total count with filters
  */
-export async function loadTotalCount(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes) {
+export async function loadTotalCount(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes, globalSettings) {
   const totalCountElement = getElementByIdSafe("totalQuotesCount", 'loadTotalCount');
   const typeCountElement = getElementByIdSafe("typeQuotesCount", 'loadTotalCount');
   const filteredCountElement = getElementByIdSafe("filteredQuotesCount", 'loadTotalCount');
   
   try {
-    const params = buildQuotesParams(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes);
+    const params = buildQuotesParams(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes, globalSettings);
     
     const response = await fetchWithRetry(`${API_URL}/quotes/count?${params.toString()}`);
     const data = await response.json();

@@ -168,8 +168,6 @@ export function setCommonFields(note, elements, quillEditor) {
         // --text-primary variable is respected in all themes (dark / light).
         const normalizedText = normalizeTextColors(note.note_text);
         // Use dangerouslyPasteHTML so Quill converts HTML → Delta properly.
-        // Direct root.innerHTML assignment causes Quill's MutationObserver to
-        // sanitize away unsupported tags (e.g. <font>) and leaves the editor empty.
         quillEditor.clipboard.dangerouslyPasteHTML(normalizedText);
       } else {
         quillEditor.setText(note.note_text);
@@ -412,7 +410,15 @@ export function setupEditModal(note, elements, quillEditor, updateFieldVisibilit
     currentQuoteImage: note.thumbnail || "",
     currentQuoteImageFull: note.attachment_full || "",
     currentAttachmentType: note.attachment_type || "image",
-    currentAttachmentFileName: note.attachment_filename || "",
+    currentAttachmentFileName: (() => {
+      if (note.attachment_filename) return note.attachment_filename;
+      if ((note.attachment_type || '') === 'encrypted') {
+        // Derive original name from path: <noteId>.<origName>.enc → <origName>
+        const rawPath = (note.attachment_full || '').replace(/^file:/, '').split('/').pop();
+        return rawPath.replace(/^\d+\./, '').replace(/\.enc$/i, '');
+      }
+      return '';
+    })(),
     currentSourceId: note.source_id || null
   };
 }

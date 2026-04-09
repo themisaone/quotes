@@ -1369,6 +1369,11 @@ app.get("/api/quotes/count", async (req, res) => {
       query += ` AND (SELECT COUNT(*) FROM note_attachments WHERE note_id = q.id) <= 1`;
     }
 
+    if (req.query.hideEncryptedNotes === 'true') {
+      query += ` AND q.attachment_type IS DISTINCT FROM 'encrypted'`
+             + ` AND NOT EXISTS (SELECT 1 FROM note_attachments WHERE note_id = q.id AND attachment_type = 'encrypted')`;
+    }
+
     // Find by ID
     if (req.query.noteId && !isNaN(parseInt(req.query.noteId))) {
       query += ` AND q.id = $${paramCounter}`;
@@ -1598,6 +1603,11 @@ app.get("/api/quotes", async (req, res) => {
       query += ` AND (SELECT COUNT(*) FROM note_attachments WHERE note_id = q.id) > 1`;
     } else if (hasMultipleAttachments === 'false') {
       query += ` AND (SELECT COUNT(*) FROM note_attachments WHERE note_id = q.id) <= 1`;
+    }
+
+    if (req.query.hideEncryptedNotes === 'true') {
+      query += ` AND q.attachment_type IS DISTINCT FROM 'encrypted'`
+             + ` AND NOT EXISTS (SELECT 1 FROM note_attachments WHERE note_id = q.id AND attachment_type = 'encrypted')`;
     }
 
     // Translation group filter
@@ -2427,6 +2437,65 @@ app.delete("/api/notes/:noteId/attachments/:attachId", async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     await client.query("ROLLBACK");
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+});
+
+// POST /api/notes/:id/attachments/file
+// Accepts multipart/form-data: field "file" (the .enc blob) + fields
+//   attachment_type, original_name, folder.
+// Stores the file on disk and inserts a note_attachments row.
+app.post("/api/notes/:id/attachments/file", upload.single('file'), async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const noteId = req.params.id;
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+    const folder       = req.body.folder || 'note';
+    const origName     = req.body.original_name || req.file.originalname;
+    const attachType   = req.body.attachment_type || 'encrypted';
+
+    // Move tmp file to a stable name: <noteId>.<origName>.enc
+    const tmpPath  = req.file.path;
+    const stableFilename = `${noteId}.${origName}.enc`;
+    const stableDir  = path.join(fileStorage.getAttachmentsDir(), folder);
+    if (!fs.existsSync(stableDir)) fs.mkdirSync(stableDir, { recursive: true });
+    const stablePath = path.join(stableDir, stableFilename);
+    fs.renameSync(tmpPath, stablePath);
+
+    const relPath  = `${folder}/${stableFilename}`;
+    const fileRef  = `file:${relPath}`;
+
+    // Find next position
+    const posRes = await client.query(
+      `SELECT COALESCE(MAX(position) + 1, 0) AS pos FROM note_attachments WHERE note_id = $1`,
+      [noteId]
+    );
+    const position = posRes.rows[0].pos;
+
+    await client.query("BEGIN");
+    await client.query(
+      `INSERT INTO note_attachments (note_id, thumbnail, attachment_full, attachment_type, position)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [noteId, null, fileRef, attachType, position]
+    );
+
+    // If it's the primary attachment (position 0) sync flat columns
+    if (position === 0) {
+      await client.query(
+        `UPDATE notes SET thumbnail = NULL, attachment_full = $1, attachment_type = $2 WHERE id = $3`,
+        [fileRef, attachType, noteId]
+      );
+    }
+    await client.query("COMMIT");
+
+    console.log(`🔒 Encrypted attachment stored: ${relPath}`);
+    res.json({ ok: true, fileRef, relPath });
+  } catch (err) {
+    await client.query("ROLLBACK").catch(() => {});
+    console.error('Encrypted upload error:', err);
     res.status(500).json({ error: err.message });
   } finally {
     client.release();

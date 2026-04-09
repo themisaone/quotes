@@ -47,6 +47,7 @@ export function getAttachmentIcon(type) {
     'video': '🎬',
     'audio': '🎵',
     'document': '📎',
+    'encrypted': '🔒',
     'other': '📁'
   };
   return icons[type] || icons['other'];

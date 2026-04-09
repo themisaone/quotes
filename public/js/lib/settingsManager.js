@@ -304,7 +304,8 @@ function applySettingsToUI() {
     { id: 'showLongQuotesExpanded', setting: 'showLongQuotesExpanded' },
     { id: 'displayScoreInCards', setting: 'displayScoreInCards' },
     { id: 'downscaleQuoteImages', setting: 'downscaleQuoteImages' },
-    { id: 'enableWordWrap', setting: 'enableWordWrap' }
+    { id: 'enableWordWrap', setting: 'enableWordWrap' },
+    { id: 'hideEncryptedNotes', setting: 'hideEncryptedNotes' }
   ];
   
   checkboxMappings.forEach(({ id, setting }) => {
@@ -1594,4 +1595,13 @@ function initializeColorCustomization() {
 
   // Initial palette list load
   refreshPaletteList('');
+
+  // Hide Notes with Encrypted Attachments setting
+  const hideEncryptedNotesCheckbox = getElementByIdSafe('hideEncryptedNotes', 'initializeSettings');
+  if (hideEncryptedNotesCheckbox) {
+    hideEncryptedNotesCheckbox.addEventListener('change', (e) => {
+      updateSetting('hideEncryptedNotes', e.target.checked);
+      if (callbacks?.loadQuotes) callbacks.loadQuotes();
+    });
+  }
 }

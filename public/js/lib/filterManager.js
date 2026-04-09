@@ -34,7 +34,7 @@ const SELECTORS = {
   trainingTypeOptions: '.training-type-filter-options',
   quoteTypeCheckbox: '.type-filter-option input[type="checkbox"]',
   trainingTypeCheckbox: '.training-type-filter-options input[type="checkbox"]',
-  typeFilterContainer: '.type-filter-dropdown-container',
+  typeFilterContainer: '#quoteSourcesFilterContainer',
   trainingFilterContainer: '#trainingTypesFilterContainer'
 };
 
@@ -383,17 +383,10 @@ function updateSearchHeaderTitle(currentNoteTypeFilter) {
  * Update the training types dropdown label based on view
  */
 function updateTrainingTypesDropdownLabel(isAllNotesView) {
-  const toggleBtn = getElementByIdSafe('trainingTypeFilterToggle', 'updateTrainingTypesDropdownLabel');
-  if (!toggleBtn) return;
-  
-  const labelSpan = toggleBtn.querySelector('span:first-child');
-  if (!labelSpan) return;
-  
-  if (isAllNotesView) {
-    labelSpan.textContent = '📚 Note Types/Sources';
-  } else {
-    labelSpan.textContent = '🏋️ Training Types';
-  }
+  const label = document.getElementById('trainingTypesFilterLabel');
+  if (!label) return;
+
+  label.textContent = isAllNotesView ? '📚 Types/Sources' : '🏋️ Training Types';
 }
 
 // ============= DROPDOWN HANDLERS =============

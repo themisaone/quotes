@@ -53,6 +53,42 @@
       </div>
     </div>
 
+    <!-- ── Encrypt/Decrypt Password Dialog ─────────────────────────────── -->
+    <div id="encPasswordModal" class="modal" style="display:none;">
+      <div class="modal-content enc-pw-modal-content">
+        <div class="modal-header">
+          <div class="modal-header-left">
+            <span id="encPwModalIcon" class="modal-header-icon">🔒</span>
+            <h2 id="encPwModalTitle">Encrypt selected text</h2>
+          </div>
+        </div>
+        <div class="modal-body">
+          <p id="encPwModalHint" class="enc-pw-hint">
+            Enter a passphrase to encrypt the selected text.
+          </p>
+          <div class="form-group">
+            <label for="encPwField">Passphrase</label>
+            <input type="password" id="encPwField" class="form-control" style="padding: 5px;"
+              placeholder="Passphrase…"
+              autocomplete="off" readonly
+              name="enc-tok-key" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" />
+          </div>
+          <div class="form-group" id="encPwConfirmGroup">
+            <label for="encPwConfirmField">Confirm passphrase</label>
+            <input type="password" id="encPwConfirmField" class="form-control" style="padding: 5px;"
+              placeholder="Repeat passphrase…"
+              autocomplete="off" readonly
+              name="enc-tok-key-c" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" />
+          </div>
+          <p id="encPwError" class="enc-pw-error" style="display:none;"></p>
+          <div class="form-actions">
+            <button type="button" id="encPwCancelBtn" class="btn btn-secondary">Cancel</button>
+            <button type="button" id="encPwOkBtn" class="btn btn-primary">OK</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- ── Merge Modal ──────────────────────────────────────────────────── -->
     <div id="mergeModal" class="modal" style="display:none;">
       <div class="modal-content merge-modal-content">
@@ -266,59 +302,8 @@
                       <span id="trainingTypeSummary" class="filter-type-summary" style="display:none;"></span>
                     </div>
                   </div>
-
-                  <!-- Type Filter Dropdown -->
-                  <div class="type-filter-dropdown-container" id="quoteSourcesFilterContainer">
-                    <button type="button" id="typeFilterToggle" class="type-filter-toggle">
-                      <span>📋Quote Sources</span>
-                      <span class="dropdown-arrow">▼</span>
-                    </button>
-                    <div id="typeFilterDropdown" class="type-filter-dropdown">
-                      <div class="type-action-buttons">
-                        <button type="button" id="typeSelectAllBtn" class="type-action-btn">
-                          <span class="type-icon">✓</span>
-                          <span>Select All</span>
-                        </button>
-                        <div class="type-action-separator"></div>
-                        <button type="button" id="typeDeselectAllBtn" class="type-action-btn">
-                          <span class="type-icon">✗</span>
-                          <span>Clear All</span>
-                        </button>
-                      </div>
-                      <div class="type-filter-separator"></div>
-                      <!-- Type checkboxes will be dynamically populated by populateTypeFilterCheckboxes() -->
-                      <div class="type-filter-options">
-                        <!-- Populated by JavaScript -->
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <!-- Training Types Filter Dropdown -->
-                  <div class="type-filter-dropdown-container" id="trainingTypesFilterContainer" style="display: none;">
-                    <button type="button" id="trainingTypeFilterToggle" class="type-filter-toggle">
-                      <span>🏋️Training Types</span>
-                      <span class="dropdown-arrow">▼</span>
-                    </button>
-                    <div id="trainingTypeFilterDropdown" class="type-filter-dropdown">
-                      <div class="type-action-buttons">
-                        <button type="button" id="trainingTypeSelectAllBtn" class="type-action-btn">
-                          <span class="type-icon">✓</span>
-                          <span>Select All</span>
-                        </button>
-                        <div class="type-action-separator"></div>
-                        <button type="button" id="trainingTypeDeselectAllBtn" class="type-action-btn">
-                          <span class="type-icon">✗</span>
-                          <span>Clear All</span>
-                        </button>
-                      </div>
-                      <div class="type-filter-separator"></div>
-                      <!-- Training type checkboxes will be dynamically populated -->
-                      <div class="training-type-filter-options">
-                        <!-- Populated by JavaScript -->
-                      </div>
-                    </div>
-                  </div>
-                  
+                  <!-- Clear button lives in the title row -->
+                  <button id="clearBtn" class="btn btn-primary search-clear-btn">Clear</button>
                 </div>
               </div>
 
@@ -403,10 +388,59 @@
                     <option value="12">December</option>
                   </select>
                 </div>
-                
- 
-                <div class="search-item" id="searchClearContainer">
-                  <button id="clearBtn" class="btn btn-primary">Clear</button>
+
+                <!-- Quote Sources dropdown — shown in grid row 2 for quote layout -->
+                <div class="search-item search-grid-dropdown" id="quoteSourcesFilterContainer">
+                  <label id="quoteSourcesFilterLabel">📋 Quote Sources</label>
+                  <div class="type-filter-dropdown-container">
+                    <button type="button" id="typeFilterToggle" class="type-filter-toggle">
+                      <span class="dropdown-arrow">▼</span>
+                    </button>
+                    <div id="typeFilterDropdown" class="type-filter-dropdown">
+                      <div class="type-action-buttons">
+                        <button type="button" id="typeSelectAllBtn" class="type-action-btn">
+                          <span class="type-icon">✓</span>
+                          <span>Select All</span>
+                        </button>
+                        <div class="type-action-separator"></div>
+                        <button type="button" id="typeDeselectAllBtn" class="type-action-btn">
+                          <span class="type-icon">✗</span>
+                          <span>Clear All</span>
+                        </button>
+                      </div>
+                      <div class="type-filter-separator"></div>
+                      <div class="type-filter-options">
+                        <!-- Populated by JavaScript -->
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Training Types dropdown — shown in grid row 2 for training layout -->
+                <div class="search-item search-grid-dropdown" id="trainingTypesFilterContainer" style="display: none;">
+                  <label id="trainingTypesFilterLabel">🏋️ Training Types</label>
+                  <div class="type-filter-dropdown-container">
+                    <button type="button" id="trainingTypeFilterToggle" class="type-filter-toggle">
+                      <span class="dropdown-arrow">▼</span>
+                    </button>
+                    <div id="trainingTypeFilterDropdown" class="type-filter-dropdown">
+                      <div class="type-action-buttons">
+                        <button type="button" id="trainingTypeSelectAllBtn" class="type-action-btn">
+                          <span class="type-icon">✓</span>
+                          <span>Select All</span>
+                        </button>
+                        <div class="type-action-separator"></div>
+                        <button type="button" id="trainingTypeDeselectAllBtn" class="type-action-btn">
+                          <span class="type-icon">✗</span>
+                          <span>Clear All</span>
+                        </button>
+                      </div>
+                      <div class="type-filter-separator"></div>
+                      <div class="training-type-filter-options">
+                        <!-- Populated by JavaScript -->
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
               
@@ -894,6 +928,20 @@
             </div>
             </div><!-- end settings-row: Tag Management + Search Features -->
 
+            <div class="settings-row">
+            <div class="settings-section">
+              <h2>🔒 Encryption</h2>
+              <div class="setting-item">
+                <label class="setting-label">
+                  <input type="checkbox" id="hideEncryptedNotes" />
+                  <span>Hide Notes with Encrypted Attachments</span>
+                </label>
+                <p class="setting-description">When enabled, notes that have one or more encrypted attachments are excluded from all views and search results.</p>
+              </div>
+            </div>
+            </div><!-- end settings-row: Encryption -->
+
+
             <!-- Quick Tag Shortcuts -->
             <div class="settings-row">
             <div class="settings-section" style="flex: 1;">
@@ -1233,6 +1281,10 @@
                 <button type="button" id="toggleAttachmentBtn" class="btn-attach-toggle" title="Toggle attachment panel">
                   📎 Add attachment
                 </button>
+                <button type="button" id="addEncryptedAttachBtn" class="btn-attach-toggle" title="Pick a file, encrypt it with a passphrase, and attach it to this note">
+                  🔒 Encrypt &amp; attach
+                </button>
+                <input type="file" id="encryptedAttachFileInput" style="display:none;" />
               </div>
               <div class="score-radio-group">
                 <label class="score-radio-label">
