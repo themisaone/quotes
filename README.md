@@ -1,174 +1,154 @@
-# Quotes Database
+# Misa Notes — Personal Knowledge Base
 
-A simple and elegant quote collection and management system built with PostgreSQL, Node.js/Express, and vanilla JavaScript.
+A personal note and quote management system built with Node.js/Express, PostgreSQL, and vanilla JavaScript. Supports multiple note types, rich text, file attachments (stored on disk), tagging, search, export/import, and attachment encryption.
 
-## Features
+---
 
-- 📝 Add, edit, and delete quotes with images and notes
-- 🔍 Search and filter by quote text, author, source, tags, and type
-- 📚 Beautiful, modern UI with responsive design
-- 👤 Manage authors with images
-- 📖 Manage sources (books, movies, assorted) with images
-- 🏷️ Tag system for organizing quotes
-- 📊 Pagination support (20 quotes per page)
-- 🎨 Multiple views: Quotes, Authors, Sources, Tags
-- 🔄 Refresh buttons on all pages
-- 📅 Timestamp tracking (created_at, updated_at)
+## Quick Start
 
-## Prerequisites
+### Prerequisites
+- Docker (recommended), **or** Node.js 18+ and PostgreSQL 14+
 
-- Node.js (v14 or higher)
-- PostgreSQL (already installed and running)
+### Option A — Docker (recommended)
 
-## Installation
+```bash
+# 1. Copy env template and fill in your Postgres credentials
+cp .env.example .env
 
-1. Install dependencies:
+# 2. Create the database (once, in psql as superuser)
+sudo -u postgres psql
+  CREATE USER notes_user WITH PASSWORD 'yourpassword';
+  CREATE DATABASE notes_db OWNER notes_user;
+  \q
+
+# 3. Start (migrations run automatically)
+docker compose up -d
+
+# 4. Open  http://localhost:4000
+```
+
+### Option B — Node directly
 
 ```bash
 npm install
+cp .env.example .env   # fill in DB credentials
+npm start              # runs migrations then starts server
 ```
 
-2. Configure database connection:
-   - Create a `.env` file in the root directory (or copy `.env.example`)
-   - Add your database credentials:
+---
 
-```
-# Database
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=quotes_db
-DB_USER=your_username
-DB_PASSWORD=your_password
+## Environment Variables (`.env`)
 
-# Server
-PORT=4000
+| Variable | Description | Default |
+|---|---|---|
+| `DB_HOST` | Postgres host | `host.docker.internal` |
+| `DB_PORT` | Postgres port | `5432` |
+| `DB_NAME` | Database name | `notes_db` |
+| `DB_USER` | Postgres user | `notes_user` |
+| `DB_PASSWORD` | Postgres password | — |
+| `PORT` | HTTP port | `4000` |
 
-# File Storage (optional)
-# Files larger than this will be stored in attachments/ folder
-MAX_DB_SIZE_MB=1
-```
+---
 
-3. Create the database:
+## Mode System
 
-```bash
-createdb quotes
-```
+The app supports **modes** that control which note types are visible. Set via the `MODE` env var or the UI mode selector.
 
-4. Run database migrations:
+| npm script | MODE | Visible types |
+|---|---|---|
+| `npm start` | DEFAULT | quote, note, historical |
+| `npm run all` | ALL | all types |
+| `npm run quotes` | QUOTES | quote only |
+| `npm run training` | TRAINING | training only |
+| `npm run notes` | NOTES | note only |
+| `npm run historical` | HISTORICAL | historical only |
+| `npm run brain` | BRAIN | custom set |
 
-```bash
-cd migrations
-node 003_books_to_sources.js
-node 004_add_type_to_quotes.js
-```
+Modes are defined in `config/modes.json`. Active mode persists in `config/local.json`.
 
-## Usage
+---
 
-1. Start the server:
+## Note Types
 
-```bash
-npm start
-```
+Configured in `config/settings.json` under `noteTypes`. Each type has:
+- `value` — internal key (`quote`, `training`, `note`, `puzzle`, `historical`)
+- `icon` — emoji
+- `label` — display name
+- `behavior` — which fields to show (`quote` | `training` | `generic`)
 
-For development with auto-reload:
+**Behavior `quote`**: shows Author, Source, Score fields  
+**Behavior `training`**: shows Date, Training Sub-type fields  
+**Behavior `generic`**: shows only the text editor
 
-```bash
-npm run dev
-```
+Training sub-types are configured under `trainingTypes` in `settings.json`.
 
-2. Open your browser and navigate to:
+---
 
-```
-http://localhost:4000
-```
-
-## Project Structure
+## File Layout
 
 ```
 quotes/
-├── src/                    # Source code
-│   ├── server.js          # Express server
-│   └── db.js              # Database connection
-├── public/                # Frontend files
-│   ├── index.html         # Main HTML
-│   ├── app.js             # Frontend JavaScript
-│   ├── style.css          # Styles
-│   └── favicon.svg        # App icon
-├── migrations/            # Database migrations
-│   ├── 003_books_to_sources.js
-│   └── 004_add_type_to_quotes.js
-├── scripts/               # Utility scripts
-│   ├── migrate.js         # Old migration scripts
-│   ├── setup.js           # Setup utilities
+├── src/
+│   ├── server.js          # Express server + all API routes (~4800 lines)
+│   ├── db.js              # PostgreSQL connection pool
+│   ├── fileStorage.js     # Disk attachment helpers
+│   └── tagHelpers.js      # Tag DB helpers
+├── public/
+│   ├── index.html         # Single-page HTML (~2000 lines)
+│   ├── app.js             # Main frontend logic (~5200 lines)
+│   ├── style.css          # All styles (~7000 lines)
+│   └── js/lib/            # Frontend ES modules (see ARCHITECTURE.md)
+├── migrations/
+│   ├── 001_schema.js      # Full schema (safe to re-run)
+│   └── run-migrations.js  # Migration runner
+├── config/
+│   ├── settings.json      # User settings, note types, colors (auto-created)
+│   ├── local.json         # Vault path + active mode (machine-local)
+│   └── modes.json         # Mode → note type mappings
+├── attachments/           # All uploaded files (mounted as Docker volume)
+│   ├── quote/
+│   ├── note/
+│   ├── training/
 │   └── ...
-├── docs/                  # Documentation
-│   └── ...
-├── package.json           # Dependencies
-└── README.md             # This file
+├── palettes/              # Saved color palettes (JSON files)
+├── docker-compose.yml
+├── Dockerfile
+└── .env.example
 ```
 
-## API Endpoints
+---
 
-### Quotes
+## Data Persistence
 
-- `GET /api/quotes` - Get all quotes (with filters: quote, author, source, tags, types, limit, offset)
-- `GET /api/quotes/count` - Get total count of quotes (with filters)
-- `GET /api/quotes/:id` - Get single quote
-- `POST /api/quotes` - Create new quote
-- `PUT /api/quotes/:id` - Update quote
-- `DELETE /api/quotes/:id` - Delete quote
+| Data | Location |
+|---|---|
+| Notes, tags, authors, sources | PostgreSQL |
+| Thumbnails | PostgreSQL (base64 in `notes.thumbnail`) |
+| All other attachments | `./attachments/<type>/` on disk |
+| Settings & note type config | `config/settings.json` |
+| Machine-local config | `config/local.json` |
+| Color palettes | `palettes/*.json` |
 
-### Authors
+---
 
-- `GET /api/authors` - Get all authors with quote counts
-- `GET /api/authors/:id` - Get single author with quote count
-- `PUT /api/authors/:id` - Update author (name, image)
-- `DELETE /api/authors/:id` - Delete author (only if no quotes)
+## Sharing with a Colleague
 
-### Sources
+See `DOCKER.md` for full instructions. Short version:
 
-- `GET /api/sources` - Get all sources with quote counts
-- `GET /api/sources/:id` - Get single source with quote count
-- `PUT /api/sources/:id` - Update source (name, type, image)
-- `DELETE /api/sources/:id` - Delete source (only if no quotes)
+1. They create a Postgres database and user
+2. Copy the project folder to their machine
+3. `cp .env.example .env` and fill in their DB credentials
+4. `docker compose up -d`
 
-### Tags
+All tables are created automatically by migrations on first start.
 
-- `GET /api/tags` - Get all tags with quote counts
+To share **your data**: export a JSON backup from Data Management → Export, then import on their machine. For notes with large file attachments, also copy the `attachments/` folder.
 
-## Database Schema
+---
 
-### quotes
+## Further Reading
 
-- `id` - Primary key
-- `quote` - Quote text (TEXT, required)
-- `author_id` - Foreign key to authors table
-- `source_id` - Foreign key to sources table
-- `type` - Source type (BOOK|MOVIE|ASSORTED)
-- `tags` - Comma-separated tags (TEXT)
-- `image` - Thumbnail image (TEXT, base64)
-- `image_full` - Full-size image (TEXT, base64)
-- `note` - Additional notes (TEXT)
-- `created_at` - Timestamp
-- `updated_at` - Timestamp
-
-### authors
-
-- `id` - Primary key
-- `name` - Author name (VARCHAR, unique)
-- `image` - Author image (TEXT, base64)
-
-### sources
-
-- `id` - Primary key
-- `name` - Source name (VARCHAR, unique)
-- `type` - Source type (BOOK|MOVIE)
-- `image` - Source image (TEXT, base64)
-
-## Technologies Used
-
-- **Backend**: Node.js, Express.js
-- **Database**: PostgreSQL with pg driver
-- **Frontend**: HTML5, CSS3, Vanilla JavaScript
-- **Styling**: Modern CSS with CSS Grid, Flexbox, and CSS Variables
-- **Image Processing**: Client-side Canvas API for resizing
+- `DOCKER.md` — Docker setup details, Linux/Mac differences, common commands
+- `ARCHITECTURE.md` — Code patterns, module system, data flow, gotchas
+- `FEATURES.md` — All features documented with implementation notes
+- `public/js/lib/README.md` — Frontend module reference
