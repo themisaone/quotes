@@ -379,7 +379,6 @@ app.post('/api/upload-attachment', upload.single('file'), async (req, res) => {
         // Replace original with PCM version
         fs.renameSync(pcmPath, fullPath);
         mimeType = 'audio/wav';
-        console.log(`🎵 Transcoded to PCM WAV: ${relPath}`);
       } catch (transcodeErr) {
         // ffmpeg not available or failed — keep original, warn
         console.warn(`⚠️  WAV transcode failed (file kept as-is): ${transcodeErr.message}`);
@@ -389,7 +388,6 @@ app.post('/api/upload-attachment', upload.single('file'), async (req, res) => {
 
     const sizeMB  = (fs.statSync(path.join(fileStorage.getAttachmentsDir(), relPath)).size / 1024 / 1024).toFixed(2);
     const fileRef = fileStorage.createFileReference(relPath, mimeType);
-    console.log(`📁 Direct upload: ${relPath} (${sizeMB} MB)`);
     res.json({ fileRef, filename: req.file.originalname, sizeMB });
   } catch (err) {
     console.error('Upload error:', err);
@@ -1374,6 +1372,16 @@ app.get("/api/quotes/count", async (req, res) => {
              + ` AND NOT EXISTS (SELECT 1 FROM note_attachments WHERE note_id = q.id AND attachment_type = 'encrypted')`;
     }
 
+    if (req.query.hideTag) {
+      query += ` AND NOT EXISTS (
+        SELECT 1 FROM note_tags nt
+        JOIN tags t ON nt.tag_id = t.id
+        WHERE nt.note_id = q.id AND LOWER(t.name) = LOWER($${paramCounter})
+      )`;
+      params.push(req.query.hideTag);
+      paramCounter++;
+    }
+
     // Find by ID
     if (req.query.noteId && !isNaN(parseInt(req.query.noteId))) {
       query += ` AND q.id = $${paramCounter}`;
@@ -1608,6 +1616,16 @@ app.get("/api/quotes", async (req, res) => {
     if (req.query.hideEncryptedNotes === 'true') {
       query += ` AND q.attachment_type IS DISTINCT FROM 'encrypted'`
              + ` AND NOT EXISTS (SELECT 1 FROM note_attachments WHERE note_id = q.id AND attachment_type = 'encrypted')`;
+    }
+
+    if (req.query.hideTag) {
+      query += ` AND NOT EXISTS (
+        SELECT 1 FROM note_tags nt
+        JOIN tags t ON nt.tag_id = t.id
+        WHERE nt.note_id = q.id AND LOWER(t.name) = LOWER($${paramCounter})
+      )`;
+      params.push(req.query.hideTag);
+      paramCounter++;
     }
 
     // Translation group filter
@@ -1915,9 +1933,6 @@ app.post("/api/quotes", async (req, res) => {
     const processedImage     = fileStorage.processForStorage(renamedThumb, storageFolder, quoteId, '', storageThresholdMB, false);
     const processedImageFull = fileStorage.processForStorage(renamedFull,  storageFolder, quoteId, '', storageThresholdMB, true);
 
-    console.log(`📦 Quote ${quoteId} attachment processing (type: ${attachment_type}, threshold: ${storageThresholdMB} MB):`);
-    console.log(`   Thumbnail: ${thumbnail ? `${(thumbnail.length/1024).toFixed(0)}KB` : 'none'} → ${processedImage ? (processedImage.startsWith('file:') ? processedImage : `${(processedImage.length/1024).toFixed(0)}KB base64`) : 'none'}`);
-    console.log(`   Full: ${attachment_full ? `${(attachment_full.length/1024/1024).toFixed(2)}MB` : 'none'} → ${processedImageFull ? (processedImageFull.startsWith('file:') ? processedImageFull : `${(processedImageFull.length/1024).toFixed(0)}KB base64`) : 'none'}`);
 
     // Update notes flat columns (backward compat) and write to note_attachments
     await client.query(
@@ -2000,12 +2015,6 @@ app.put("/api/quotes/:id", async (req, res) => {
       storageThresholdMB = 1, // From frontend settings
     } = req.body;
 
-    console.log("UPDATE QUOTE - Received data:", {
-      id,
-      source,
-      sourceType,
-      sourceId,
-    });
 
     let authorId = null;
     let newSourceId = null;
@@ -2026,11 +2035,6 @@ app.put("/api/quotes/:id", async (req, res) => {
 
     // Handle source update - simpler now since type is stored in quotes table
     if (source !== undefined) {
-      console.log("Processing source update:", {
-        source,
-        sourceType,
-        sourceId,
-      });
       if (source && source.trim()) {
         // Create or get source by name
         const sourceResult = await client.query(
@@ -2041,7 +2045,6 @@ app.put("/api/quotes/:id", async (req, res) => {
           [source.trim(), sourceType || "BOOK"],
         );
         newSourceId = sourceResult.rows[0].id;
-        console.log("Source processed:", newSourceId);
       }
     }
 
@@ -2163,7 +2166,6 @@ app.put("/api/quotes/:id", async (req, res) => {
         
         // If translation_group is changing (and old one exists), update all quotes in the old group
         if (oldTranslationGroup && oldTranslationGroup !== translation_group) {
-          console.log(`Renaming translation group "${oldTranslationGroup}" to "${translation_group}" for all quotes in group`);
           await client.query(
             `UPDATE notes 
              SET translation_group = $1 
@@ -2205,20 +2207,15 @@ app.put("/api/quotes/:id", async (req, res) => {
 
     // Handle tags update if provided (only if new tables exist)
     if (tagsToUpdate !== null) {
-      console.log("UPDATE TAGS - Input:", tagsToUpdate);
       const tagNames = parseTagInput(tagsToUpdate);
-      console.log("UPDATE TAGS - Parsed tag names:", tagNames);
       const tagIds = await getOrCreateTagIds(tagNames, note_type, client);
-      console.log("UPDATE TAGS - Tag IDs:", tagIds);
       
       if (tagIds.length > 0) {
         await associateTagsWithNote(id, tagIds, client);
-        console.log("UPDATE TAGS - Associated tags with quote");
       } else {
         const hasNewTables = await checkTagTablesExist();
         if (hasNewTables) {
           await client.query("DELETE FROM note_tags WHERE note_id = $1", [id]);
-          console.log("UPDATE TAGS - Cleared all tag associations");
         }
       }
     }
@@ -2293,9 +2290,6 @@ app.post("/api/quotes/:id/downscale-thumbnail", async (req, res) => {
     const { id } = req.params;
     const { thumbnail, attachment_full, oldFilePath } = req.body;
 
-    console.log(`📦 Downscaling image for quote ${id}`);
-    console.log(`   File: ${oldFilePath}`);
-    console.log(`   New size: ${(attachment_full.length / 1024).toFixed(0)} KB`);
 
     // Overwrite the existing file on disk with the downscaled version.
     // The file: reference in the DB stays unchanged — same path, smaller file.
@@ -2305,7 +2299,6 @@ app.post("/api/quotes/:id/downscale-thumbnail", async (req, res) => {
       const fullPath = path.join(fileStorage.getAttachmentsDir(), oldFilePath);
       fs.mkdirSync(path.dirname(fullPath), { recursive: true });
       fs.writeFileSync(fullPath, buffer);
-      console.log(`   ✅ Overwritten on disk: ${oldFilePath} (${(buffer.length / 1024).toFixed(0)} KB)`);
     }
 
     // Only the thumbnail changes in the DB (attachment_full file: ref stays the same)
@@ -2491,7 +2484,6 @@ app.post("/api/notes/:id/attachments/file", upload.single('file'), async (req, r
     }
     await client.query("COMMIT");
 
-    console.log(`🔒 Encrypted attachment stored: ${relPath}`);
     res.json({ ok: true, fileRef, relPath });
   } catch (err) {
     await client.query("ROLLBACK").catch(() => {});
@@ -3307,7 +3299,6 @@ app.get("/api/tags/co-occurring", async (req, res) => {
       tagTypeClause = `AND t.type = $${params.length}`;
     }
 
-    console.log('[co-occurring] tagList:', tagList, '| type:', type, '| params:', params);
 
     const result = await pool.query(`
       SELECT t.id, t.name, t.type,
@@ -3328,7 +3319,6 @@ app.get("/api/tags/co-occurring", async (req, res) => {
       ORDER BY quote_count DESC, t.name
     `, params);
 
-    console.log('[co-occurring] returned', result.rows.length, 'tags');
     res.json(result.rows);
   } catch (err) {
     console.error('co-occurring tags error:', err);
@@ -3651,7 +3641,6 @@ function resolveAttachmentForExport(value, noteId, bigFiles, thresholdMB = 1) {
 // Export all data as JSON
 app.get("/api/export/json", async (req, res) => {
   const { note_type } = req.query;
-  console.log(`JSON export requested... (note_type: ${note_type || 'all'})`);
 
   // Stream the response immediately so the browser doesn't time out and we
   // never build one giant JSON string in memory (avoids "Invalid string length").
@@ -3694,7 +3683,6 @@ app.get("/api/export/json", async (req, res) => {
       quotes:  quoteCount,
     };
 
-    console.log(`Exported ${counts.authors} authors, ${counts.sources} sources, ${counts.tags} tags, ${counts.quotes} quotes (note_type: ${note_type || 'all'})`);
 
     // ── Write JSON preamble ───────────────────────────────────────────────────
     res.write('{"version":"2.0"');
@@ -3836,7 +3824,6 @@ app.post("/api/import/json", async (req, res) => {
   const client = await pool.connect();
 
   try {
-    console.log("JSON import requested...");
     const { data, options } = req.body;
 
     if (!data || !data.authors || !data.sources || !data.quotes) {
@@ -3854,7 +3841,6 @@ app.post("/api/import/json", async (req, res) => {
     };
 
     // Import authors
-    console.log(`Importing ${data.authors.length} authors...`);
     for (const author of data.authors) {
       try {
         if (options?.replaceExisting) {
@@ -3894,7 +3880,6 @@ app.post("/api/import/json", async (req, res) => {
     }
 
     // Import sources
-    console.log(`Importing ${data.sources.length} sources...`);
     for (const source of data.sources) {
       try {
         if (options?.replaceExisting) {
@@ -3933,7 +3918,6 @@ app.post("/api/import/json", async (req, res) => {
 
     // Import tags (if present in backup)
     if (data.tags && data.tags.length > 0) {
-      console.log(`Importing ${data.tags.length} tags...`);
       for (const tag of data.tags) {
         try {
           if (options?.replaceExisting) {
@@ -3972,7 +3956,6 @@ app.post("/api/import/json", async (req, res) => {
     }
 
     // Import quotes
-    console.log(`Importing ${data.quotes.length} quotes...`);
     // Get storage threshold from settings
     const storageThresholdMB = options?.storageThresholdMB || 1;
     
@@ -4175,7 +4158,6 @@ app.post("/api/import/json", async (req, res) => {
 
     await client.query("COMMIT");
 
-    console.log("Import completed:", stats);
     res.json({
       success: true,
       message: "Import completed",
@@ -4494,14 +4476,12 @@ app.post("/api/migrate/attachments-to-disk", async (req, res) => {
 
 app.post("/api/export/pdf", async (req, res) => {
   try {
-    console.log("PDF export requested...");
     const { quotes, filters } = req.body;
 
     if (!quotes || quotes.length === 0) {
       return res.status(400).json({ error: "No quotes provided" });
     }
 
-    console.log(`Generating PDF for ${quotes.length} quotes...`);
 
     // Import puppeteer
     const puppeteer = require("puppeteer");
@@ -4532,22 +4512,18 @@ app.post("/api/export/pdf", async (req, res) => {
     });
 
     // Generate HTML for PDF
-    console.log("Generating HTML...");
     const html = generatePdfHtml(groupedByAuthor, filters, quotes);
 
     // Launch puppeteer
-    console.log("Launching browser...");
     const browser = await puppeteer.launch({
       headless: "new",
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
 
     const page = await browser.newPage();
-    console.log("Loading content...");
     await page.setContent(html, { waitUntil: "networkidle0" });
 
     // Generate PDF
-    console.log("Generating PDF...");
     const pdfBuffer = await page.pdf({
       format: "A4",
       margin: {
@@ -4560,7 +4536,6 @@ app.post("/api/export/pdf", async (req, res) => {
     });
 
     await browser.close();
-    console.log(`PDF generated successfully: ${pdfBuffer.length} bytes`);
 
     // Send PDF with proper headers
     res.setHeader("Content-Type", "application/pdf");

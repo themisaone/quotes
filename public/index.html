@@ -122,7 +122,7 @@
         <!-- Side Menu -->
         <nav class="side-menu">
             <button id="sideMenuToggle" class="menu-toggle-btn" title="Toggle menu">&#9664;</button>
-            <h2 class="side-menu-title">📚 Note Archive</h2>
+            <h2 class="side-menu-title">📦 Note Archive</h2>
             <div style="padding: 0.25rem 0.6rem 0.5rem; display: flex; align-items: center; gap: 0.7rem;">
               <span style="font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary); white-space: nowrap;">Mode</span>
               <select id="modeSwitcher" style="flex:1; font-size: 0.72rem; height: 32px; padding: 0 0.3rem; border-radius: 4px;">
@@ -136,7 +136,7 @@
         <ul class="menu-list">
           <li id="menuItemAllNotes">
             <button class="menu-item active" data-view="quotes">
-              <span class="menu-icon">💬</span><span class="menu-text"> All Notes</span>
+              <span class="menu-icon">📦</span><span class="menu-text"> All Notes</span>
             </button>
           </li>
           <li id="menuSepAllNotes" class="menu-separator"></li>
@@ -940,6 +940,26 @@
               </div>
             </div>
             </div><!-- end settings-row: Encryption -->
+
+            <div class="settings-row">
+            <div class="settings-section">
+              <h2>🏷️ Hidden Tag</h2>
+              <div class="setting-item">
+                <label class="setting-label">
+                  <input type="checkbox" id="hideNotesWithTag" />
+                  <span>Hide Notes with Tag</span>
+                </label>
+                <p class="setting-description">When enabled, notes that carry the tag below are excluded from all views and search results.</p>
+              </div>
+              <div class="setting-item" id="hideTagNameRow" style="display:none; margin-top:0.5rem;">
+                <label for="hideTagName" class="setting-label" style="flex-direction:row; gap:0.75rem; align-items:center;">
+                  <span style="white-space:nowrap;">Tag to hide:</span>
+                  <input type="text" id="hideTagName" placeholder="hidden"
+                    style="flex:1; max-width:220px; padding:0.35rem 0.6rem; border:1px solid var(--border); border-radius:4px; font-size:var(--d-font-base); background:var(--bg-secondary); color:var(--text-primary);" />
+                </label>
+              </div>
+            </div>
+            </div><!-- end settings-row: Hidden Tag -->
 
 
             <!-- Quick Tag Shortcuts -->

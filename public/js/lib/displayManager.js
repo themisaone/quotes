@@ -95,6 +95,9 @@ function addSearchFilters(params, globalSettings) {
   if (searchValues.noteId && !isNaN(parseInt(searchValues.noteId))) params.append('noteId', searchValues.noteId.trim());
 
   if (globalSettings?.hideEncryptedNotes) params.append('hideEncryptedNotes', 'true');
+  if (globalSettings?.hideNotesWithTag && globalSettings?.hideTagName) {
+    params.append('hideTag', globalSettings.hideTagName.trim());
+  }
 }
 
 /**

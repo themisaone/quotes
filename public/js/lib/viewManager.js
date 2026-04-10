@@ -70,7 +70,7 @@ export function updatePageTitle(noteTypeFilter) {
   if (!titleIcon || !titleText) return;
   
   const titles = {
-    null: { icon: '💬', text: "All Notes" },
+    null: { icon: '📦', text: "All Notes" },
     'quote': { icon: '💬', text: "Quotes" },
     'note': { icon: '📝', text: "Notes" },
     'training': { icon: '💪', text: "Trainings" },

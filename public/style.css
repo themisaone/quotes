@@ -128,6 +128,8 @@ body {
   color: rgba(255, 255, 255, 0.85);
   cursor: pointer;
   transition: all 0.2s;
+  display: flex;
+  align-items: center;
 }
 
 .menu-item:hover {
@@ -151,6 +153,7 @@ body {
 /* Desktop: show full text with icons */
 .menu-icon {
   display: inline;
+  margin-right: 0.4rem;
 }
 
 .menu-text,

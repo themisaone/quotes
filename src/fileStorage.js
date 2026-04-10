@@ -71,7 +71,6 @@ function ensureDirectories() {
   dirs.forEach((dir) => {
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
-      console.log(`Created directory: ${dir}`);
     }
   });
 }
@@ -160,7 +159,6 @@ function saveToFilesystem(base64String, type, id, suffix = "") {
   const buffer = Buffer.from(data, "base64");
   fs.writeFileSync(fullPath, buffer);
 
-  console.log(`Saved external file: ${relativePath} (${(buffer.length / 1024 / 1024).toFixed(2)} MB)`);
 
   return relativePath;
 }
@@ -199,7 +197,6 @@ function deleteFromFilesystem(relativePath) {
 
   if (fs.existsSync(fullPath)) {
     fs.unlinkSync(fullPath);
-    console.log(`Deleted external file: ${relativePath}`);
   }
 }
 
@@ -343,7 +340,6 @@ function copyAttachmentFile(value, oldId, newId) {
   const newFullPath = path.join(getAttachmentsDir(), newRelativePath);
 
   fs.copyFileSync(oldFullPath, newFullPath);
-  console.log(`Copied attachment: ${relativePath} → ${newRelativePath}`);
 
   return createFileReference(newRelativePath, mimeType);
 }
@@ -374,7 +370,6 @@ function finalizeUploadedFile(value, noteId, suffix = '') {
     // If target already exists (unlikely), delete it first
     if (fs.existsSync(newFull)) fs.unlinkSync(newFull);
     fs.renameSync(oldFull, newFull);
-    console.log(`Renamed upload: ${relPath} → ${newRelPath}`);
   }
   return createFileReference(newRelPath, mimeType);
 }

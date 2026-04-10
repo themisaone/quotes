@@ -305,7 +305,8 @@ function applySettingsToUI() {
     { id: 'displayScoreInCards', setting: 'displayScoreInCards' },
     { id: 'downscaleQuoteImages', setting: 'downscaleQuoteImages' },
     { id: 'enableWordWrap', setting: 'enableWordWrap' },
-    { id: 'hideEncryptedNotes', setting: 'hideEncryptedNotes' }
+    { id: 'hideEncryptedNotes', setting: 'hideEncryptedNotes' },
+    { id: 'hideNotesWithTag', setting: 'hideNotesWithTag' }
   ];
   
   checkboxMappings.forEach(({ id, setting }) => {
@@ -1601,6 +1602,36 @@ function initializeColorCustomization() {
   if (hideEncryptedNotesCheckbox) {
     hideEncryptedNotesCheckbox.addEventListener('change', (e) => {
       updateSetting('hideEncryptedNotes', e.target.checked);
+      if (callbacks?.loadQuotes) callbacks.loadQuotes();
+    });
+  }
+
+  // Hide Notes with Tag setting
+  const hideTagCheckbox  = getElementByIdSafe('hideNotesWithTag', 'initializeSettings');
+  const hideTagNameInput = getElementByIdSafe('hideTagName',      'initializeSettings');
+  const hideTagNameRow   = getElementByIdSafe('hideTagNameRow',   'initializeSettings');
+
+  // Restore saved tag name
+  if (hideTagNameInput && globalSettings?.hideTagName) {
+    hideTagNameInput.value = globalSettings.hideTagName;
+  }
+  // Show/hide the tag-name row based on current checkbox state
+  if (hideTagNameRow && hideTagCheckbox) {
+    hideTagNameRow.style.display = hideTagCheckbox.checked ? '' : 'none';
+  }
+
+  if (hideTagCheckbox) {
+    hideTagCheckbox.addEventListener('change', (e) => {
+      updateSetting('hideNotesWithTag', e.target.checked);
+      if (hideTagNameRow) hideTagNameRow.style.display = e.target.checked ? '' : 'none';
+      if (callbacks?.loadQuotes) callbacks.loadQuotes();
+    });
+  }
+
+  if (hideTagNameInput) {
+    hideTagNameInput.addEventListener('change', (e) => {
+      updateSetting('hideTagName', e.target.value.trim());
+      if (globalSettings) globalSettings.hideTagName = e.target.value.trim();
       if (callbacks?.loadQuotes) callbacks.loadQuotes();
     });
   }
