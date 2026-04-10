@@ -127,7 +127,7 @@ quotes/
 | All other attachments | `./attachments/<type>/` on disk |
 | Settings & note type config | `config/settings.json` |
 | Machine-local config | `config/local.json` |
-| Color palettes | `palettes/*.json` |
+| Color palettes | `<vaultPath>/palettes/*.json` (falls back to `./palettes/` if vault path not configured) |
 
 ---
 

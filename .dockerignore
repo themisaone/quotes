@@ -1,0 +1,21 @@
+.git
+.gitignore
+node_modules
+attachments
+*.log
+*.enex
+*.json.gz
+
+# Test / temp files
+test-*.json
+2013.enex
+2014.enex
+
+# Don't bake personal env into image — passed via docker-compose environment:
+.env
+.env.*
+
+# Docker files don't need to be in the image
+docker-compose*.yml
+Dockerfile
+DOCKER.md

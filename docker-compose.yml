@@ -1,0 +1,24 @@
+services:
+
+  app:
+    image: misa-quotes          # or whatever you name/push the image
+    build: .
+    restart: unless-stopped
+    ports:
+      - "${PORT:-4000}:4000"
+    environment:
+      DB_HOST:     ${DB_HOST}
+      DB_PORT:     ${DB_PORT:-5432}
+      DB_NAME:     ${DB_NAME}
+      DB_USER:     ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      PORT:        4000
+    volumes:
+      # Settings — edit on host, restart app to pick up changes
+      - ./config:/app/config
+      # Uploaded attachments — persisted on host
+      - ./attachments:/app/attachments
+    # Allows DB_HOST=host.docker.internal to reach Postgres on the host machine
+    # Works on Linux; on macOS/Windows this resolves automatically without this entry
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
