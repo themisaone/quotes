@@ -939,7 +939,8 @@ function applyWordWrap(enabled, chars) {
         white-space: pre-wrap !important;
         box-sizing: border-box !important;
       }
-      .ql-editor > * {
+      .ql-editor > *,
+      .quote-text > * {
         max-width: ${chars}ch !important;
         margin-left: 0 !important;
         margin-right: auto !important;
@@ -951,10 +952,21 @@ function applyWordWrap(enabled, chars) {
       .ql-editor > ul,
       .ql-editor > ol,
       .ql-editor > blockquote,
-      .ql-editor > pre {
+      .ql-editor > pre,
+      .quote-text > p,
+      .quote-text > h1,
+      .quote-text > h2,
+      .quote-text > h3,
+      .quote-text > ul,
+      .quote-text > ol,
+      .quote-text > blockquote,
+      .quote-text > pre {
         max-width: ${chars}ch !important;
         margin-left: 0 !important;
         margin-right: auto !important;
+      }
+      .welcome-quote-text {
+        max-width: ${chars}ch !important;
       }
     `;
   } else {
@@ -964,10 +976,14 @@ function applyWordWrap(enabled, chars) {
         width: 100% !important;
         white-space: pre-wrap !important;
       }
-      .ql-editor > * {
+      .ql-editor > *,
+      .quote-text > * {
         max-width: 100% !important;
         margin-left: 0 !important;
         margin-right: 0 !important;
+      }
+      .welcome-quote-text {
+        max-width: 100% !important;
       }
     `;
   }

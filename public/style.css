@@ -3246,7 +3246,8 @@ body.selection-mode .quote-card::after {
     flex-direction: column;
     padding: var(--m-pad-xl) var(--m-pad-base) !important;
     transition: width 0.25s ease, padding 0.25s ease;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 
   /* Collapse toggle button — pinned to bottom of menu via order */
