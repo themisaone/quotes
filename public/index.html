@@ -300,6 +300,7 @@
                     <div class="search-type-summaries">
                       <span id="quoteSourcesSummary" class="filter-type-summary" style="display:none;"></span>
                       <span id="trainingTypeSummary" class="filter-type-summary" style="display:none;"></span>
+                      <span id="genericSubTypeSummary" class="filter-type-summary" style="display:none;"></span>
                     </div>
                   </div>
                   <!-- Clear button lives in the title row -->
@@ -437,6 +438,33 @@
                       </div>
                       <div class="type-filter-separator"></div>
                       <div class="training-type-filter-options">
+                        <!-- Populated by JavaScript -->
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Generic sub-type filter — shown when current type has sub-types -->
+                <div class="search-item search-grid-dropdown" id="genericSubTypesFilterContainer" style="display: none;">
+                  <label id="genericSubTypesFilterLabel">🏷️ Type</label>
+                  <div class="type-filter-dropdown-container">
+                    <button type="button" id="genericSubTypeFilterToggle" class="type-filter-toggle">
+                      <span class="dropdown-arrow">▼</span>
+                    </button>
+                    <div id="genericSubTypeFilterDropdown" class="type-filter-dropdown">
+                      <div class="type-action-buttons">
+                        <button type="button" id="genericSubTypeSelectAllBtn" class="type-action-btn">
+                          <span class="type-icon">✓</span>
+                          <span>Select All</span>
+                        </button>
+                        <div class="type-action-separator"></div>
+                        <button type="button" id="genericSubTypeDeselectAllBtn" class="type-action-btn">
+                          <span class="type-icon">✗</span>
+                          <span>Clear All</span>
+                        </button>
+                      </div>
+                      <div class="type-filter-separator"></div>
+                      <div class="generic-subtype-filter-options">
                         <!-- Populated by JavaScript -->
                       </div>
                     </div>
@@ -939,9 +967,6 @@
                 <p class="setting-description">When enabled, notes that have one or more encrypted attachments are excluded from all views and search results.</p>
               </div>
             </div>
-            </div><!-- end settings-row: Encryption -->
-
-            <div class="settings-row">
             <div class="settings-section">
               <h2>🏷️ Hidden Tag</h2>
               <div class="setting-item">
@@ -959,8 +984,7 @@
                 </label>
               </div>
             </div>
-            </div><!-- end settings-row: Hidden Tag -->
-
+            </div><!-- end settings-row: Encryption + Hidden Tag -->
 
             <!-- Quick Tag Shortcuts -->
             <div class="settings-row">
@@ -1506,6 +1530,12 @@
 
           <!-- Group field for generic behavior (note, puzzle, historical, …) -->
           <div class="form-row form-row-with-separator" style="margin-top: 0.5rem; display: none;" id="genericSpecificFields">
+            <div class="form-group form-group-inline" id="genericSubTypeFields" style="flex: 1; margin-bottom: 0;">
+              <label for="genericSubType">🏷️ Type</label>
+              <select id="genericSubType">
+                <option value="">Select type...</option>
+              </select>
+            </div>
             <div class="form-group form-group-inline" style="flex: 1; margin-bottom: 0;">
               <label for="genericTranslationGroup">🔗 Group</label>
               <input

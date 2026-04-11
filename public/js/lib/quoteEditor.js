@@ -18,7 +18,7 @@
 
 import { MODAL_IDS, getElementByIdSafe, getElementValue } from '../constants.js';
 import { downscaleImage } from './attachments.js';
-import { getNoteTypeConfig } from './noteTypes.js';
+import { getNoteTypeConfig, hasGenericSubTypeField } from './noteTypes.js';
 import { showConfirm } from './confirmDialog.js';
 
 // ============= CONSTANTS =============
@@ -324,7 +324,9 @@ export function collectFormData(state) {
     source: getElementValue(MODAL_IDS.SOURCE_INPUT),
     sourceType: noteType === 'training' 
       ? getElementValue(MODAL_IDS.TRAINING_TYPE_SELECT)
-      : (getElementValue(MODAL_IDS.SOURCE_TYPE_SELECT) || "ASSORTED"),
+      : (hasGenericSubTypeField(noteType)
+          ? getElementValue('genericSubType')
+          : (getElementValue(MODAL_IDS.SOURCE_TYPE_SELECT) || "ASSORTED")),
     sourceId: window.currentSourceId || null,
     tags: getElementValue(MODAL_IDS.TAG_INPUT),
     comment: getElementValue(MODAL_IDS.COMMENT_INPUT),
@@ -365,6 +367,21 @@ export async function handleFormSubmit(e, config) {
       }, 3000);
     }
     alert('⚠️ Please select a Training Type before saving.');
+    return;
+  }
+
+  // Validate generic sub-type is selected when sub-types are configured for this type
+  if (hasGenericSubTypeField(quoteData.note_type) && !quoteData.sourceType) {
+    const select = document.getElementById('genericSubType');
+    if (select) {
+      select.style.outline = '2px solid #e74c3c';
+      select.style.borderColor = '#e74c3c';
+      setTimeout(() => {
+        select.style.outline = '';
+        select.style.borderColor = '';
+      }, 3000);
+    }
+    alert('⚠️ Please select a Type before saving.');
     return;
   }
 

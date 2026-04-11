@@ -26,6 +26,7 @@ import {
   getElementByIdSafe,
   getCheckedValues
 } from '../constants.js';
+import { hasGenericSubTypeField } from './noteTypes.js';
 
 // ============= MODULE STATE =============
 
@@ -166,6 +167,19 @@ function addMetadataFilters(params) {
 }
 
 /**
+ * Add generic sub-type filters when viewing a generic type that has configured sub-types.
+ */
+function addGenericSubTypeFilters(params, currentNoteTypeFilter) {
+  if (!currentNoteTypeFilter || !hasGenericSubTypeField(currentNoteTypeFilter)) return;
+
+  const checkboxes = document.querySelectorAll('.generic-subtype-filter-options input[type="checkbox"]');
+  const selected = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.dataset.type);
+  if (selected.length > 0) {
+    params.append('generic_sub_types', selected.join(','));
+  }
+}
+
+/**
  * Add pagination parameters
  */
 function addPaginationParams(params) {
@@ -190,6 +204,7 @@ function buildQuotesParams(currentNoteTypeFilter, getQuoteTypes, getTrainingType
   
   addQuoteTypeFilters(params, currentNoteTypeFilter, getQuoteTypes);
   addTrainingTypeFilters(params, currentNoteTypeFilter);
+  addGenericSubTypeFilters(params, currentNoteTypeFilter);
   addMetadataFilters(params);
   addPaginationParams(params);
   return params;
@@ -204,6 +219,7 @@ export function buildExportParams(currentNoteTypeFilter, getQuoteTypes, getTrain
   if (currentNoteTypeFilter) params.append("note_type", currentNoteTypeFilter);
   addQuoteTypeFilters(params, currentNoteTypeFilter, getQuoteTypes);
   addTrainingTypeFilters(params, currentNoteTypeFilter);
+  addGenericSubTypeFilters(params, currentNoteTypeFilter);
   addMetadataFilters(params);
   params.append("limit", String(limit));
   return params;

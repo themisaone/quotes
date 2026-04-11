@@ -134,6 +134,22 @@ export function hasGenericGroupField(noteType) {
   return behavior === 'generic';
 }
 
+/**
+ * Returns true when the generic note type has sub-types configured in settings.
+ * Used to show/hide the sub-type dropdown in the modal.
+ */
+export function hasGenericSubTypeField(noteType) {
+  const config = getNoteTypeConfig(noteType);
+  return config.behavior === 'generic' && Array.isArray(config.subTypes) && config.subTypes.length > 0;
+}
+
+/**
+ * Returns the sub-types array for a generic note type (empty array when none).
+ */
+export function getGenericSubTypes(noteType) {
+  return getNoteTypeConfig(noteType)?.subTypes || [];
+}
+
 export function updateModalFieldVisibility(noteType) {
   const quoteFields = getElementByIdSafe(CONTAINER_IDS.QUOTE_SPECIFIC_FIELDS, 'updateModalFieldVisibility');
   if (quoteFields) {
@@ -146,6 +162,11 @@ export function updateModalFieldVisibility(noteType) {
   const genericFields = document.getElementById('genericSpecificFields');
   if (genericFields) {
     genericFields.style.display = hasGenericGroupField(noteType) ? 'flex' : 'none';
+  }
+  // Show/hide the sub-type dropdown inside the generic fields section
+  const genericSubTypeFields = document.getElementById('genericSubTypeFields');
+  if (genericSubTypeFields) {
+    genericSubTypeFields.style.display = hasGenericSubTypeField(noteType) ? 'flex' : 'none';
   }
 }
 

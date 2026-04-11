@@ -266,6 +266,36 @@ app.put('/api/settings', (req, res) => {
     fs.mkdirSync(path.dirname(settingsFile), { recursive: true });
     fs.writeFileSync(settingsFile, JSON.stringify(settings, null, 2));
 
+    // Sync modes.json: keep ALL up-to-date and prune removed types from all modes
+    try {
+      const currentTypeValues = settings.noteTypes.map(t => t.value);
+      const modesData = loadModes();
+
+      // Ensure ALL mode exists and contains every configured note type
+      if (!modesData.ALL) modesData.ALL = [];
+      for (const val of currentTypeValues) {
+        if (!modesData.ALL.includes(val)) modesData.ALL.push(val);
+      }
+
+      // Remove values that no longer exist in noteTypes from every mode array
+      for (const modeName of Object.keys(modesData)) {
+        modesData[modeName] = modesData[modeName].filter(v => currentTypeValues.includes(v));
+      }
+
+      fs.writeFileSync(MODES_FILE, JSON.stringify(modesData, null, 2));
+
+      // Reflect changes in the in-memory _modes object (mutate in place)
+      for (const [k, v] of Object.entries(modesData)) _modes[k] = v;
+      for (const k of Object.keys(_modes)) { if (!modesData[k]) delete _modes[k]; }
+
+      // Re-resolve _allowedTypes for the active mode
+      if (_modes[_modeName]) {
+        _allowedTypes = _modes[_modeName];
+      }
+    } catch (modeErr) {
+      console.warn('⚠️  Could not sync modes.json:', modeErr.message);
+    }
+
     res.json({ success: true, settings });
   } catch (error) {
     console.error('Error saving settings:', error);
@@ -612,12 +642,13 @@ app.put("/api/authors/:id", async (req, res) => {
     await client.query("BEGIN");
     
     const { id } = req.params;
-    let { name, description, thumbnail } = req.body;
+    let { name, description, image, thumbnail: thumbnailLegacy } = req.body;
+    // Accept either 'image' (current frontend) or legacy 'thumbnail' key
+    const thumbnail = image ?? thumbnailLegacy;
 
-    // Image is already resized on client-side, no need to process again
-    // Just validate it's a data URL if provided
-    if (thumbnail && !thumbnail.startsWith("data:thumbnail")) {
-      return res.status(400).json({ error: "Invalid thumbnail format" });
+    // Validate it's a proper data URL when an image is provided
+    if (thumbnail && !thumbnail.startsWith("data:")) {
+      return res.status(400).json({ error: "Invalid image format" });
     }
 
     // Check if author exists
@@ -868,12 +899,13 @@ app.put("/api/sources/:id", async (req, res) => {
     await client.query("BEGIN");
     
     const { id } = req.params;
-    let { name, thumbnail, type } = req.body;
+    let { name, image, thumbnail: thumbnailLegacy, type } = req.body;
+    // Accept either 'image' (current frontend) or legacy 'thumbnail' key
+    const thumbnail = image ?? thumbnailLegacy;
 
-    // Image is already resized on client-side, no need to process again
-    // Just validate it's a data URL if provided
-    if (thumbnail && !thumbnail.startsWith("data:thumbnail")) {
-      return res.status(400).json({ error: "Invalid thumbnail format" });
+    // Validate it's a proper data URL when an image is provided
+    if (thumbnail && !thumbnail.startsWith("data:")) {
+      return res.status(400).json({ error: "Invalid image format" });
     }
 
     // Check if source exists
@@ -956,7 +988,6 @@ app.put("/api/sources/:id", async (req, res) => {
        WHERE id = $${paramCount}
        RETURNING *`,
       updateParams
-      [name?.trim(), thumbnail, type, id]
     );
 
     await client.query("COMMIT");
@@ -1183,6 +1214,7 @@ function buildTagSearchCondition(searchQuery, paramCounter, params) {
 app.get("/api/quotes/count", async (req, res) => {
   try {
     const { quote, author, source, tags, score, types, note_type, training_types, hasAuthor, hasSource, hasNote, hasTags, hasImage, hasImageType, hasTranslationGroup, hasMultipleAttachments } = req.query;
+    const { generic_sub_types } = req.query;
     
     // Build filtered count query (with all filters)
     let query = `
@@ -1257,6 +1289,16 @@ app.get("/api/quotes/count", async (req, res) => {
           query += ` AND (q.note_type != 'training' OR q.type = ANY($${paramCounter}))`;
         }
         params.push(trainingTypeArray);
+        paramCounter++;
+      }
+    }
+
+    // Generic sub-type filter (for generic-behavior note types with configured sub-types)
+    if (generic_sub_types) {
+      const genericSubTypeArray = generic_sub_types.split(",").filter((t) => t);
+      if (genericSubTypeArray.length > 0) {
+        query += ` AND q.type = ANY($${paramCounter})`;
+        params.push(genericSubTypeArray);
         paramCounter++;
       }
     }
@@ -1658,6 +1700,16 @@ app.get("/api/quotes", async (req, res) => {
           query += ` AND (q.note_type != 'training' OR q.type = ANY($${paramCounter}))`;
         }
         params.push(trainingTypeArray);
+        paramCounter++;
+      }
+    }
+
+    // Generic sub-type filter (for generic-behavior note types with configured sub-types)
+    if (req.query.generic_sub_types) {
+      const genericSubTypeArray = req.query.generic_sub_types.split(",").filter((t) => t);
+      if (genericSubTypeArray.length > 0) {
+        query += ` AND q.type = ANY($${paramCounter})`;
+        params.push(genericSubTypeArray);
         paramCounter++;
       }
     }

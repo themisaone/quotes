@@ -4,6 +4,16 @@
   box-sizing: border-box;
 }
 
+/* ── Global scrollbar — slim, mirrors side-menu style (inverted for light bg) ── */
+::-webkit-scrollbar        { width: 6px; height: 6px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: rgba(0, 0, 0, 0.2); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.4); }
+::-webkit-scrollbar-corner { background: transparent; }
+/* Firefox */
+* { scrollbar-width: auto; scrollbar-color: rgba(0, 0, 0, 0.2) transparent; }
+
+
 :root {
   --primary-color: #1e40af;
   --primary-hover: #1e3a8a;
@@ -92,6 +102,17 @@ body {
   overflow-y: auto;
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
 }
+
+/* ── Side-menu override — white-on-dark because the menu is dark ── */
+.side-menu::-webkit-scrollbar-thumb       { background: rgba(255, 255, 255, 0.2); }
+.side-menu::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.4); }
+.side-menu { scrollbar-width: auto; scrollbar-color: rgba(255, 255, 255, 0.2) transparent; }
+
+/* ── Page (html) scrollbar — slim, same style as side-menu but inverted ── */
+html::-webkit-scrollbar-thumb       { background: rgba(0, 0, 0, 0.2); border-radius: 3px; }
+html::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.4); }
+html { scrollbar-width: thin; scrollbar-color: rgba(0, 0, 0, 0.2) transparent; }
+
 
 .side-menu-title {
   font-size: var(--d-font-xl);
@@ -439,7 +460,7 @@ header h1 {
 /* Dropdown panel opens downward from the button, not from the label */
 .search-grid-dropdown .type-filter-dropdown {
   top: 100%;
-  min-width: 220px;
+  min-width: 260px;
 }
 
 .quote-type-filter {

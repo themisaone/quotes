@@ -1,9 +1,33 @@
 {
-  "DEFAULT":    ["quote", "note", "historical"],
-  "ALL":        ["quote", "note", "historical", "puzzle", "training"],
-  "QUOTES":     ["quote"],
-  "NOTES":      ["note"],
-  "HISTORICAL": ["historical"],
-  "BRAIN":      ["puzzle"],
-  "TRAINING":   ["training"]
+  "DEFAULT": [
+    "quote",
+    "note",
+    "historical"
+  ],
+  "ALL": [
+    "quote",
+    "note",
+    "historical",
+    "puzzle",
+    "training",
+    "job"
+  ],
+  "QUOTES": [
+    "quote"
+  ],
+  "NOTES": [
+    "note"
+  ],
+  "HISTORICAL": [
+    "historical"
+  ],
+  "BRAIN": [
+    "puzzle"
+  ],
+  "TRAINING": [
+    "training"
+  ],
+  "JOB": [
+    "job"
+  ]
 }

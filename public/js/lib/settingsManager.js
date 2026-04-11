@@ -585,7 +585,7 @@ export function renderNoteTypesList(rebuildMenuFn) {
     </div>`;
 
   container.innerHTML = types.map((type, index) => {
-    const hasSubs = type.behavior === 'quote' || type.behavior === 'training';
+    const hasSubs = type.behavior === 'quote' || type.behavior === 'training' || type.behavior === 'generic';
     const subs = type.subTypes || [];
     const behaviorOpts = ['quote','training','generic'].map(b =>
       `<option value="${b}" ${(type.behavior||'generic')===b?'selected':''}>${behaviorLabel(b)}</option>`).join('');

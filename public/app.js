@@ -28,7 +28,9 @@ import {
   initNoteTypes,
   updateModalFieldVisibility,
   updateModalLabels,
-  updateAddButtonText as updateAddButtonTextLib
+  updateAddButtonText as updateAddButtonTextLib,
+  hasGenericSubTypeField,
+  getGenericSubTypes
 } from './js/lib/noteTypes.js';
 
 import {
@@ -257,6 +259,29 @@ function populateTypeDropdowns() {
       trainingTypeDropdown.value = currentValue;
     }
   }
+}
+
+/**
+ * Populate the generic sub-type dropdown (#genericSubType) in the modal
+ * for the given noteType. If the type has no sub-types the select is cleared.
+ * Optionally pass a preselectedValue to restore after repopulation.
+ */
+function populateGenericSubTypeDropdown(noteType, preselectedValue) {
+  const select = document.getElementById('genericSubType');
+  if (!select) return;
+
+  const subTypes = hasGenericSubTypeField(noteType) ? getGenericSubTypes(noteType) : [];
+  const prevValue = preselectedValue ?? select.value;
+
+  select.innerHTML = '<option value="">Select type...</option>';
+  subTypes.forEach(type => {
+    const option = document.createElement('option');
+    option.value = type.value;
+    option.textContent = `${type.icon} ${type.label}`;
+    select.appendChild(option);
+  });
+
+  if (prevValue) select.value = prevValue;
 }
 
 // Populate type filter checkboxes in search area
@@ -1520,9 +1545,8 @@ function updateFieldVisibility() {
     quoteSpecificFields.style.display = isQuote ? 'flex' : 'none';
   }
   
-  // Group field is inside trainingSpecificFields, so it's automatically shown for trainings
-  // For quotes, we need to show it separately - but for now, Group is only for trainings
-  // (If needed for quotes in future, we can add a separate field in quoteSpecificFields)
+  // Repopulate the generic sub-type dropdown whenever the note type changes
+  populateGenericSubTypeDropdown(noteType);
   
   // Update labels using library
   updateModalLabels(noteType);
@@ -1642,6 +1666,12 @@ function openEditModal(quote) {
   currentAttachmentType = state.currentAttachmentType || "image";
   currentAttachmentFileName = state.currentAttachmentFileName || "";
   window.currentSourceId = state.currentSourceId;
+
+  // Populate and set the generic sub-type dropdown when editing a generic note
+  const editNoteType = quote.note_type || 'quote';
+  if (hasGenericSubTypeField(editNoteType)) {
+    populateGenericSubTypeDropdown(editNoteType, quote.source_type || '');
+  }
   
   // Display attachment preview (app-specific)
   if (currentQuoteImage || currentQuoteImageFull) {

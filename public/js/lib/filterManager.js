@@ -25,17 +25,20 @@
 
 import { clearSearchFields } from './searchManager.js';
 import { getElementByIdSafe } from '../constants.js';
-import { getNoteTypeConfig } from './noteTypes.js';
+import { getNoteTypeConfig, hasGenericSubTypeField, getGenericSubTypes } from './noteTypes.js';
 
 // ============= CONSTANTS =============
 
 const SELECTORS = {
   quoteTypeOptions: '.type-filter-options',
   trainingTypeOptions: '.training-type-filter-options',
+  genericSubTypeOptions: '.generic-subtype-filter-options',
   quoteTypeCheckbox: '.type-filter-option input[type="checkbox"]',
   trainingTypeCheckbox: '.training-type-filter-options input[type="checkbox"]',
+  genericSubTypeCheckbox: '.generic-subtype-filter-options input[type="checkbox"]',
   typeFilterContainer: '#quoteSourcesFilterContainer',
-  trainingFilterContainer: '#trainingTypesFilterContainer'
+  trainingFilterContainer: '#trainingTypesFilterContainer',
+  genericSubTypeFilterContainer: '#genericSubTypesFilterContainer'
 };
 
 const ELEMENT_IDS = {
@@ -50,10 +53,17 @@ const ELEMENT_IDS = {
   trainingTypeFilterDropdown: 'trainingTypeFilterDropdown',
   trainingTypeSelectAllBtn: 'trainingTypeSelectAllBtn',
   trainingTypeDeselectAllBtn: 'trainingTypeDeselectAllBtn',
+
+  // Generic sub-type filter
+  genericSubTypeFilterToggle: 'genericSubTypeFilterToggle',
+  genericSubTypeFilterDropdown: 'genericSubTypeFilterDropdown',
+  genericSubTypeSelectAllBtn: 'genericSubTypeSelectAllBtn',
+  genericSubTypeDeselectAllBtn: 'genericSubTypeDeselectAllBtn',
   
   // Visibility (CORRECTED IDs)
   sourcesFilterContainer: 'quoteSourcesFilterContainer',  // Was 'sourcesFilterContainer'
-  trainingTypesFilterContainer: 'trainingTypesFilterContainer'
+  trainingTypesFilterContainer: 'trainingTypesFilterContainer',
+  genericSubTypesFilterContainer: 'genericSubTypesFilterContainer'
 };
 
 // ============= MODULE STATE =============
@@ -90,6 +100,7 @@ function createTypeCheckbox(checkboxId, type, isChecked) {
     typeFilterChanged = true;
     updateTrainingTypeSummary();
     updateQuoteSourcesSummary();
+    updateGenericSubTypeSummary();
   });
   
   return label;
@@ -184,6 +195,30 @@ export function populateTrainingTypeFilterCheckboxes(getTrainingTypes) {
     const isChecked = checkedStates[checkboxId] !== undefined ? checkedStates[checkboxId] : typeDefault;
     container.appendChild(createTypeCheckbox(checkboxId, type, isChecked));
   });
+}
+
+/**
+ * Populate generic sub-type filter checkboxes for the current generic note type
+ */
+export function populateGenericSubTypeFilterCheckboxes(subTypes) {
+  const container = document.querySelector(SELECTORS.genericSubTypeOptions);
+  if (!container) return;
+
+  const checkedStates = getCheckboxStates(container);
+  container.innerHTML = '';
+
+  subTypes.forEach(type => {
+    const checkboxId = `filterGenericSub${type.value.replace(/[^A-Z0-9]/gi, '')}`;
+    const isChecked = checkedStates[checkboxId] !== false;
+    container.appendChild(createTypeCheckbox(checkboxId, type, isChecked));
+  });
+}
+
+/**
+ * Refresh active/inactive generic sub-type summary
+ */
+export function updateGenericSubTypeSummary() {
+  renderTypeSummary(document.getElementById('genericSubTypeSummary'), SELECTORS.genericSubTypeCheckbox);
 }
 
 /**
@@ -331,6 +366,26 @@ export function updateSourcesFilterVisibility(currentNoteTypeFilter, getQuoteTyp
   const showTrainingDateFilters = trainingBehavior;
   setElementVisibility('trainingYearContainer', showTrainingDateFilters);
   setElementVisibility('trainingMonthContainer', showTrainingDateFilters);
+
+  // Show generic sub-type filter when the current type is generic AND has sub-types
+  const showGenericSubTypes = !isAllNotesView && currentNoteTypeFilter !== null && hasGenericSubTypeField(currentNoteTypeFilter);
+  setElementVisibility(ELEMENT_IDS.genericSubTypesFilterContainer, showGenericSubTypes);
+  if (showGenericSubTypes) {
+    populateGenericSubTypeFilterCheckboxes(getGenericSubTypes(currentNoteTypeFilter));
+    // Update label to match the type
+    const genericSubTypesLabel = document.getElementById('genericSubTypesFilterLabel');
+    if (genericSubTypesLabel) {
+      genericSubTypesLabel.textContent = `🏷️ ${getNoteTypeConfig(currentNoteTypeFilter).label} Type`;
+    }
+  }
+  // Generic sub-type summary
+  const genericSubTypeSummaryEl = document.getElementById('genericSubTypeSummary');
+  if (showGenericSubTypes) {
+    updateGenericSubTypeSummary();
+    if (genericSubTypeSummaryEl) genericSubTypeSummaryEl.style.display = '';
+  } else {
+    if (genericSubTypeSummaryEl) { genericSubTypeSummaryEl.style.display = 'none'; genericSubTypeSummaryEl.innerHTML = ''; }
+  }
   
   // Apply the correct search grid layout for this note type
   updateSearchGridLayout(currentNoteTypeFilter);
@@ -366,17 +421,14 @@ function updateSearchGridLayout(noteType) {
 function updateSearchHeaderTitle(currentNoteTypeFilter) {
   const searchHeaderTitle = getElementByIdSafe('searchHeaderTitle', 'updateSearchHeaderTitle');
   if (!searchHeaderTitle) return;
-  
-  const titles = {
-    quote: '🔍 Search Quotes',
-    training: '🔍 Search Training',
-    note: '🔍 Search Notes',
-    puzzle: '🔍 Search Puzzles',
-    null: '🔍 Search All Notes'  // "All Notes" view
-  };
-  
-  const title = titles[currentNoteTypeFilter] || titles[null];
-  searchHeaderTitle.textContent = title;
+
+  if (!currentNoteTypeFilter) {
+    searchHeaderTitle.textContent = '🔍 Search All Notes';
+    return;
+  }
+
+  const config = getNoteTypeConfig(currentNoteTypeFilter);
+  searchHeaderTitle.textContent = `🔍 Search ${config.label || currentNoteTypeFilter}`;
 }
 
 /**
@@ -477,9 +529,10 @@ function setAllCheckboxes(selector, checked) {
     checkbox.checked = checked;
   });
   typeFilterChanged = true;
-  // Refresh both summaries (each only renders if its element is visible)
+  // Refresh all summaries (each only renders if its element is visible)
   updateTrainingTypeSummary();
   updateQuoteSourcesSummary();
+  updateGenericSubTypeSummary();
 }
 
 /**
@@ -573,6 +626,53 @@ function setupTrainingTypeButtons() {
   );
 }
 
+/**
+ * Setup generic sub-type filter dropdown
+ */
+function setupGenericSubTypeDropdown(callbacks) {
+  const toggle = getElementByIdSafe(ELEMENT_IDS.genericSubTypeFilterToggle, 'setupGenericSubTypeDropdown');
+  const dropdown = getElementByIdSafe(ELEMENT_IDS.genericSubTypeFilterDropdown, 'setupGenericSubTypeDropdown');
+  if (!toggle || !dropdown) return;
+
+  toggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const wasOpen = dropdown.classList.contains('show');
+    dropdown.classList.toggle('show');
+    toggle.classList.toggle('open');
+    if (wasOpen && typeFilterChanged) {
+      typeFilterChanged = false;
+      if (callbacks.setCurrentPage) callbacks.setCurrentPage(1);
+      if (callbacks.loadQuotes) callbacks.loadQuotes();
+      if (callbacks.loadTotalCount) callbacks.loadTotalCount();
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest(SELECTORS.genericSubTypeFilterContainer)) {
+      const wasOpen = dropdown.classList.contains('show');
+      dropdown.classList.remove('show');
+      toggle.classList.remove('open');
+      if (wasOpen && typeFilterChanged) {
+        typeFilterChanged = false;
+        if (callbacks.setCurrentPage) callbacks.setCurrentPage(1);
+        if (callbacks.loadQuotes) callbacks.loadQuotes();
+        if (callbacks.loadTotalCount) callbacks.loadTotalCount();
+      }
+    }
+  });
+}
+
+/**
+ * Setup Select All / Deselect All for generic sub-types
+ */
+function setupGenericSubTypeButtons() {
+  setupSelectButtons(
+    ELEMENT_IDS.genericSubTypeSelectAllBtn,
+    ELEMENT_IDS.genericSubTypeDeselectAllBtn,
+    SELECTORS.genericSubTypeCheckbox
+  );
+}
+
 // ============= INITIALIZATION =============
 
 /**
@@ -584,4 +684,6 @@ export function initializeFilterHandlers(callbacks) {
   setupQuoteTypeButtons();
   setupTrainingTypeDropdown(callbacks);
   setupTrainingTypeButtons();
+  setupGenericSubTypeDropdown(callbacks);
+  setupGenericSubTypeButtons();
 }

@@ -4,29 +4,44 @@
  */
 
 import { getElementByIdSafe, BUTTON_IDS, CONTAINER_IDS } from '../constants.js';
+import { getNoteTypeConfig, getNoteTypes } from './noteTypes.js';
 
 /**
- * Parse URL hash and return note type filter
+ * Parse URL hash and return note type filter.
+ * Uses the dynamic note types list so any configured type works automatically.
  */
 export function parseUrlHash() {
   const hash = window.location.hash || '#/all';
   const view = hash.replace('#/', '').toLowerCase();
   
-  if (view === 'all' || view === 'all-notes') {
-    return null; // All notes
-  } else if (view === 'quotes' || view === 'quote') {
-    return 'quote';
-  } else if (view === 'notes' || view === 'note') {
-    return 'note';
-  } else if (view === 'training') {
-    return 'training';
-  } else if (view === 'puzzles' || view === 'puzzle') {
-    return 'puzzle';
-  } else if (view === 'historicals' || view === 'historical') {
-    return 'historical';
+  if (view === 'all' || view === 'all-notes' || view === '') {
+    return null;
+  }
+
+  const types = getNoteTypes();
+  if (types.length > 0) {
+    // Exact match (e.g. #/note, #/training, #/journal)
+    const exact = types.find(t => t.value === view);
+    if (exact) return exact.value;
+    // Pluralised match (e.g. #/notes → note, #/puzzles → puzzle)
+    const dePluralized = view.endsWith('s') ? view.slice(0, -1) : null;
+    if (dePluralized) {
+      const plural = types.find(t => t.value === dePluralized);
+      if (plural) return plural.value;
+    }
+  } else {
+    // Fallback when types not yet initialised (startup race)
+    const legacyMap = {
+      'quotes': 'quote', 'quote': 'quote',
+      'notes': 'note', 'note': 'note',
+      'training': 'training',
+      'puzzles': 'puzzle', 'puzzle': 'puzzle',
+      'historicals': 'historical', 'historical': 'historical'
+    };
+    if (legacyMap[view]) return legacyMap[view];
   }
   
-  return null; // Default to all notes
+  return null;
 }
 
 /**
@@ -61,7 +76,7 @@ export function updateActiveMenuState(noteTypeFilter) {
 }
 
 /**
- * Update page title based on current filter
+ * Update page title based on current filter — driven by configured note types.
  */
 export function updatePageTitle(noteTypeFilter) {
   const titleIcon = getElementByIdSafe('mainTitleIcon', 'updatePageTitle');
@@ -69,22 +84,19 @@ export function updatePageTitle(noteTypeFilter) {
   
   if (!titleIcon || !titleText) return;
   
-  const titles = {
-    null: { icon: '📦', text: "All Notes" },
-    'quote': { icon: '💬', text: "Quotes" },
-    'note': { icon: '📝', text: "Notes" },
-    'training': { icon: '💪', text: "Trainings" },
-    'puzzle': { icon: '🧩', text: "Puzzles" },
-    'historical': { icon: '📜', text: "Historical Notes" }
-  };
-  
-  const title = titles[noteTypeFilter] || titles[null];
-  titleIcon.textContent = title.icon;
-  titleText.textContent = title.text;
+  if (!noteTypeFilter) {
+    titleIcon.textContent = '📦';
+    titleText.textContent = 'All Notes';
+    return;
+  }
+
+  const config = getNoteTypeConfig(noteTypeFilter);
+  titleIcon.textContent = config.icon || '📝';
+  titleText.textContent = config.label || noteTypeFilter;
 }
 
 /**
- * Update search header text
+ * Update search header text — driven by configured note types.
  */
 export function updateSearchHeader(noteTypeFilter) {
   const searchHeader = getElementByIdSafe('searchHeaderTitle', 'updateSearchHeader');
@@ -92,15 +104,11 @@ export function updateSearchHeader(noteTypeFilter) {
   
   if (!noteTypeFilter) {
     searchHeader.textContent = 'Search All Notes';
-  } else {
-    const labels = {
-      'quote': 'Quotes',
-      'note': 'Notes',
-      'training': 'Training',
-      'puzzle': 'Puzzles'
-    };
-    searchHeader.textContent = `Search ${labels[noteTypeFilter] || 'Notes'}`;
+    return;
   }
+
+  const config = getNoteTypeConfig(noteTypeFilter);
+  searchHeader.textContent = `Search ${config.label || noteTypeFilter}`;
 }
 
 /**
@@ -146,7 +154,7 @@ export function updateFilterVisibility(noteTypeFilter) {
 }
 
 /**
- * Update add button text
+ * Update add button text — driven by configured note types.
  */
 export function updateAddButtonText(noteTypeFilter) {
   const addBtn = getElementByIdSafe(BUTTON_IDS.ADD_QUOTE_BTN, 'updateAddButtonText');
@@ -154,15 +162,11 @@ export function updateAddButtonText(noteTypeFilter) {
   
   if (!noteTypeFilter) {
     addBtn.textContent = '+ Add New Note';
-  } else {
-    const labels = {
-      'quote': 'Quote',
-      'note': 'Note',
-      'training': 'Training',
-      'puzzle': 'Puzzle'
-    };
-    addBtn.textContent = `+ Add New ${labels[noteTypeFilter] || 'Note'}`;
+    return;
   }
+
+  const config = getNoteTypeConfig(noteTypeFilter);
+  addBtn.textContent = `+ Add New ${config.label || 'Note'}`;
 }
 
 /**
