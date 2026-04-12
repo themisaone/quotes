@@ -193,12 +193,45 @@ export function initializeQuillEditor(editorSelector = '#quoteEditor', hiddenInp
     }
   });
 
-  // Setup fullscreen editor toggle
+  // Inject attachment + fullscreen buttons into the Quill toolbar
+  _injectToolbarButtons();
+
+  // Setup fullscreen editor toggle (button + dblclick + F11 + ESC)
   setupFullscreenEditor();
   
   console.log('✅ Quill editor initialized');
   
   return quillEditorInstance;
+}
+
+/**
+ * Inject 📎 Add, 🔒 Add encrypted, and ⛶ Fullscreen buttons
+ * as the first group in the Quill toolbar.  Called once after Quill init so
+ * that app.js event-listener wiring (which runs later) finds them by ID.
+ */
+function _injectToolbarButtons() {
+  const toolbar = quillEditorInstance.getModule('toolbar')?.container;
+  if (!toolbar) return;
+
+  const group = document.createElement('span');
+  group.className = 'ql-formats ql-custom-actions';
+
+  const makeBtn = (id, emoji, title, extraClass = '') => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = id;
+    btn.title = title;
+    btn.className = `ql-custom-btn${extraClass ? ' ' + extraClass : ''}`;
+    btn.textContent = emoji;
+    return btn;
+  };
+
+  group.appendChild(makeBtn('toggleAttachmentBtn',  '📎 Add',   'Toggle attachment panel'));
+  group.appendChild(makeBtn('addEncryptedAttachBtn', '🔒 Add Encrypted', 'Encrypt & attach a file'));
+  group.appendChild(makeBtn('toggleFullscreenEditor','⛶',                   'Fullscreen editor (or double-click)'));
+
+  // Prepend before the first existing format group
+  toolbar.insertBefore(group, toolbar.firstChild);
 }
 
 /**
@@ -218,14 +251,34 @@ function setupFullscreenEditor() {
   const toggleBtn = getElementByIdSafe('toggleFullscreenEditor', 'setupFullscreenEditor');
   const editorGroup = document.querySelector('.quote-editor-group');
   
-  if (!toggleBtn || !editorGroup) return;
+  if (!editorGroup) return;
   
   let isFullscreen = false;
-  
-  toggleBtn.addEventListener('click', () => {
+
+  const toggle = () => {
     isFullscreen = !isFullscreen;
     toggleFullscreenMode(isFullscreen, editorGroup, toggleBtn);
-  });
+  };
+
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', toggle);
+  }
+
+  // Double-click on the editor area to enter/exit fullscreen
+  if (quillEditorInstance?.root) {
+    quillEditorInstance.root.addEventListener('dblclick', toggle);
+
+    // Double-tap for iPad / touch devices (two taps within 300 ms)
+    let lastTap = 0;
+    quillEditorInstance.root.addEventListener('touchend', (e) => {
+      const now = Date.now();
+      if (now - lastTap < 300) {
+        toggle();
+        e.preventDefault(); // prevent zoom
+      }
+      lastTap = now;
+    }, { passive: false });
+  }
   
   // ESC key to exit fullscreen
   document.addEventListener('keydown', (e) => {
@@ -296,10 +349,8 @@ function parseNorwegianDate(dateStr) {
  */
 function _readGroupInput(noteType) {
   const behavior = getNoteTypeConfig(noteType)?.behavior;
-  const raw = behavior === 'generic'
-    ? getElementValue('genericTranslationGroup')
-    : (getElementValue(MODAL_IDS.TRANSLATION_GROUP_INPUT) ||
-       getElementValue('quoteTranslationGroup'));
+  // Single universal Group field — genericTranslationGroup is always rendered
+  const raw = getElementValue('genericTranslationGroup');
   return raw.trim() || null;
 }
 

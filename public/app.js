@@ -869,6 +869,33 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupEventListeners();
   setupMenuNavigation();
 
+  // Double-click on the quote modal header → toggle full-screen expansion.
+  // Only meaningful on medium screens (tablet); on desktop the modal is already wide.
+  const _quoteModalHeader = document.querySelector('#quoteModal .modal-header');
+  const _quoteModalContent = document.querySelector('#quoteModal .modal-content');
+  if (_quoteModalHeader && _quoteModalContent) {
+    _quoteModalHeader.addEventListener('dblclick', () => {
+      _quoteModalContent.classList.toggle('modal-expanded');
+    });
+  }
+
+  // Wire attachment / encrypt buttons that are injected into the Quill toolbar by
+  // initializeQuillEditor() — must run AFTER that call so getElementById finds them.
+  const _toggleAttachmentBtn = getElementByIdSafe(BUTTON_IDS.TOGGLE_ATTACHMENT_BTN, 'DOMContentLoaded/toolbar');
+  if (_toggleAttachmentBtn) {
+    _toggleAttachmentBtn.addEventListener('click', toggleAttachmentPanel);
+  }
+  const _addEncryptedAttachBtn   = document.getElementById('addEncryptedAttachBtn');
+  const _encryptedAttachFileInput = document.getElementById('encryptedAttachFileInput');
+  if (_addEncryptedAttachBtn && _encryptedAttachFileInput) {
+    _addEncryptedAttachBtn.addEventListener('click', () => _encryptedAttachFileInput.click());
+    _encryptedAttachFileInput.addEventListener('change', async () => {
+      const file = _encryptedAttachFileInput.files[0];
+      _encryptedAttachFileInput.value = '';
+      if (file) await window.addEncryptedAttachment(file);
+    });
+  }
+
   // Side-menu layout active on medium screens — no landing page needed
   // (landing page code kept; isTablet flag preserved for future use)
   loadQuotes();
@@ -1581,7 +1608,7 @@ function openAddModal() {
     noteDateInput: getElementByIdSafe("noteDate"),
     noteDatePicker: getElementByIdSafe("noteDatePicker"),
     trainingTypeSelect: getElementByIdSafe("trainingType"),
-    translationGroupInput: getElementByIdSafe("translationGroup"),
+    translationGroupInput: getElementByIdSafe("genericTranslationGroup"),
     scoreRadios: true, // Flag to indicate score radios exist
     metadataElement: getElementByIdSafe("quoteMetadata"),
     deleteBtn: getElementByIdSafe("deleteQuoteBtn"),
@@ -1642,7 +1669,7 @@ function openEditModal(quote) {
     noteDateInput: getElementByIdSafe("noteDate"),
     noteDatePicker: getElementByIdSafe("noteDatePicker"),
     trainingTypeSelect: getElementByIdSafe("trainingType"),
-    translationGroupInput: getElementByIdSafe("translationGroup"),
+    translationGroupInput: getElementByIdSafe("genericTranslationGroup"),
     scoreRadios: true, // Flag to indicate score radios exist
     metadataElement: getElementByIdSafe("quoteMetadata"),
     deleteBtn: getElementByIdSafe("deleteQuoteBtn"),
@@ -1700,6 +1727,7 @@ function openEditModal(quote) {
 function closeQuoteModal() {
   quoteModal.style.display = "none";
   quoteModal.classList.remove('has-attachment');
+  document.querySelector('#quoteModal .modal-content')?.classList.remove('modal-expanded');
   quoteForm.reset();
   editingQuoteId = null;
   currentQuoteImage = "";
@@ -2597,22 +2625,21 @@ function handleSourceFileSelect(e) {
 quoteImageFile.addEventListener("change", async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-
-  // Edit mode + existing attachment → add via API immediately
-  if (editingQuoteId && (currentQuoteImage || currentQuoteImageFull)) {
+  // Edit mode → always upload to the server immediately (first or additional attachment)
+  if (editingQuoteId) {
     await addAttachmentFromFile(file, editingQuoteId);
     quoteImageFile.value = "";
     return;
   }
 
   // Add mode + existing primary attachment → queue for upload after save
-  if (!editingQuoteId && (currentQuoteImage || currentQuoteImageFull)) {
+  if (currentQuoteImage || currentQuoteImageFull) {
     await queuePendingAttachment(file);
     quoteImageFile.value = "";
     return;
   }
 
-  // Normal flow — set as the primary attachment
+  // Add mode, no attachment yet — set as the primary (local state only until save)
   readAttachmentFile(file, "quote");
 });
 
@@ -2827,6 +2854,7 @@ async function queuePendingAttachment(file) {
           filename:        result.filename || file.name,
         });
         renderPendingStrip();
+        updateAttachmentPanelVisibility();
         resolve();
       },
       onAttachmentLoaded: (result) => {
@@ -2837,6 +2865,7 @@ async function queuePendingAttachment(file) {
           filename:        result.filename || file.name,
         });
         renderPendingStrip();
+        updateAttachmentPanelVisibility();
         resolve();
       },
     };
@@ -3032,6 +3061,8 @@ async function addAttachmentFromFile(file, noteId) {
   // so files land in the correct vault subfolder (historical/, notes/, etc.)
   const folder = document.getElementById('noteType')?.value || currentNoteTypeFilter || 'note';
 
+  const wasFirstAttachment = !currentQuoteImage && !currentQuoteImageFull;
+
   return new Promise((resolve) => {
     const callbacks = {
       onImageLoaded: async (result) => {
@@ -3042,6 +3073,15 @@ async function addAttachmentFromFile(file, noteId) {
             attachment_type: result.type || 'image',
             filename:        result.filename || file.name,
           });
+          // If this was the very first attachment, update local preview state too
+          if (wasFirstAttachment) {
+            currentQuoteImage        = result.thumbnail;
+            currentQuoteImageFull    = result.full;
+            currentAttachmentType    = result.type || 'image';
+            currentAttachmentFileName = result.filename || file.name;
+            displayImage(quoteImagePreview, result.thumbnail);
+            updateAttachmentPanelVisibility();
+          }
           resolve();
         } catch (err) {
           alert('Could not add attachment: ' + err.message);
@@ -3056,6 +3096,14 @@ async function addAttachmentFromFile(file, noteId) {
             attachment_type: result.type || 'image',
             filename:        result.filename || file.name,
           });
+          if (wasFirstAttachment) {
+            currentQuoteImage        = result.thumbnail || null;
+            currentQuoteImageFull    = result.full;
+            currentAttachmentType    = result.type || 'image';
+            currentAttachmentFileName = result.filename || file.name;
+            if (result.thumbnail) displayImage(quoteImagePreview, result.thumbnail);
+            updateAttachmentPanelVisibility();
+          }
           resolve();
         } catch (err) {
           alert('Could not add attachment: ' + err.message);
@@ -3087,24 +3135,8 @@ async function postAttachmentToNote(noteId, attData) {
 }
 
 // ──────────────────────────────────────────────────────────────────────────
-
-// Toggle attachment panel
-const toggleAttachmentBtn = getElementByIdSafe(BUTTON_IDS.TOGGLE_ATTACHMENT_BTN, 'setupEventListeners');
-if (toggleAttachmentBtn) {
-  toggleAttachmentBtn.addEventListener('click', toggleAttachmentPanel);
-}
-
-// Encrypt & attach button — opens a file picker, then encrypts the file before uploading
-const addEncryptedAttachBtn  = document.getElementById('addEncryptedAttachBtn');
-const encryptedAttachFileInput = document.getElementById('encryptedAttachFileInput');
-if (addEncryptedAttachBtn && encryptedAttachFileInput) {
-  addEncryptedAttachBtn.addEventListener('click', () => encryptedAttachFileInput.click());
-  encryptedAttachFileInput.addEventListener('change', async () => {
-    const file = encryptedAttachFileInput.files[0];
-    encryptedAttachFileInput.value = ''; // reset so same file can be selected again
-    if (file) await window.addEncryptedAttachment(file);
-  });
-}
+// Attachment button wiring moved inside DOMContentLoaded (above) so it runs
+// after initializeQuillEditor() has injected the buttons into the Quill toolbar.
 
 // ── Attachment encryption ──────────────────────────────────────────────────
 
@@ -5070,7 +5102,7 @@ function updateAttachmentPanelVisibility() {
   } else {
     container.classList.add('hidden');
     modal?.classList.remove('has-attachment');
-    toggleBtn.textContent = '📎 Add attachment';
+    toggleBtn.textContent = '📎 Add';
     toggleBtn.title = 'Show attachment panel';
   }
 }
@@ -5083,22 +5115,44 @@ function toggleAttachmentPanel() {
 
   const hasAttachment = currentQuoteImage || currentQuoteImageFull;
 
-  // Has attachment (edit or add mode): open file picker directly to add another
+  // Has attachment — open a dedicated picker that routes straight to the right handler,
+  // bypassing the first-attachment routing in quoteImageFile.change.
   if (hasAttachment) {
-    quoteImageFile.click();
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = quoteImageFile?.accept || 'image/*';
+    input.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;pointer-events:none;';
+    document.body.appendChild(input);
+    const cleanup = () => { try { document.body.removeChild(input); } catch(_) {} };
+    input.addEventListener('change', async () => {
+      const file = input.files[0];
+      cleanup();
+      if (!file) return;
+      if (editingQuoteId) {
+        await addAttachmentFromFile(file, editingQuoteId);
+      } else {
+        await queuePendingAttachment(file);
+      }
+    });
+    // cleanup on cancel (focus returns to window with no change event)
+    window.addEventListener('focus', function onceFocus() {
+      window.removeEventListener('focus', onceFocus);
+      setTimeout(() => { if (!input.files?.length) cleanup(); }, 500);
+    });
+    input.click();
     return;
   }
 
-  // Otherwise: toggle panel visibility
+  // No attachment yet — toggle the attachment panel open/closed
   const isHidden = container.classList.contains('hidden');
   if (isHidden) {
     container.classList.remove('hidden');
-    toggleBtn.textContent = hasAttachment ? '📎 Attachment' : '📎 Hide';
+    toggleBtn.textContent = '📎 Hide';
     toggleBtn.title = 'Hide attachment panel';
   } else {
     container.classList.add('hidden');
     toggleBtn.textContent = '📎 Add attachment';
-    toggleBtn.title = 'Show attachment panel';
+    toggleBtn.title = 'Add attachment';
   }
 }
 

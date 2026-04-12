@@ -1299,14 +1299,17 @@ h2 {
   min-height: 0;
 }
 
-/* Attachment container is a column so the strip sits at the bottom */
+/* Attachment container: column layout.
+   The preview area (image-preview-vertical) stretches to fill, then the strip
+   sits directly below it rather than being pushed to the modal bottom. */
 #attachmentContainer {
   display: flex;
   flex-direction: column;
+  align-self: flex-start;   /* don't stretch to full row height */
 }
 
 #attachmentContainer .modal-att-strip {
-  margin-top: auto;   /* push strip to bottom of container */
+  margin-top: 6px;   /* small gap below preview */
 }
 
 /* Quill editor wrapper — grows to fill column height */
@@ -1320,7 +1323,7 @@ h2 {
 
 /* RIGHT: metadata column — fixed width, stacked fields */
 .modal-col-meta {
-  width: 260px;
+  width: 320px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -1333,6 +1336,13 @@ h2 {
 .modal-col-meta .form-group,
 .modal-col-meta .modal-meta-field {
   margin-bottom: 1rem;
+}
+
+/* Comment sits after the type-specific block — give it a clear visual break */
+.modal-col-meta .form-group:has(#comment) {
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
 }
 
 .modal-col-meta label {
@@ -2625,6 +2635,41 @@ body.selection-mode .quote-card::after {
   box-sizing: border-box;
 }
 
+/* ── Custom buttons injected into the Quill toolbar ── */
+.ql-custom-actions {
+  border-right: 1px solid var(--border);
+  margin-right: 4px !important;
+  padding-right: 6px !important;
+}
+
+.ql-custom-btn {
+  width: auto !important;      /* Quill forces 28px on all toolbar buttons — override it */
+  height: auto !important;
+  font-size: 0.8rem !important;
+  line-height: 1.4 !important;
+  padding: 2px 6px !important;
+  border: none !important;
+  background: transparent !important;
+  color: var(--text-primary) !important;
+  cursor: pointer;
+  border-radius: 4px;
+  opacity: 0.8;
+  white-space: nowrap;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.ql-custom-btn:hover {
+  opacity: 1;
+  background: var(--card-hover-bg) !important;
+  color: var(--primary-color) !important;
+}
+
+/* Prevent double-click on the editor from selecting text while toggling fullscreen */
+.ql-editor {
+  user-select: text;
+  touch-action: manipulation; /* prevents zoom on double-tap (iPad) */
+}
+
 .ql-toolbar.ql-snow {
   padding: 4px 8px !important;
   border-top-left-radius: 8px;
@@ -3460,42 +3505,43 @@ body.selection-mode .quote-card::after {
     display: none !important;
   }
   
-  /* Modal — medium screens: wider + tall (internal padding does the compacting) */
+  /* Modal — medium screens: keep two-column layout, use available viewport */
   .modal-content {
     padding: 0 !important;
-    width: min(1100px, 82vw) !important;
-    height: auto !important;
-    max-height: 92vh !important;
+    width: min(1100px, 94vw) !important;
+    height: 88vh !important;
+    max-height: 88vh !important;
   }
 
-  /* Collapse two-column modal layout back to single column on medium screens */
-  .modal-two-col {
-    flex-direction: column;
-    flex: none;
-  }
-  .modal-col-editor {
-    flex: none;
-  }
+  /* Two-column layout stays — just narrow the meta column so the editor has room */
   .modal-col-meta {
-    width: 100% !important;
-    border-left: none !important;
-    padding-left: 0 !important;
-    border-top: 1px solid var(--border);
-    padding-top: 0.5rem;
-    overflow-y: visible;
+    width: 300px !important;
   }
-  /* Restore fixed editor height on medium screens */
-  .modal-editor-text #quoteEditor {
-    flex: none !important;
-    height: calc(3.4rem + 42px + 12px) !important;
+
+  /* Image preview capped at 180×180 on medium screens */
+  .image-preview-vertical {
+    width:      180px !important;
+    max-width:  180px !important;
+    height:     180px !important;
+    min-height: 180px !important;
+    max-height: 180px !important;
   }
-  .modal-editor-text .ql-container {
-    flex: none !important;
-    height: calc(3.4rem + 12px) !important;
+  /* Attachment container matches */
+  #attachmentContainer:not(.hidden) {
+    max-width: 180px !important;
   }
-  /* Restore body scroll on medium screens */
-  #quoteModal .modal-body {
-    overflow-y: auto !important;
+
+  /* Header double-click expands modal to full screen (editor column stretches, others fixed) */
+  #quoteModal .modal-content.modal-expanded {
+    width:      100vw !important;
+    max-width:  100vw !important;
+    height:     100vh !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+  }
+  /* Animate the expansion */
+  #quoteModal .modal-content {
+    transition: width 0.25s ease, height 0.25s ease;
   }
 
   .modal-header {

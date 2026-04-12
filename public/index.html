@@ -1315,22 +1315,57 @@
           <form id="quoteForm">
           <input type="hidden" id="quoteId" />
 
-          <!-- Top bar: label + attachment buttons + score dice -->
+          <!-- Top bar: label only — attachment/fullscreen buttons are injected into the Quill toolbar by JS -->
+            <!-- Hidden file input for encrypted attachments — JS targets this by ID -->
+<!--
           <div class="quote-editor-topbar">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-              <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <label for="quoteText" style="margin-bottom: 0;"><span id="quoteTextLabel">📝 Note text *</span></label>
-                <button type="button" id="toggleFullscreenEditor" class="btn-icon" title="Fullscreen Editor" style="padding: 0.25rem 0.5rem; font-size: 0.9rem;">
-                  ⛶
-                </button>
-                <button type="button" id="toggleAttachmentBtn" class="btn-attach-toggle" title="Toggle attachment panel">
-                  📎 Add attachment
-                </button>
-                <button type="button" id="addEncryptedAttachBtn" class="btn-attach-toggle" title="Pick a file, encrypt it with a passphrase, and attach it to this note">
-                  🔒 Encrypt &amp; attach
-                </button>
-                <input type="file" id="encryptedAttachFileInput" style="display:none;" />
+            <label style="display:block; margin-bottom:0.4rem;"><span id="quoteTextLabel">📝 Note text *</span></label>
+            <input type="file" id="encryptedAttachFileInput" style="display:none;" />
+          </div>
+        -->              
+          <!-- Two-column body: editor LEFT, metadata RIGHT -->
+          <div class="modal-two-col">
+
+            <!-- LEFT: image + Quill editor + attachment strip -->
+            <div class="modal-col-editor quote-editor-group">
+              <div class="modal-editor-row">
+                <!-- Attachment / image (collapsible) -->
+                <div id="attachmentContainer" style="width: auto; max-width: 250px; flex-shrink: 0; transition: all 0.3s ease;">
+                  <div style="position: relative;">
+                    <div id="quoteImagePreview" class="image-preview image-preview-vertical">
+                      <div class="image-placeholder">
+                        <span>📎</span>
+                        <p style="font-size: 0.75rem; margin: 0.5rem;">Click or paste (Ctrl+V)</p>
+                      </div>
+                    </div>
+                    <button type="button" id="clearQuoteImageX" class="clear-image-btn" style="display: none;" onclick="event.stopPropagation(); document.getElementById('clearQuoteImage').click();">✕</button>
+                  </div>
+                  <input
+                    type="file"
+                    id="quoteImageFile"
+                    accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,video/*,audio/*"
+                    style="display: none"
+                  />
+                  <button type="button" id="clearQuoteImage" style="display: none;">Clear Attachment</button>
+                  <span id="attachmentLabel" style="display: none;">📎 Attachment</span>
+                  <!-- Multi-attachment strip: inside attachment column, aligns bottom with note text -->
+                  <div id="modalAttachmentStrip" class="modal-att-strip" style="display:none;"></div>
+                </div>
+
+                <!-- Quill editor -->
+                <div class="modal-editor-text">
+                  <div id="quoteEditor"></div>
+                  <input type="hidden" id="quoteText" required />
+                  <div class="form-group modal-meta-field">
+                    <div id="selectedTags" style="display:flex; flex-wrap:wrap; gap:0.4rem; margin-top:0.4rem;"></div>
+                    <input type="hidden" id="tags" />
+                  </div>
+                    </div>
               </div>
+            </div>
+
+            <!-- RIGHT: all metadata fields stacked (label above value) -->
+            <div class="modal-col-meta">
               <div class="score-radio-group">
                 <label class="score-radio-label">
                   <input type="radio" name="quoteScore" value="0" checked />
@@ -1361,56 +1396,16 @@
                   <span><i class="fa-solid fa-dice-six"></i></span>
                 </label>
               </div>
-            </div>
-          </div>
 
-          <!-- Two-column body: editor LEFT, metadata RIGHT -->
-          <div class="modal-two-col">
-
-            <!-- LEFT: image + Quill editor + attachment strip -->
-            <div class="modal-col-editor">
-              <div class="modal-editor-row">
-                <!-- Attachment / image (collapsible) -->
-                <div id="attachmentContainer" style="width: auto; max-width: 250px; flex-shrink: 0; transition: all 0.3s ease;">
-                  <div style="position: relative;">
-                    <div id="quoteImagePreview" class="image-preview image-preview-vertical">
-                      <div class="image-placeholder">
-                        <span>📎</span>
-                        <p style="font-size: 0.75rem; margin: 0.5rem;">Click or paste (Ctrl+V)</p>
-                      </div>
-                    </div>
-                    <button type="button" id="clearQuoteImageX" class="clear-image-btn" style="display: none;" onclick="event.stopPropagation(); document.getElementById('clearQuoteImage').click();">✕</button>
-                  </div>
-                  <input
-                    type="file"
-                    id="quoteImageFile"
-                    accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,video/*,audio/*"
-                    style="display: none"
-                  />
-                  <button type="button" id="clearQuoteImage" style="display: none;">Clear Attachment</button>
-                  <span id="attachmentLabel" style="display: none;">📎 Attachment</span>
-                  <!-- Multi-attachment strip: inside attachment column, aligns bottom with note text -->
-                  <div id="modalAttachmentStrip" class="modal-att-strip" style="display:none;"></div>
-                </div>
-
-                <!-- Quill editor -->
-                <div class="modal-editor-text">
-                  <div id="quoteEditor"></div>
-                  <input type="hidden" id="quoteText" required />
-                </div>
-              </div>
-            </div>
-
-            <!-- RIGHT: all metadata fields stacked (label above value) -->
-            <div class="modal-col-meta">
-
-              <!-- Comment -->
-              <div class="form-group modal-meta-field">
-                <label for="comment"><span id="noteLabel">💭 Comment</span></label>
-                <input type="text" id="comment" placeholder="Additional context..." />
+              <div class="form-group modal-meta-field" id="genericSubTypeFields">
+                <label for="genericSubType">🏷️ Type</label>
+                <select id="genericSubType">
+                  <option value="">Select type...</option>
+                </select>
               </div>
 
               <!-- Tags -->
+              
               <div class="form-group modal-meta-field">
                 <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.25rem;">
                   <label style="margin-bottom:0;">🏷️ Tags</label>
@@ -1420,12 +1415,20 @@
                   <input type="text" id="tagInput" placeholder="Type tag name..." autocomplete="off" />
                   <div id="tagInputSuggestions" class="autocomplete-suggestions"></div>
                 </div>
-                <div id="selectedTags" style="display:flex; flex-wrap:wrap; gap:0.4rem; margin-top:0.4rem;"></div>
-                <input type="hidden" id="tags" />
-              </div>
-
+             </div>
               <!-- Quote-specific fields: Author, Source, Type, Group -->
               <div id="quoteSpecificFields" style="display:flex; flex-direction:column; gap:0.5rem;">
+                <div class="form-group modal-meta-field">
+                  <label for="sourceType">📑 Type</label>
+                  <select id="sourceType">
+                    <option value="BOOK">📖 Book</option>
+                    <option value="MOVIE-TV">🎬 Movies &amp; TV</option>
+                    <option value="ASSORTED">📝 Assorted</option>
+                    <option value="POETRY">📜 Poetry</option>
+                    <option value="LYRICS">🎵 Lyrics</option>
+                    <option value="JOKES">😂 Jokes</option>
+                  </select>
+                </div>
                 <div class="form-group modal-meta-field">
                   <label for="author">✍️ Author</label>
                   <div class="autocomplete-wrapper">
@@ -1440,25 +1443,16 @@
                     <div id="sourceSuggestions" class="autocomplete-suggestions"></div>
                   </div>
                 </div>
-                <div class="form-group modal-meta-field">
-                  <label for="sourceType">📑 Type</label>
-                  <select id="sourceType">
-                    <option value="BOOK">📖 Book</option>
-                    <option value="MOVIE-TV">🎬 Movies &amp; TV</option>
-                    <option value="ASSORTED">📝 Assorted</option>
-                    <option value="POETRY">📜 Poetry</option>
-                    <option value="LYRICS">🎵 Lyrics</option>
-                    <option value="JOKES">😂 Jokes</option>
-                  </select>
-                </div>
-                <div class="form-group modal-meta-field" id="quoteGroupContainer">
-                  <label for="quoteTranslationGroup">🔗 Group</label>
-                  <input type="text" id="quoteTranslationGroup" placeholder="Group (optional)" title="Enter a group name to link related notes together" />
-                </div>
               </div>
 
               <!-- Training-specific fields: Date, Type, Group -->
               <div id="trainingSpecificFields" style="display:none; flex-direction:column; gap:0.5rem;">
+                <div class="form-group modal-meta-field">
+                  <label for="trainingType">🏋️ Training Type</label>
+                  <select id="trainingType">
+                    <option value="">Select type...</option>
+                  </select>
+                </div>
                 <div class="form-group modal-meta-field" style="position:relative;">
                   <label for="noteDate">📅 Date</label>
                   <div style="display:flex; gap:0.5rem;">
@@ -1467,31 +1461,20 @@
                     <button type="button" id="openDatePickerBtn" onclick="document.getElementById('noteDatePicker').showPicker()" style="padding:0.5rem; background:#ced1d6; border:none; border-radius:4px; cursor:pointer; display:flex; align-items:center; justify-content:center;" title="Open date picker">📅</button>
                   </div>
                 </div>
-                <div class="form-group modal-meta-field">
-                  <label for="trainingType">🏋️ Training Type</label>
-                  <select id="trainingType">
-                    <option value="">Select type...</option>
-                  </select>
-                </div>
-                <div class="form-group modal-meta-field" id="translationGroupContainer">
-                  <label for="translationGroup">🔗 Group</label>
-                  <input type="text" id="translationGroup" placeholder="Group (optional)" title="Enter a group name to link related notes together" />
-                </div>
               </div>
 
-              <!-- Generic-specific fields: Sub-type, Group -->
-              <div id="genericSpecificFields" style="display:none; flex-direction:column; gap:0.5rem;">
-                <div class="form-group modal-meta-field" id="genericSubTypeFields">
-                  <label for="genericSubType">🏷️ Type</label>
-                  <select id="genericSubType">
-                    <option value="">Select type...</option>
-                  </select>
+              <!-- Generic-specific fields: Comment Group -->
+              <!--<div id="genericSpecificFields" style="display:none; flex-direction:column; gap:0.5rem;"> -->
+                <div class="form-group modal-meta-field">
+                  <label for="comment"><span id="noteLabel">💭 Comment</span></label>
+                  <input type="text" id="comment" placeholder="Additional context..." />
                 </div>
+
                 <div class="form-group modal-meta-field">
                   <label for="genericTranslationGroup">🔗 Group</label>
                   <input type="text" id="genericTranslationGroup" placeholder="Group (optional)" title="Enter a group name to link related notes together" />
                 </div>
-              </div>
+              <!--</div> -->
 
             </div><!-- end .modal-col-meta -->
           </div><!-- end .modal-two-col -->
