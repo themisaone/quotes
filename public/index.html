@@ -1315,8 +1315,9 @@
           <form id="quoteForm">
           <input type="hidden" id="quoteId" />
 
-          <div class="form-group quote-editor-group">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0;">
+          <!-- Top bar: label + attachment buttons + score dice -->
+          <div class="quote-editor-topbar">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
               <div style="display: flex; align-items: center; gap: 0.5rem;">
                 <label for="quoteText" style="margin-bottom: 0;"><span id="quoteTextLabel">📝 Note text *</span></label>
                 <button type="button" id="toggleFullscreenEditor" class="btn-icon" title="Fullscreen Editor" style="padding: 0.25rem 0.5rem; font-size: 0.9rem;">
@@ -1361,191 +1362,139 @@
                 </label>
               </div>
             </div>
-            <!-- Quill editor and Attachment side by side -->
-            <div style="display: flex; gap: 0; align-items: flex-start; margin-top: 0;">
-              <!-- Left: Attachment (collapsible) -->
-              <div id="attachmentContainer" style="width: auto; max-width: 250px; flex-shrink: 0; transition: all 0.3s ease;">
-                <div style="position: relative;">
-                  <div id="quoteImagePreview" class="image-preview image-preview-vertical">
-                    <div class="image-placeholder">
-                      <span>📎</span>
-                      <p style="font-size: 0.75rem; margin: 0.5rem;">Click or paste (Ctrl+V)</p>
-                    </div>
-                  </div>
-                  <button type="button" id="clearQuoteImageX" class="clear-image-btn" style="display: none;" onclick="event.stopPropagation(); document.getElementById('clearQuoteImage').click();">✕</button>
-                </div>
-                <input
-                  type="file"
-                  id="quoteImageFile"
-                  accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,video/*,audio/*"
-                  style="display: none"
-                />
-                <button
-                  type="button"
-                  id="clearQuoteImage"
-                  style="display: none;"
-                >
-                  Clear Attachment
-                </button>
-                <!-- Hidden label for dynamic updates by noteTypes.js -->
-                <span id="attachmentLabel" style="display: none;">📎 Attachment</span>
-              </div>
-              
-              <!-- Right: Quill editor -->
-              <div style="flex: 1; min-width: 0;">
-                <div id="quoteEditor" style="min-height: 204px; height: 204px;"></div>
-                <input type="hidden" id="quoteText" required />
-              </div>
-            </div>
-            <!-- Multi-attachment strip: full-width horizontal scroll below editor -->
-            <div id="modalAttachmentStrip" class="modal-att-strip" style="display:none;"></div>
           </div>
 
-          <div class="form-row form-row-with-separator">
-            <div class="form-group form-group-inline" style="flex: 1;">
-              <label for="note"><span id="noteLabel">💭 Comment</span></label>
-              <input
-                type="text"
-                id="comment"
-                placeholder="Additional context..."
-              />
+          <!-- Two-column body: editor LEFT, metadata RIGHT -->
+          <div class="modal-two-col">
+
+            <!-- LEFT: image + Quill editor + attachment strip -->
+            <div class="modal-col-editor">
+              <div class="modal-editor-row">
+                <!-- Attachment / image (collapsible) -->
+                <div id="attachmentContainer" style="width: auto; max-width: 250px; flex-shrink: 0; transition: all 0.3s ease;">
+                  <div style="position: relative;">
+                    <div id="quoteImagePreview" class="image-preview image-preview-vertical">
+                      <div class="image-placeholder">
+                        <span>📎</span>
+                        <p style="font-size: 0.75rem; margin: 0.5rem;">Click or paste (Ctrl+V)</p>
+                      </div>
+                    </div>
+                    <button type="button" id="clearQuoteImageX" class="clear-image-btn" style="display: none;" onclick="event.stopPropagation(); document.getElementById('clearQuoteImage').click();">✕</button>
+                  </div>
+                  <input
+                    type="file"
+                    id="quoteImageFile"
+                    accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,video/*,audio/*"
+                    style="display: none"
+                  />
+                  <button type="button" id="clearQuoteImage" style="display: none;">Clear Attachment</button>
+                  <span id="attachmentLabel" style="display: none;">📎 Attachment</span>
+                  <!-- Multi-attachment strip: inside attachment column, aligns bottom with note text -->
+                  <div id="modalAttachmentStrip" class="modal-att-strip" style="display:none;"></div>
+                </div>
+
+                <!-- Quill editor -->
+                <div class="modal-editor-text">
+                  <div id="quoteEditor"></div>
+                  <input type="hidden" id="quoteText" required />
+                </div>
+              </div>
             </div>
 
-            <div class="form-group" style="flex: 1;">
-              <div class="form-group-inline">
-                <label for="tagInput">🏷️ Tags</label>
-                <div class="autocomplete-wrapper" style="flex: 1; min-width: 0;">
+            <!-- RIGHT: all metadata fields stacked (label above value) -->
+            <div class="modal-col-meta">
+
+              <!-- Comment -->
+              <div class="form-group modal-meta-field">
+                <label for="comment"><span id="noteLabel">💭 Comment</span></label>
+                <input type="text" id="comment" placeholder="Additional context..." />
+              </div>
+
+              <!-- Tags -->
+              <div class="form-group modal-meta-field">
+                <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.25rem;">
+                  <label style="margin-bottom:0;">🏷️ Tags</label>
+                  <button type="button" id="addTagBtn" class="btn btn-primary" style="padding:0.15rem 0.5rem; font-size:0.75rem; white-space:nowrap; flex-shrink:0;">+ Add</button>
+                </div>
+                <div class="autocomplete-wrapper">
                   <input type="text" id="tagInput" placeholder="Type tag name..." autocomplete="off" />
                   <div id="tagInputSuggestions" class="autocomplete-suggestions"></div>
                 </div>
-                <button type="button" id="addTagBtn" class="btn btn-primary" style="white-space: nowrap; flex-shrink: 0;">+ Add Tag</button>
+                <div id="selectedTags" style="display:flex; flex-wrap:wrap; gap:0.4rem; margin-top:0.4rem;"></div>
+                <input type="hidden" id="tags" />
               </div>
-              <div id="selectedTags" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;"></div>
-              <input type="hidden" id="tags" />
-            </div>
-          </div>
 
-          <div class="form-row-with-separator" style="margin-top: 0.5rem; flex-direction: column; gap: 0.6rem;" id="quoteSpecificFields">
-            <!-- Row 1: Author + Source -->
-            <div class="form-row" style="margin-bottom: 0.6rem;">
-              <div class="form-group form-group-inline" style="flex: 1;">
-                <label for="author">✍️ Author</label>
-                <div class="autocomplete-wrapper">
-                  <input
-                    type="text"
-                    id="author"
-                    placeholder="Author name"
-                    autocomplete="off"
-                  />
-                  <div id="authorSuggestions" class="autocomplete-suggestions"></div>
+              <!-- Quote-specific fields: Author, Source, Type, Group -->
+              <div id="quoteSpecificFields" style="display:flex; flex-direction:column; gap:0.5rem;">
+                <div class="form-group modal-meta-field">
+                  <label for="author">✍️ Author</label>
+                  <div class="autocomplete-wrapper">
+                    <input type="text" id="author" placeholder="Author name" autocomplete="off" />
+                    <div id="authorSuggestions" class="autocomplete-suggestions"></div>
+                  </div>
+                </div>
+                <div class="form-group modal-meta-field">
+                  <label for="source">📚 Source</label>
+                  <div class="autocomplete-wrapper">
+                    <input type="text" id="source" placeholder="Source title" autocomplete="off" />
+                    <div id="sourceSuggestions" class="autocomplete-suggestions"></div>
+                  </div>
+                </div>
+                <div class="form-group modal-meta-field">
+                  <label for="sourceType">📑 Type</label>
+                  <select id="sourceType">
+                    <option value="BOOK">📖 Book</option>
+                    <option value="MOVIE-TV">🎬 Movies &amp; TV</option>
+                    <option value="ASSORTED">📝 Assorted</option>
+                    <option value="POETRY">📜 Poetry</option>
+                    <option value="LYRICS">🎵 Lyrics</option>
+                    <option value="JOKES">😂 Jokes</option>
+                  </select>
+                </div>
+                <div class="form-group modal-meta-field" id="quoteGroupContainer">
+                  <label for="quoteTranslationGroup">🔗 Group</label>
+                  <input type="text" id="quoteTranslationGroup" placeholder="Group (optional)" title="Enter a group name to link related notes together" />
                 </div>
               </div>
 
-              <div class="form-group form-group-inline" style="flex: 1;">
-                <label for="source">📚 Source</label>
-                <div class="autocomplete-wrapper">
-                  <input
-                    type="text"
-                    id="source"
-                    placeholder="Source title"
-                    autocomplete="off"
-                  />
-                  <div id="sourceSuggestions" class="autocomplete-suggestions"></div>
+              <!-- Training-specific fields: Date, Type, Group -->
+              <div id="trainingSpecificFields" style="display:none; flex-direction:column; gap:0.5rem;">
+                <div class="form-group modal-meta-field" style="position:relative;">
+                  <label for="noteDate">📅 Date</label>
+                  <div style="display:flex; gap:0.5rem;">
+                    <input type="text" id="noteDate" placeholder="dd.mm.yyyy" title="Format: dd.mm.yyyy (optional)" style="flex:1;" />
+                    <input type="date" id="noteDatePicker" style="position:absolute; opacity:0; width:0; pointer-events:none;" />
+                    <button type="button" id="openDatePickerBtn" onclick="document.getElementById('noteDatePicker').showPicker()" style="padding:0.5rem; background:#ced1d6; border:none; border-radius:4px; cursor:pointer; display:flex; align-items:center; justify-content:center;" title="Open date picker">📅</button>
+                  </div>
+                </div>
+                <div class="form-group modal-meta-field">
+                  <label for="trainingType">🏋️ Training Type</label>
+                  <select id="trainingType">
+                    <option value="">Select type...</option>
+                  </select>
+                </div>
+                <div class="form-group modal-meta-field" id="translationGroupContainer">
+                  <label for="translationGroup">🔗 Group</label>
+                  <input type="text" id="translationGroup" placeholder="Group (optional)" title="Enter a group name to link related notes together" />
                 </div>
               </div>
-            </div>
 
-            <!-- Row 2: Type + Group -->
-            <div class="form-row">
-              <div class="form-group form-group-inline" style="flex: 1;">
-                <label for="sourceType">📑 Type</label>
-                <select id="sourceType">
-                  <option value="BOOK">📖 Book</option>
-                  <option value="MOVIE-TV">🎬 Movies & TV</option>
-                  <option value="ASSORTED">📝 Assorted</option>
-                  <option value="POETRY">📜 Poetry</option>
-                  <option value="LYRICS">🎵 Lyrics</option>
-                  <option value="JOKES">😂 Jokes</option>
-                </select>
+              <!-- Generic-specific fields: Sub-type, Group -->
+              <div id="genericSpecificFields" style="display:none; flex-direction:column; gap:0.5rem;">
+                <div class="form-group modal-meta-field" id="genericSubTypeFields">
+                  <label for="genericSubType">🏷️ Type</label>
+                  <select id="genericSubType">
+                    <option value="">Select type...</option>
+                  </select>
+                </div>
+                <div class="form-group modal-meta-field">
+                  <label for="genericTranslationGroup">🔗 Group</label>
+                  <input type="text" id="genericTranslationGroup" placeholder="Group (optional)" title="Enter a group name to link related notes together" />
+                </div>
               </div>
 
-              <div class="form-group form-group-inline" style="flex: 1;" id="quoteGroupContainer">
-                <label for="quoteTranslationGroup">🔗 Group</label>
-                <input
-                  type="text"
-                  id="quoteTranslationGroup"
-                  placeholder="Group (optional)"
-                  title="Enter a group name to link related notes together"
-                />
-              </div>
-            </div>
-          </div>
-
-          <!-- Training-specific fields -->
-          <div class="form-row form-row-with-separator" style="margin-top: 0.5rem; display: none; flex-direction: row;" id="trainingSpecificFields">
-            <div class="form-group" style="flex: 1; position: relative; margin-bottom: 0;">
-              <label for="noteDate">📅 Date</label>
-              <div style="display: flex; gap: 0.5rem;">
-                <input
-                  type="text"
-                  id="noteDate"
-                  placeholder="dd.mm.yyyy"
-                  title="Format: dd.mm.yyyy (optional)"
-                  style="flex: 1;"
-                />
-                <input
-                  type="date"
-                  id="noteDatePicker"
-                  style="position: absolute; opacity: 0; width: 0; pointer-events: none;"
-                />
-                <button 
-                  type="button" 
-                  id="openDatePickerBtn"
-                  onclick="document.getElementById('noteDatePicker').showPicker()"
-                  style="padding: 0.5rem; background: #ced1d6; border: none; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center;"
-                  title="Open date picker"
-                >
-                  📅
-                </button>
-              </div>
-            </div>
-
-            <div class="form-group" style="flex: 1; margin-bottom: 0;">
-              <label for="trainingType">🏋️ Training Type</label>
-              <select id="trainingType">
-                <option value="">Select type...</option>
-              </select>
-            </div>
-            
-            <div class="form-group" style="flex: 1; margin-bottom: 0;" id="translationGroupContainer">
-              <label for="translationGroup">🔗 Group</label>
-              <input
-                type="text"
-                id="translationGroup"
-                placeholder="Group (optional)"
-                title="Enter a group name to link related notes together"
-              />
-            </div>
-          </div>
-
-          <!-- Group field for generic behavior (note, puzzle, historical, …) -->
-          <div class="form-row form-row-with-separator" style="margin-top: 0.5rem; display: none;" id="genericSpecificFields">
-            <div class="form-group form-group-inline" id="genericSubTypeFields" style="flex: 1; margin-bottom: 0;">
-              <label for="genericSubType">🏷️ Type</label>
-              <select id="genericSubType">
-                <option value="">Select type...</option>
-              </select>
-            </div>
-            <div class="form-group form-group-inline" style="flex: 1; margin-bottom: 0;">
-              <label for="genericTranslationGroup">🔗 Group</label>
-              <input
-                type="text"
-                id="genericTranslationGroup"
-                placeholder="Group (optional)"
-                title="Enter a group name to link related notes together"
-              />
-            </div>
-          </div>
+            </div><!-- end .modal-col-meta -->
+          </div><!-- end .modal-two-col -->
 
           <div class="form-actions">
             <button type="submit" class="btn btn-primary">Save Quote</button>

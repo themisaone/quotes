@@ -1699,6 +1699,7 @@ function openEditModal(quote) {
 
 function closeQuoteModal() {
   quoteModal.style.display = "none";
+  quoteModal.classList.remove('has-attachment');
   quoteForm.reset();
   editingQuoteId = null;
   currentQuoteImage = "";
@@ -2342,7 +2343,7 @@ function handlePaste(e, type) {
         currentAttachmentType = result.type;
         currentAttachmentFileName = result.filename;
         displayImage(quoteImagePreview, result.thumbnail);
-        updateImageIndicator();
+        updateAttachmentPanelVisibility();
       } else if (type === "author") {
         currentAuthorImage = result.image;
         window.currentAuthorImage = result.image; // Keep window object in sync
@@ -5057,14 +5058,18 @@ function updateAttachmentPanelVisibility() {
   // Panel is always shown once the user opens it or has an attachment
   toggleBtn.disabled = false;
 
+  const modal = document.getElementById('quoteModal');
+
   if (hasAttachment) {
     container.classList.remove('hidden');
+    modal?.classList.add('has-attachment');
     const pendingCount = pendingExtraAttachments.length;
     const extra = pendingCount > 0 ? ` (+${pendingCount})` : '';
     toggleBtn.textContent = `📎 Add more${extra}`;
     toggleBtn.title = 'Add another attachment';
   } else {
     container.classList.add('hidden');
+    modal?.classList.remove('has-attachment');
     toggleBtn.textContent = '📎 Add attachment';
     toggleBtn.title = 'Show attachment panel';
   }

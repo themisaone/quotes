@@ -1015,7 +1015,8 @@ h2 {
   border-radius: 12px;
   border: 2px solid var(--border);
   width: min(1200px, 65vw);
-  max-height: 90vh;
+  height: 80vh;        /* fixed height so editor can fill to bottom */
+  max-height: 80vh;
   overflow: hidden; /* Clip children to border-radius */
   display: flex;
   flex-direction: column;
@@ -1164,8 +1165,28 @@ h2 {
   padding: var(--d-pad-md);
   background-color: var(--surface);
   border-radius: 0 0 12px 12px; /* Round bottom corners */
-  overflow-y: auto; /* Allow scrolling within modal body */
-  flex: 1; /* Take remaining space */
+  overflow-y: hidden; /* quoteModal uses internal flex scroll; others scroll naturally */
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* quoteModal form stretches to fill the body */
+#quoteModal #quoteForm {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Non-quote modals: restore scrolling (they don't use the two-col layout) */
+#authorModal .modal-body,
+#sourceModal .modal-body,
+#encPasswordModal .modal-body {
+  overflow-y: auto;
+  display: block;
+  height: auto;
 }
 
 .modal-content .form-group {
@@ -1243,6 +1264,96 @@ h2 {
 .quote-editor-group {
   width: 100%;
   max-width: 100%;
+}
+
+/* ── Modal two-column layout (desktop only) ─────────────────────────────── */
+.quote-editor-topbar {
+  flex-shrink: 0;
+  margin-bottom: 0;
+}
+
+.modal-two-col {
+  display: flex;
+  gap: 1rem;
+  align-items: stretch;   /* both columns same height */
+  margin-top: 0.5rem;
+  flex: 1;                /* fill remaining form height */
+  min-height: 0;
+}
+
+/* LEFT: image + editor, grows to fill space */
+.modal-col-editor {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Inner row: image panel + quill editor side by side */
+.modal-editor-row {
+  display: flex;
+  gap: 0;
+  align-items: stretch;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Attachment container is a column so the strip sits at the bottom */
+#attachmentContainer {
+  display: flex;
+  flex-direction: column;
+}
+
+#attachmentContainer .modal-att-strip {
+  margin-top: auto;   /* push strip to bottom of container */
+}
+
+/* Quill editor wrapper — grows to fill column height */
+.modal-editor-text {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* RIGHT: metadata column — fixed width, stacked fields */
+.modal-col-meta {
+  width: 260px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-left: 0.75rem;
+  border-left: 1px solid var(--border);
+  overflow-y: auto;       /* scroll if meta overflows */
+}
+
+.modal-col-meta .form-group,
+.modal-col-meta .modal-meta-field {
+  margin-bottom: 1rem;
+}
+
+.modal-col-meta label {
+  font-size: var(--d-font-sm);
+  color: var(--text-secondary);
+  margin-bottom: 0.2rem;
+  display: block;
+}
+
+.modal-col-meta input[type="text"],
+.modal-col-meta select {
+  width: 100%;
+  font-size: var(--d-font-sm);
+}
+
+/* When specific-field groups are visible, they are always column-flex */
+.modal-col-meta #quoteSpecificFields,
+.modal-col-meta #trainingSpecificFields,
+.modal-col-meta #genericSpecificFields,
+.modal-col-meta #genericSubTypeFields {
+  flex-direction: column;
 }
 
 .modal-content .form-group:last-of-type {
@@ -2480,15 +2591,30 @@ body.selection-mode .quote-card::after {
 
 /* Quill editor container */
 #quoteEditor {
-  width: 100% !important; /* Match note field width */
+  width: 100% !important;
   min-width: auto !important;
   max-width: 100% !important;
-  height: calc(6.4rem + 42px + 24px) !important; /* 4 lines (6.4rem) + toolbar (42px) + padding (24px) */
+  height: calc(6.4rem + 42px + 24px) !important; /* 4 lines + toolbar + padding — overridden in two-col */
   border: 1px solid var(--border);
   border-radius: 8px;
-  overflow: hidden; /* Prevent container from expanding */
+  overflow: hidden;
   box-sizing: border-box;
   background: var(--input-bg);
+}
+
+/* In the two-column modal the editor fills all available height */
+.modal-editor-text #quoteEditor {
+  flex: 1 !important;
+  height: auto !important;
+  min-height: 120px;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.modal-editor-text .ql-container {
+  flex: 1 !important;
+  height: auto !important;
+  overflow-y: auto !important;
 }
 
 .ql-container {
@@ -2938,6 +3064,12 @@ body.selection-mode .quote-card::after {
   cursor: not-allowed;
 }
 
+/* When an actual attachment is present, widen the modal so the editor keeps its 82-ch width */
+#quoteModal.has-attachment .modal-content {
+  width: min(1466px, calc(65vw + 266px)) !important;
+  max-width: min(1466px, calc(65vw + 266px)) !important;
+}
+
 #attachmentContainer.hidden {
   width: 0 !important;
   max-width: 0 !important;
@@ -3332,7 +3464,38 @@ body.selection-mode .quote-card::after {
   .modal-content {
     padding: 0 !important;
     width: min(1100px, 82vw) !important;
-    max-height: 92vh !important;   /* keep tall; reduced internal spacing shows all buttons */
+    height: auto !important;
+    max-height: 92vh !important;
+  }
+
+  /* Collapse two-column modal layout back to single column on medium screens */
+  .modal-two-col {
+    flex-direction: column;
+    flex: none;
+  }
+  .modal-col-editor {
+    flex: none;
+  }
+  .modal-col-meta {
+    width: 100% !important;
+    border-left: none !important;
+    padding-left: 0 !important;
+    border-top: 1px solid var(--border);
+    padding-top: 0.5rem;
+    overflow-y: visible;
+  }
+  /* Restore fixed editor height on medium screens */
+  .modal-editor-text #quoteEditor {
+    flex: none !important;
+    height: calc(3.4rem + 42px + 12px) !important;
+  }
+  .modal-editor-text .ql-container {
+    flex: none !important;
+    height: calc(3.4rem + 12px) !important;
+  }
+  /* Restore body scroll on medium screens */
+  #quoteModal .modal-body {
+    overflow-y: auto !important;
   }
 
   .modal-header {
