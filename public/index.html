@@ -1356,10 +1356,6 @@
                 <div class="modal-editor-text">
                   <div id="quoteEditor"></div>
                   <input type="hidden" id="quoteText" required />
-                  <div class="form-group modal-meta-field">
-                    <div id="selectedTags" style="display:flex; flex-wrap:wrap; gap:0.4rem; margin-top:0.4rem;"></div>
-                    <input type="hidden" id="tags" />
-                  </div>
                     </div>
               </div>
             </div>
@@ -1414,6 +1410,10 @@
                 <div class="autocomplete-wrapper">
                   <input type="text" id="tagInput" placeholder="Type tag name..." autocomplete="off" />
                   <div id="tagInputSuggestions" class="autocomplete-suggestions"></div>
+                </div>
+                <div class="form-group modal-meta-field">
+                  <div id="selectedTags" style="display:flex; flex-wrap:wrap; gap:0.4rem; margin-top:0.4rem;"></div>
+                  <input type="hidden" id="tags" />
                 </div>
              </div>
               <!-- Quote-specific fields: Author, Source, Type, Group -->

@@ -448,7 +448,9 @@ function triggerLinkClick(link) {
 // ============================================
 
 /**
- * Show image viewer with optional downscale button
+ * Show image viewer with optional downscale button.
+ * We load the image first to get its real pixel dimensions, then decide
+ * whether the downscale button is needed (only for images > 1024 px on any side).
  * @param {Object} fileInfo - File information
  * @param {number|null} quoteId - Quote ID
  * @param {string} attachmentType - Attachment type
@@ -456,25 +458,39 @@ function triggerLinkClick(link) {
  */
 function showImageViewer(fileInfo, quoteId, attachmentType, callbacks) {
   const modal = createModal();
-  const showDownscaleButton = shouldShowDownscaleButton(fileInfo, quoteId, attachmentType);
-  
-  modal.innerHTML = buildImageViewerHTML(fileInfo.actualSrc, showDownscaleButton);
-  
+
+  // Show the viewer immediately without the downscale button, then add it
+  // asynchronously once we know the real image dimensions.
+  modal.innerHTML = buildImageViewerHTML(fileInfo.actualSrc, false);
   attachModalHandlers(modal);
-  
-  if (showDownscaleButton) {
-    attachDownscaleHandler(modal, quoteId, fileInfo, callbacks);
-  }
-  
   showModal(modal);
+
+  // Only bother checking dimensions if the preconditions are met
+  if (!fileInfo.isExternalFile || !quoteId || attachmentType !== VIEWER_TYPES.IMAGE) return;
+
+  const img = new Image();
+  img.onload = () => {
+    // Only offer downscale if either dimension actually exceeds 1024 px
+    if (img.naturalWidth > 1024 || img.naturalHeight > 1024) {
+      const btnHTML = `
+        <button id="downscaleImageBtn" class="btn btn-primary" style="${STYLES.DOWNSCALE_BUTTON}">
+          📦 Downscale to 1024px
+        </button>`;
+      const content = modal.querySelector('.image-modal-content');
+      if (content) content.insertAdjacentHTML('beforeend', btnHTML);
+      attachDownscaleHandler(modal, quoteId, fileInfo, callbacks);
+    }
+  };
+  img.src = fileInfo.actualSrc;
 }
 
 /**
- * Check if downscale button should be shown
+ * Check if downscale button should be shown (legacy helper, kept for reference).
+ * Actual check is now done asynchronously in showImageViewer.
  * @param {Object} fileInfo - File information
  * @param {number|null} quoteId - Quote ID
  * @param {string} attachmentType - Attachment type
- * @returns {boolean} True if button should be shown
+ * @returns {boolean} True if worth loading dimensions
  */
 function shouldShowDownscaleButton(fileInfo, quoteId, attachmentType) {
   return fileInfo.isExternalFile && quoteId && attachmentType === VIEWER_TYPES.IMAGE;

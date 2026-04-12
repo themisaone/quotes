@@ -2256,6 +2256,9 @@ window.showFullImage = function (imageSrc, quoteId = null, attachmentType = 'ima
   showFullImageLib(imageSrc, quoteId, attachmentType, {
     onDownscale: async (quoteId, imageUrl, filePath, modal) => {
       await downscaleAndMoveToDb(quoteId, imageUrl, filePath, modal);
+      // The file on disk is now overwritten with a ≤1024px version.
+      // The viewer already checks real image dimensions before showing the button,
+      // so it will not reappear when the image is next opened.
     }
   });
 };
@@ -2281,11 +2284,11 @@ function readAttachmentFile(file, type) {
         displayImage(quoteImagePreview, result.thumbnail);
         updateAttachmentPanelVisibility(); // Update panel visibility when image loads
       } else if (type === "author") {
-        currentAuthorImage = result.image;
-        displayImage(authorImagePreview, result.image);
+        currentAuthorImage = result.thumbnail;
+        displayImage(authorImagePreview, result.thumbnail);
       } else if (type === "source") {
-        currentSourceImage = result.image;
-        displayImage(sourceImagePreview, result.image);
+        currentSourceImage = result.thumbnail;
+        displayImage(sourceImagePreview, result.thumbnail);
       }
     },
     onAttachmentLoaded: (result, icon, filename, size) => {
@@ -2314,16 +2317,16 @@ function readImageFile(file, type) {
         displayImage(quoteImagePreview, result.thumbnail);
         updateAttachmentPanelVisibility(); // Update panel visibility when image loads
       } else if (type === "author") {
-        currentAuthorImage = result.image;
-        window.currentAuthorImage = result.image; // Keep window object in sync
-        displayImage(authorImagePreview, result.image);
+        currentAuthorImage = result.thumbnail;
+        window.currentAuthorImage = result.thumbnail; // Keep window object in sync
+        displayImage(authorImagePreview, result.thumbnail);
         // Show clear button
         if (clearAuthorImageBtn) clearAuthorImageBtn.style.display = 'flex';
         toggleAuthorAttachmentPanel();
       } else if (type === "source") {
-        currentSourceImage = result.image;
-        window.currentSourceImage = result.image; // Keep window object in sync
-        displayImage(sourceImagePreview, result.image);
+        currentSourceImage = result.thumbnail;
+        window.currentSourceImage = result.thumbnail; // Keep window object in sync
+        displayImage(sourceImagePreview, result.thumbnail);
         // Show clear button
         if (clearSourceImageBtn) clearSourceImageBtn.style.display = 'flex';
         toggleSourceAttachmentPanel();
@@ -2373,16 +2376,16 @@ function handlePaste(e, type) {
         displayImage(quoteImagePreview, result.thumbnail);
         updateAttachmentPanelVisibility();
       } else if (type === "author") {
-        currentAuthorImage = result.image;
-        window.currentAuthorImage = result.image; // Keep window object in sync
-        displayImage(authorImagePreview, result.image);
+        currentAuthorImage = result.thumbnail;
+        window.currentAuthorImage = result.thumbnail; // Keep window object in sync
+        displayImage(authorImagePreview, result.thumbnail);
         // Show clear button
         if (clearAuthorImageBtn) clearAuthorImageBtn.style.display = 'flex';
         toggleAuthorAttachmentPanel();
       } else if (type === "source") {
-        currentSourceImage = result.image;
-        window.currentSourceImage = result.image; // Keep window object in sync
-        displayImage(sourceImagePreview, result.image);
+        currentSourceImage = result.thumbnail;
+        window.currentSourceImage = result.thumbnail; // Keep window object in sync
+        displayImage(sourceImagePreview, result.thumbnail);
         // Show clear button
         if (clearSourceImageBtn) clearSourceImageBtn.style.display = 'flex';
         toggleSourceAttachmentPanel();

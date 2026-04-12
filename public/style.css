@@ -1015,7 +1015,7 @@ h2 {
   border-radius: 12px;
   border: 2px solid var(--border);
   width: min(1200px, 65vw);
-  height: 80vh;        /* fixed height so editor can fill to bottom */
+  height: 70vh;        /* fixed height so editor can fill to bottom */
   max-height: 80vh;
   overflow: hidden; /* Clip children to border-radius */
   display: flex;
@@ -1026,10 +1026,13 @@ h2 {
 
 /* Narrower modals for author and source */
 #authorModal .modal-content,
-#sourceModal .modal-content {
-  width: auto; /* Let content determine width */
-  max-width: 90vw; /* Don't exceed viewport */
-  min-width: 550px; /* Minimum sensible width */
+#sourceModal .modal-content,
+#encPasswordModal .modal-content {
+  width: auto;
+  max-width: 90vw;
+  min-width: 550px;
+  height: auto;
+  max-height: 90vh;
 }
 
 /* Attachment container wrapper - horizontal layout */
@@ -1087,7 +1090,7 @@ h2 {
   cursor: pointer;
   outline: none;
   flex-shrink: 0;
-  max-width: 120px;
+  max-width: 160px;
 }
 .modal-notetype-select option {
   background: var(--header-color);
@@ -3279,7 +3282,7 @@ body.selection-mode .quote-card::after {
   color: white;
   padding: var(--d-pad-xs) var(--d-pad-base);
   border-radius: 12px;
-  font-size: var(--d-font-xs);
+  font-size: var(--d-font-sm);
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
