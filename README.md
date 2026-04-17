@@ -1,4 +1,4 @@
-# Misa Jokic Notes — Personal Knowledge Base
+# Misa's' Notes — Personal Knowledge Base
 
 A personal note and quote management system built with Node.js/Express, PostgreSQL, and vanilla JavaScript. Supports multiple note types, rich text, file attachments (stored on disk), tagging, search, export/import, and attachment encryption.
 
