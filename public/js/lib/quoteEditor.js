@@ -320,6 +320,7 @@ export function collectFormData(state) {
   
   return {
     note_text: getElementValue(MODAL_IDS.QUOTE_TEXT),
+    note_title: (document.getElementById('noteTitle')?.value?.trim() || null),
     author: getElementValue(MODAL_IDS.AUTHOR_INPUT),
     source: getElementValue(MODAL_IDS.SOURCE_INPUT),
     sourceType: noteType === 'training' 

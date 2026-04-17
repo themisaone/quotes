@@ -201,7 +201,13 @@ export function setCommonFields(note, elements, quillEditor) {
   if (translationGroupInput) {
     translationGroupInput.value = note.translation_group || "";
   }
-  
+
+  // Set note title
+  const noteTitleInput = document.getElementById('noteTitle');
+  if (noteTitleInput) {
+    noteTitleInput.value = note.note_title || "";
+  }
+
   // Also sync the other two group inputs (quote-specific and generic)
   const quoteTranslationGroupInput = document.getElementById('quoteTranslationGroup');
   if (quoteTranslationGroupInput) {
@@ -242,6 +248,10 @@ export function resetModalFields(quillEditor, elements) {
       defaultScoreRadio.checked = true;
     }
   }
+
+  // Clear note title
+  const noteTitleInput = document.getElementById('noteTitle');
+  if (noteTitleInput) noteTitleInput.value = '';
 }
 
 /**

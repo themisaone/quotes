@@ -369,8 +369,24 @@ export function createQuoteCard(note, currentNoteTypeFilter, getTrainingTypes, g
                     ${tags ? `<div class="quote-tags-inline">${tags}</div>` : ''}
                 </div>`;
 
-  const topSection = `
-                <div class="quote-top-section">
+  const isTextEmpty = !note.note_text || note.note_text === '';
+  const isImageOnly = noteType === 'tegneserie' && isTextEmpty;
+
+  // For image-only tegneserie cards build a full-width image directly (no constrained thumb wrapper)
+  const imageOnlySection = (() => {
+    const att = note.attachments && note.attachments.length > 0 ? note.attachments[0] : null;
+    const url  = att ? (att.attachment_full || att.thumbnail) : (note.attachment_full || note.thumbnail);
+    const thumb = att ? resolveAttachmentUrl(att.thumbnail || att.attachment_full) : (imageUrl || imageFullUrl);
+    if (!url || !thumb) return null;
+    const onclick = `event.stopPropagation(); showFullImage('${url}', ${note.id}, 'image')`;
+    return `<div class="quote-top-section image-only">
+      <img class="tegneserie-full-img" src="${thumb}" alt="${escapeHtml(note.note_title || '')}" onclick="${onclick}">
+    </div>`;
+  })();
+
+  const topSection = (isImageOnly && imageOnlySection)
+    ? imageOnlySection
+    : `<div class="quote-top-section">
                     <div class="quote-left-column">
                         ${noteScoreLine}
                         <div class="quote-text-wrapper">
@@ -398,10 +414,15 @@ export function createQuoteCard(note, currentNoteTypeFilter, getTrainingTypes, g
     </div>`;
   })();
 
+  const titleHtml = (note.note_title && note.note_title !== 'No title')
+    ? `<div class="card-note-title">${escapeHtml(note.note_title)}</div>`
+    : '';
+
   return `
         <div class="quote-card ${note.image || note.attachment_full ? 'has-image' : ''}" data-quote-id="${note.id}" data-note-type="${note.note_type || ''}" style="cursor: pointer;">
             ${galleryThumbHtml}
             <div class="quote-card-content">
+                ${titleHtml}
                 ${isTraining ? metaRow + '<div class="quote-separator"></div>' + topSection
                              : topSection + '<div class="quote-separator"></div>' + metaRow}
             </div>

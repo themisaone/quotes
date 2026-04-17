@@ -52,6 +52,8 @@ export const FILTER_IDS = {
   HAS_TRANSLATION_GROUP_CONDITION: 'searchTranslationGroupCondition',
   HAS_MULTIPLE_ATTACHMENTS_CHECKBOX: 'searchHasMultipleAttachments',
   HAS_MULTIPLE_ATTACHMENTS_CONDITION: 'searchMultipleAttachmentsCondition',
+  HAS_TITLE_CHECKBOX: 'searchHasTitle',
+  HAS_TITLE_CONDITION: 'searchTitleCondition',
   
   // Search containers
   SEARCH_HEADER_TITLE: 'searchHeaderTitle',

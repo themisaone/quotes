@@ -524,6 +524,15 @@
                     </select>
                     <span>🔗 Group</span>
                   </div>
+
+                  <div class="metadata-filter-item">
+                    <input type="checkbox" id="searchHasTitle" />
+                    <select id="searchTitleCondition">
+                      <option value="has">Have</option>
+                      <option value="not">NOT Have</option>
+                    </select>
+                    <span>🏷️ Title</span>
+                  </div>
        <!-- Find by ID -->
        <div style="margin-top: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
         <label style="font-size: 0.85rem; color: var(--text-secondary); white-space: nowrap; display: flex; align-items: center; gap: 0.2rem;"># Note ID</label>
@@ -1314,6 +1323,14 @@
         <div class="modal-body">
           <form id="quoteForm">
           <input type="hidden" id="quoteId" />
+            <!-- Note title (optional, styled like h2 when displayed) -->
+            <div class="form-group" style="margin-bottom: 0.4rem;">
+              <input
+                type="text"
+                id="noteTitle"
+                placeholder="Title (optional)"
+              />
+            </div>
 
           <div class="form-group quote-editor-group">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0;">
@@ -1361,6 +1378,7 @@
                 </label>
               </div>
             </div>
+
             <!-- Quill editor and Attachment side by side -->
             <div style="display: flex; gap: 0; align-items: flex-start; margin-top: 0;">
               <!-- Left: Attachment (collapsible) -->

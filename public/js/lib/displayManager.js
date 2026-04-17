@@ -55,7 +55,8 @@ const METADATA_FILTERS = [
   { name: 'Attachment', checkboxId: FILTER_IDS.HAS_IMAGE_CHECKBOX, conditionId: FILTER_IDS.HAS_IMAGE_CONDITION, paramName: 'hasImage' },
   { name: 'ImageType', checkboxId: FILTER_IDS.HAS_IMAGE_TYPE_CHECKBOX, conditionId: FILTER_IDS.HAS_IMAGE_TYPE_CONDITION, paramName: 'hasImageType' },
   { name: 'TranslationGroup', checkboxId: FILTER_IDS.HAS_TRANSLATION_GROUP_CHECKBOX, conditionId: FILTER_IDS.HAS_TRANSLATION_GROUP_CONDITION, paramName: 'hasTranslationGroup' },
-  { name: 'MultipleAttachments', checkboxId: FILTER_IDS.HAS_MULTIPLE_ATTACHMENTS_CHECKBOX, conditionId: FILTER_IDS.HAS_MULTIPLE_ATTACHMENTS_CONDITION, paramName: 'hasMultipleAttachments' }
+  { name: 'MultipleAttachments', checkboxId: FILTER_IDS.HAS_MULTIPLE_ATTACHMENTS_CHECKBOX, conditionId: FILTER_IDS.HAS_MULTIPLE_ATTACHMENTS_CONDITION, paramName: 'hasMultipleAttachments' },
+  { name: 'Title', checkboxId: FILTER_IDS.HAS_TITLE_CHECKBOX, conditionId: FILTER_IDS.HAS_TITLE_CONDITION, paramName: 'hasTitle' }
 ];
 
 // ============= HELPER FUNCTIONS =============

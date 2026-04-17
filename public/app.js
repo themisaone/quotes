@@ -5294,13 +5294,13 @@ function setupMetadataSearchListeners() {
   const metadataCheckboxes = [
     'searchHasAuthor', 'searchHasSource', 'searchHasNote',
     'searchHasTags', 'searchHasImage', 'searchHasImageType',
-    'searchHasTranslationGroup', 'searchHasMultipleAttachments'
+    'searchHasTranslationGroup', 'searchHasMultipleAttachments', 'searchHasTitle'
   ];
   
   const metadataSelects = [
     'searchAuthorCondition', 'searchSourceCondition', 'searchNoteCondition',
     'searchTagsCondition', 'searchImageCondition', 'searchImageTypeCondition',
-    'searchTranslationGroupCondition', 'searchMultipleAttachmentsCondition'
+    'searchTranslationGroupCondition', 'searchMultipleAttachmentsCondition', 'searchTitleCondition'
   ];
   
   // Add listeners to checkboxes

@@ -1240,7 +1240,7 @@ function buildTagSearchCondition(searchQuery, paramCounter, params) {
 // Get total quote count
 app.get("/api/quotes/count", async (req, res) => {
   try {
-    const { quote, author, source, tags, score, types, note_type, training_types, hasAuthor, hasSource, hasNote, hasTags, hasImage, hasImageType, hasTranslationGroup, hasMultipleAttachments } = req.query;
+    const { quote, author, source, tags, score, types, note_type, training_types, hasAuthor, hasSource, hasNote, hasTags, hasImage, hasImageType, hasTranslationGroup, hasMultipleAttachments, hasTitle } = req.query;
     const { generic_sub_types } = req.query;
     
     // Build filtered count query (with all filters)
@@ -1436,6 +1436,12 @@ app.get("/api/quotes/count", async (req, res) => {
       query += ` AND (SELECT COUNT(*) FROM note_attachments WHERE note_id = q.id) <= 1`;
     }
 
+    if (hasTitle === 'true') {
+      query += ` AND q.note_title IS NOT NULL AND q.note_title != '' AND q.note_title != 'No title'`;
+    } else if (hasTitle === 'false') {
+      query += ` AND (q.note_title IS NULL OR q.note_title = '' OR q.note_title = 'No title')`;
+    }
+
     if (req.query.hideEncryptedNotes === 'true') {
       query += ` AND q.attachment_type IS DISTINCT FROM 'encrypted'`
              + ` AND NOT EXISTS (SELECT 1 FROM note_attachments WHERE note_id = q.id AND attachment_type = 'encrypted')`;
@@ -1530,6 +1536,7 @@ app.get("/api/quotes", async (req, res) => {
       hasImageType,
       hasTranslationGroup,
       hasMultipleAttachments,
+      hasTitle,
       noteId,
       limit = 20,
       offset = 0,
@@ -1680,6 +1687,12 @@ app.get("/api/quotes", async (req, res) => {
       query += ` AND (SELECT COUNT(*) FROM note_attachments WHERE note_id = q.id) > 1`;
     } else if (hasMultipleAttachments === 'false') {
       query += ` AND (SELECT COUNT(*) FROM note_attachments WHERE note_id = q.id) <= 1`;
+    }
+
+    if (hasTitle === 'true') {
+      query += ` AND q.note_title IS NOT NULL AND q.note_title != '' AND q.note_title != 'No title'`;
+    } else if (hasTitle === 'false') {
+      query += ` AND (q.note_title IS NULL OR q.note_title = '' OR q.note_title = 'No title')`;
     }
 
     if (req.query.hideEncryptedNotes === 'true') {
@@ -1947,6 +1960,7 @@ app.post("/api/quotes", async (req, res) => {
 
     const {
       note_text,
+      note_title = null,
       author,
       source,
       sourceType = "BOOK",
@@ -1996,10 +2010,10 @@ app.post("/api/quotes", async (req, res) => {
     // Create the quote - still store tags column for backward compatibility
     // Insert the quote first to get ID
     const result = await client.query(
-      `INSERT INTO notes (note_text, author_id, source_id, comment, type, score, note_type, note_date, translation_group) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
+      `INSERT INTO notes (note_text, note_title, author_id, source_id, comment, type, score, note_type, note_date, translation_group) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
        RETURNING *`,
-      [note_text, authorId, sourceId, comment, sourceType, score, note_type, note_date, translation_group],
+      [note_text, note_title || null, authorId, sourceId, comment, sourceType, score, note_type, note_date, translation_group],
     );
 
     const quoteId = result.rows[0].id;
@@ -2078,6 +2092,7 @@ app.put("/api/quotes/:id", async (req, res) => {
     const { id } = req.params;
     const {
       note_text,
+      note_title,
       author,
       source,
       sourceType,
@@ -2142,6 +2157,12 @@ app.put("/api/quotes/:id", async (req, res) => {
     if (note_text !== undefined) {
       updateFields.push(`note_text = $${paramCounter}`);
       params.push(note_text);
+      paramCounter++;
+    }
+
+    if (note_title !== undefined) {
+      updateFields.push(`note_title = $${paramCounter}`);
+      params.push(note_title || null);
       paramCounter++;
     }
 
@@ -3015,6 +3036,12 @@ function buildFilterQuery(filters) {
     query += ` AND q.attachment_full IS NOT NULL AND q.attachment_full != '' AND (q.attachment_type IS NULL OR q.attachment_type != 'image')`;
   }
 
+  if (filters.hasTitle === 'true') {
+    query += ` AND q.note_title IS NOT NULL AND q.note_title != '' AND q.note_title != 'No title'`;
+  } else if (filters.hasTitle === 'false') {
+    query += ` AND (q.note_title IS NULL OR q.note_title = '' OR q.note_title = 'No title')`;
+  }
+
   if (filters.noteId && !isNaN(parseInt(filters.noteId))) {
     query += ` AND q.id = $${paramCounter}`;
     params.push(parseInt(filters.noteId));
@@ -3227,7 +3254,7 @@ app.post("/api/quotes/bulk-duplicate", async (req, res) => {
     for (const oldId of quoteIds) {
       // 1. Fetch original note row
       const noteRes = await client.query(
-        `SELECT note_text, author_id, source_id, type, score, thumbnail, attachment_full,
+        `SELECT note_text, note_title, author_id, source_id, type, score, thumbnail, attachment_full,
                 attachment_type, attachment_filename, comment, translation_group, note_type, note_date
          FROM notes WHERE id = $1`,
         [oldId]
@@ -3238,12 +3265,12 @@ app.post("/api/quotes/bulk-duplicate", async (req, res) => {
       // 2. Insert new note (flat attachment refs copied after we have the new ID)
       const insertRes = await client.query(
         `INSERT INTO notes
-           (note_text, author_id, source_id, type, score, thumbnail, attachment_full,
+           (note_text, note_title, author_id, source_id, type, score, thumbnail, attachment_full,
             attachment_type, attachment_filename, comment, translation_group, note_type, note_date)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
          RETURNING id`,
         [
-          orig.note_text, orig.author_id, orig.source_id, orig.type, orig.score,
+          orig.note_text, orig.note_title, orig.author_id, orig.source_id, orig.type, orig.score,
           orig.thumbnail, orig.attachment_full, orig.attachment_type, orig.attachment_filename,
           orig.comment, orig.translation_group, orig.note_type, orig.note_date
         ]
@@ -3347,7 +3374,7 @@ app.post("/api/quotes/bulk-split", async (req, res) => {
     for (const origId of quoteIds) {
       // Fetch the original note row
       const noteRes = await client.query(
-        `SELECT note_text, author_id, source_id, type, score, comment,
+        `SELECT note_text, note_title, author_id, source_id, type, score, comment,
                 translation_group, note_type, note_date
          FROM notes WHERE id = $1`,
         [origId]
@@ -3372,12 +3399,12 @@ app.post("/api/quotes/bulk-split", async (req, res) => {
         // 1. Insert new note (no attachment columns yet — filled below)
         const insRes = await client.query(
           `INSERT INTO notes
-             (note_text, author_id, source_id, type, score, comment,
+             (note_text, note_title, author_id, source_id, type, score, comment,
               translation_group, note_type, note_date)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
            RETURNING id`,
           [
-            orig.note_text, orig.author_id, orig.source_id, orig.type, orig.score,
+            orig.note_text, orig.note_title, orig.author_id, orig.source_id, orig.type, orig.score,
             orig.comment, orig.translation_group, orig.note_type, orig.note_date
           ]
         );
