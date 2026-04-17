@@ -219,7 +219,7 @@ app.get('/api/settings', (req, res) => {
 });
 
 // Save settings
-app.put('/api/settings', (req, res) => {
+app.put('/api/settings', async (req, res) => {
   try {
     const settings = req.body;
     
@@ -294,6 +294,33 @@ app.put('/api/settings', (req, res) => {
       }
     } catch (modeErr) {
       console.warn('⚠️  Could not sync modes.json:', modeErr.message);
+    }
+
+    // Fix notes whose sub-type was removed from settings.
+    // For every note_type that has configured sub-types, any note whose `type`
+    // column is no longer in the valid list gets reset to ASSORTED (if that
+    // sub-type exists) or NULL.
+    try {
+      for (const nt of settings.noteTypes) {
+        if (!Array.isArray(nt.subTypes) || nt.subTypes.length === 0) continue;
+        const validValues = nt.subTypes.map(s => s.value.toUpperCase());
+        const hasAssorted = validValues.includes('ASSORTED');
+        const fallback    = hasAssorted ? 'ASSORTED' : null;
+        const updated = await pool.query(
+          `UPDATE notes
+              SET type = $1
+            WHERE note_type = $2
+              AND type IS NOT NULL
+              AND UPPER(type) != ALL($3::text[])
+            RETURNING id, type`,
+          [fallback, nt.value, validValues]
+        );
+        if (updated.rowCount > 0) {
+          console.log(`⚙️  Reset ${updated.rowCount} note(s) of type "${nt.value}" to "${fallback ?? 'NULL'}" (sub-type removed from settings)`);
+        }
+      }
+    } catch (cleanupErr) {
+      console.warn('⚠️  Could not clean up stale sub-types in notes:', cleanupErr.message);
     }
 
     res.json({ success: true, settings });
