@@ -14,7 +14,8 @@
     "historical": "npm run migrate && MODE=HISTORICAL node src/server.js",
     "brain": "npm run migrate && MODE=BRAIN node src/server.js",
     "training": "npm run migrate && MODE=TRAINING node src/server.js",
-    "job": "npm run migrate && MODE=JOB node src/server.js"
+    "job": "npm run migrate && MODE=JOB node src/server.js",
+    "tegneserie": "npm run migrate && MODE=TEGNESERIE node src/server.js"
   },
   "keywords": [
     "quotes",

@@ -869,6 +869,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupEventListeners();
   setupMenuNavigation();
 
+  // Double-click on the quote modal header → toggle full-screen expansion.
+  // Only meaningful on medium screens (tablet); on desktop the modal is already wide.
+  const _quoteModalHeader = document.querySelector('#quoteModal .modal-header');
+  const _quoteModalContent = document.querySelector('#quoteModal .modal-content');
+  if (_quoteModalHeader && _quoteModalContent) {
+    _quoteModalHeader.addEventListener('dblclick', () => {
+      _quoteModalContent.classList.toggle('modal-expanded');
+    });
+  }
   // Side-menu layout active on medium screens — no landing page needed
   // (landing page code kept; isTablet flag preserved for future use)
   loadQuotes();
@@ -1238,6 +1247,11 @@ function setupEventListeners() {
   const bulkDuplicateBtn = document.getElementById('bulkDuplicateBtn');
   if (bulkDuplicateBtn) {
     bulkDuplicateBtn.addEventListener("click", handleBulkDuplicate);
+  }
+
+  const bulkSplitBtn = document.getElementById('bulkSplitBtn');
+  if (bulkSplitBtn) {
+    bulkSplitBtn.addEventListener("click", handleBulkSplit);
   }
 
   if (bulkDeleteBtn) {
@@ -1699,6 +1713,8 @@ function openEditModal(quote) {
 
 function closeQuoteModal() {
   quoteModal.style.display = "none";
+  quoteModal.classList.remove('has-attachment');
+  document.querySelector('#quoteModal .modal-content')?.classList.remove('modal-expanded');
   quoteForm.reset();
   editingQuoteId = null;
   currentQuoteImage = "";
@@ -2227,6 +2243,9 @@ window.showFullImage = function (imageSrc, quoteId = null, attachmentType = 'ima
   showFullImageLib(imageSrc, quoteId, attachmentType, {
     onDownscale: async (quoteId, imageUrl, filePath, modal) => {
       await downscaleAndMoveToDb(quoteId, imageUrl, filePath, modal);
+      // The file on disk is now overwritten with a ≤1024px version.
+      // The viewer already checks real image dimensions before showing the button,
+      // so it will not reappear when the image is next opened.
     }
   });
 };
@@ -2252,11 +2271,11 @@ function readAttachmentFile(file, type) {
         displayImage(quoteImagePreview, result.thumbnail);
         updateAttachmentPanelVisibility(); // Update panel visibility when image loads
       } else if (type === "author") {
-        currentAuthorImage = result.image;
-        displayImage(authorImagePreview, result.image);
+        currentAuthorImage = result.thumbnail;
+        displayImage(authorImagePreview, result.thumbnail);
       } else if (type === "source") {
-        currentSourceImage = result.image;
-        displayImage(sourceImagePreview, result.image);
+        currentSourceImage = result.thumbnail;
+        displayImage(sourceImagePreview, result.thumbnail);
       }
     },
     onAttachmentLoaded: (result, icon, filename, size) => {
@@ -2285,16 +2304,16 @@ function readImageFile(file, type) {
         displayImage(quoteImagePreview, result.thumbnail);
         updateAttachmentPanelVisibility(); // Update panel visibility when image loads
       } else if (type === "author") {
-        currentAuthorImage = result.image;
-        window.currentAuthorImage = result.image; // Keep window object in sync
-        displayImage(authorImagePreview, result.image);
+        currentAuthorImage = result.thumbnail;
+        window.currentAuthorImage = result.thumbnail; // Keep window object in sync
+        displayImage(authorImagePreview, result.thumbnail);
         // Show clear button
         if (clearAuthorImageBtn) clearAuthorImageBtn.style.display = 'flex';
         toggleAuthorAttachmentPanel();
       } else if (type === "source") {
-        currentSourceImage = result.image;
-        window.currentSourceImage = result.image; // Keep window object in sync
-        displayImage(sourceImagePreview, result.image);
+        currentSourceImage = result.thumbnail;
+        window.currentSourceImage = result.thumbnail; // Keep window object in sync
+        displayImage(sourceImagePreview, result.thumbnail);
         // Show clear button
         if (clearSourceImageBtn) clearSourceImageBtn.style.display = 'flex';
         toggleSourceAttachmentPanel();
@@ -2342,18 +2361,18 @@ function handlePaste(e, type) {
         currentAttachmentType = result.type;
         currentAttachmentFileName = result.filename;
         displayImage(quoteImagePreview, result.thumbnail);
-        updateImageIndicator();
+        updateAttachmentPanelVisibility();
       } else if (type === "author") {
-        currentAuthorImage = result.image;
-        window.currentAuthorImage = result.image; // Keep window object in sync
-        displayImage(authorImagePreview, result.image);
+        currentAuthorImage = result.thumbnail;
+        window.currentAuthorImage = result.thumbnail; // Keep window object in sync
+        displayImage(authorImagePreview, result.thumbnail);
         // Show clear button
         if (clearAuthorImageBtn) clearAuthorImageBtn.style.display = 'flex';
         toggleAuthorAttachmentPanel();
       } else if (type === "source") {
-        currentSourceImage = result.image;
-        window.currentSourceImage = result.image; // Keep window object in sync
-        displayImage(sourceImagePreview, result.image);
+        currentSourceImage = result.thumbnail;
+        window.currentSourceImage = result.thumbnail; // Keep window object in sync
+        displayImage(sourceImagePreview, result.thumbnail);
         // Show clear button
         if (clearSourceImageBtn) clearSourceImageBtn.style.display = 'flex';
         toggleSourceAttachmentPanel();
@@ -2596,22 +2615,21 @@ function handleSourceFileSelect(e) {
 quoteImageFile.addEventListener("change", async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-
-  // Edit mode + existing attachment → add via API immediately
-  if (editingQuoteId && (currentQuoteImage || currentQuoteImageFull)) {
+  // Edit mode → always upload to the server immediately (first or additional attachment)
+  if (editingQuoteId) {
     await addAttachmentFromFile(file, editingQuoteId);
     quoteImageFile.value = "";
     return;
   }
 
   // Add mode + existing primary attachment → queue for upload after save
-  if (!editingQuoteId && (currentQuoteImage || currentQuoteImageFull)) {
+  if (currentQuoteImage || currentQuoteImageFull) {
     await queuePendingAttachment(file);
     quoteImageFile.value = "";
     return;
   }
 
-  // Normal flow — set as the primary attachment
+  // Add mode, no attachment yet — set as the primary (local state only until save)
   readAttachmentFile(file, "quote");
 });
 
@@ -2826,6 +2844,7 @@ async function queuePendingAttachment(file) {
           filename:        result.filename || file.name,
         });
         renderPendingStrip();
+        updateAttachmentPanelVisibility();
         resolve();
       },
       onAttachmentLoaded: (result) => {
@@ -2836,6 +2855,7 @@ async function queuePendingAttachment(file) {
           filename:        result.filename || file.name,
         });
         renderPendingStrip();
+        updateAttachmentPanelVisibility();
         resolve();
       },
     };
@@ -3031,6 +3051,8 @@ async function addAttachmentFromFile(file, noteId) {
   // so files land in the correct vault subfolder (historical/, notes/, etc.)
   const folder = document.getElementById('noteType')?.value || currentNoteTypeFilter || 'note';
 
+  const wasFirstAttachment = !currentQuoteImage && !currentQuoteImageFull;
+
   return new Promise((resolve) => {
     const callbacks = {
       onImageLoaded: async (result) => {
@@ -3041,6 +3063,15 @@ async function addAttachmentFromFile(file, noteId) {
             attachment_type: result.type || 'image',
             filename:        result.filename || file.name,
           });
+          // If this was the very first attachment, update local preview state too
+          if (wasFirstAttachment) {
+            currentQuoteImage        = result.thumbnail;
+            currentQuoteImageFull    = result.full;
+            currentAttachmentType    = result.type || 'image';
+            currentAttachmentFileName = result.filename || file.name;
+            displayImage(quoteImagePreview, result.thumbnail);
+            updateAttachmentPanelVisibility();
+          }
           resolve();
         } catch (err) {
           alert('Could not add attachment: ' + err.message);
@@ -3055,6 +3086,14 @@ async function addAttachmentFromFile(file, noteId) {
             attachment_type: result.type || 'image',
             filename:        result.filename || file.name,
           });
+          if (wasFirstAttachment) {
+            currentQuoteImage        = result.thumbnail || null;
+            currentQuoteImageFull    = result.full;
+            currentAttachmentType    = result.type || 'image';
+            currentAttachmentFileName = result.filename || file.name;
+            if (result.thumbnail) displayImage(quoteImagePreview, result.thumbnail);
+            updateAttachmentPanelVisibility();
+          }
           resolve();
         } catch (err) {
           alert('Could not add attachment: ' + err.message);
@@ -4650,6 +4689,42 @@ async function handleBulkDuplicate() {
   }
 }
 
+async function handleBulkSplit() {
+  const { payload, count, label } = _getBulkPayloadAndLabel();
+
+  if (count === 0) {
+    alert("⚠️ No notes selected.");
+    return;
+  }
+
+  if (!await showConfirm(
+    `Split attachments in ${count} ${label}?\n\nEach extra attachment becomes a new note (same text & tags). The original keeps only its first attachment.`,
+    { icon: '✂️', title: 'Split Attachments', confirmLabel: 'Split' }
+  )) return;
+
+  const btn = document.getElementById('bulkSplitBtn');
+  if (btn) { btn.disabled = true; btn.querySelector('div > div').textContent = '⏳ Splitting…'; }
+
+  try {
+    const response = await fetch(`${API_URL}/quotes/bulk-split`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to split');
+
+    closeBulkOperationsModal();
+    loadQuotes();
+    alert(`✅ ${result.message}`);
+  } catch (error) {
+    console.error("Bulk split error:", error);
+    alert(`❌ Error: ${error.message}`);
+  } finally {
+    if (btn) { btn.disabled = false; btn.querySelector('div > div').textContent = 'Split Attachments'; }
+  }
+}
+
 async function handleBulkDelete() {
   const { payload, count, label } = _getBulkPayloadAndLabel();
   
@@ -5057,15 +5132,19 @@ function updateAttachmentPanelVisibility() {
   // Panel is always shown once the user opens it or has an attachment
   toggleBtn.disabled = false;
 
+  const modal = document.getElementById('quoteModal');
+
   if (hasAttachment) {
     container.classList.remove('hidden');
+    modal?.classList.add('has-attachment');
     const pendingCount = pendingExtraAttachments.length;
     const extra = pendingCount > 0 ? ` (+${pendingCount})` : '';
     toggleBtn.textContent = `📎 Add more${extra}`;
     toggleBtn.title = 'Add another attachment';
   } else {
     container.classList.add('hidden');
-    toggleBtn.textContent = '📎 Add attachment';
+    modal?.classList.remove('has-attachment');
+    toggleBtn.textContent = '� Add';;
     toggleBtn.title = 'Show attachment panel';
   }
 }
@@ -5078,13 +5157,35 @@ function toggleAttachmentPanel() {
 
   const hasAttachment = currentQuoteImage || currentQuoteImageFull;
 
-  // Has attachment (edit or add mode): open file picker directly to add another
+  // Has attachment — open a dedicated picker that routes straight to the right handler,
+  // bypassing the first-attachment routing in quoteImageFile.change.
   if (hasAttachment) {
-    quoteImageFile.click();
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = quoteImageFile?.accept || 'image/*';
+    input.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;pointer-events:none;';
+    document.body.appendChild(input);
+    const cleanup = () => { try { document.body.removeChild(input); } catch(_) {} };
+    input.addEventListener('change', async () => {
+      const file = input.files[0];
+      cleanup();
+      if (!file) return;
+      if (editingQuoteId) {
+        await addAttachmentFromFile(file, editingQuoteId);
+      } else {
+        await queuePendingAttachment(file);
+      }
+    });
+    // cleanup on cancel (focus returns to window with no change event)
+    window.addEventListener('focus', function onceFocus() {
+      window.removeEventListener('focus', onceFocus);
+      setTimeout(() => { if (!input.files?.length) cleanup(); }, 500);
+    });
+    input.click();
     return;
   }
 
-  // Otherwise: toggle panel visibility
+  // No attachment yet — toggle the attachment panel open/closed
   const isHidden = container.classList.contains('hidden');
   if (isHidden) {
     container.classList.remove('hidden');

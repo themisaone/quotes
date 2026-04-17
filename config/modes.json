@@ -10,7 +10,8 @@
     "historical",
     "puzzle",
     "training",
-    "job"
+    "job",
+    "tegneserie"
   ],
   "QUOTES": [
     "quote"
@@ -29,5 +30,8 @@
   ],
   "JOB": [
     "job"
+  ],
+  "TEGNESERIE": [
+    "tegneserie"
   ]
 }

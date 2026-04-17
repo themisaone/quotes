@@ -27,32 +27,48 @@ async function generateThumbnail(dataUrl) {
   }
 }
 
+// ─── Resolve settings.json path (vault-first, then repo fallback) ───────────
+
+function resolveSettingsPath() {
+  try {
+    const localJson = JSON.parse(
+      fs.readFileSync(path.join(__dirname, '..', 'config', 'local.json'), 'utf-8')
+    );
+    if (localJson.vaultPath) {
+      const vaultSettings = path.join(localJson.vaultPath, 'config', 'settings.json');
+      if (fs.existsSync(vaultSettings)) return vaultSettings;
+    }
+  } catch (e) { /* local.json missing or unreadable */ }
+  // Fallback: old repo-local location
+  return path.join(__dirname, '..', 'config', 'settings.json');
+}
+
+function loadSettings() {
+  try {
+    return JSON.parse(fs.readFileSync(resolveSettingsPath(), 'utf-8'));
+  } catch (e) {
+    return null;
+  }
+}
+
 // ─── Load configured note types from settings.json ─────────────────────────
 
 function loadNoteTypes() {
-  const settingsPath = path.join(__dirname, '..', 'config', 'settings.json');
-  try {
-    const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
-    if (Array.isArray(settings.noteTypes)) {
-      return settings.noteTypes.map(t => t.value.toLowerCase());
-    }
-  } catch (e) {
-    // settings.json missing or unreadable — fall back to built-in list
+  const settings = loadSettings();
+  if (settings && Array.isArray(settings.noteTypes)) {
+    return settings.noteTypes.map(t => t.value.toLowerCase());
   }
   return ['quote', 'note', 'training', 'puzzle', 'historical'];
 }
 
 function loadSubTypesForNoteType(noteType) {
-  const settingsPath = path.join(__dirname, '..', 'config', 'settings.json');
-  try {
-    const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
-    if (Array.isArray(settings.noteTypes)) {
-      const nt = settings.noteTypes.find(t => t.value.toLowerCase() === noteType.toLowerCase());
-      if (nt && Array.isArray(nt.subTypes)) {
-        return nt.subTypes.map(s => s.value.toUpperCase());
-      }
+  const settings = loadSettings();
+  if (settings && Array.isArray(settings.noteTypes)) {
+    const nt = settings.noteTypes.find(t => t.value.toLowerCase() === noteType.toLowerCase());
+    if (nt && Array.isArray(nt.subTypes)) {
+      return nt.subTypes.map(s => s.value.toUpperCase());
     }
-  } catch (e) {}
+  }
   // Hard-coded fallbacks
   if (noteType === 'training') return ['WEIGHTS', 'CARDIO', 'MIX', 'HOME', 'OVERVIEW/DOC'];
   if (noteType === 'quote')    return ['BOOK', 'MOVIE-TV', 'POETRY', 'LYRICS', 'JOKES', 'ASSORTED'];
@@ -593,7 +609,7 @@ async function main() {
   if (!validNoteTypes.includes(normalizedNoteType)) {
     console.error(`❌ Unknown note type: "${normalizedNoteType}"`);
     console.error(`   Valid types: ${validNoteTypes.join(', ')}`);
-    console.error(`   (Configured in config/settings.json)`);
+    console.error(`   (Configured in settings.json inside your vault's config/ folder)`);
     process.exit(1);
   }
 
@@ -603,7 +619,7 @@ async function main() {
     if (!validSubTypes.includes(subTypeArg.toUpperCase())) {
       console.error(`❌ Unknown sub-type for "${noteTypeArg}": "${subTypeArg.toUpperCase()}"`);
       console.error(`   Valid sub-types: ${validSubTypes.join(', ')}`);
-      console.error(`   (Configured in config/settings.json)`);
+      console.error(`   (Configured in settings.json inside your vault's config/ folder)`);
       process.exit(1);
     }
   }

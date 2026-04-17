@@ -3239,11 +3239,24 @@ app.post("/api/quotes/bulk-duplicate", async (req, res) => {
         [oldId]
       );
       for (const att of attRes.rows) {
-        // Additional-attachment files use "{noteId}_a{position}" as their ID prefix
-        const oldKey = `${oldId}_a${att.position}`;
-        const newKey = `${newId}_a${att.position}`;
-        const newAttThumb = fileStorage.copyAttachmentFile(att.thumbnail, oldKey, newKey);
-        const newAttFull  = fileStorage.copyAttachmentFile(att.attachment_full, oldKey, newKey);
+        let newAttThumb, newAttFull;
+
+        if (att.position === 0) {
+          // Position 0 was already handled by step 3 — reuse those file refs.
+          // The primary attachment file may be named "{noteId}.jpg" (created with the
+          // note) or "{noteId}_a0.jpg" (added later). Either way step 3 copied it
+          // correctly; using its result here avoids a key-mismatch that would leave
+          // the new note's note_attachments row pointing at the *original* file.
+          newAttThumb = newThumb;
+          newAttFull  = newFull;
+        } else {
+          // Extra attachments are always named "{noteId}_a{position}.ext"
+          const oldKey = `${oldId}_a${att.position}`;
+          const newKey = `${newId}_a${att.position}`;
+          newAttThumb = fileStorage.copyAttachmentFile(att.thumbnail, oldKey, newKey);
+          newAttFull  = fileStorage.copyAttachmentFile(att.attachment_full, oldKey, newKey);
+        }
+
         await client.query(
           `INSERT INTO note_attachments
              (note_id, position, thumbnail, attachment_full, attachment_type, storage_type, filename)
@@ -3268,6 +3281,160 @@ app.post("/api/quotes/bulk-duplicate", async (req, res) => {
     await client.query("ROLLBACK");
     console.error("Error in bulk-duplicate:", error);
     res.status(500).json({ error: "Failed to duplicate notes" });
+  } finally {
+    client.release();
+  }
+});
+
+// POST /api/quotes/bulk-split
+// For each selected note that has 2+ attachments:
+//   - Keep the original note with only its position-0 attachment.
+//   - For each extra attachment (positions 1, 2, …) create a new note that is an
+//     exact copy of the original (text, author, source, tags, etc.) but carries
+//     only that single attachment (at position 0).
+// Notes with 0 or 1 attachment are skipped silently.
+app.post("/api/quotes/bulk-split", async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const { filters, noteIds } = req.body;
+
+    let quoteIds;
+    if (noteIds && Array.isArray(noteIds) && noteIds.length > 0) {
+      quoteIds = noteIds.map(id => parseInt(id, 10));
+    } else {
+      const { query, params } = buildFilterQuery(filters);
+      const result = await client.query(`SELECT q.id ${query}`, params);
+      quoteIds = result.rows.map(r => r.id);
+    }
+
+    if (quoteIds.length === 0) {
+      await client.query("ROLLBACK");
+      return res.json({ splitCount: 0, newNotes: 0, message: "No notes match" });
+    }
+
+    let splitCount = 0; // original notes that were split
+    let newNotes   = 0; // total new notes created
+
+    for (const origId of quoteIds) {
+      // Fetch the original note row
+      const noteRes = await client.query(
+        `SELECT note_text, author_id, source_id, type, score, comment,
+                translation_group, note_type, note_date
+         FROM notes WHERE id = $1`,
+        [origId]
+      );
+      if (noteRes.rows.length === 0) continue;
+      const orig = noteRes.rows[0];
+
+      // Fetch all attachments ordered by position
+      const attRes = await client.query(
+        `SELECT * FROM note_attachments WHERE note_id = $1 ORDER BY position`,
+        [origId]
+      );
+      const atts = attRes.rows;
+      if (atts.length < 2) continue; // nothing to split
+
+      splitCount++;
+
+      // For each extra attachment create a new note
+      for (let i = 1; i < atts.length; i++) {
+        const att = atts[i];
+
+        // 1. Insert new note (no attachment columns yet — filled below)
+        const insRes = await client.query(
+          `INSERT INTO notes
+             (note_text, author_id, source_id, type, score, comment,
+              translation_group, note_type, note_date)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+           RETURNING id`,
+          [
+            orig.note_text, orig.author_id, orig.source_id, orig.type, orig.score,
+            orig.comment, orig.translation_group, orig.note_type, orig.note_date
+          ]
+        );
+        const newId = insRes.rows[0].id;
+
+        // 2. Copy the attachment file to a name based on newId.
+        //    Extra attachments may be named "{origId}_{pos}.jpg" (old convention)
+        //    or "{origId}_a{pos}.jpg" (new convention).  We try both.
+        //    The new note owns it at position 0, so target key is just newId.
+        let newAttThumb = att.thumbnail; // thumbnails are usually base64 — safe to share
+        let newAttFull  = fileStorage.copyAttachmentFile(att.attachment_full, `${origId}_a${att.position}`, String(newId));
+        if (newAttFull === att.attachment_full) {
+          // Key didn't match — try old "_pos" convention
+          newAttFull = fileStorage.copyAttachmentFile(att.attachment_full, `${origId}_${att.position}`, String(newId));
+        }
+        if (newAttFull === att.attachment_full) {
+          // Still no match — fall back to copying with the raw origId as key
+          newAttFull = fileStorage.copyAttachmentFile(att.attachment_full, String(origId), String(newId));
+        }
+
+        // 3. Update notes flat columns for the new note
+        await client.query(
+          `UPDATE notes SET thumbnail = $1, attachment_full = $2, attachment_type = $3 WHERE id = $4`,
+          [newAttThumb, newAttFull, att.attachment_type, newId]
+        );
+
+        // 4. Insert note_attachments row (position 0 for the new note)
+        await client.query(
+          `INSERT INTO note_attachments
+             (note_id, position, thumbnail, attachment_full, attachment_type, storage_type, filename)
+           VALUES ($1, 0, $2, $3, $4, $5, $6)`,
+          [newId, newAttThumb, newAttFull, att.attachment_type, att.storage_type, att.filename]
+        );
+
+        // 5. Copy tags from original
+        await client.query(
+          `INSERT INTO note_tags (note_id, tag_id)
+           SELECT $1, tag_id FROM note_tags WHERE note_id = $2
+           ON CONFLICT DO NOTHING`,
+          [newId, origId]
+        );
+
+        newNotes++;
+      }
+
+      // Remove the extra attachments (positions 1…) from the original note.
+      // Delete filesystem files for each one first.
+      for (let i = 1; i < atts.length; i++) {
+        const att = atts[i];
+        if (att.thumbnail)       fileStorage.deleteAttachment(att.thumbnail);
+        if (att.attachment_full) fileStorage.deleteAttachment(att.attachment_full);
+        await client.query(`DELETE FROM note_attachments WHERE id = $1`, [att.id]);
+      }
+
+      // Re-number the remaining attachments on the original (now just position 0)
+      await client.query(
+        `UPDATE note_attachments SET position = pos_rank - 1
+         FROM (SELECT id, ROW_NUMBER() OVER (ORDER BY position) AS pos_rank
+               FROM note_attachments WHERE note_id = $1) ranked
+         WHERE note_attachments.id = ranked.id`,
+        [origId]
+      );
+
+      // Sync the original note's flat columns with position 0 (unchanged but tidy)
+      const firstAtt = atts[0];
+      await client.query(
+        `UPDATE notes SET thumbnail = $1, attachment_full = $2, attachment_type = $3 WHERE id = $4`,
+        [firstAtt.thumbnail, firstAtt.attachment_full, firstAtt.attachment_type, origId]
+      );
+    }
+
+    await client.query("COMMIT");
+    res.json({
+      splitCount,
+      newNotes,
+      message: splitCount === 0
+        ? "No multi-attachment notes found to split"
+        : `Split ${splitCount} note${splitCount !== 1 ? 's' : ''} → created ${newNotes} new note${newNotes !== 1 ? 's' : ''}`
+    });
+
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Error in bulk-split:", error);
+    res.status(500).json({ error: "Failed to split notes" });
   } finally {
     client.release();
   }

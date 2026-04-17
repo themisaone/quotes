@@ -1086,7 +1086,7 @@ h2 {
   cursor: pointer;
   outline: none;
   flex-shrink: 0;
-  max-width: 120px;
+  max-width: 160px;
 }
 .modal-notetype-select option {
   background: var(--header-color);
@@ -3102,7 +3102,7 @@ body.selection-mode .quote-card::after {
   color: white;
   padding: var(--d-pad-xs) var(--d-pad-base);
   border-radius: 12px;
-  font-size: var(--d-font-xs);
+  font-size: var(--d-font-sm);
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;

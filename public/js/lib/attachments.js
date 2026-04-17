@@ -706,7 +706,7 @@ export async function downscaleAndMoveToDb(quoteId, imageUrl, filePath, modal, a
     }
     
     // Success!
-    btn.textContent = '✅ Moved to DB!';
+    btn.textContent = '✅ Downscaled!';
     btn.style.background = '#10b981';
     
     // Close modal after 1 second
