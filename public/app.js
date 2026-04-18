@@ -1609,7 +1609,8 @@ function openAddModal() {
     elements, 
     quillEditor,
     updateFieldVisibility,
-    updateModalLabels
+    updateModalLabels,
+    globalSettings
   );
   
   // Update app state

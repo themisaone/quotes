@@ -16,6 +16,15 @@ const {
 } = require("./tagHelpers");
 require("dotenv").config();
 
+// ── Note text cleanup: strip Evernote artefacts, normalise empty content to '' ──
+const _EN_MEDIA_RE = /<en-media[^>]*\/?>/gi;
+const _EMPTY_HTML_RE = /^(\s|<br\s*\/?>|<p[^>]*>\s*(<br\s*\/?>|&nbsp;)?\s*<\/p>)*$/i;
+function sanitizeNoteText(text) {
+  if (!text) return '';
+  const stripped = text.replace(_EN_MEDIA_RE, '');
+  return _EMPTY_HTML_RE.test(stripped) ? '' : stripped;
+}
+
 const app = express();
 const PORT = process.env.PORT || 4000;
 
@@ -1267,8 +1276,7 @@ app.get("/api/quotes/count", async (req, res) => {
 
     // Text search with AND/OR operators
     if (quote) {
-      const { condition, newParamCounter } = buildTextSearchCondition(quote, 'q.note_text', paramCounter, params);
-      query += condition;
+      const { condition, newParamCounter } = buildTextSearchCondition(quote, ['q.note_text', 'q.note_title'], paramCounter, params);      query += condition;
       paramCounter = newParamCounter;
     }
 
@@ -1556,7 +1564,7 @@ app.get("/api/quotes", async (req, res) => {
 
     // Text search with AND/OR operators — searches note_text and comment
     if (quote) {
-      const { condition, newParamCounter } = buildTextSearchCondition(quote, ['q.note_text', 'q.comment'], paramCounter, params);
+      const { condition, newParamCounter } = buildTextSearchCondition(quote, ['q.note_text', 'q.note_title', 'q.comment'], paramCounter, params);
       query += condition;
       paramCounter = newParamCounter;
     }
@@ -2013,7 +2021,7 @@ app.post("/api/quotes", async (req, res) => {
       `INSERT INTO notes (note_text, note_title, author_id, source_id, comment, type, score, note_type, note_date, translation_group) 
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
        RETURNING *`,
-      [note_text, note_title || null, authorId, sourceId, comment, sourceType, score, note_type, note_date, translation_group],
+      [sanitizeNoteText(note_text), note_title || null, authorId, sourceId, comment, sourceType, score, note_type, note_date, translation_group],
     );
 
     const quoteId = result.rows[0].id;
@@ -2156,7 +2164,7 @@ app.put("/api/quotes/:id", async (req, res) => {
 
     if (note_text !== undefined) {
       updateFields.push(`note_text = $${paramCounter}`);
-      params.push(note_text);
+      params.push(sanitizeNoteText(note_text));
       paramCounter++;
     }
 
@@ -2910,7 +2918,7 @@ function buildFilterQuery(filters) {
   
   // Search query
   if (filters.search) {
-    query += ` AND (q.note_text ILIKE $${paramCounter} OR q.comment ILIKE $${paramCounter})`;
+    query += ` AND (q.note_text ILIKE $${paramCounter} OR q.note_title ILIKE $${paramCounter} OR q.comment ILIKE $${paramCounter})`;
     params.push(`%${filters.search}%`);
     paramCounter++;
   }

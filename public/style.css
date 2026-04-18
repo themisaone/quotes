@@ -6250,6 +6250,16 @@ body.selection-mode .quote-card::after {
   gap: 0.4rem;
 }
 
+/* Default radio — small, with a star-like title tooltip */
+.subtype-default {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  cursor: pointer;
+  accent-color: var(--accent);
+  title: "Set as default";
+}
+
 .subtype-item input[type="text"] {
   padding: 0.2rem 0.35rem;
   font-size: 0.8rem;

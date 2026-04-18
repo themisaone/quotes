@@ -303,6 +303,8 @@ function applySettingsToUI() {
     { id: 'displayImageQuotesLong', setting: 'displayImageQuotesLong' },
     { id: 'showLongQuotesExpanded', setting: 'showLongQuotesExpanded' },
     { id: 'displayScoreInCards', setting: 'displayScoreInCards' },
+    { id: 'stretchImagesWhenEmpty', setting: 'stretchImagesWhenEmpty' },
+    { id: 'displayEmptyTitleInCard', setting: 'displayEmptyTitleInCard' },
     { id: 'downscaleQuoteImages', setting: 'downscaleQuoteImages' },
     { id: 'enableWordWrap', setting: 'enableWordWrap' },
     { id: 'hideEncryptedNotes', setting: 'hideEncryptedNotes' },
@@ -576,8 +578,9 @@ export function renderNoteTypesList(rebuildMenuFn) {
 
   const behaviorLabel = (b) => ({ quote: '📖 Quote', training: '🏋️ Training', generic: '📄 Generic' }[b] || b);
 
-  const subTypeRowHtml = (sub, ntIdx, sIdx, canDelete) => `
+  const subTypeRowHtml = (sub, ntIdx, sIdx, canDelete, isDefault) => `
     <div class="subtype-item" data-nt="${ntIdx}" data-si="${sIdx}">
+      <input type="radio" class="subtype-default" name="subtype-default-${ntIdx}" title="Set as default" ${isDefault ? 'checked' : ''} />
       <input type="text" class="subtype-icon"  value="${sub.icon}"  placeholder="📝" maxlength="2" />
       <input type="text" class="subtype-value" value="${sub.value}" placeholder="VALUE" style="width:90px;text-transform:uppercase;" />
       <input type="text" class="subtype-label" value="${sub.label}" placeholder="Label" />
@@ -596,7 +599,7 @@ export function renderNoteTypesList(rebuildMenuFn) {
           <button type="button" class="btn-add-subtype btn-icon-small" data-nt="${index}" title="Add sub-type">➕</button>
         </div>
         <div class="subtype-list" data-nt="${index}">
-          ${subs.map((s, si) => subTypeRowHtml(s, index, si, subs.length > 1)).join('')}
+          ${subs.map((s, si) => subTypeRowHtml(s, index, si, subs.length > 1, !!s.isDefault)).join('')}
         </div>
       </div>` : '';
 
@@ -658,15 +661,17 @@ export function renderNoteTypesList(rebuildMenuFn) {
     row.querySelectorAll('.subtype-item').forEach((sRow) => {
       const ntIdx = parseInt(sRow.dataset.nt);
       const siIdx = parseInt(sRow.dataset.si);
-      const iconI  = sRow.querySelector('.subtype-icon');
-      const valueI = sRow.querySelector('.subtype-value');
-      const labelI = sRow.querySelector('.subtype-label');
-      const delBtn = sRow.querySelector('.btn-delete-subtype');
+      const iconI    = sRow.querySelector('.subtype-icon');
+      const valueI   = sRow.querySelector('.subtype-value');
+      const labelI   = sRow.querySelector('.subtype-label');
+      const defaultR = sRow.querySelector('.subtype-default');
+      const delBtn   = sRow.querySelector('.btn-delete-subtype');
 
       const updateSub = () => {
         const current = getNoteTypesSettings();
         if (!current[ntIdx].subTypes) current[ntIdx].subTypes = [];
         current[ntIdx].subTypes[siIdx] = {
+          ...current[ntIdx].subTypes[siIdx],
           icon:  iconI.value  || '📝',
           value: (valueI.value || 'CUSTOM').toUpperCase().replace(/[^A-Z0-9/\-_]/g, ''),
           label: labelI.value || 'Custom'
@@ -676,6 +681,19 @@ export function renderNoteTypesList(rebuildMenuFn) {
       iconI.addEventListener('change', updateSub);
       valueI.addEventListener('change', updateSub);
       labelI.addEventListener('change', updateSub);
+
+      if (defaultR) {
+        defaultR.addEventListener('change', () => {
+          if (!defaultR.checked) return;
+          const current = getNoteTypesSettings();
+          if (!current[ntIdx].subTypes) return;
+          current[ntIdx].subTypes = current[ntIdx].subTypes.map((s, i) => ({
+            ...s,
+            isDefault: i === siIdx
+          }));
+          saveNoteTypesAndRefresh(current, rebuildMenuFn);
+        });
+      }
 
       if (delBtn) {
         delBtn.addEventListener('click', async () => {
@@ -1289,7 +1307,27 @@ export function initializeSettings(callbacks = {}) {
       if (loadQuotes) loadQuotes();
     });
   }
-  
+
+  // Stretch images when text is empty
+  const stretchImagesWhenEmptyCheckbox = getElementByIdSafe('stretchImagesWhenEmpty');
+  if (stretchImagesWhenEmptyCheckbox) {
+    stretchImagesWhenEmptyCheckbox.checked = globalSettings?.stretchImagesWhenEmpty === true;
+    stretchImagesWhenEmptyCheckbox.addEventListener('change', (e) => {
+      updateSetting('stretchImagesWhenEmpty', e.target.checked);
+      if (loadQuotes) loadQuotes();
+    });
+  }
+
+  // Display empty title in card
+  const displayEmptyTitleInCardCheckbox = getElementByIdSafe('displayEmptyTitleInCard');
+  if (displayEmptyTitleInCardCheckbox) {
+    displayEmptyTitleInCardCheckbox.checked = globalSettings?.displayEmptyTitleInCard === true;
+    displayEmptyTitleInCardCheckbox.addEventListener('change', (e) => {
+      updateSetting('displayEmptyTitleInCard', e.target.checked);
+      if (loadQuotes) loadQuotes();
+    });
+  }
+
   // Word Wrap setting
   const enableWordWrapCheckbox = getElementByIdSafe('enableWordWrap');
   const wordWrapCharsInput = getElementByIdSafe('wordWrapChars');

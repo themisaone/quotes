@@ -369,11 +369,14 @@ export function createQuoteCard(note, currentNoteTypeFilter, getTrainingTypes, g
                     ${tags ? `<div class="quote-tags-inline">${tags}</div>` : ''}
                 </div>`;
 
-  const isTextEmpty = !note.note_text || note.note_text === '';
-  const isImageOnly = noteType === 'tegneserie' && isTextEmpty;
+  const isTextEmpty = !note.note_text || note.note_text === ''
+    || /^(\s|<br\s*\/?>|<p[^>]*>\s*(<br\s*\/?>|&nbsp;)?\s*<\/p>)*$/i.test(note.note_text);
+  const stretchEnabled = globalSettings?.stretchImagesWhenEmpty === true;
+  const hasMultipleAttachments = note.attachments && note.attachments.length > 1;
+  const isImageOnly = isTextEmpty && stretchEnabled && !hasMultipleAttachments;
 
-  // For image-only tegneserie cards build a full-width image directly (no constrained thumb wrapper)
-  const imageOnlySection = (() => {
+  // For image-only cards: full-width image directly (no constrained thumb wrapper)
+  const imageOnlySection = isImageOnly ? (() => {
     const att = note.attachments && note.attachments.length > 0 ? note.attachments[0] : null;
     const url  = att ? (att.attachment_full || att.thumbnail) : (note.attachment_full || note.thumbnail);
     const thumb = att ? resolveAttachmentUrl(att.thumbnail || att.attachment_full) : (imageUrl || imageFullUrl);
@@ -382,7 +385,7 @@ export function createQuoteCard(note, currentNoteTypeFilter, getTrainingTypes, g
     return `<div class="quote-top-section image-only">
       <img class="tegneserie-full-img" src="${thumb}" alt="${escapeHtml(note.note_title || '')}" onclick="${onclick}">
     </div>`;
-  })();
+  })() : null;
 
   const topSection = (isImageOnly && imageOnlySection)
     ? imageOnlySection
@@ -414,7 +417,8 @@ export function createQuoteCard(note, currentNoteTypeFilter, getTrainingTypes, g
     </div>`;
   })();
 
-  const titleHtml = (note.note_title && note.note_title !== 'No title')
+  const showNoTitle = globalSettings?.displayEmptyTitleInCard === true && noteType !== 'training';
+  const titleHtml = (note.note_title && (note.note_title !== 'No title' || showNoTitle))
     ? `<div class="card-note-title">${escapeHtml(note.note_title)}</div>`
     : '';
 

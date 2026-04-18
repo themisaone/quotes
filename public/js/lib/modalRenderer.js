@@ -305,7 +305,7 @@ export function hideMetadata(metadataElement) {
  * @param {Function} updateModalLabels - Function to update modal labels
  * @returns {Object} - State object for the modal
  */
-export function setupAddModal(noteType, currentNoteTypeFilter, elements, quillEditor, updateFieldVisibility, updateModalLabels) {
+export function setupAddModal(noteType, currentNoteTypeFilter, elements, quillEditor, updateFieldVisibility, updateModalLabels, globalSettings) {
   console.log('🎨 ModalRenderer - Setting up ADD modal for:', noteType);
   
   const { modalTitle, noteTypeSelect } = elements;
@@ -335,13 +335,32 @@ export function setupAddModal(noteType, currentNoteTypeFilter, elements, quillEd
   } else if (noteType === 'training') {
     setDefaultTrainingFields(elements);
   }
-  
+
   // Clear type-specific fields
   clearTypeSpecificFields(elements);
   
-  // Update field visibility
+  // Update field visibility (populates genericSubType dropdown)
   if (updateFieldVisibility) {
     updateFieldVisibility();
+  }
+
+  // Apply default sub-type from settings — must run AFTER updateFieldVisibility
+  // so the genericSubType dropdown is already populated before we set the value
+  if (globalSettings?.noteTypes) {
+    const ntConfig = globalSettings.noteTypes.find(nt => nt.value === noteType);
+    const defaultSub = ntConfig?.subTypes?.find(s => s.isDefault);
+    if (defaultSub) {
+      const behavior = ntConfig.behavior || 'generic';
+      const { sourceTypeSelect, trainingTypeSelect } = elements;
+      const genericSubTypeSelect = document.getElementById('genericSubType');
+      if (behavior === 'quote' && sourceTypeSelect) {
+        sourceTypeSelect.value = defaultSub.value;
+      } else if (behavior === 'training' && trainingTypeSelect) {
+        trainingTypeSelect.value = defaultSub.value;
+      } else if (genericSubTypeSelect) {
+        genericSubTypeSelect.value = defaultSub.value;
+      }
+    }
   }
   
   // Hide metadata and delete button
