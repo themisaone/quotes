@@ -1984,8 +1984,8 @@ app.post("/api/quotes", async (req, res) => {
       storageThresholdMB = 1, // From frontend settings
     } = req.body;
     
-    if (!note_text) {
-      return res.status(400).json({ error: "Quote text is required" });
+    if (!note_text && !note_title && !attachment_full && !thumbnail) {
+      return res.status(400).json({ error: "Please provide at least some text, a title, or an attachment." });
     }
 
     let authorId = null;
