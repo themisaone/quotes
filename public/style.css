@@ -7155,3 +7155,161 @@ body.selection-mode .quote-card::after {
   background: var(--surface);
 }
 
+/* ─────────────────────────────────────────────────────────────────────────
+   Training Calendar (left column of list-pane view when enabled)
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Drop the flat-list padding when the calendar replaces the list */
+.lp-list.lp-list-calendar { padding: 0; }
+
+.tc-calendar {
+  display: flex;
+  flex-direction: column;
+  padding: 0.75rem;
+  gap: 0.6rem;
+}
+
+.tc-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 0.4rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.tc-title {
+  text-align: center;
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--text-primary);
+  text-transform: capitalize;
+}
+
+.tc-nav-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  border-radius: 6px;
+  padding: 0.25rem 0.55rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  line-height: 1;
+  transition: background 0.15s ease;
+}
+.tc-nav-btn:hover { background: var(--surface-hover, rgba(127,127,127,0.12)); }
+.tc-today-btn   { font-weight: 600; }
+
+.tc-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.7rem;
+  font-size: 0.78rem;
+  color: var(--text-secondary, #888);
+  padding: 0.15rem 0.1rem 0.4rem;
+  border-bottom: 1px dashed var(--border);
+}
+.tc-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.tc-legend-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+.tc-legend-empty { font-style: italic; }
+
+.tc-loading {
+  padding: 1.5rem 0.5rem;
+  text-align: center;
+  color: var(--text-secondary, #888);
+  font-size: 0.9rem;
+}
+
+.tc-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.tc-weekday {
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary, #888);
+  padding: 0.2rem 0;
+  text-transform: uppercase;
+}
+
+.tc-day {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 3px 5px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.78rem;
+  color: var(--text-primary);
+  background: transparent;
+  user-select: none;
+  overflow: hidden;
+}
+.tc-day-empty {
+  border-color: transparent;
+  background: transparent;
+}
+.tc-day-has-training {
+  cursor: pointer;
+  transition: background-color 0.1s ease, border-color 0.1s ease;
+}
+.tc-day-has-training:hover {
+  background: var(--surface-hover, rgba(127, 127, 127, 0.12));
+  border-color: var(--text-secondary, #888);
+}
+.tc-day-today {
+  outline: 2px solid var(--accent, #3b82f6);
+  outline-offset: -2px;
+}
+
+.tc-day-num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Cluster of small colored dots showing which sub-types trained that day */
+.tc-day-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  align-items: flex-end;
+  width: 100%;
+  padding-bottom: 1px;
+}
+.tc-day-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
+}
+
+/* ── Subtype color picker inside settings ─────────────────────────────── */
+.subtype-item .subtype-color {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+

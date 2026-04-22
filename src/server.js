@@ -1788,6 +1788,20 @@ app.get("/api/quotes", async (req, res) => {
       paramCounter++;
     }
 
+    // dateFrom / dateTo — direct filtering on the note_date column (inclusive
+    // on both ends).  Used by the Training Calendar, which needs to catch old
+    // trainings that never got year/month tags.  Accepts 'YYYY-MM-DD' strings.
+    if (req.query.dateFrom) {
+      query += ` AND q.note_date >= $${paramCounter}`;
+      params.push(req.query.dateFrom);
+      paramCounter++;
+    }
+    if (req.query.dateTo) {
+      query += ` AND q.note_date <= $${paramCounter}`;
+      params.push(req.query.dateTo);
+      paramCounter++;
+    }
+
     // Sort by note_date for training notes (hierarchical by year/month tags, then date), otherwise by updated_at
     if (note_type === 'training') {
       // Hierarchical sorting for training notes using LEFT JOIN to get tags

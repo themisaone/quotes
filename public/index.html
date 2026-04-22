@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Note Archive</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
-    <link rel="stylesheet" href="style.css?v=202604010001" />
+    <link rel="stylesheet" href="style.css?v=202604110002" />
     <!-- Font Awesome for dice icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <!-- Quill Editor -->
@@ -1211,6 +1211,13 @@
               </div>
               <div class="setting-item">
                 <label class="setting-label">
+                  <input type="checkbox" id="displayTrainingCalendar" />
+                  <span>Display Training Calendar</span>
+                </label>
+                <p class="setting-description">In the Training list/pane view, replace the flat list of trainings with a monthly calendar. Days with trainings are colored per sub-type (configure each sub-type's color in the Note Types section above). Days with multiple sub-types show vertical stripes.</p>
+              </div>
+              <div class="setting-item">
+                <label class="setting-label">
                   <input type="checkbox" id="displayScoreInCards" />
                   <span>Display Score in Note Cards</span>
                 </label>
@@ -2091,6 +2098,6 @@ Quote number three..."
     <!-- Quill Editor Script -->
     <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
     <script type="module" src="js/lib/confirmDialog.js"></script>
-    <script type="module" src="app.js?v=20260318v"></script>
+    <script type="module" src="app.js?v=20260411d"></script>
   </body>
 </html>

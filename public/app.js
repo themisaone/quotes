@@ -1476,6 +1476,19 @@ function updateBulkButtonVisibility() {
 // Wrapper for filterManager library
 function updateSourcesFilterVisibility() {
   updateSourcesFilterVisibilityLib2(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes);
+
+  // When the Training Calendar is active, the sub-type filter and pagination
+  // don't apply (the calendar shows one full month colored per sub-type).
+  // Hide them; the Year/Month filters stay visible and drive the calendar.
+  const calOn =
+    currentNoteTypeFilter === 'training' &&
+    getGlobalSettings()?.displayTrainingCalendar === true;
+
+  const trainingTypesFilter = getElementByIdSafe('trainingTypesFilterContainer');
+  if (trainingTypesFilter && calOn) trainingTypesFilter.style.display = 'none';
+
+  const paginationContainer = getElementByIdSafe('paginationControls');
+  if (paginationContainer && calOn) paginationContainer.innerHTML = '';
 }
 
 // Show/hide and label the view-mode toggle button based on current note type.
@@ -2006,9 +2019,23 @@ function displayQuotes(quotes) {
     currentViewMode = 'cards';
   }
 
+  // Re-apply sources-filter visibility — needed when the Training Calendar
+  // setting is toggled on/off so the sub-type filter and pagination hide
+  // accordingly without requiring a note-type switch.
+  updateSourcesFilterVisibility();
+
   quoteCount.textContent = `(${quotes.length})`;
 
-  if (quotes.length === 0) {
+  // In calendar mode we always want to render the calendar, even if the main
+  // list fetch returned zero notes for the current year/month filter.  The
+  // calendar does its own month-by-month fetch and remains useful for
+  // navigating around.
+  const calendarActive =
+    currentNoteTypeFilter === 'training' &&
+    getGlobalSettings()?.displayTrainingCalendar === true &&
+    currentViewMode === 'list-pane';
+
+  if (quotes.length === 0 && !calendarActive) {
     // Show "empty" in quotesList, hide lpWrapper
     quotesList.style.removeProperty('display');
     if (lpWrapper) lpWrapper.style.display = 'none';
@@ -3415,6 +3442,15 @@ quoteImagePreview.addEventListener('click', (e) => {
 function updatePaginationControls() {
   const paginationContainer = getElementByIdSafe("paginationControls");
   if (!paginationContainer) return;
+
+  // Calendar mode owns month navigation — pagination is meaningless.
+  if (
+    currentNoteTypeFilter === 'training' &&
+    getGlobalSettings()?.displayTrainingCalendar === true
+  ) {
+    paginationContainer.innerHTML = '';
+    return;
+  }
 
   // Use filteredQuotes for pagination calculations
   const qpp = getQuotesPerPage();

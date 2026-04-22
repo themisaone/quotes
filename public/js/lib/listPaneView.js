@@ -18,6 +18,7 @@
  */
 
 import { escapeHtml, resolveAttachmentUrl } from './utils.js';
+import { renderTrainingCalendar } from './trainingCalendar.js';
 
 // ─────────────────────────────────────────────────────────────
 // Internal state (reset on every renderListPaneView call)
@@ -46,6 +47,44 @@ function formatTrainingDate(dateString) {
   const dd   = String(d.getDate()).padStart(2, '0');
   const day  = d.toLocaleDateString('en-US', { weekday: 'short' });
   return `${yyyy}.${mm}.${dd} ${day}`;
+}
+
+/**
+ * Silently align the Training Year/Month filter selects with the calendar's
+ * current view.  Adds the year option if it isn't in the dropdown yet (the
+ * dropdown is lazy-populated from /api/quotes/training-years and may not
+ * contain future or empty-data years).  Enables the month filter since a
+ * concrete year is now selected.
+ *
+ * Does NOT dispatch 'change' events — callers must only use this to reflect
+ * external state changes, not to trigger a reload.
+ */
+function syncFilterSelects(year, month) {
+  const yearSelect  = document.getElementById('trainingYearFilter');
+  const monthSelect = document.getElementById('trainingMonthFilter');
+  if (yearSelect) {
+    const yearStr = String(year);
+    let opt = Array.from(yearSelect.options).find(o => o.value === yearStr);
+    if (!opt) {
+      opt = document.createElement('option');
+      opt.value = yearStr;
+      opt.textContent = yearStr;
+      // Insert after the "All Years" (empty value) option, keeping newest-first.
+      const firstReal = Array.from(yearSelect.options).find(o => o.value !== '');
+      if (firstReal && parseInt(firstReal.value, 10) < year) {
+        yearSelect.insertBefore(opt, firstReal);
+      } else {
+        yearSelect.appendChild(opt);
+      }
+    }
+    yearSelect.value = yearStr;
+    yearSelect.classList.toggle('filter-active', yearSelect.value !== '');
+  }
+  if (monthSelect) {
+    monthSelect.disabled = false;
+    monthSelect.value = String(month);
+    monthSelect.classList.toggle('filter-active', monthSelect.value !== '');
+  }
 }
 
 function getTrainingLabel(sourceType, getTrainingTypes) {
@@ -267,6 +306,77 @@ export function renderListPaneView(container, notes, opts) {
       <span class="lp-list-header-type">${typeMeta.icon} ${typeMeta.label}</span>
       <span class="lp-list-header-count">${notes.length} notes</span>
     </div>`;
+
+  // ── Calendar mode for training (opt-in via global setting) ──────────────
+  // When enabled, replace the flat training list on the left with a monthly
+  // calendar.  The right pane keeps working exactly as before — the calendar
+  // just becomes an alternative navigation surface.
+  const useCalendar =
+    opts.currentNoteTypeFilter === 'training' &&
+    opts.globalSettings?.displayTrainingCalendar === true;
+
+  if (useCalendar) {
+    container.innerHTML = `
+      <div class="lp-layout">
+        <div class="lp-list lp-list-calendar" id="lpList"></div>
+        <div class="lp-pane" id="lpPane"></div>
+      </div>`;
+    const calHost = container.querySelector('#lpList');
+    const pane    = container.querySelector('#lpPane');
+
+    // Render empty pane first; the calendar will notify us once it has data.
+    renderPane(pane, null, 0);
+
+    // Read the current Year / Month filter values so the calendar opens on the
+    // month the user has selected in the filter bar.  When the user has
+    // "All years" (year = '') selected — either directly or via the Clear
+    // button — the calendar snaps to TODAY.  The filter bar is treated as the
+    // single source of truth for which month to display; initialNoteId is only
+    // used to pre-select a note inside the already-chosen month.
+    const yearSelect  = document.getElementById('trainingYearFilter');
+    const monthSelect = document.getElementById('trainingMonthFilter');
+    const yearFromFilter  = yearSelect  ? parseInt(yearSelect.value,  10) : NaN;
+    const monthFromFilter = monthSelect ? parseInt(monthSelect.value, 10) : NaN;
+
+    let initialYear, initialMonth;
+    if (Number.isFinite(yearFromFilter) && Number.isFinite(monthFromFilter)) {
+      initialYear  = yearFromFilter;
+      initialMonth = monthFromFilter;
+    } else if (Number.isFinite(yearFromFilter)) {
+      initialYear  = yearFromFilter;
+      initialMonth = 1; // Year-only selected → January
+    } else {
+      // "All years" → today
+      const now = new Date();
+      initialYear  = now.getFullYear();
+      initialMonth = now.getMonth() + 1;
+    }
+
+    renderTrainingCalendar(calHost, {
+      getTrainingTypes: opts.getTrainingTypes,
+      // Only pre-select a note when we have one — never let it override the
+      // month chosen above.
+      initialNoteId:    opts.initialNoteId ?? null,
+      initialYear,
+      initialMonth,
+      // When a day is clicked the calendar hands us the full month's notes.
+      // Swap _notes to that list so Prev/Next in the pane walk the month.
+      onSelectNote: (monthNotes, idx) => {
+        _notes = monthNotes;
+        _selectedIndex = idx;
+        renderPane(pane, monthNotes[idx] || null, idx);
+      },
+      // Keep the Year/Month filter selects visually synced when the user
+      // navigates via the calendar's own prev/next/today buttons.  We update
+      // .value directly and do NOT dispatch 'change' — the calendar already
+      // refetched the new month, so triggering a reload would be redundant
+      // and create a visual flicker.
+      onMonthChange: (year, month) => {
+        syncFilterSelects(year, month);
+      },
+    });
+    return;
+  }
 
   // Build skeleton
   container.innerHTML = `

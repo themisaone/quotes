@@ -305,6 +305,7 @@ function applySettingsToUI() {
     { id: 'displayScoreInCards', setting: 'displayScoreInCards' },
     { id: 'stretchImagesWhenEmpty', setting: 'stretchImagesWhenEmpty' },
     { id: 'displayEmptyTitleInCard', setting: 'displayEmptyTitleInCard' },
+    { id: 'displayTrainingCalendar', setting: 'displayTrainingCalendar' },
     { id: 'downscaleQuoteImages', setting: 'downscaleQuoteImages' },
     { id: 'enableWordWrap', setting: 'enableWordWrap' },
     { id: 'hideEncryptedNotes', setting: 'hideEncryptedNotes' },
@@ -584,6 +585,7 @@ export function renderNoteTypesList(rebuildMenuFn) {
       <input type="text" class="subtype-icon"  value="${sub.icon}"  placeholder="📝" maxlength="2" />
       <input type="text" class="subtype-value" value="${sub.value}" placeholder="VALUE" style="width:90px;text-transform:uppercase;" />
       <input type="text" class="subtype-label" value="${sub.label}" placeholder="Label" />
+      <input type="color" class="subtype-color" value="${sub.color || '#4f46e5'}" title="Color (used by the Training calendar)" />
       ${canDelete ? `<button type="button" class="btn-icon-small btn-delete-subtype" title="Delete subtype">🗑️</button>` : ''}
     </div>`;
 
@@ -664,6 +666,7 @@ export function renderNoteTypesList(rebuildMenuFn) {
       const iconI    = sRow.querySelector('.subtype-icon');
       const valueI   = sRow.querySelector('.subtype-value');
       const labelI   = sRow.querySelector('.subtype-label');
+      const colorI   = sRow.querySelector('.subtype-color');
       const defaultR = sRow.querySelector('.subtype-default');
       const delBtn   = sRow.querySelector('.btn-delete-subtype');
 
@@ -674,13 +677,15 @@ export function renderNoteTypesList(rebuildMenuFn) {
           ...current[ntIdx].subTypes[siIdx],
           icon:  iconI.value  || '📝',
           value: (valueI.value || 'CUSTOM').toUpperCase().replace(/[^A-Z0-9/\-_]/g, ''),
-          label: labelI.value || 'Custom'
+          label: labelI.value || 'Custom',
+          color: colorI?.value || current[ntIdx].subTypes[siIdx].color || '#4f46e5'
         };
         saveNoteTypesAndRefresh(current, rebuildMenuFn);
       };
       iconI.addEventListener('change', updateSub);
       valueI.addEventListener('change', updateSub);
       labelI.addEventListener('change', updateSub);
+      if (colorI) colorI.addEventListener('change', updateSub);
 
       if (defaultR) {
         defaultR.addEventListener('change', () => {
@@ -1324,6 +1329,16 @@ export function initializeSettings(callbacks = {}) {
     displayEmptyTitleInCardCheckbox.checked = globalSettings?.displayEmptyTitleInCard === true;
     displayEmptyTitleInCardCheckbox.addEventListener('change', (e) => {
       updateSetting('displayEmptyTitleInCard', e.target.checked);
+      if (loadQuotes) loadQuotes();
+    });
+  }
+
+  // Display training calendar (replaces the flat training list in list-pane view)
+  const displayTrainingCalendarCheckbox = getElementByIdSafe('displayTrainingCalendar');
+  if (displayTrainingCalendarCheckbox) {
+    displayTrainingCalendarCheckbox.checked = globalSettings?.displayTrainingCalendar === true;
+    displayTrainingCalendarCheckbox.addEventListener('change', (e) => {
+      updateSetting('displayTrainingCalendar', e.target.checked);
       if (loadQuotes) loadQuotes();
     });
   }
