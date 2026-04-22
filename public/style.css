@@ -577,6 +577,14 @@ header h1 {
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
+/* Theme the open dropdown list (native <option> elements) to match the
+ * surrounding surface — otherwise it falls back to the OS default which on
+ * most platforms is stark white even inside a dark-themed app. */
+.training-date-select option {
+  background: var(--surface, var(--input-bg));
+  color: var(--text-primary);
+}
+
 .type-filter-toggle {
   display: flex;
   align-items: center;
@@ -6822,7 +6830,7 @@ body.selection-mode .quote-card::after {
 /* Outer wrapper — two independent cards side by side */
 .lp-layout {
   display: grid;
-  grid-template-columns: 540px 1fr;
+  grid-template-columns: 1fr 2fr;
   gap: 1rem;
   align-items: stretch;
 }
@@ -6853,6 +6861,65 @@ body.selection-mode .quote-card::after {
 .lp-list-header-count {
   font-size: 0.8rem;
   color: var(--text-secondary);
+}
+
+/* Segmented toggle between Calendar / List sub-views (training only). */
+.lp-list-header-toggle {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface, transparent);
+}
+.lp-toggle-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 0.25rem 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  line-height: 1;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.lp-toggle-btn + .lp-toggle-btn { border-left: 1px solid var(--border); }
+.lp-toggle-btn:hover:not(.active) { background: var(--surface-hover, rgba(127,127,127,0.12)); }
+.lp-toggle-btn.active {
+  background: var(--link-color, #4f46e5);
+  color: #fff;
+}
+
+/* Host the training calendar is rendered into when list-pane is showing
+ * training in calendar sub-mode.  Just a pass-through wrapper — the calendar
+ * component (.tc-calendar) supplies its own layout and padding. */
+.lp-calendar-host {
+  display: block;
+}
+
+/* Sub-header row inside the list-pane header where the Year/Month filter
+ * containers (moved out of the global filter bar) are parked when the user
+ * is in Training → List sub-mode.  Compact two-column layout so the labels
+ * and selects line up neatly. */
+.lp-list-header-dates {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+  padding: 0.35rem 0.9rem 0.65rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+}
+.lp-list-header-dates .search-item {
+  flex: 1 1 auto;
+  margin: 0;
+  min-width: 0;
+}
+.lp-list-header-dates .search-item label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.2rem;
+}
+.lp-list-header-dates .search-item select {
+  width: 100%;
 }
 
 .lp-row {
@@ -7035,7 +7102,7 @@ body.selection-mode .quote-card::after {
 /* List-pane: narrower list column on medium screens */
 @media (min-width: 768px) and (max-width: 1100px) {
   .lp-layout {
-    grid-template-columns: 300px 1fr;
+    grid-template-columns: 1fr 1fr;
   }
 }
 
@@ -7170,20 +7237,55 @@ body.selection-mode .quote-card::after {
 }
 
 .tc-header {
-  display: grid;
-  grid-template-columns: auto 1fr auto auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   align-items: center;
   gap: 0.4rem;
   padding-bottom: 0.35rem;
   border-bottom: 1px solid var(--border);
 }
 
-.tc-title {
-  text-align: center;
+/* The Today button gets pushed to the far right so it doesn't visually
+ * intrude on the month-stepper grouping on its left. */
+.tc-header .tc-today-btn { margin-left: auto; }
+
+.tc-title-select {
+  /* Override the global `select { width: 100%; }` rule (line ~1548) which
+   * would otherwise stretch each select to fill the flex row, forcing the
+   * header to wrap onto multiple lines. */
+  width: auto;
+  flex: 0 0 auto;
+  font: inherit;
   font-weight: 700;
-  font-size: 1.05rem;
   color: var(--text-primary);
-  text-transform: capitalize;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 0.15rem 0.35rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.tc-title-select:hover,
+.tc-title-select:focus {
+  border-color: var(--border);
+  background: var(--surface-hover, rgba(127,127,127,0.08));
+  outline: none;
+}
+/* The dropdown list that opens when a <select> is clicked is rendered using
+ * the <option> element's own background/colour — browsers don't inherit
+ * from the <select>.  Force it to match the surrounding theme so the open
+ * dropdown isn't a stark white rectangle on dark backgrounds. */
+.tc-title-select option {
+  background: var(--surface, #1f2937);
+  color: var(--text-primary, #e5e7eb);
+}
+.tc-title-month { min-width: 6.5rem; }
+.tc-title-year  {
+  min-width: 4.5rem;
+  /* Visually separate the Year "jumper" from the month-stepper trio
+   * (◀ Month ▶) to its left. */
+  margin-left: 0.6rem;
 }
 
 .tc-nav-btn {
@@ -7206,8 +7308,10 @@ body.selection-mode .quote-card::after {
   gap: 0.35rem 0.7rem;
   font-size: 0.78rem;
   color: var(--text-secondary, #888);
-  padding: 0.15rem 0.1rem 0.4rem;
-  border-bottom: 1px dashed var(--border);
+  /* Legend now sits below the grid — flip the divider to the top edge so
+   * it separates the legend from the grid above rather than the header. */
+  padding: 0.5rem 0.1rem 0.15rem;
+  border-top: 1px dashed var(--border);
 }
 .tc-legend-item {
   display: inline-flex;
@@ -7284,21 +7388,38 @@ body.selection-mode .quote-card::after {
 }
 
 /* Cluster of small colored dots showing which sub-types trained that day */
-.tc-day-dots {
+/* Icons row — one glyph per distinct sub-type on the day.  Wraps onto
+ * multiple lines if a day has many sub-types.  The parent .tc-day uses
+ * justify-content: space-between so the day-number sits at the top and the
+ * icons settle at the bottom of the cell. */
+.tc-day-icons {
   display: flex;
   flex-wrap: wrap;
   gap: 2px;
-  align-items: flex-end;
+  justify-content: flex-start;
+  align-items: center;
   width: 100%;
-  padding-bottom: 1px;
+  line-height: 1;
 }
-.tc-day-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
+.tc-day-icon {
+  font-size: 1.1rem;
   flex-shrink: 0;
+  /* Emoji glyphs render slightly inconsistently across platforms — a touch
+   * of letter-spacing keeps adjacent glyphs from visually merging. */
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  margin-left: 2px;
+}
+
+/* Calendar day cells are roughly half as wide on medium (tablet) screens —
+ * shrink the icons so they don't overflow a single cell.  Placed AFTER the
+ * base .tc-day-icon rule to guarantee this override wins at equal selector
+ * specificity (CSS source order breaks ties). */
+@media (min-width: 768px) and (max-width: 1100px) {
+  .tc-day-icon {
+    font-size: 0.7rem;
+    margin-bottom: 5px;
+  }
 }
 
 /* ── Subtype color picker inside settings ─────────────────────────────── */

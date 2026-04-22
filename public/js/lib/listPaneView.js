@@ -28,6 +28,99 @@ let _selectedIndex = 0;
 let _opts = {};
 let _container = null;
 
+// Per-note-type "sub-view" preference for the list-pane left column.  Only
+// Trainings currently have two sub-views (calendar / list); other note types
+// will simply ignore the value.  Persisted in localStorage so the user's
+// choice survives reloads.
+const TRAINING_SUBMODE_KEY = 'lpTrainingSubMode';
+const VALID_SUBMODES = new Set(['calendar', 'list']);
+
+export function getTrainingSubMode() {
+  const v = (typeof localStorage !== 'undefined')
+    ? localStorage.getItem(TRAINING_SUBMODE_KEY)
+    : null;
+  return VALID_SUBMODES.has(v) ? v : 'calendar';
+}
+
+function setTrainingSubMode(mode) {
+  if (!VALID_SUBMODES.has(mode)) return;
+  try { localStorage.setItem(TRAINING_SUBMODE_KEY, mode); } catch { /* ignore */ }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Training Year/Month filter reparenting
+// ─────────────────────────────────────────────────────────────
+// When training + list sub-mode is active we physically move the global
+// Year/Month filter containers out of the filter bar and into the list
+// header so the user has one unambiguous location to pick year/month.
+// The underlying <select> elements stay the same (their IDs and event
+// listeners are preserved across moves), so every existing code path that
+// reads #trainingYearFilter / #trainingMonthFilter keeps working.
+//
+// We remember each container's original parent + nextSibling on first move
+// so we can always return them to the same exact spot.
+let _filterOriginalYearNext  = null;  // original nextSibling for year container
+let _filterOriginalMonthNext = null;  // original nextSibling for month container
+let _filterOriginalParent    = null;  // original parent (shared between both)
+
+function captureOriginalFilterPositions() {
+  if (_filterOriginalParent) return;
+  const y = document.getElementById('trainingYearContainer');
+  const m = document.getElementById('trainingMonthContainer');
+  if (y && y.parentElement) {
+    _filterOriginalParent    = y.parentElement;
+    _filterOriginalYearNext  = y.nextSibling;
+    _filterOriginalMonthNext = m ? m.nextSibling : null;
+  }
+}
+
+/**
+ * Move the training Year/Month filter containers into the given host element
+ * and force them visible there.  Safe to call repeatedly — it's a no-op if
+ * the containers already live in `host`.
+ */
+function moveTrainingDateFiltersTo(host) {
+  if (!host) return;
+  captureOriginalFilterPositions();
+  const y = document.getElementById('trainingYearContainer');
+  const m = document.getElementById('trainingMonthContainer');
+  if (y && y.parentElement !== host) host.appendChild(y);
+  if (m && m.parentElement !== host) host.appendChild(m);
+  if (y) y.style.display = 'block';
+  if (m) m.style.display = 'block';
+}
+
+/**
+ * Return the training Year/Month filter containers to their original parent
+ * at their original positions.  Optionally force them hidden (used in
+ * calendar sub-mode where they're redundant with the calendar's own
+ * in-header dropdowns).  Safe to call repeatedly.
+ */
+export function restoreTrainingDateFiltersToBar({ hide = false } = {}) {
+  const y = document.getElementById('trainingYearContainer');
+  const m = document.getElementById('trainingMonthContainer');
+
+  // Only move nodes if we've captured their original home AND they're
+  // currently elsewhere.  On first render they're still in the filter bar,
+  // so there's nothing to move — just proceed to optional hide.
+  if (_filterOriginalParent) {
+    if (y && y.parentElement !== _filterOriginalParent) {
+      _filterOriginalParent.insertBefore(y, _filterOriginalYearNext);
+    }
+    if (m && m.parentElement !== _filterOriginalParent) {
+      _filterOriginalParent.insertBefore(m, _filterOriginalMonthNext);
+    }
+  }
+
+  if (hide) {
+    if (y) y.style.display = 'none';
+    if (m) m.style.display = 'none';
+  }
+  // When not hiding we leave display alone — the next updateFilterVisibility
+  // call (triggered e.g. by a note-type change) will reset it to 'block' for
+  // training views or 'none' for non-training views.
+}
+
 // ─────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────
@@ -301,38 +394,68 @@ export function renderListPaneView(container, notes, opts) {
     note:       { icon: '📝', label: 'Notes'     },
   };
   const typeMeta = TYPE_META[opts.currentNoteTypeFilter] || { icon: '📋', label: opts.currentNoteTypeFilter || 'Notes' };
+
+  // Training is the only note type that offers a sub-view toggle.  The toggle
+  // lives in the list header; clicking it re-invokes renderListPaneView with
+  // the same notes/opts so we keep the code path uniform.
+  const isTraining = opts.currentNoteTypeFilter === 'training';
+  const subMode    = isTraining ? getTrainingSubMode() : 'list';
+
+  const toggleHtml = isTraining ? `
+    <div class="lp-list-header-toggle" role="tablist" aria-label="List view mode">
+      <button type="button" class="lp-toggle-btn${subMode === 'calendar' ? ' active' : ''}" data-lp-submode="calendar" role="tab" aria-selected="${subMode === 'calendar'}">📅 Calendar</button>
+      <button type="button" class="lp-toggle-btn${subMode === 'list' ? ' active' : ''}" data-lp-submode="list" role="tab" aria-selected="${subMode === 'list'}">📋 List</button>
+    </div>` : '';
+
+  const countHtml = subMode === 'calendar'
+    ? '' // Calendar has its own title (month/year) — a "N notes" count would be misleading
+    : `<span class="lp-list-header-count">${notes.length} notes</span>`;
+
+  // A dedicated slot where we park the global Year/Month filter containers
+  // when training + list sub-mode is active.  Only emitted in that mode — in
+  // other modes the slot doesn't exist and the containers live in the global
+  // filter bar as usual.
+  const dateFiltersSlotHtml = (isTraining && subMode === 'list')
+    ? `<div class="lp-list-header-dates" id="lpListHeaderDates"></div>`
+    : '';
+
   const headerHtml = `
     <div class="lp-list-header">
       <span class="lp-list-header-type">${typeMeta.icon} ${typeMeta.label}</span>
-      <span class="lp-list-header-count">${notes.length} notes</span>
-    </div>`;
+      ${toggleHtml}
+      ${countHtml}
+    </div>
+    ${dateFiltersSlotHtml}`;
 
-  // ── Calendar mode for training (opt-in via global setting) ──────────────
-  // When enabled, replace the flat training list on the left with a monthly
-  // calendar.  The right pane keeps working exactly as before — the calendar
-  // just becomes an alternative navigation surface.
-  const useCalendar =
-    opts.currentNoteTypeFilter === 'training' &&
-    opts.globalSettings?.displayTrainingCalendar === true;
+  // ── Training + Calendar sub-mode ─────────────────────────────────────────
+  if (isTraining && subMode === 'calendar') {
+    // Filter-bar Year/Month are redundant here (calendar's own header owns
+    // month navigation).  Put them back in the filter bar if they were moved
+    // out in a previous list sub-mode render, and hide them.
+    restoreTrainingDateFiltersToBar({ hide: true });
 
-  if (useCalendar) {
     container.innerHTML = `
       <div class="lp-layout">
-        <div class="lp-list lp-list-calendar" id="lpList"></div>
+        <div class="lp-list lp-list-calendar" id="lpList">${headerHtml}</div>
         <div class="lp-pane" id="lpPane"></div>
       </div>`;
-    const calHost = container.querySelector('#lpList');
+    const list    = container.querySelector('#lpList');
     const pane    = container.querySelector('#lpPane');
+    // The calendar renders into its own host below the header.
+    const calHost = document.createElement('div');
+    calHost.className = 'lp-calendar-host';
+    list.appendChild(calHost);
+
+    wireToggleButtons(list, notes, opts);
 
     // Render empty pane first; the calendar will notify us once it has data.
     renderPane(pane, null, 0);
 
-    // Read the current Year / Month filter values so the calendar opens on the
-    // month the user has selected in the filter bar.  When the user has
-    // "All years" (year = '') selected — either directly or via the Clear
-    // button — the calendar snaps to TODAY.  The filter bar is treated as the
-    // single source of truth for which month to display; initialNoteId is only
-    // used to pre-select a note inside the already-chosen month.
+    // Read the current Year / Month filter values so the calendar opens on
+    // the month the user has selected in the filter bar.  When the user has
+    // "All years" selected — directly or via the Clear button — the calendar
+    // snaps to TODAY.  initialNoteId is only used to pre-select a note
+    // inside the already-chosen month, never to override the month itself.
     const yearSelect  = document.getElementById('trainingYearFilter');
     const monthSelect = document.getElementById('trainingMonthFilter');
     const yearFromFilter  = yearSelect  ? parseInt(yearSelect.value,  10) : NaN;
@@ -344,9 +467,8 @@ export function renderListPaneView(container, notes, opts) {
       initialMonth = monthFromFilter;
     } else if (Number.isFinite(yearFromFilter)) {
       initialYear  = yearFromFilter;
-      initialMonth = 1; // Year-only selected → January
+      initialMonth = 1;
     } else {
-      // "All years" → today
       const now = new Date();
       initialYear  = now.getFullYear();
       initialMonth = now.getMonth() + 1;
@@ -354,23 +476,17 @@ export function renderListPaneView(container, notes, opts) {
 
     renderTrainingCalendar(calHost, {
       getTrainingTypes: opts.getTrainingTypes,
-      // Only pre-select a note when we have one — never let it override the
-      // month chosen above.
       initialNoteId:    opts.initialNoteId ?? null,
       initialYear,
       initialMonth,
-      // When a day is clicked the calendar hands us the full month's notes.
-      // Swap _notes to that list so Prev/Next in the pane walk the month.
       onSelectNote: (monthNotes, idx) => {
         _notes = monthNotes;
         _selectedIndex = idx;
         renderPane(pane, monthNotes[idx] || null, idx);
       },
-      // Keep the Year/Month filter selects visually synced when the user
-      // navigates via the calendar's own prev/next/today buttons.  We update
-      // .value directly and do NOT dispatch 'change' — the calendar already
-      // refetched the new month, so triggering a reload would be redundant
-      // and create a visual flicker.
+      // Keep the Year/Month filter selects visually synced so switching to
+      // list mode (or any re-render) continues from the month the user
+      // navigated to within the calendar.
       onMonthChange: (year, month) => {
         syncFilterSelects(year, month);
       },
@@ -378,31 +494,74 @@ export function renderListPaneView(container, notes, opts) {
     return;
   }
 
-  // Build skeleton
+  // IMPORTANT: before we blow away container.innerHTML we must first park the
+  // moved Year/Month filter containers back in the global filter bar.
+  // Otherwise they become orphans inside the old DOM and a subsequent
+  // getElementById('trainingYearContainer') returns null, making the next
+  // move-to-slot call a no-op (i.e. the dropdowns visually disappear).
+  // This is only needed when we're about to wipe the container, so we do it
+  // here before innerHTML assignment.
+  restoreTrainingDateFiltersToBar();
+
+  // ── Flat list (default for all note types; also training + list sub-mode) ─
   container.innerHTML = `
     <div class="lp-layout">
       <div class="lp-list" id="lpList">${headerHtml}</div>
       <div class="lp-pane" id="lpPane"></div>
     </div>`;
 
-  // Fill list (rows appended after the header that's already in #lpList)
   const list = container.querySelector('#lpList');
+  wireToggleButtons(list, notes, opts);
+
+  // For training + list sub-mode: move the now-safe filter containers into
+  // the newly-rendered list header slot.
+  if (isTraining && subMode === 'list') {
+    const slot = container.querySelector('#lpListHeaderDates');
+    if (slot) moveTrainingDateFiltersTo(slot);
+  }
+
   notes.forEach((note, idx) => {
     list.insertAdjacentHTML('beforeend', buildRowHtml(note, idx, idx === _selectedIndex, opts));
   });
 
-  // Row click handlers
   list.querySelectorAll('.lp-row').forEach(row => {
     row.addEventListener('click', () => selectNote(parseInt(row.dataset.lpIdx)));
   });
 
-  // Render pane with initially selected note
   const pane = container.querySelector('#lpPane');
   renderPane(pane, notes[_selectedIndex] || null, _selectedIndex);
 
-  // Scroll selected row into view
   const initRow = list.querySelector(`.lp-row[data-lp-idx="${_selectedIndex}"]`);
   if (initRow) initRow.scrollIntoView({ block: 'nearest' });
+}
+
+/**
+ * Attach click handlers to the Calendar/List toggle buttons in the list
+ * header.  On click we persist the new sub-mode and re-invoke
+ * renderListPaneView with the cached notes/opts so the switch is instant.
+ *
+ * Note: we rely on the caller-supplied `opts.onSubModeChange` to trigger any
+ * side-effects that need full reload (e.g. list mode wanting pagination to
+ * reappear).  If the caller doesn't provide one we just re-render in place,
+ * which is fine because the calendar does its own data fetching and the
+ * list sub-mode is content-complete with whatever `notes` were passed in.
+ */
+function wireToggleButtons(list, notes, opts) {
+  list.querySelectorAll('.lp-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const newMode = btn.dataset.lpSubmode;
+      if (!VALID_SUBMODES.has(newMode)) return;
+      if (getTrainingSubMode() === newMode) return;
+      setTrainingSubMode(newMode);
+      // Let the app reload (pagination + displayQuotes empty-state depend on
+      // the current sub-mode).  Fall back to a local re-render if no hook.
+      if (typeof opts.onSubModeChange === 'function') {
+        opts.onSubModeChange(newMode);
+      } else {
+        renderListPaneView(_container, notes, opts);
+      }
+    });
+  });
 }
 
 /**

@@ -33,12 +33,13 @@
 import { API_URL, fetchWithRetry } from './api.js';
 
 // ─── Internal state ──────────────────────────────────────────────────────────
-let _container   = null;
-let _opts        = {};
-let _viewYear    = null;   // visible month's year (e.g. 2026)
-let _viewMonth   = null;   // visible month (1–12)
-let _monthNotes  = [];     // trainings for the visible month
-let _loading     = false;
+let _container    = null;
+let _opts         = {};
+let _viewYear     = null;   // visible month's year (e.g. 2026)
+let _viewMonth    = null;   // visible month (1–12)
+let _monthNotes   = [];     // trainings for the visible month
+let _loading      = false;
+let _trainingYears = null;  // [2026, 2024, …] from /api/quotes/training-years (cached)
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -108,6 +109,20 @@ function fallbackTypeMeta(value) {
 
 // ─── Data fetching ───────────────────────────────────────────────────────────
 
+/**
+ * Read currently-selected training sub-type values directly from the filter
+ * bar checkboxes.  Returns an array of sub-type values; empty array means
+ * "no filter — show all".  Mirrors the selector used in displayManager.js.
+ */
+function readSelectedTrainingTypes() {
+  const boxes = document.querySelectorAll(
+    '.training-type-filter-options input[type="checkbox"]'
+  );
+  const out = [];
+  boxes.forEach(b => { if (b.checked && b.dataset.type) out.push(b.dataset.type); });
+  return out;
+}
+
 async function fetchMonthTrainings(year, month) {
   // Use dateFrom/dateTo (direct note_date range) rather than the year/month
   // tag filters — older trainings that were never tagged with year/month still
@@ -123,6 +138,15 @@ async function fetchMonthTrainings(year, month) {
   params.append('dateTo',    dateTo);
   params.append('limit',     '500');
   params.append('offset',    '0');
+
+  // Honour the training sub-type filter: if the user unchecks e.g. "Cardio",
+  // cardio days shouldn't dot the calendar.  Reading directly from the DOM
+  // keeps the calendar auto-in-sync when the user toggles the filter (the
+  // calling code re-renders on every filter change).
+  const selectedTypes = readSelectedTrainingTypes();
+  if (selectedTypes.length > 0) {
+    params.append('training_types', selectedTypes.join(','));
+  }
   try {
     const resp = await fetchWithRetry(`${API_URL}/quotes?${params.toString()}`);
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
@@ -143,12 +167,50 @@ async function fetchMonthTrainings(year, month) {
 
 // ─── Rendering ───────────────────────────────────────────────────────────────
 
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
+
+/**
+ * Build the list of years to show in the year dropdown.  We combine:
+ *   - all years returned by /api/quotes/training-years (years that actually
+ *     contain training notes)
+ *   - the current view year
+ *   - today's year
+ *   - a small window (±3) around the current view year so users can step into
+ *     "empty" years that aren't in the tagged set yet (common for old notes
+ *     that were imported without year tags).
+ * Sorted newest → oldest.
+ */
+function buildYearOptions() {
+  const set = new Set();
+  (_trainingYears || []).forEach(y => set.add(y));
+  set.add(new Date().getFullYear());
+  set.add(_viewYear);
+  for (let dy = -3; dy <= 3; dy++) set.add(_viewYear + dy);
+  return Array.from(set).sort((a, b) => b - a);
+}
+
 function renderHeader() {
+  const years = buildYearOptions();
+  const yearOpts  = years.map(y =>
+    `<option value="${y}"${y === _viewYear ? ' selected' : ''}>${y}</option>`
+  ).join('');
+  const monthOpts = MONTH_NAMES.map((name, i) => {
+    const m = i + 1;
+    return `<option value="${m}"${m === _viewMonth ? ' selected' : ''}>${name}</option>`;
+  }).join('');
+
+  // Layout: [◀] [Month ▼] [▶] [Year ▼] [Today]
+  // Prev/next bracket the Month dropdown so the arrows feel like month-by-month
+  // stepping; the Year dropdown stands apart as a jumper.
   return `
     <div class="tc-header">
       <button type="button" class="tc-nav-btn" data-tc-nav="prev" title="Previous month">◀</button>
-      <div class="tc-title">${monthLabel(_viewYear, _viewMonth)}</div>
+      <select class="tc-title-select tc-title-month" data-tc-sel="month" title="Pick month">${monthOpts}</select>
       <button type="button" class="tc-nav-btn" data-tc-nav="next" title="Next month">▶</button>
+      <select class="tc-title-select tc-title-year"  data-tc-sel="year"  title="Pick year">${yearOpts}</select>
       <button type="button" class="tc-nav-btn tc-today-btn" data-tc-nav="today" title="Jump to today">Today</button>
     </div>`;
 }
@@ -178,13 +240,18 @@ function renderDayCell(year, month, day, dayTrainings, typeMap, isToday) {
   if (subs.length > 0)  cellClasses += ' tc-day-has-training';
   if (isToday)          cellClasses += ' tc-day-today';
 
-  const dotsHtml = subs.length
-    ? `<div class="tc-day-dots">${
-        subs.map(v => {
-          const meta = typeMap.get(v) || fallbackTypeMeta(v);
-          return `<span class="tc-day-dot" style="background:${meta.color}"></span>`;
-        }).join('')
-      }</div>`
+  // Icons row — one glyph per distinct sub-type.  Sub-types without a
+  // configured icon are skipped rather than leaving a blank gap.
+  const iconsHtml = subs.length
+    ? (() => {
+        const glyphs = subs
+          .map(v => (typeMap.get(v) || fallbackTypeMeta(v)).icon)
+          .filter(Boolean);
+        if (!glyphs.length) return '';
+        return `<div class="tc-day-icons">${
+          glyphs.map(g => `<span class="tc-day-icon">${g}</span>`).join('')
+        }</div>`;
+      })()
     : '';
 
   const tooltip = dayTrainings.length
@@ -199,7 +266,7 @@ function renderDayCell(year, month, day, dayTrainings, typeMap, isToday) {
          data-tc-y="${year}" data-tc-m="${month}" data-tc-d="${day}"
          ${tooltip ? `title="${tooltip.replace(/"/g, '&quot;')}"` : ''}>
       <span class="tc-day-num">${day}</span>
-      ${dotsHtml}
+      ${iconsHtml}
     </div>`;
 }
 
@@ -243,11 +310,11 @@ function render() {
   _container.innerHTML = `
     <div class="tc-calendar">
       ${renderHeader()}
-      ${renderLegend(typeMap)}
       ${_loading ? '<div class="tc-loading">Loading…</div>' : renderGrid(typeMap)}
+      ${renderLegend(typeMap)}
     </div>`;
 
-  // Header navigation
+  // Header navigation (prev / next / today)
   _container.querySelectorAll('.tc-nav-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const action = btn.dataset.tcNav;
@@ -260,7 +327,21 @@ function render() {
         _viewYear  = t.year;
         _viewMonth = t.month;
       }
-      // Notify host so external Year/Month selects stay in sync.
+      if (typeof _opts.onMonthChange === 'function') {
+        _opts.onMonthChange(_viewYear, _viewMonth);
+      }
+      loadAndRender();
+    });
+  });
+
+  // In-header month / year dropdowns — jump directly.
+  _container.querySelectorAll('.tc-title-select').forEach(sel => {
+    sel.addEventListener('change', () => {
+      const kind = sel.dataset.tcSel;
+      const v = parseInt(sel.value, 10);
+      if (!Number.isFinite(v)) return;
+      if (kind === 'month') _viewMonth = v;
+      else if (kind === 'year') _viewYear = v;
       if (typeof _opts.onMonthChange === 'function') {
         _opts.onMonthChange(_viewYear, _viewMonth);
       }
@@ -283,6 +364,20 @@ function render() {
       }
     });
   });
+}
+
+async function fetchTrainingYearsOnce() {
+  if (_trainingYears) return _trainingYears;
+  try {
+    const resp = await fetchWithRetry(`${API_URL}/quotes/training-years`);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+    _trainingYears = Array.isArray(data.years) ? data.years.filter(Number.isFinite) : [];
+  } catch (err) {
+    console.error('[trainingCalendar] Failed to fetch training years', err);
+    _trainingYears = [];
+  }
+  return _trainingYears;
 }
 
 async function loadAndRender() {
@@ -314,6 +409,11 @@ export async function renderTrainingCalendar(container, opts) {
     _viewYear  = opts.initialYear;
     _viewMonth = opts.initialMonth;
   }
+
+  // Prime the year dropdown before the first render so the <select> shows
+  // every year that actually has trainings (plus a sensible window around
+  // the current view).  Non-blocking error handling lives inside the helper.
+  await fetchTrainingYearsOnce();
 
   await loadAndRender();
 

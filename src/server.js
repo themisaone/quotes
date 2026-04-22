@@ -4781,6 +4781,15 @@ app.post("/api/export/pdf", async (req, res) => {
     // Import puppeteer
     const puppeteer = require("puppeteer");
 
+    // For tegneserie notes, pre-resolve the full image at max 1024px
+    // so the PDF shows the comic at readable size (not the small thumbnail).
+    for (const note of quotes) {
+      if (note && note.note_type === 'tegneserie') {
+        const big = await resolveImageForPdf(note.attachment_full, 1024);
+        if (big) note.pdf_full_image = big;
+      }
+    }
+
     // Group notes by author
     const groupedByAuthor = {};
     quotes.forEach((note) => {
@@ -4857,7 +4866,7 @@ function generatePdfHtml(groupedByAuthor, filters, allQuotes) {
   });
   const bodyHtml = hasRealAuthors
     ? buildGroupedHtml(groupedByAuthor)
-    : buildFlatHtml(allQuotes);
+    : buildFlatHtml(allQuotes, noteType);
 
   return `<!DOCTYPE html>
 <html>
@@ -4891,6 +4900,32 @@ function generatePdfHtml(groupedByAuthor, filters, allQuotes) {
       gap: 9px;
     }
     .note-card-body { flex: 1; min-width: 0; }
+    .note-title {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-weight: 700;
+      font-size: 10pt;
+      color: #1f2937;
+      margin: 0 0 4px 0;
+      line-height: 1.25;
+    }
+    .tegneserie-card {
+      flex-direction: column;
+      gap: 6px;
+      align-items: stretch;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    .tegneserie-card .note-title { font-size: 11pt; margin-bottom: 6px; }
+    .tegneserie-img-wrap {
+      text-align: center;
+      margin: 2px 0;
+    }
+    .tegneserie-img {
+      max-width: 100%;
+      max-height: 180mm;
+      height: auto;
+      border-radius: 3px;
+    }
     .note-text p        { margin: 0; line-height: 1.45; }
     .note-text p + p    { margin-top: 2px; }
     .note-text ul, .note-text ol { margin: 1px 0 1px 16px; padding: 0; }
@@ -4898,7 +4933,7 @@ function generatePdfHtml(groupedByAuthor, filters, allQuotes) {
     .note-text h1, .note-text h2, .note-text h3 { margin: 3px 0 1px 0; font-size: 8.5pt; }
     .note-text { font-style: italic; color: #1f2937; font-size: 8.5pt; }
     .note-meta  { margin-top: 3px; font-size: 7pt; color: #6b7280; font-family: 'Segoe UI', Arial, sans-serif; font-style: normal; }
-    .author-section { page-break-before: always; margin-bottom: 18px; }
+    .author-section { margin-bottom: 18px; }
     .author-header {
       display: flex; align-items: center; gap: 10px;
       margin-bottom: 12px; padding-bottom: 6px;
@@ -4952,17 +4987,77 @@ function buildFilterInfoHtml(filters) {
   return `<div class="filter-info"><h3>Filters Applied:</h3>${lines.join('')}</div>`;
 }
 
+// Resolve an attachment value (file: ref or base64) to a data URL, resized so
+// the longest side <= maxDim. Returns null if not an image or cannot be read.
+async function resolveImageForPdf(attachmentValue, maxDim) {
+  if (!attachmentValue) return null;
+  try {
+    const meta = fileStorage.retrieveFromStorage(attachmentValue, true);
+    if (!meta || !meta.data) return null;
+    if (!meta.mimeType || !meta.mimeType.startsWith('image/')) return null;
+
+    // meta.data is "data:<mime>;base64,<payload>"
+    const commaIdx = meta.data.indexOf(',');
+    if (commaIdx === -1) return null;
+    const payload = meta.data.slice(commaIdx + 1);
+    const inputBuffer = Buffer.from(payload, 'base64');
+
+    const sharp = require('sharp');
+    const resized = await sharp(inputBuffer)
+      .rotate()
+      .resize({ width: maxDim, height: maxDim, fit: 'inside', withoutEnlargement: true })
+      .jpeg({ quality: 85 })
+      .toBuffer();
+
+    return `data:image/jpeg;base64,${resized.toString('base64')}`;
+  } catch (err) {
+    console.warn('resolveImageForPdf failed:', err && err.message ? err.message : err);
+    return null;
+  }
+}
+
+function isNoteTitleMeaningful(title) {
+  if (!title) return false;
+  const t = String(title).trim();
+  if (!t) return false;
+  if (t.toLowerCase() === 'no title') return false;
+  return true;
+}
+
 function buildNoteCardHtml(note) {
+  const titleText = isNoteTitleMeaningful(note.note_title) ? note.note_title : '';
+  const titleHtml = titleText
+    ? `<div class="note-title">${escapeHtml(titleText)}</div>` : '';
+  const tagsHtml = note.tags
+    ? `<div class="note-meta">🏷 ${escapeHtml(note.tags)}</div>` : '';
+
+  // Tegneserie: full-width image, title above, text AFTER the image (if any).
+  if (note.note_type === 'tegneserie') {
+    const bigImg = note.pdf_full_image || note.thumbnail || note.attachment_full;
+    const imgHtml = bigImg
+      ? `<div class="tegneserie-img-wrap"><img src="${bigImg}" class="tegneserie-img"></div>`
+      : '';
+    const textHtml = note.note_text
+      ? `<div class="note-text">${note.note_text}</div>` : '';
+    return `
+      <div class="note-card tegneserie-card">
+        ${titleHtml}
+        ${imgHtml}
+        ${textHtml}
+        ${tagsHtml}
+      </div>`;
+  }
+
+  // Default layout: thumbnail on the left, title + text on the right.
   const quoteImage = note.thumbnail || note.attachment_full;
   const imgHtml = quoteImage
     ? `<div style="flex-shrink:0"><img src="${quoteImage}" style="width:100px;height:auto;border-radius:4px;"></div>`
     : '';
-  const tagsHtml = note.tags
-    ? `<div class="note-meta">🏷 ${escapeHtml(note.tags)}</div>` : '';
   return `
     <div class="note-card">
       ${imgHtml}
       <div class="note-card-body">
+        ${titleHtml}
         <div class="note-text">${note.note_text || ''}</div>
         ${tagsHtml}
       </div>
@@ -4976,7 +5071,7 @@ function buildGroupedHtml(groupedByAuthor) {
     const avatarHtml = author.authorImage
       ? `<img src="${author.authorImage}" class="author-avatar">`
       : `<div class="author-avatar-placeholder">✍️</div>`;
-    html += `<div class="author-section" ${idx === 0 ? 'style="page-break-before:avoid"' : ''}>
+    html += `<div class="author-section">
       <div class="author-header">
         ${avatarHtml}
         <h2>${escapeHtml(author.authorName)}</h2>
@@ -4997,8 +5092,30 @@ function buildGroupedHtml(groupedByAuthor) {
   return html;
 }
 
-function buildFlatHtml(allQuotes) {
+function buildFlatHtml(allQuotes, noteType) {
   if (!allQuotes || allQuotes.length === 0) return '';
+
+  // For tegneserie, group by sub-type (note.type), e.g. PONDUS / DILBERT / NEMI.
+  // A "Month Year" created_at header doesn't make sense for archived comics.
+  const allTegneserie = allQuotes.every(q => q && q.note_type === 'tegneserie');
+  if (allTegneserie) {
+    const byType = {};
+    allQuotes.forEach(note => {
+      const key = (note.type && String(note.type).trim()) || 'Uncategorized';
+      if (!byType[key]) byType[key] = [];
+      byType[key].push(note);
+    });
+    const sortedKeys = Object.keys(byType).sort((a, b) => a.localeCompare(b));
+    let html = '';
+    sortedKeys.forEach(key => {
+      html += `<div class="flat-group">
+        <div class="flat-group-title">💥 ${escapeHtml(key)}</div>`;
+      byType[key].forEach(note => { html += buildNoteCardHtml(note); });
+      html += `</div>`;
+    });
+    return html;
+  }
+
   const groups = {};
   allQuotes.forEach(note => {
     let groupKey = 'Undated';

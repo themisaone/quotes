@@ -169,7 +169,9 @@ import { encryptFileBuffer, decryptFileBuffer } from './js/lib/cryptoUtils.js';
 import {
   renderListPaneView,
   refreshPaneNote,
-  getSelectedNoteId as getLpSelectedNoteId
+  getSelectedNoteId as getLpSelectedNoteId,
+  getTrainingSubMode,
+  restoreTrainingDateFiltersToBar
 } from './js/lib/listPaneView.js';
 // They are kept as local functions due to tight coupling with app-specific state
 
@@ -298,21 +300,30 @@ let currentNoteTypeFilter = null; // null = show all types
 // Persisted in localStorage per note type so each type remembers its preference.
 let currentViewMode = 'cards';
 
+// Note types that support list-pane view (shown the ⊞/☰ toggle button)
+const LIST_PANE_SUPPORTED_TYPES = new Set(['training']);
+// Note types that MUST use list-pane (card grid is not offered).  Typically a
+// subset of LIST_PANE_SUPPORTED_TYPES — these types get no toggle button and
+// their stored preference is ignored in favour of 'list-pane'.  Training is
+// list-pane-only because its alternative sub-views (Calendar / flat list)
+// already cover every navigation need and having a third (cards) view on top
+// makes the UX noisier without adding value.
+const LIST_PANE_ONLY_TYPES = new Set(['training']);
+
 function getStoredViewMode(noteType) {
+  if (LIST_PANE_ONLY_TYPES.has(noteType)) return 'list-pane';
   try {
     return localStorage.getItem(`viewMode_${noteType || 'all'}`) || 'cards';
   } catch { return 'cards'; }
 }
 
 function saveViewMode(noteType, mode) {
+  // List-pane-only types never save — there's nothing to remember.
+  if (LIST_PANE_ONLY_TYPES.has(noteType)) return;
   try {
     localStorage.setItem(`viewMode_${noteType || 'all'}`, mode);
   } catch {}
 }
-
-// Note types that support (and default to) list-pane view
-const LIST_PANE_SUPPORTED_TYPES = new Set(['training']);
-// To enable globally later: just add more types or use a wildcard check
 
 // Expose globally for historyManager
 window.currentNoteTypeFilter = currentNoteTypeFilter;
@@ -1476,19 +1487,6 @@ function updateBulkButtonVisibility() {
 // Wrapper for filterManager library
 function updateSourcesFilterVisibility() {
   updateSourcesFilterVisibilityLib2(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes);
-
-  // When the Training Calendar is active, the sub-type filter and pagination
-  // don't apply (the calendar shows one full month colored per sub-type).
-  // Hide them; the Year/Month filters stay visible and drive the calendar.
-  const calOn =
-    currentNoteTypeFilter === 'training' &&
-    getGlobalSettings()?.displayTrainingCalendar === true;
-
-  const trainingTypesFilter = getElementByIdSafe('trainingTypesFilterContainer');
-  if (trainingTypesFilter && calOn) trainingTypesFilter.style.display = 'none';
-
-  const paginationContainer = getElementByIdSafe('paginationControls');
-  if (paginationContainer && calOn) paginationContainer.innerHTML = '';
 }
 
 // Show/hide and label the view-mode toggle button based on current note type.
@@ -1496,11 +1494,14 @@ function updateSourcesFilterVisibility() {
 // even before the first async fetch completes.
 function updateViewModeToggle() {
   const supported = LIST_PANE_SUPPORTED_TYPES.has(currentNoteTypeFilter);
+  const listPaneOnly = LIST_PANE_ONLY_TYPES.has(currentNoteTypeFilter);
   const selectModeBtn = getElementByIdSafe('selectModeBtn');
   const isGallery = quotesList && quotesList.classList.contains('gallery-mode');
 
   if (viewModeToggleBtn) {
-    viewModeToggleBtn.style.display = supported ? '' : 'none';
+    // Hide the toggle for unsupported types AND for list-pane-only types
+    // (training) — there's nothing to switch to.
+    viewModeToggleBtn.style.display = (supported && !listPaneOnly) ? '' : 'none';
   }
 
   if (supported) {
@@ -2019,21 +2020,15 @@ function displayQuotes(quotes) {
     currentViewMode = 'cards';
   }
 
-  // Re-apply sources-filter visibility — needed when the Training Calendar
-  // setting is toggled on/off so the sub-type filter and pagination hide
-  // accordingly without requiring a note-type switch.
-  updateSourcesFilterVisibility();
-
   quoteCount.textContent = `(${quotes.length})`;
 
-  // In calendar mode we always want to render the calendar, even if the main
-  // list fetch returned zero notes for the current year/month filter.  The
-  // calendar does its own month-by-month fetch and remains useful for
-  // navigating around.
+  // In Training's list-pane view, the left column may be showing the calendar
+  // sub-view.  The calendar does its own month fetch, so we must still render
+  // it even if the main list fetch returned zero notes.
   const calendarActive =
     currentNoteTypeFilter === 'training' &&
-    getGlobalSettings()?.displayTrainingCalendar === true &&
-    currentViewMode === 'list-pane';
+    currentViewMode === 'list-pane' &&
+    getTrainingSubMode() === 'calendar';
 
   if (quotes.length === 0 && !calendarActive) {
     // Show "empty" in quotesList, hide lpWrapper
@@ -2070,6 +2065,11 @@ function displayQuotes(quotes) {
       globalSettings: currentSettings,
       initialNoteId: prevSelectedId,
       onPaneRendered: applyPaneShowLongExpanded,
+      // When the user toggles Calendar/List in the training list header we
+      // want a full reload: list mode needs pagination to reappear, and
+      // calendar mode needs it gone.  loadQuotes() flows through displayQuotes
+      // which handles both.
+      onSubModeChange: () => loadQuotes(),
       createQuoteCard: (note) =>
         createQuoteCardLib(note, currentNoteTypeFilter, getTrainingTypes, getQuoteTypes, currentSettings)
     });
@@ -2079,6 +2079,10 @@ function displayQuotes(quotes) {
   // ── Card grid view (default) ────────────────────────────────
   if (lpWrapper) lpWrapper.style.display = 'none';
   quotesList.style.removeProperty('display');
+  // Make sure the Year/Month filter containers are back in the filter bar
+  // (they may have been moved out by a previous training + list sub-mode
+  // render).  Card grid wants them visible in the bar, so don't force-hide.
+  restoreTrainingDateFiltersToBar();
   const currentSettings = getGlobalSettings();
   
   // Use library for basic rendering (pass globalSettings for score display)
@@ -3443,14 +3447,23 @@ function updatePaginationControls() {
   const paginationContainer = getElementByIdSafe("paginationControls");
   if (!paginationContainer) return;
 
-  // Calendar mode owns month navigation — pagination is meaningless.
+  // Training + Calendar sub-mode owns its own month navigation — pagination
+  // would be meaningless.  Hide the whole pagination section (not just its
+  // contents) so no empty strip lingers below the calendar.
+  // Training + List sub-mode still needs pagination — a heavy-duty trainee
+  // easily has more notes than fit on one page.
   if (
     currentNoteTypeFilter === 'training' &&
-    getGlobalSettings()?.displayTrainingCalendar === true
+    currentViewMode === 'list-pane' &&
+    getTrainingSubMode() === 'calendar'
   ) {
     paginationContainer.innerHTML = '';
+    paginationContainer.style.display = 'none';
     return;
   }
+  // Ensure the section is visible for every other case (including training
+  // list sub-mode) after returning from a state that hid it.
+  paginationContainer.style.removeProperty('display');
 
   // Use filteredQuotes for pagination calculations
   const qpp = getQuotesPerPage();

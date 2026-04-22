@@ -305,7 +305,6 @@ function applySettingsToUI() {
     { id: 'displayScoreInCards', setting: 'displayScoreInCards' },
     { id: 'stretchImagesWhenEmpty', setting: 'stretchImagesWhenEmpty' },
     { id: 'displayEmptyTitleInCard', setting: 'displayEmptyTitleInCard' },
-    { id: 'displayTrainingCalendar', setting: 'displayTrainingCalendar' },
     { id: 'downscaleQuoteImages', setting: 'downscaleQuoteImages' },
     { id: 'enableWordWrap', setting: 'enableWordWrap' },
     { id: 'hideEncryptedNotes', setting: 'hideEncryptedNotes' },
@@ -1329,16 +1328,6 @@ export function initializeSettings(callbacks = {}) {
     displayEmptyTitleInCardCheckbox.checked = globalSettings?.displayEmptyTitleInCard === true;
     displayEmptyTitleInCardCheckbox.addEventListener('change', (e) => {
       updateSetting('displayEmptyTitleInCard', e.target.checked);
-      if (loadQuotes) loadQuotes();
-    });
-  }
-
-  // Display training calendar (replaces the flat training list in list-pane view)
-  const displayTrainingCalendarCheckbox = getElementByIdSafe('displayTrainingCalendar');
-  if (displayTrainingCalendarCheckbox) {
-    displayTrainingCalendarCheckbox.checked = globalSettings?.displayTrainingCalendar === true;
-    displayTrainingCalendarCheckbox.addEventListener('change', (e) => {
-      updateSetting('displayTrainingCalendar', e.target.checked);
       if (loadQuotes) loadQuotes();
     });
   }
