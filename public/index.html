@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Note Archive</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
-    <link rel="stylesheet" href="style.css?v=202604110011" />
+    <link rel="stylesheet" href="style.css?v=202604110015" />
     <!-- Font Awesome for dice icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <!-- Quill Editor -->
@@ -293,23 +293,44 @@
 
             <!-- Search/Filter Section -->
             <div class="search-section">
-              <div class="search-header">
-                <div class="search-title-row">
-                  <div class="search-title-with-summary">
-                    <h2 id="searchHeaderTitle">🔍 Search Quotes</h2>
-                    <div class="search-type-summaries">
-                      <span id="quoteSourcesSummary" class="filter-type-summary" style="display:none;"></span>
-                      <span id="trainingTypeSummary" class="filter-type-summary" style="display:none;"></span>
-                      <span id="genericSubTypeSummary" class="filter-type-summary" style="display:none;"></span>
-                    </div>
+              <!-- Header row: title + summaries on the left; toggles + Clear on the right -->
+              <div class="search-header-row">
+                <div class="search-title-with-summary">
+                  <h2 id="searchHeaderTitle" class="search-header-title">🔍 Search</h2>
+                  <div class="search-type-summaries">
+                    <span id="quoteSourcesSummary" class="filter-type-summary" style="display:none;"></span>
+                    <span id="trainingTypeSummary" class="filter-type-summary" style="display:none;"></span>
+                    <span id="genericSubTypeSummary" class="filter-type-summary" style="display:none;"></span>
                   </div>
-                  <!-- Clear button lives in the title row -->
-                  <button id="clearBtn" class="btn btn-primary search-clear-btn">Clear</button>
+                </div>
+                <div class="search-header-actions">
+                  <button
+                    type="button"
+                    id="additionalFiltersToggle"
+                    class="header-toggle-btn"
+                    aria-pressed="false"
+                    title="Show / hide additional filters (Author, Source, Score, Source-types, Sub-type, Training-types). Turning off clears them."
+                  >
+                    <span class="header-toggle-icon">⚙</span>
+                    <span class="header-toggle-label">Additional Filters</span>
+                  </button>
+                  <button
+                    type="button"
+                    id="metaFiltersToggle"
+                    class="header-toggle-btn"
+                    aria-pressed="false"
+                    title="Show / hide metadata filters (Have/Not-Have Author, Source, Title, Image, …). Turning off clears them."
+                  >
+                    <span class="header-toggle-icon">🏷️</span>
+                    <span class="header-toggle-label">Meta Filters</span>
+                  </button>
+                  <button id="clearBtn" class="btn btn-primary search-clear-btn" title="Clear all filters">Clear</button>
                 </div>
               </div>
 
-              <div class="search-grid">
-                <div class="search-item autocomplete-wrapper" id="searchTagsContainer">
+              <!-- Tier 1: always visible — Tags + Text -->
+              <div class="search-tier1">
+                <div class="search-item autocomplete-wrapper tier1-tags" id="searchTagsContainer">
                   <label>🏷️ Tags</label>
                   <input
                     type="text"
@@ -323,7 +344,7 @@
                     class="autocomplete-suggestions"
                   ></div>
                 </div>
-                <div class="search-item" id="searchTextContainer">
+                <div class="search-item tier1-text" id="searchTextContainer">
                   <label>💬 Text</label>
                   <input
                     type="text"
@@ -332,6 +353,10 @@
                     title="Use spaces around operators: 'term1 && term2' (both required), 'term1 || term2' (either required)"
                   />
                 </div>
+              </div>
+
+              <!-- Tier 2: Additional Filters — hidden by default, toggled by header button -->
+              <div class="search-grid" id="tier2Grid" style="display: none;">
                 <div class="search-item" id="searchScoreContainer">
                   <label><i class="fa-solid fa-dice-five" style="color:#e74c3c;"></i> Score</label>
                   <input
@@ -392,7 +417,7 @@
 
                 <!-- Quote Sources dropdown — shown in grid row 2 for quote layout -->
                 <div class="search-item search-grid-dropdown" id="quoteSourcesFilterContainer">
-                  <label id="quoteSourcesFilterLabel">📋 Quote Sources</label>
+                  <label id="quoteSourcesFilterLabel">📋 Source types</label>
                   <div class="type-filter-dropdown-container">
                     <button type="button" id="typeFilterToggle" class="type-filter-toggle">
                       <span class="dropdown-arrow">▼</span>
@@ -472,11 +497,8 @@
                 </div>
               </div>
               
-              <!-- Metadata Label and Filters (2 rows × 3) -->
+              <!-- Tier 3: Meta Filters — hidden by default, toggled by header button -->
               <div id="metadataFiltersContainer" style="display: none;">
-                <div style="margin-top: 1.5rem; margin-bottom: 0.5rem;">
-                  <strong style="font-size: 0.95rem; color: var(--text-secondary);">Metadata</strong>
-                </div>
                 <div id="metadataFiltersRow" class="metadata-filters-grid">
                   <!-- Row 1 -->
                   <div class="metadata-filter-item">
@@ -953,17 +975,7 @@
               </div>
             </div>
 
-            <div class="settings-section">
-              <h2>🔍 Search Features</h2>
-              <div class="setting-item">
-                <label class="setting-label">
-                  <input type="checkbox" id="enableQuoteMetaSearches" />
-                  <span>Quote Meta Searches</span>
-                </label>
-                <p class="setting-description">Enable advanced metadata search capabilities for quotes.</p>
-              </div>
-            </div>
-            </div><!-- end settings-row: Tag Management + Search Features -->
+            </div><!-- end settings-row: Tag Management -->
 
             <div class="settings-row">
             <div class="settings-section">
@@ -2091,6 +2103,6 @@ Quote number three..."
     <!-- Quill Editor Script -->
     <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
     <script type="module" src="js/lib/confirmDialog.js"></script>
-    <script type="module" src="app.js?v=20260411k"></script>
+    <script type="module" src="app.js?v=20260411n"></script>
   </body>
 </html>

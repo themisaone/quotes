@@ -431,12 +431,85 @@ header h1 {
   margin: 0;
 }
 
-/* Clear button sits in the title row, right-aligned */
+/* Clear button sits in the header row's actions group, right-aligned */
 .search-clear-btn {
   flex-shrink: 0;
   height: var(--d-btn-height);
   padding: 0 1rem;
   white-space: nowrap;
+}
+
+/* ── Header row: title + summaries on the left; toggles + clear on the right ── */
+.search-header-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.search-header-row .search-title-with-summary {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.search-header-row .search-title-with-summary h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  white-space: nowrap;
+}
+
+.search-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+}
+
+/* Header toggle buttons (Additional Filters, Meta Filters) */
+.header-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: var(--d-btn-height);
+  padding: 0 0.75rem;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.header-toggle-btn:hover {
+  background: var(--hover-bg, rgba(0,0,0,0.05));
+  color: var(--text-primary);
+}
+
+.header-toggle-btn[aria-pressed="true"] {
+  background: var(--link-color, #2563eb);
+  color: #fff;
+  border-color: var(--link-color, #2563eb);
+}
+
+.header-toggle-btn[aria-pressed="true"] .header-toggle-icon { color: #fff; }
+
+.header-toggle-icon { font-size: 1rem; line-height: 1; }
+.header-toggle-label { line-height: 1; }
+
+/* Medium screens — show only icons to save space */
+@media (max-width: 1100px) {
+  .header-toggle-btn .header-toggle-label { display: none; }
+  .header-toggle-btn { padding: 0 0.6rem; }
 }
 
 /* Outer wrapper — flex row like all other .search-item fields */
@@ -508,14 +581,20 @@ header h1 {
 .search-type-summaries {
   display: flex;
   flex-direction: row;
-  gap: 4px;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin-bottom: 0.75rem;
+  padding-left: 0.25rem;
+  min-height: 0;
 }
 
-/* Active/inactive type summary shown below the search title */
+.search-type-summaries:empty { display: none; }
+
+/* Active/inactive type summary shown below the Tier 1 row (small, subdued) */
 .filter-type-summary {
-  font-size: 1.0rem;
+  font-size: 0.85rem;
   color: var(--text-secondary);
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
 .tts-on {
@@ -1623,36 +1702,53 @@ textarea {
   align-items: center;
 }
 
-/* Notes / Puzzles / Jokes: Text+Clear on row 1, Tags+Score on row 2 */
-/* Generic notes: single row only — Clear is in the title row, no dropdown needed */
-.search-grid.layout-notes {
-  grid-template-columns: 3fr 3fr 2fr;
+/* Tier 1 = single horizontal row: Tags + Text. Tags input is wider than Text. */
+.search-tier1 {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
 }
-.search-grid.layout-notes #searchTagsContainer  { grid-column: 1; grid-row: 1; }
-.search-grid.layout-notes #searchTextContainer  { grid-column: 2; grid-row: 1; }
-.search-grid.layout-notes #searchScoreContainer { grid-column: 3; grid-row: 1; }
+.search-tier1 .tier1-tags { flex: 2 1 0; min-width: 0; }
+.search-tier1 .tier1-text { flex: 1 1 0; min-width: 0; }
 
-/* Training: Text+Tags+Score on row 1, Year+Month+TrainingDropdown on row 2 */
-.search-grid.layout-training {
-  grid-template-columns: 3fr 3fr 2fr;
+/* Narrow screens — stack Tags above Text */
+@media (max-width: 767px) {
+  .search-tier1 {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .search-tier1 .tier1-tags { flex: 1 1 100%; }
+  .search-tier1 .tier1-text { flex: 1 1 100%; }
 }
-.search-grid.layout-training #searchTagsContainer           { grid-column: 1; grid-row: 1; }
-.search-grid.layout-training #searchTextContainer           { grid-column: 2; grid-row: 1; }
-.search-grid.layout-training #searchScoreContainer          { grid-column: 3; grid-row: 1; }
-.search-grid.layout-training #trainingYearContainer         { grid-column: 1; grid-row: 2; }
-.search-grid.layout-training #trainingMonthContainer        { grid-column: 2; grid-row: 2; }
-.search-grid.layout-training #trainingTypesFilterContainer  { grid-column: 3; grid-row: 2; }
 
-/* Quote: Text+Tags+Score on row 1, Author+Source+QuoteSourcesDropdown on row 2 */
-.search-grid.layout-quote {
-  grid-template-columns: 3fr 3fr 2fr;
-}
-.search-grid.layout-quote #searchTagsContainer          { grid-column: 1; grid-row: 1; }
-.search-grid.layout-quote #searchTextContainer          { grid-column: 2; grid-row: 1; }
-.search-grid.layout-quote #searchScoreContainer         { grid-column: 3; grid-row: 1; }
-.search-grid.layout-quote #searchAuthorContainer        { grid-column: 1; grid-row: 2; }
-.search-grid.layout-quote #searchSourceContainer        { grid-column: 2; grid-row: 2; }
-.search-grid.layout-quote #quoteSourcesFilterContainer  { grid-column: 3; grid-row: 2; }
+/* Tier 2 = the existing search-grid; per-type filters fit in row 1 (Score + type-specific). */
+.search-grid { grid-template-columns: 1fr 1fr 1fr; }
+
+/* Vertical spacing between tiers when Tier 2 / Tier 3 are expanded.
+ * A bit of breathing room separates them from the row above. */
+#tier2Grid { margin-top: 0.75rem; }
+#metadataFiltersContainer { margin-top: 1.25rem; }
+
+/* Notes / Puzzles / Jokes / Job: row 1 = Sub-type (when present) + Score */
+.search-grid.layout-notes #genericSubTypesFilterContainer { grid-column: 1 / span 2; grid-row: 1; }
+.search-grid.layout-notes #searchScoreContainer           { grid-column: 3;          grid-row: 1; }
+
+/* Training: row 1 = Training-types + Score (Year/Month live in the list-pane) */
+.search-grid.layout-training #trainingTypesFilterContainer  { grid-column: 1 / span 2; grid-row: 1; }
+.search-grid.layout-training #searchScoreContainer          { grid-column: 3;          grid-row: 1; }
+
+/* Quote: 4-col row — Author + Source + Quote-sources dropdown + Score */
+.search-grid.layout-quote { grid-template-columns: 2fr 2fr 1.4fr 1fr; }
+.search-grid.layout-quote #searchAuthorContainer        { grid-column: 1; grid-row: 1; }
+.search-grid.layout-quote #searchSourceContainer        { grid-column: 2; grid-row: 1; }
+.search-grid.layout-quote #quoteSourcesFilterContainer  { grid-column: 3; grid-row: 1; }
+.search-grid.layout-quote #searchScoreContainer         { grid-column: 4; grid-row: 1; }
+
+/* Default (All Notes — no layout class): show Score + Author + Source on row 1 */
+.search-grid:not(.layout-notes):not(.layout-training):not(.layout-quote) #searchAuthorContainer { grid-column: 1; grid-row: 1; }
+.search-grid:not(.layout-notes):not(.layout-training):not(.layout-quote) #searchSourceContainer { grid-column: 2; grid-row: 1; }
+.search-grid:not(.layout-notes):not(.layout-training):not(.layout-quote) #searchScoreContainer  { grid-column: 3; grid-row: 1; }
 
 .search-item {
   display: flex;

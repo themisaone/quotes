@@ -134,12 +134,11 @@ export function handleHashChange(handlers, state) {
   handlers.updateMainTitle();
   handlers.updateSourcesFilterVisibility();
   handlers.updateViewModeToggle?.();
-  
-  // Update metadata search visibility
-  const metaSearchEnabled = state.globalSettings?.enableQuoteMetaSearches === true;
-  const shouldShowMetadata = (state.currentNoteTypeFilter === 'quote' || state.currentNoteTypeFilter === null) && metaSearchEnabled;
-  handlers.toggleMetadataSearchSection(shouldShowMetadata);
-  
+
+  // Metadata filter panel visibility is now driven by the Tier 3 "Filters"
+  // disclosure button (user-controlled, persisted in localStorage). No need
+  // to toggle it on navigation anymore.
+
   // Reset to first page and reload data
   handlers.setCurrentPage(1);
   handlers.loadQuotes();
@@ -195,14 +194,11 @@ function showMenuView() {
  * @param {Object} callbacks - Callbacks
  * @param {Object} state - State
  */
-function showQuotesView(callbacks, state) {
+function showQuotesView(callbacks, _state) {
   showView(VIEW_IDS.QUOTES);
   callbacks.loadQuotes();
   callbacks.loadTotalCount();
-  
-  // Check if Metadata Search should be shown
-  const metaSearchEnabled = state.globalSettings?.enableQuoteMetaSearches === true;
-  callbacks.toggleMetadataSearchSection(metaSearchEnabled);
+  // Metadata filter panel visibility is now driven by the Tier 3 disclosure button.
 }
 
 /**

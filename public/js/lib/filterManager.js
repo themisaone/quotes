@@ -416,7 +416,9 @@ function updateSearchGridLayout(noteType) {
 }
 
 /**
- * Update the search header title based on the current note type
+ * Update the search header title based on the current note type.
+ * On medium screens the per-type label is hidden via CSS; on wide screens
+ * users see e.g. "🔍 Search Quotes".
  */
 function updateSearchHeaderTitle(currentNoteTypeFilter) {
   const searchHeaderTitle = getElementByIdSafe('searchHeaderTitle', 'updateSearchHeaderTitle');

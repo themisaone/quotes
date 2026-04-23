@@ -587,9 +587,8 @@ function generateNoteTypeMenu() {
       updateAddButtonText();
       updateMainTitle();
       updateSourcesFilterVisibility();
+      applyHeaderTogglesForCurrentNoteType();
 
-      const metaSearchEnabled = globalSettings?.enableQuoteMetaSearches === true;
-      toggleMetadataSearchSection(metaSearchEnabled);
       clearSearchFields();
 
       loadQuotes();
@@ -625,6 +624,7 @@ function generateNoteTypeMenu() {
         updateAddButtonText();
         updateMainTitle();
         updateSourcesFilterVisibility();
+        applyHeaderTogglesForCurrentNoteType();
         clearSearchFields();
         // Note: switchView already triggered loadQuotes() — no second call needed
       });
@@ -652,8 +652,7 @@ function generateNoteTypeMenu() {
         updateAddButtonText();
         updateMainTitle();
         updateSourcesFilterVisibility();
-        const metaSearchEnabled = globalSettings?.enableQuoteMetaSearches === true;
-        toggleMetadataSearchSection(metaSearchEnabled);
+        applyHeaderTogglesForCurrentNoteType();
         clearSearchFields();
         // Note: switchView already triggered loadQuotes() — no second call needed
       });
@@ -845,12 +844,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   updateSourcesFilterVisibility();
   updateViewModeToggle();
   updateBulkButtonVisibility();
-  
-  // Show/hide metadata search section based on current filter and settings
-  const metaSearchEnabled = globalSettings?.enableQuoteMetaSearches === true;
-  const shouldShowMetadata = (currentNoteTypeFilter === 'quote' || currentNoteTypeFilter === null) && metaSearchEnabled;
-  toggleMetadataSearchSection(shouldShowMetadata);
-  
+
+  // Wire the header toggle buttons for Additional Filters (Tier 2) & Meta Filters (Tier 3)
+  wireHeaderToggles();
+
   // Initialize Quill editor using library
   quillEditor = initializeQuillEditor();
   
@@ -904,6 +901,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     setNoteTypeFilter: (noteType) => {
       currentNoteTypeFilter = noteType;
       window.currentNoteTypeFilter = noteType;
+      applyHeaderTogglesForCurrentNoteType();
     },
     setCurrentPage: (page) => {
       currentPage = page;
@@ -1489,6 +1487,143 @@ function updateSourcesFilterVisibility() {
   updateSourcesFilterVisibilityLib2(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes);
 }
 
+// ============= HEADER TOGGLES: Additional Filters (Tier 2) & Meta Filters (Tier 3) =============
+// Two header buttons toggle visibility of the per-type Tier-2 grid and the
+// metadata Tier-3 panel. Turning a toggle OFF clears its filters and reloads.
+//
+// The ON/OFF state is stored PER NOTE TYPE in localStorage so the user's
+// preference on "Quotes" doesn't bleed into "Training" etc.
+
+let _headerTogglesWired = false;
+
+// Build a localStorage key scoped to the currently active note type.
+// Uses the literal 'all' for the "All Notes" view (when currentNoteTypeFilter is null).
+function _toggleKey(kind) {
+  const type = currentNoteTypeFilter || 'all';
+  return `headerToggle:${kind}:${type}`;
+}
+
+function _readToggle(kind) {
+  try { return localStorage.getItem(_toggleKey(kind)) === '1'; }
+  catch (_) { return false; }
+}
+
+function _writeToggle(kind, on) {
+  try { localStorage.setItem(_toggleKey(kind), on ? '1' : '0'); } catch (_) {}
+}
+
+function setTier2Visible(visible, { persist = false } = {}) {
+  const btn = document.getElementById('additionalFiltersToggle');
+  const panel = document.getElementById('tier2Grid');
+  if (!btn || !panel) return;
+  btn.setAttribute('aria-pressed', visible ? 'true' : 'false');
+  panel.style.display = visible ? '' : 'none';
+  if (persist) _writeToggle('additional', visible);
+}
+
+function setTier3Visible(visible, { persist = false } = {}) {
+  const btn = document.getElementById('metaFiltersToggle');
+  const panel = document.getElementById('metadataFiltersContainer');
+  if (!btn || !panel) return;
+  btn.setAttribute('aria-pressed', visible ? 'true' : 'false');
+  panel.style.display = visible ? '' : 'none';
+  if (persist) _writeToggle('meta', visible);
+}
+
+// Apply the stored per-note-type toggle state to the current view.
+// Called whenever the active note type changes.
+function applyHeaderTogglesForCurrentNoteType() {
+  if (!_headerTogglesWired) return;
+  setTier2Visible(_readToggle('additional'));
+  setTier3Visible(_readToggle('meta'));
+}
+
+// Clear inputs & dropdown checkbox selections inside the Tier 2 panel.
+// We then trigger a reload so results reflect the cleared filters.
+function clearTier2Filters({ reload = true } = {}) {
+  const ids = ['searchAuthor', 'searchSource', 'searchScore'];
+  ids.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el && 'value' in el) {
+      el.value = '';
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  });
+  const yearSel = document.getElementById('trainingYearFilter');
+  if (yearSel) {
+    yearSel.value = '';
+    yearSel.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  const monthSel = document.getElementById('trainingMonthFilter');
+  if (monthSel) {
+    monthSel.value = '';
+    monthSel.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  // Reset all type-filter dropdown checkboxes (Source-types / Training-types / Sub-type)
+  // back to "all checked" by clicking the per-dropdown "Select All" buttons,
+  // which already trigger the proper update + reload pipeline.
+  ['typeSelectAllBtn', 'trainingTypeSelectAllBtn', 'genericSubTypeSelectAllBtn']
+    .forEach((id) => {
+      const btn = document.getElementById(id);
+      if (btn) btn.click();
+    });
+  if (reload && typeof loadQuotes === 'function') loadQuotes();
+}
+
+// Clear all metadata checkboxes + Note ID inside the Tier 3 panel.
+function clearMetaFilters({ reload = true } = {}) {
+  const checkboxIds = [
+    'searchHasAuthor', 'searchHasSource', 'searchHasNote', 'searchHasTags',
+    'searchHasTranslationGroup', 'searchHasTitle', 'searchHasImage',
+    'searchHasImageType', 'searchHasMultipleAttachments'
+  ];
+  checkboxIds.forEach((id) => {
+    const cb = document.getElementById(id);
+    if (cb && cb.checked) {
+      cb.checked = false;
+      cb.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  });
+  const noteIdInput = document.getElementById('searchNoteId');
+  if (noteIdInput && noteIdInput.value) {
+    noteIdInput.value = '';
+    noteIdInput.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  if (reload && typeof loadQuotes === 'function') loadQuotes();
+}
+
+function wireHeaderToggles() {
+  if (_headerTogglesWired) return;
+  const additionalBtn = document.getElementById('additionalFiltersToggle');
+  const metaBtn = document.getElementById('metaFiltersToggle');
+  if (!additionalBtn || !metaBtn) return;
+  _headerTogglesWired = true;
+
+  // Restore per-note-type saved state.
+  applyHeaderTogglesForCurrentNoteType();
+
+  additionalBtn.addEventListener('click', () => {
+    const isOn = additionalBtn.getAttribute('aria-pressed') === 'true';
+    if (isOn) {
+      // Turning OFF — clear Tier 2 filters and hide (persist state for this note type).
+      clearTier2Filters();
+      setTier2Visible(false, { persist: true });
+    } else {
+      setTier2Visible(true, { persist: true });
+    }
+  });
+
+  metaBtn.addEventListener('click', () => {
+    const isOn = metaBtn.getAttribute('aria-pressed') === 'true';
+    if (isOn) {
+      clearMetaFilters();
+      setTier3Visible(false, { persist: true });
+    } else {
+      setTier3Visible(true, { persist: true });
+    }
+  });
+}
+
 // Show/hide and label the view-mode toggle button based on current note type.
 // Also applies quotesList display style immediately so layout is correct
 // even before the first async fetch completes.
@@ -1776,11 +1911,20 @@ window.applyHtmlSource = function() {
   document.getElementById('viewHtmlBtn').textContent = '📄 HTML';
 };
 
-// Clear filters functionality
+// Clear filters functionality — wipes Tier 1, Tier 2, Tier 3 and collapses
+// the two header toggles so the panel returns to its compact default state.
 function clearFilters() {
+  // Clear Tier 2 + Tier 3 inputs without triggering individual reloads
+  // (clearFiltersLib will run a single consolidated reload).
+  clearTier2Filters({ reload: false });
+  clearMetaFilters({ reload: false });
+  // Collapse both header toggles back to OFF.
+  setTier2Visible(false);
+  setTier3Visible(false);
+  // Clear Tier 1 inputs (tags, text) and reload via the existing helper.
   clearFiltersLib({
     loadQuotes,
-    setCurrentPage: (page) => { 
+    setCurrentPage: (page) => {
       currentPage = page;
       setLibCurrentPage(page);
     }
@@ -3545,6 +3689,7 @@ function setupMenuNavigation() {
         updateSourcesFilterVisibility();
         updateViewModeToggle();
       updateBulkButtonVisibility();
+        applyHeaderTogglesForCurrentNoteType();
       }
       
       // MIGRATED: Core view switching logic now in pageCoordinator.js
@@ -3614,6 +3759,7 @@ window.setNoteTypeFilter = function(noteType) {
   updateAddButtonText?.();
   updateMainTitle?.();
   updateSourcesFilterVisibility?.();
+  applyHeaderTogglesForCurrentNoteType();
 };
 
 async function loadAuthors() {

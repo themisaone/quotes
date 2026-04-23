@@ -298,7 +298,6 @@ function applySettingsToUI() {
   const checkboxMappings = [
     // Note: 'compactModeToggle' removed - feature deprecated, element doesn't exist in HTML
     { id: 'enableTagOperations', setting: 'enableTagOperations' },
-    { id: 'enableQuoteMetaSearches', setting: 'enableQuoteMetaSearches' },
     { id: 'displayQuotesByRealSize', setting: 'displayQuotesByRealSize' },
     { id: 'displayImageQuotesLong', setting: 'displayImageQuotesLong' },
     { id: 'showLongQuotesExpanded', setting: 'showLongQuotesExpanded' },
@@ -1088,7 +1087,6 @@ export function initializeSettings(callbacks = {}) {
   } = callbacks;
 
   const enableTagOpsCheckbox = getElementByIdSafe('enableTagOperations');
-  const enableQuoteMetaSearchesCheckbox = getElementByIdSafe('enableQuoteMetaSearches');
   const displayQuotesByRealSizeCheckbox = getElementByIdSafe('displayQuotesByRealSize');
   const displayImageQuotesLongCheckbox = getElementByIdSafe('displayImageQuotesLong');
   const showLongQuotesExpandedCheckbox = getElementByIdSafe('showLongQuotesExpanded');
@@ -1238,22 +1236,9 @@ export function initializeSettings(callbacks = {}) {
   }
   // ── End Migrate DB Attachments ────────────────────────────────────────────
 
-  // Quote Meta Searches setting
-  if (enableQuoteMetaSearchesCheckbox) {
-    // Load saved setting from globalSettings (default: false)
-    const quoteMetaSearchesEnabled = globalSettings?.enableQuoteMetaSearches === true;
-    enableQuoteMetaSearchesCheckbox.checked = quoteMetaSearchesEnabled;
-    
-    // Apply initial state
-    toggleMetadataSearchSection(quoteMetaSearchesEnabled);
-    
-    // Listen for changes
-    enableQuoteMetaSearchesCheckbox.addEventListener('change', (e) => {
-      const isEnabled = e.target.checked;
-      updateSetting('enableQuoteMetaSearches', isEnabled);
-      toggleMetadataSearchSection(isEnabled);
-    });
-  }
+  // Note: `enableQuoteMetaSearches` has been removed — metadata filters are
+  // now always available behind the "Filters" disclosure button.
+
   
   // Display Notes by Natural Height setting (global default + per-type overrides)
   if (displayQuotesByRealSizeCheckbox) {
