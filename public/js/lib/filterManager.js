@@ -89,8 +89,10 @@ function getCheckboxStates(container) {
 function createTypeCheckbox(checkboxId, type, isChecked) {
   const label = document.createElement('label');
   label.className = 'type-filter-option';
+  // data-label holds the plain text label (no icon) so the header sub-type
+  // summary can render it icon-free.
   label.innerHTML = `
-    <input type="checkbox" id="${checkboxId}" data-type="${type.value}" ${isChecked ? 'checked' : ''}>
+    <input type="checkbox" id="${checkboxId}" data-type="${type.value}" data-label="${type.label}" ${isChecked ? 'checked' : ''}>
     <span>${type.icon} ${type.label}</span>
   `;
   
@@ -116,10 +118,16 @@ function renderTypeSummary(summaryEl, checkboxSelector) {
   if (checkboxes.length === 0) { summaryEl.innerHTML = ''; return; }
 
   const parts = checkboxes.map((cb, i) => {
-    const span = cb.closest('label')?.querySelector('span');
-    const text = span?.textContent?.trim() || cb.dataset.type;
+    // Prefer the icon-free label stored in data-label; fall back to span text
+    // (with any leading icon stripped) for older checkboxes without it.
+    let text = cb.dataset.label;
+    if (!text) {
+      const spanTxt = cb.closest('label')?.querySelector('span')?.textContent?.trim() || '';
+      // Drop a leading emoji/icon + whitespace if present (e.g., "✍️ Author" -> "Author").
+      text = spanTxt.replace(/^[^\p{L}\p{N}]+\s*/u, '') || cb.dataset.type;
+    }
     const cls  = cb.checked ? 'tts-on' : 'tts-off';
-    const sep  = i < checkboxes.length - 1 ? '<span class="tts-sep"> · </span>' : '';
+    const sep  = i < checkboxes.length - 1 ? '<span class="tts-sep"> / </span>' : '';
     return `<span class="${cls}">${text}</span>${sep}`;
   });
 
@@ -375,7 +383,7 @@ export function updateSourcesFilterVisibility(currentNoteTypeFilter, getQuoteTyp
     // Update label to match the type
     const genericSubTypesLabel = document.getElementById('genericSubTypesFilterLabel');
     if (genericSubTypesLabel) {
-      genericSubTypesLabel.textContent = `🏷️ ${getNoteTypeConfig(currentNoteTypeFilter).label} Type`;
+      genericSubTypesLabel.textContent = `🏷️ ${getNoteTypeConfig(currentNoteTypeFilter).label} Types`;
     }
   }
   // Generic sub-type summary

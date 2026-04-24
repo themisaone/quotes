@@ -425,13 +425,35 @@ header h1 {
   justify-content: space-between;
   align-items: center;
   width: 100%;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .search-title-row h2 {
   margin: 0;
 }
 
-/* Clear button sits in the title row, right-aligned */
+/* Right-side slot holding the sub-type dropdown (only one child visible at a
+   time — Quote Sources, Training Types, or Generic Sub-types). */
+.search-header-subtype {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* The dropdown block inside the header doesn't need the grid-cell layout it
+   had when it lived in .search-grid — keep it compact.
+   Fixed width so Quote Sources / Training Types / Generic Sub-types all
+   look identical regardless of how long their label text is. */
+.search-header-subtype .search-grid-dropdown {
+  width: 320px;
+  min-width: 320px;
+  flex: 0 0 320px;
+}
+
+/* Clear button (now placed inside .search-grid row 1) */
 .search-clear-btn {
   flex-shrink: 0;
   height: var(--d-btn-height);
@@ -1616,43 +1638,45 @@ textarea {
   border: 2px solid var(--border);
 }
 
+/* ---------------------------------------------------------------
+   SEARCH GRID
+   Row 1 is identical for EVERY note type:
+       Tags | Text | Score | Clear
+   Row 2 exists only for quote behaviour (Quote view / All Notes):
+       Author | Source
+   Sub-type dropdowns live in the search header, not in the grid.
+   Year/Month filters are hidden (their UI moved to the list pane).
+   --------------------------------------------------------------- */
 .search-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
-  gap: 0.75rem 2rem;
+  grid-template-columns: 3fr 3fr 1.6fr auto;
+  gap: 0.75rem 1.5rem;
   align-items: center;
 }
 
-/* Notes / Puzzles / Jokes: Text+Clear on row 1, Tags+Score on row 2 */
-/* Generic notes: single row only — Clear is in the title row, no dropdown needed */
-.search-grid.layout-notes {
-  grid-template-columns: 3fr 3fr 2fr;
-}
-.search-grid.layout-notes #searchTagsContainer  { grid-column: 1; grid-row: 1; }
-.search-grid.layout-notes #searchTextContainer  { grid-column: 2; grid-row: 1; }
-.search-grid.layout-notes #searchScoreContainer { grid-column: 3; grid-row: 1; }
+/* Row 1 — same everywhere */
+.search-grid #searchTagsContainer   { grid-column: 1; grid-row: 1; }
+.search-grid #searchTextContainer   { grid-column: 2; grid-row: 1; }
+.search-grid #searchScoreContainer  { grid-column: 3; grid-row: 1; }
+.search-grid .search-clear-item     { grid-column: 4; grid-row: 1; justify-self: end; }
 
-/* Training: Text+Tags+Score on row 1, Year+Month+TrainingDropdown on row 2 */
-.search-grid.layout-training {
-  grid-template-columns: 3fr 3fr 2fr;
-}
-.search-grid.layout-training #searchTagsContainer           { grid-column: 1; grid-row: 1; }
-.search-grid.layout-training #searchTextContainer           { grid-column: 2; grid-row: 1; }
-.search-grid.layout-training #searchScoreContainer          { grid-column: 3; grid-row: 1; }
-.search-grid.layout-training #trainingYearContainer         { grid-column: 1; grid-row: 2; }
-.search-grid.layout-training #trainingMonthContainer        { grid-column: 2; grid-row: 2; }
-.search-grid.layout-training #trainingTypesFilterContainer  { grid-column: 3; grid-row: 2; }
+/* Row 2 — Author + Source are present in the DOM for every note type but
+   only shown for quote / all-notes views (via updateSourcesFilterVisibility).
+   When visible they span row 2; when hidden they collapse out of the grid. */
+.search-grid #searchAuthorContainer { grid-column: 1 / span 1; grid-row: 2; }
+.search-grid #searchSourceContainer { grid-column: 2 / span 1; grid-row: 2; }
 
-/* Quote: Text+Tags+Score on row 1, Author+Source+QuoteSourcesDropdown on row 2 */
-.search-grid.layout-quote {
-  grid-template-columns: 3fr 3fr 2fr;
+/* Clear button lives inside the grid now; it has no label to align with */
+.search-grid .search-clear-item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }
-.search-grid.layout-quote #searchTagsContainer          { grid-column: 1; grid-row: 1; }
-.search-grid.layout-quote #searchTextContainer          { grid-column: 2; grid-row: 1; }
-.search-grid.layout-quote #searchScoreContainer         { grid-column: 3; grid-row: 1; }
-.search-grid.layout-quote #searchAuthorContainer        { grid-column: 1; grid-row: 2; }
-.search-grid.layout-quote #searchSourceContainer        { grid-column: 2; grid-row: 2; }
-.search-grid.layout-quote #quoteSourcesFilterContainer  { grid-column: 3; grid-row: 2; }
+.search-grid .search-clear-item .search-clear-btn {
+  height: var(--d-btn-height);
+  padding: 0 1.25rem;
+  white-space: nowrap;
+}
 
 .search-item {
   display: flex;
@@ -3996,12 +4020,31 @@ body.selection-mode .quote-card::after {
     grid-template-columns: 1fr;
   }
 
+  /* On phones stack the grid into a single column and let the Clear
+     button sit on its own row at the right. */
   .search-grid {
-    grid-template-columns: 3fr 3fr 2fr;
+    grid-template-columns: 1fr;
+    gap: 0.6rem 0;
   }
+  .search-grid #searchTagsContainer,
+  .search-grid #searchTextContainer,
+  .search-grid #searchScoreContainer,
+  .search-grid #searchAuthorContainer,
+  .search-grid #searchSourceContainer,
+  .search-grid .search-clear-item {
+    grid-column: 1;
+    grid-row: auto;
+  }
+  .search-grid .search-clear-item { justify-self: stretch; }
+  .search-grid .search-clear-item .search-clear-btn { width: 100%; }
 
-  .search-grid.layout-notes {
-    gap: 0.75rem 0rem;
+  .search-header-subtype {
+    width: 100%;
+    margin-left: 0;
+  }
+  .search-header-subtype .search-grid-dropdown {
+    width: 100%;
+    min-width: 0;
   }
 
   .quote-meta {
@@ -5478,6 +5521,24 @@ body.selection-mode .quote-card::after {
     gap: 0.5rem !important;
     grid-template-columns: 1fr 1fr !important;
   }
+  /* Reset the desktop grid-column assignments so elements flow naturally in
+     the 2-column tablet grid. */
+  .search-grid #searchTagsContainer,
+  .search-grid #searchTextContainer,
+  .search-grid #searchScoreContainer,
+  .search-grid #searchAuthorContainer,
+  .search-grid #searchSourceContainer,
+  .search-grid .search-clear-item {
+    grid-column: auto !important;
+    grid-row: auto !important;
+  }
+  .search-grid .search-clear-item {
+    grid-column: 1 / -1 !important;
+    justify-self: stretch !important;
+  }
+  .search-grid .search-clear-item .search-clear-btn {
+    width: 100% !important;
+  }
   
   .search-item {
     margin-bottom: 0.3rem !important;
@@ -6902,24 +6963,35 @@ body.selection-mode .quote-card::after {
  * and selects line up neatly. */
 .lp-list-header-dates {
   display: flex;
-  gap: 0.75rem;
+  gap: 0.9rem;
   align-items: flex-end;
-  padding: 0.35rem 0.9rem 0.65rem 0.9rem;
+  padding: 0.5rem 0.9rem 0.75rem 0.9rem;
   border-bottom: 1px solid var(--border);
 }
+/* Each Year/Month block stacks its label above the select. */
 .lp-list-header-dates .search-item {
-  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  flex: 1 1 0;
   margin: 0;
   min-width: 0;
+  gap: 0.2rem;
 }
 .lp-list-header-dates .search-item label {
   display: block;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   color: var(--text-secondary);
-  margin-bottom: 0.2rem;
+  min-width: 0;
+  margin: 0;
+  white-space: nowrap;
 }
 .lp-list-header-dates .search-item select {
   width: 100%;
+  min-width: 0;
+  height: var(--d-btn-height);
+  padding: 0.3rem 0.5rem;
+  font-size: 0.9rem;
 }
 
 .lp-row {

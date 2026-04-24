@@ -303,12 +303,96 @@
                       <span id="genericSubTypeSummary" class="filter-type-summary" style="display:none;"></span>
                     </div>
                   </div>
-                  <!-- Clear button lives in the title row -->
-                  <button id="clearBtn" class="btn btn-primary search-clear-btn">Clear</button>
+                  <!-- Sub-type dropdown lives in the header, right-aligned.
+                       Only ONE of the three containers below is visible at a time
+                       (per current note type). -->
+                  <div class="search-header-subtype">
+                    <!-- Quote Sources dropdown (Quote view / All Notes view) -->
+                    <div class="search-item search-grid-dropdown" id="quoteSourcesFilterContainer">
+                      <label id="quoteSourcesFilterLabel">📋 Quote Sources</label>
+                      <div class="type-filter-dropdown-container">
+                        <button type="button" id="typeFilterToggle" class="type-filter-toggle">
+                          <span class="dropdown-arrow">▼</span>
+                        </button>
+                        <div id="typeFilterDropdown" class="type-filter-dropdown">
+                          <div class="type-action-buttons">
+                            <button type="button" id="typeSelectAllBtn" class="type-action-btn">
+                              <span class="type-icon">✓</span>
+                              <span>Select All</span>
+                            </button>
+                            <div class="type-action-separator"></div>
+                            <button type="button" id="typeDeselectAllBtn" class="type-action-btn">
+                              <span class="type-icon">✗</span>
+                              <span>Clear All</span>
+                            </button>
+                          </div>
+                          <div class="type-filter-separator"></div>
+                          <div class="type-filter-options">
+                            <!-- Populated by JavaScript -->
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Training Types dropdown (Training view / All Notes view) -->
+                    <div class="search-item search-grid-dropdown" id="trainingTypesFilterContainer" style="display: none;">
+                      <label id="trainingTypesFilterLabel">🏋️ Training Types</label>
+                      <div class="type-filter-dropdown-container">
+                        <button type="button" id="trainingTypeFilterToggle" class="type-filter-toggle">
+                          <span class="dropdown-arrow">▼</span>
+                        </button>
+                        <div id="trainingTypeFilterDropdown" class="type-filter-dropdown">
+                          <div class="type-action-buttons">
+                            <button type="button" id="trainingTypeSelectAllBtn" class="type-action-btn">
+                              <span class="type-icon">✓</span>
+                              <span>Select All</span>
+                            </button>
+                            <div class="type-action-separator"></div>
+                            <button type="button" id="trainingTypeDeselectAllBtn" class="type-action-btn">
+                              <span class="type-icon">✗</span>
+                              <span>Clear All</span>
+                            </button>
+                          </div>
+                          <div class="type-filter-separator"></div>
+                          <div class="training-type-filter-options">
+                            <!-- Populated by JavaScript -->
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Generic sub-type filter — shown when current type has sub-types -->
+                    <div class="search-item search-grid-dropdown" id="genericSubTypesFilterContainer" style="display: none;">
+                      <label id="genericSubTypesFilterLabel">🏷️ Type</label>
+                      <div class="type-filter-dropdown-container">
+                        <button type="button" id="genericSubTypeFilterToggle" class="type-filter-toggle">
+                          <span class="dropdown-arrow">▼</span>
+                        </button>
+                        <div id="genericSubTypeFilterDropdown" class="type-filter-dropdown">
+                          <div class="type-action-buttons">
+                            <button type="button" id="genericSubTypeSelectAllBtn" class="type-action-btn">
+                              <span class="type-icon">✓</span>
+                              <span>Select All</span>
+                            </button>
+                            <div class="type-action-separator"></div>
+                            <button type="button" id="genericSubTypeDeselectAllBtn" class="type-action-btn">
+                              <span class="type-icon">✗</span>
+                              <span>Clear All</span>
+                            </button>
+                          </div>
+                          <div class="type-filter-separator"></div>
+                          <div class="generic-subtype-filter-options">
+                            <!-- Populated by JavaScript -->
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
               <div class="search-grid">
+                <!-- Row 1 (all note types): Tags | Text | Score | Clear -->
                 <div class="search-item autocomplete-wrapper" id="searchTagsContainer">
                   <label>🏷️ Tags</label>
                   <input
@@ -340,6 +424,12 @@
                     placeholder="5, 5+, or 3-5..."
                   />
                 </div>
+                <!-- Clear button sits at the end of row 1 -->
+                <div class="search-item search-clear-item">
+                  <button id="clearBtn" class="btn btn-primary search-clear-btn">Clear</button>
+                </div>
+
+                <!-- Row 2 (Quote / All Notes only): Author | Source -->
                 <div class="search-item autocomplete-wrapper" id="searchAuthorContainer">
                   <label>✍️ Author</label>
                   <input
@@ -360,18 +450,23 @@
                   />
                   <div id="searchSourceSuggestions" class="autocomplete-suggestions"></div>
                 </div>
-                
-                <!-- Training Year Filter -->
-                <div class="search-item" id="trainingYearContainer" style="display: none;">
+
+                <!-- Year / Month filters.
+                     They are hidden here in the filter bar (the filter UI for
+                     date selection now lives in the list pane's header). The
+                     list-pane code (listPaneView.js) physically moves these
+                     containers into its own header slot when training + list
+                     sub-mode is active, so we must keep the full label +
+                     populated <select> structure that the rest of the code
+                     (searchManager.js, calendar, query builder) expects. -->
+                <div class="search-item" id="trainingYearContainer" style="display:none;">
                   <label>📅 Year</label>
                   <select id="trainingYearFilter" class="training-date-select">
                     <option value="">All Years</option>
-                    <!-- Populated by JavaScript -->
+                    <!-- Populated by JavaScript on focus (searchManager.js) -->
                   </select>
                 </div>
-                
-                <!-- Training Month Filter -->
-                <div class="search-item" id="trainingMonthContainer" style="display: none;">
+                <div class="search-item" id="trainingMonthContainer" style="display:none;">
                   <label>📅 Month</label>
                   <select id="trainingMonthFilter" class="training-date-select" disabled>
                     <option value="">All Months</option>
@@ -388,87 +483,6 @@
                     <option value="11">November</option>
                     <option value="12">December</option>
                   </select>
-                </div>
-
-                <!-- Quote Sources dropdown — shown in grid row 2 for quote layout -->
-                <div class="search-item search-grid-dropdown" id="quoteSourcesFilterContainer">
-                  <label id="quoteSourcesFilterLabel">📋 Quote Sources</label>
-                  <div class="type-filter-dropdown-container">
-                    <button type="button" id="typeFilterToggle" class="type-filter-toggle">
-                      <span class="dropdown-arrow">▼</span>
-                    </button>
-                    <div id="typeFilterDropdown" class="type-filter-dropdown">
-                      <div class="type-action-buttons">
-                        <button type="button" id="typeSelectAllBtn" class="type-action-btn">
-                          <span class="type-icon">✓</span>
-                          <span>Select All</span>
-                        </button>
-                        <div class="type-action-separator"></div>
-                        <button type="button" id="typeDeselectAllBtn" class="type-action-btn">
-                          <span class="type-icon">✗</span>
-                          <span>Clear All</span>
-                        </button>
-                      </div>
-                      <div class="type-filter-separator"></div>
-                      <div class="type-filter-options">
-                        <!-- Populated by JavaScript -->
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Training Types dropdown — shown in grid row 2 for training layout -->
-                <div class="search-item search-grid-dropdown" id="trainingTypesFilterContainer" style="display: none;">
-                  <label id="trainingTypesFilterLabel">🏋️ Training Types</label>
-                  <div class="type-filter-dropdown-container">
-                    <button type="button" id="trainingTypeFilterToggle" class="type-filter-toggle">
-                      <span class="dropdown-arrow">▼</span>
-                    </button>
-                    <div id="trainingTypeFilterDropdown" class="type-filter-dropdown">
-                      <div class="type-action-buttons">
-                        <button type="button" id="trainingTypeSelectAllBtn" class="type-action-btn">
-                          <span class="type-icon">✓</span>
-                          <span>Select All</span>
-                        </button>
-                        <div class="type-action-separator"></div>
-                        <button type="button" id="trainingTypeDeselectAllBtn" class="type-action-btn">
-                          <span class="type-icon">✗</span>
-                          <span>Clear All</span>
-                        </button>
-                      </div>
-                      <div class="type-filter-separator"></div>
-                      <div class="training-type-filter-options">
-                        <!-- Populated by JavaScript -->
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Generic sub-type filter — shown when current type has sub-types -->
-                <div class="search-item search-grid-dropdown" id="genericSubTypesFilterContainer" style="display: none;">
-                  <label id="genericSubTypesFilterLabel">🏷️ Type</label>
-                  <div class="type-filter-dropdown-container">
-                    <button type="button" id="genericSubTypeFilterToggle" class="type-filter-toggle">
-                      <span class="dropdown-arrow">▼</span>
-                    </button>
-                    <div id="genericSubTypeFilterDropdown" class="type-filter-dropdown">
-                      <div class="type-action-buttons">
-                        <button type="button" id="genericSubTypeSelectAllBtn" class="type-action-btn">
-                          <span class="type-icon">✓</span>
-                          <span>Select All</span>
-                        </button>
-                        <div class="type-action-separator"></div>
-                        <button type="button" id="genericSubTypeDeselectAllBtn" class="type-action-btn">
-                          <span class="type-icon">✗</span>
-                          <span>Clear All</span>
-                        </button>
-                      </div>
-                      <div class="type-filter-separator"></div>
-                      <div class="generic-subtype-filter-options">
-                        <!-- Populated by JavaScript -->
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </div>
               
