@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Note Archive</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
-    <link rel="stylesheet" href="style.css?v=202604110420" />
+    <link rel="stylesheet" href="style.css?v=202604110900" />
     <!-- Font Awesome for dice icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <!-- Quill Editor -->
@@ -309,9 +309,9 @@
                   <div class="search-header-subtype">
                     <!-- Quote Sources dropdown (Quote view / All Notes view) -->
                     <div class="search-item search-grid-dropdown" id="quoteSourcesFilterContainer">
-                      <label id="quoteSourcesFilterLabel">📋 Quote Sources</label>
                       <div class="type-filter-dropdown-container">
                         <button type="button" id="typeFilterToggle" class="type-filter-toggle">
+                          <span id="quoteSourcesFilterLabel" class="type-filter-toggle-label">📋 Quote Sources</span>
                           <span class="dropdown-arrow">▼</span>
                         </button>
                         <div id="typeFilterDropdown" class="type-filter-dropdown">
@@ -336,9 +336,9 @@
 
                     <!-- Training Types dropdown (Training view / All Notes view) -->
                     <div class="search-item search-grid-dropdown" id="trainingTypesFilterContainer" style="display: none;">
-                      <label id="trainingTypesFilterLabel">🏋️ Training Types</label>
                       <div class="type-filter-dropdown-container">
                         <button type="button" id="trainingTypeFilterToggle" class="type-filter-toggle">
+                          <span id="trainingTypesFilterLabel" class="type-filter-toggle-label">🏋️ Training Types</span>
                           <span class="dropdown-arrow">▼</span>
                         </button>
                         <div id="trainingTypeFilterDropdown" class="type-filter-dropdown">
@@ -363,9 +363,9 @@
 
                     <!-- Generic sub-type filter — shown when current type has sub-types -->
                     <div class="search-item search-grid-dropdown" id="genericSubTypesFilterContainer" style="display: none;">
-                      <label id="genericSubTypesFilterLabel">🏷️ Type</label>
                       <div class="type-filter-dropdown-container">
                         <button type="button" id="genericSubTypeFilterToggle" class="type-filter-toggle">
+                          <span id="genericSubTypesFilterLabel" class="type-filter-toggle-label">🏷️ Type</span>
                           <span class="dropdown-arrow">▼</span>
                         </button>
                         <div id="genericSubTypeFilterDropdown" class="type-filter-dropdown">
@@ -2078,41 +2078,9 @@ Quote number three..."
               </div>
             </div>
 
-            <!-- Export to PDF -->
-            <button id="bulkExportPdfBtn" class="btn btn-primary" style="display: flex; align-items: center; padding: 12px; text-align: left;">
-              <span style="font-size: 1.5rem; margin-right: 12px;">📄</span>
-              <div style="flex: 1;">
-                <div style="font-weight: 600; font-size: 1rem;">Export to PDF</div>
-                <div style="font-size: 0.85rem; opacity: 0.8; margin-top: 2px;">Export all filtered quotes as PDF</div>
-              </div>
-            </button>
-
-            <!-- Duplicate -->
-            <button id="bulkDuplicateBtn" class="btn" style="display: flex; align-items: center; padding: 12px; text-align: left; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe;">
-              <span style="font-size: 1.5rem; margin-right: 12px;">⧉</span>
-              <div style="flex: 1;">
-                <div style="font-weight: 600; font-size: 1rem;">Duplicate Notes</div>
-                <div style="font-size: 0.85rem; opacity: 0.8; margin-top: 2px;">Copy selected notes with all attachments and tags</div>
-              </div>
-            </button>
-
-            <!-- Split Attachments -->
-            <button id="bulkSplitBtn" class="btn" style="display: flex; align-items: center; padding: 12px; text-align: left; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;">
-              <span style="font-size: 1.5rem; margin-right: 12px;">✂️</span>
-              <div style="flex: 1;">
-                <div style="font-weight: 600; font-size: 1rem;">Split Attachments</div>
-                <div style="font-size: 0.85rem; opacity: 0.8; margin-top: 2px;">One new note per extra attachment — original keeps first, text &amp; tags copied to each</div>
-              </div>
-            </button>
-
-            <!-- Delete All -->
-            <button id="bulkDeleteBtn" class="btn" style="display: flex; align-items: center; padding: 12px; text-align: left; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca;">
-              <span style="font-size: 1.5rem; margin-right: 12px;">🗑️</span>
-              <div style="flex: 1;">
-                <div style="font-weight: 600; font-size: 1rem;">Delete All</div>
-                <div style="font-size: 0.85rem; opacity: 0.8; margin-top: 2px;">Permanently delete all filtered quotes (with confirmation)</div>
-              </div>
-            </button>
+            <!-- Export / Duplicate / Split / Delete moved to the in-list
+                 Select-Action-Bar (below the "Latest" header). The Bulk
+                 Operations modal now focuses on Tag / Untag / Group. -->
           </div>
 
           <div style="margin-top: 20px;">
@@ -2127,6 +2095,6 @@ Quote number three..."
     <!-- Quill Editor Script -->
     <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
     <script type="module" src="js/lib/confirmDialog.js"></script>
-    <script type="module" src="app.js?v=20260411saf2"></script>
+    <script type="module" src="app.js?v=20260411counters1"></script>
   </body>
 </html>

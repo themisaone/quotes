@@ -822,13 +822,30 @@ function darkenColor(hex, percent) {
 }
 
 /**
- * Apply button color
+ * Return the RGB-inverted hex colour (255 - each channel).
+ * Used as the hover colour for primary buttons so it's always the visual
+ * complement of the chosen palette button colour.
+ */
+function invertColor(hex) {
+  hex = hex.replace('#', '');
+  if (hex.length === 3) {
+    hex = hex.split('').map((c) => c + c).join('');
+  }
+  const r = 255 - parseInt(hex.substring(0, 2), 16);
+  const g = 255 - parseInt(hex.substring(2, 4), 16);
+  const b = 255 - parseInt(hex.substring(4, 6), 16);
+  const toHex = (n) => n.toString(16).padStart(2, '0');
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+/**
+ * Apply button color. The hover colour is derived as the RGB invert of the
+ * chosen primary colour, so it's always the visual complement of the
+ * palette's button colour and visibly distinct on hover.
  */
 function applyButtonColor(color) {
   document.documentElement.style.setProperty('--primary-color', color);
-  // Calculate hover color (darker)
-  const hoverColor = darkenColor(color, 15);
-  document.documentElement.style.setProperty('--primary-hover', hoverColor);
+  document.documentElement.style.setProperty('--primary-hover', invertColor(color));
 }
 
 function applyLinkColor(color) {
@@ -873,6 +890,7 @@ function applyCancelColor(color) {
  * Apply active counter color
  */
 function applyActiveCounterColor(color) {
+  document.documentElement.style.setProperty('--active-counter-color', color);
   const counters = document.querySelectorAll(
     '#filteredQuotesCount, #filteredAuthorsCount, #filteredSourcesCount, #filteredTagsCount'
   );
@@ -885,6 +903,7 @@ function applyActiveCounterColor(color) {
  * Apply total counter color
  */
 function applyTotalCounterColor(color) {
+  document.documentElement.style.setProperty('--total-counter-color', color);
   const counters = document.querySelectorAll(
     '#totalQuotesCount, #totalAuthorsCount, #totalSourcesCount, #totalTagsCount'
   );

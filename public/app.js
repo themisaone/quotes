@@ -63,7 +63,7 @@ import {
   toggleTagOperationsPanel,
   getDisplaySetting,
   initializeSettings as initializeSettingsLib
-} from './js/lib/settingsManager.js?v=20260318j';
+} from './js/lib/settingsManager.js?v=20260411counters1';
 
 import {
   openAuthorModal as openAuthorModalLib,
@@ -1223,8 +1223,6 @@ function setupEventListeners() {
   const bulkTagAddBtn = getElementByIdSafe("bulkTagAddBtn");
   const bulkUntagExecuteBtn = getElementByIdSafe("bulkUntagExecuteBtn");
   const bulkGroupExecuteBtn = getElementByIdSafe("bulkGroupExecuteBtn");
-  const bulkExportPdfBtn = getElementByIdSafe("bulkExportPdfBtn");
-  const bulkDeleteBtn = getElementByIdSafe("bulkDeleteBtn");
 
   if (bulkOperationsBtn) {
     bulkOperationsBtn.addEventListener("click", () => {
@@ -1280,23 +1278,10 @@ function setupEventListeners() {
     bulkGroupExecuteBtn.addEventListener("click", handleBulkSetGroup);
   }
 
-  if (bulkExportPdfBtn) {
-    bulkExportPdfBtn.addEventListener("click", handleBulkExportPdf);
-  }
-
-  const bulkDuplicateBtn = document.getElementById('bulkDuplicateBtn');
-  if (bulkDuplicateBtn) {
-    bulkDuplicateBtn.addEventListener("click", handleBulkDuplicate);
-  }
-
-  const bulkSplitBtn = document.getElementById('bulkSplitBtn');
-  if (bulkSplitBtn) {
-    bulkSplitBtn.addEventListener("click", handleBulkSplit);
-  }
-
-  if (bulkDeleteBtn) {
-    bulkDeleteBtn.addEventListener("click", handleBulkDelete);
-  }
+  // Export / Duplicate / Split / Delete were removed from the Bulk Operations
+  // modal; those actions now live in the Select-Action-Bar (below the "Latest"
+  // header). The handlers themselves are kept — they're still invoked by
+  // dispatchSabAction() for the stripe buttons.
 
   // Close bulk operations modal on outside click
   window.addEventListener("click", (e) => {
@@ -4883,11 +4868,6 @@ async function handleBulkSetGroup() {
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = 'Set Group'; }
   }
-}
-
-async function handleBulkExportPdf() {
-  closeBulkOperationsModal();
-  await exportToPdf();
 }
 
 async function handleBulkDuplicate() {

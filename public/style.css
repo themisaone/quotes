@@ -16,7 +16,7 @@
 
 :root {
   --primary-color: #1e40af;
-  --primary-hover: #1e3a8a;
+  --primary-hover: #5883ab;
   --link-color: #1e40af;
   --link-hover: #1e3a8a;
   --secondary-color: #64748b;
@@ -34,6 +34,8 @@
   --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.1);
   --side-menu-width: 280px;
   --tag-color: #2d6a4f;
+  --active-counter-color: #dc2626;
+  --total-counter-color: #047857;
   --header-color: #166534;
   --modal-footer-bg: #fde68a;
   --delete-color: #ef4444;
@@ -445,12 +447,10 @@ header h1 {
 
 /* The dropdown block inside the header doesn't need the grid-cell layout it
    had when it lived in .search-grid — keep it compact.
-   Fixed width so Quote Sources / Training Types / Generic Sub-types all
-   look identical regardless of how long their label text is. */
+   Size to content (the label text + arrow) so the button doesn't stretch
+   across empty space like a traditional select. */
 .search-header-subtype .search-grid-dropdown {
-  width: 320px;
-  min-width: 320px;
-  flex: 0 0 320px;
+  flex: 0 0 auto;
 }
 
 /* Clear button (now placed inside .search-grid row 1) */
@@ -471,13 +471,24 @@ header h1 {
   flex: 1;
   min-width: 0;
 }
-/* Arrow-only toggle button fills its container */
+/* Toggle button now carries its own label (see .type-filter-toggle-label)
+   so we size it to content and place the label-left / arrow-right. */
 .search-grid-dropdown .type-filter-toggle {
-  width: 100%;
   min-width: 0;
-  padding: 0.4rem 0.6rem;
-  justify-content: center;
+  padding: 0.4rem 0.9rem;
+  justify-content: space-between;
+  gap: 0.6rem;
   height: var(--d-btn-height);
+}
+
+/* Label that sits inside the sub-type toggle button. Acts like the button
+   text (label + arrow), replacing the old separate <label> element. */
+.type-filter-toggle-label {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 22ch;
 }
 /* Dropdown panel opens downward from the button, not from the label */
 .search-grid-dropdown .type-filter-dropdown {
@@ -553,7 +564,7 @@ header h1 {
 
 .tts-sep {
   color: #9ca3af;
-  font-size: 0.75em;
+  font-size: 1.0rem;
   user-select: none;
 }
 
@@ -1990,7 +2001,7 @@ body.selection-mode .quote-card::after {
   cursor: pointer;
   font-weight: 600;
   user-select: none;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .select-action-bar .sab-saf-label input[type="checkbox"] {
@@ -2011,7 +2022,8 @@ body.selection-mode .quote-card::after {
 .select-action-bar .sab-count {
   font-weight: 700;
   padding: 4px 10px;
-  background: #dc2626;
+  background: var(--active-counter-color);
+  color: white;
   border-radius: 12px;
   font-size: var(--d-font-base);
   white-space: nowrap;
@@ -2029,8 +2041,10 @@ body.selection-mode .quote-card::after {
   transition: all 0.2s;
 }
 
-.select-action-bar .btn-sab:hover:not(:disabled) {
-  background: #f3f4f6;
+.select-action-bar .btn-sab:hover:not(:disabled),
+.select-action-bar .btn-sab-danger:hover:not(:disabled) {
+  background: var(--primary-hover);
+  color: white;
   transform: translateY(-1px);
   box-shadow: 0 2px 6px rgba(0,0,0,.15);
 }
@@ -2044,10 +2058,6 @@ body.selection-mode .quote-card::after {
   background: #fee2e2;
   color: #b91c1c;
   border-color: #fecaca;
-}
-
-.select-action-bar .btn-sab-danger:hover:not(:disabled) {
-  background: #fecaca;
 }
 
 /* Dim individual-card checkboxes when SAF is on and the user can't untick */
@@ -2165,7 +2175,8 @@ body.saf-locked .quote-card .note-select-checkbox {
 }
 
 .btn-select-mode.active {
-  background: #be9533;
+  background: var(--total-counter-color);
+  color: white;
   outline-offset: 1px;
 }
 
@@ -6617,7 +6628,7 @@ body.selection-mode .quote-card:hover {
   padding: 0.6rem 1.25rem;
   font-size: 0.85rem;
   color: var(--text-secondary, #6b7280);
-  background: var(--bg-secondary, #f9fafb);
+  background: var(--surface, #f9fafb);
   border-bottom: 1px solid var(--border);
 }
 
@@ -6638,7 +6649,7 @@ body.selection-mode .quote-card:hover {
 }
 .merge-note-row:hover { background: var(--hover-color, #f3f4f6); }
 .merge-note-row.merge-note-main {
-  background: #eff6ff;
+  background:  var(--surface, #f9fafb);
   border-left-color: var(--primary, #3b82f6);
 }
 .dark-mode .merge-note-row.merge-note-main {
@@ -6893,7 +6904,7 @@ body.selection-mode .quote-card:hover {
   padding: 0 0.5rem;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: var(--input-bg);
+  background: var(--primary-color);
   color: var(--text-primary);
   font-size: 0.85rem;
   cursor: pointer;
@@ -6912,9 +6923,9 @@ body.selection-mode .quote-card:hover {
 }
 /* Gallery mode active state — amber tint to signal implicit filter is on */
 .column-count-select.gallery-active {
-  background: #d97706;
+  background: var(--total-counter-color);
   color: white;
-  border-color: #b45309;
+  border-color:var(--total-counter-color);
 }
 
 /* Gallery thumb is always in the DOM but hidden outside gallery mode */
