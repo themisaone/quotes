@@ -134,7 +134,7 @@ import {
   initializeQuillEditor,
   handleFormSubmit as handleFormSubmitLib,
   deleteQuote as deleteQuoteLib
-} from './js/lib/quoteEditor.js';
+} from './js/lib/quoteEditor.js?v=20260411grpclr';
 
 import {
   initializeBulkImport,
@@ -343,8 +343,6 @@ let filteredQuotes = 0; // Track filtered count for pagination
 // ============= MANUAL SELECTION STATE =============
 let selectionMode = false;
 let selectedNoteIds = new Set();
-// 'filtered' | 'selected' — which scope the bulk ops modal targets
-let bulkOpsScope = 'filtered';
 
 // ── Select-Action-Bar state (new stripe below Latest header) ──
 // When "Select All filtered" is ON, we operate in *virtual* select-all mode:
@@ -539,6 +537,7 @@ function generateNoteTypeMenu() {
     const btn = document.createElement('button');
     btn.className = 'menu-item note-type-filter';
     btn.dataset.noteType = type.value;
+    btn.title = type.label;
     btn.innerHTML = `<span class="menu-icon">${type.icon}</span><span class="menu-text"> ${type.label}</span>`;
 
     if (hasSubTags) {
@@ -733,11 +732,17 @@ async function loadAndApplyMode() {
   // Make allowed types available globally for filter managers
   window._modeAllowedTypes = allowedTypes;
 
-  // Populate mode selector with all known modes, mark current
+  // Populate mode selector with all known modes, mark current.
+  // Display labels can differ from the backend key — currently only ALL gets
+  // a prettier label ("All types"); others show their raw key.
+  const MODE_DISPLAY_LABELS = { ALL: 'ALL TYPES' };
   const modeSwitcher = document.getElementById('modeSwitcher');
   if (modeSwitcher && activeMode.allModes) {
     modeSwitcher.innerHTML = Object.keys(activeMode.allModes)
-      .map(m => `<option value="${m}"${m === mode ? ' selected' : ''}>${m}</option>`)
+      .map(m => {
+        const label = MODE_DISPLAY_LABELS[m] || m;
+        return `<option value="${m}"${m === mode ? ' selected' : ''}>${label}</option>`;
+      })
       .join('');
     modeSwitcher.addEventListener('change', async () => {
       const newMode = modeSwitcher.value;
@@ -864,26 +869,33 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Initialize Quill editor using library
   quillEditor = initializeQuillEditor();
   
-  // Check if we're on a tablet (769px-1100px)
+  // Check if we're on a tablet (769px-1100px) — still used below for other
+  // tablet-specific wiring decisions.
   const isTablet = window.matchMedia("(min-width: 768px) and (max-width: 1100px)").matches;
 
-  // Medium-screen sidebar collapse toggle
+  // Side-menu collapse toggle — available on desktop and medium (on mobile the
+  // side menu becomes a bottom-bar so the toggle is hidden via CSS).
   const sideMenuToggle = document.getElementById('sideMenuToggle');
-  if (sideMenuToggle && isTablet) {
+  if (sideMenuToggle) {
     const sideMenuEl  = document.querySelector('.side-menu');
     const appLayoutEl = document.querySelector('.app-layout');
+    const isMobile    = window.matchMedia('(max-width: 767px)').matches;
     const applyCollapsed = (collapsed) => {
       sideMenuEl.classList.toggle('menu-collapsed', collapsed);
       appLayoutEl.classList.toggle('menu-collapsed', collapsed);
       sideMenuToggle.innerHTML = collapsed ? '&#9654;' : '&#9664;';
+      sideMenuToggle.title = collapsed ? 'Expand menu' : 'Collapse menu';
     };
-    // Restore saved state
-    applyCollapsed(localStorage.getItem('sideMenuCollapsed') === 'true');
-    sideMenuToggle.addEventListener('click', () => {
-      const nowCollapsed = !sideMenuEl.classList.contains('menu-collapsed');
-      applyCollapsed(nowCollapsed);
-      localStorage.setItem('sideMenuCollapsed', nowCollapsed);
-    });
+    // Mobile layout is a bottom-bar; the collapsed state is meaningless there
+    // and would fight the width:100% rule, so skip restore + wire-up entirely.
+    if (!isMobile) {
+      applyCollapsed(localStorage.getItem('sideMenuCollapsed') === 'true');
+      sideMenuToggle.addEventListener('click', () => {
+        const nowCollapsed = !sideMenuEl.classList.contains('menu-collapsed');
+        applyCollapsed(nowCollapsed);
+        localStorage.setItem('sideMenuCollapsed', nowCollapsed);
+      });
+    }
   }
 
   // Set up event listeners (including gallery mode) BEFORE first load
@@ -1063,14 +1075,9 @@ function setupEventListeners() {
   }
 
   // ── New Select-Action-Bar wiring (below the Latest header) ───────────────
-  const safCheckbox = document.getElementById('selectAllFilteredCheckbox');
-  if (safCheckbox) {
-    safCheckbox.addEventListener('change', handleSelectAllFilteredToggle);
-  }
-
   // Each action button routes through a single dispatcher that produces the
-  // correct backend payload based on the current selection mode (SAF on/off,
-  // with/without exclusions) and then calls the existing bulk handler.
+  // correct backend payload based on the current selection (always
+  // selectedNoteIds, since "Select All filtered" has been removed).
   const _wireSab = (btnId, action) => {
     const b = document.getElementById(btnId);
     if (b) b.addEventListener('click', () => dispatchSabAction(action));
@@ -1080,6 +1087,24 @@ function setupEventListeners() {
   _wireSab('sabSplitBtn',     'split');
   _wireSab('sabMergeBtn',     'merge');
   _wireSab('sabDeleteBtn',    'delete');
+
+  // Tag/Group mini-form: dropdown drives the input's placeholder, Apply runs
+  // the chosen operation against the current selection.
+  const sabTagOpSelect   = document.getElementById('sabTagOpSelect');
+  const sabTagOpInput    = document.getElementById('sabTagOpInput');
+  const sabTagOpApplyBtn = document.getElementById('sabTagOpApplyBtn');
+  if (sabTagOpSelect) {
+    sabTagOpSelect.addEventListener('change', _updateSabTagOpPlaceholder);
+    _updateSabTagOpPlaceholder();
+  }
+  if (sabTagOpInput) {
+    sabTagOpInput.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter') { ev.preventDefault(); handleSabTagOpApply(); }
+    });
+  }
+  if (sabTagOpApplyBtn) {
+    sabTagOpApplyBtn.addEventListener('click', handleSabTagOpApply);
+  }
 
   // ── Column count / Gallery mode ──────────────────────────────────────────
   let _galleryNormalPageSize = null;
@@ -1207,89 +1232,14 @@ function setupEventListeners() {
     selectAllPageBtn.addEventListener("click", selectAllOnPage);
   }
 
-  const bulkTagSelectedBtn = getElementByIdSafe("bulkTagSelectedBtn");
-  if (bulkTagSelectedBtn) {
-    bulkTagSelectedBtn.addEventListener("click", () => {
-      bulkOpsScope = 'selected';
-      openBulkOperationsModal();
-    });
+  // ── Export-to-PDF menu item ──────────────────────────────────────────────
+  // Replaces the old "Bulk Operations" modal entry. Always exports the full
+  // filtered set (never the stripe's selection). For selection-scoped PDF
+  // export the user should use the Select-Action-Bar's "Export to PDF" button.
+  const exportPdfMenuBtn = getElementByIdSafe("exportPdfMenuBtn");
+  if (exportPdfMenuBtn) {
+    exportPdfMenuBtn.addEventListener("click", exportToPdf);
   }
-
-  // Bulk operations modal
-  const bulkOperationsBtn = getElementByIdSafe("bulkOperationsBtn");
-  const closeBulkOpsModal = getElementByIdSafe("closeBulkOpsModal");
-  const cancelBulkOpsBtn = getElementByIdSafe("cancelBulkOpsBtn");
-  const bulkTagExecuteBtn = getElementByIdSafe("bulkTagExecuteBtn");
-  const bulkTagAddBtn = getElementByIdSafe("bulkTagAddBtn");
-  const bulkUntagExecuteBtn = getElementByIdSafe("bulkUntagExecuteBtn");
-  const bulkGroupExecuteBtn = getElementByIdSafe("bulkGroupExecuteBtn");
-
-  if (bulkOperationsBtn) {
-    bulkOperationsBtn.addEventListener("click", () => {
-      bulkOpsScope = 'filtered'; // menu button always starts with filter scope
-      openBulkOperationsModal();
-    });
-  }
-
-  if (closeBulkOpsModal) {
-    closeBulkOpsModal.addEventListener("click", closeBulkOperationsModal);
-  }
-
-  if (cancelBulkOpsBtn) {
-    cancelBulkOpsBtn.addEventListener("click", closeBulkOperationsModal);
-  }
-
-  // Scope toggle buttons inside bulk ops modal
-  const bulkScopeFiltered = document.getElementById('bulkScopeFiltered');
-  const bulkScopeSelected = document.getElementById('bulkScopeSelected');
-  if (bulkScopeFiltered) {
-    bulkScopeFiltered.addEventListener('click', () => {
-      bulkOpsScope = 'filtered';
-      openBulkOperationsModal();
-    });
-  }
-  if (bulkScopeSelected) {
-    bulkScopeSelected.addEventListener('click', () => {
-      bulkOpsScope = 'selected';
-      openBulkOperationsModal();
-    });
-  }
-
-  if (bulkTagAddBtn) {
-    bulkTagAddBtn.addEventListener("click", addBulkTagFromInput);
-  }
-
-  const bulkTagInputEl = document.getElementById("bulkTagInput");
-  if (bulkTagInputEl) {
-    bulkTagInputEl.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") { e.preventDefault(); addBulkTagFromInput(); }
-    });
-  }
-
-  if (bulkTagExecuteBtn) {
-    bulkTagExecuteBtn.addEventListener("click", handleBulkTag);
-  }
-
-  if (bulkUntagExecuteBtn) {
-    bulkUntagExecuteBtn.addEventListener("click", handleBulkUntag);
-  }
-
-  if (bulkGroupExecuteBtn) {
-    bulkGroupExecuteBtn.addEventListener("click", handleBulkSetGroup);
-  }
-
-  // Export / Duplicate / Split / Delete were removed from the Bulk Operations
-  // modal; those actions now live in the Select-Action-Bar (below the "Latest"
-  // header). The handlers themselves are kept — they're still invoked by
-  // dispatchSabAction() for the stripe buttons.
-
-  // Close bulk operations modal on outside click
-  window.addEventListener("click", (e) => {
-    const bulkOpsModal = getElementByIdSafe("bulkOperationsModal");
-    if (e.target === bulkOpsModal) {
-      closeBulkOperationsModal();
-    }
-  });
 
   if (refreshAuthorsBtn) {
     refreshAuthorsBtn.addEventListener("click", async () => {
@@ -4334,17 +4284,12 @@ function toggleSelectionMode() {
     btn.textContent = selectionMode ? '✕ Exit Selection' : '☑ Select';
   }
 
-  const bar = document.getElementById('selectActionBar');
-  if (bar) bar.style.display = selectionMode ? 'flex' : 'none';
-
   if (!selectionMode) {
     clearSelection();
-  } else {
-    // Entering selection mode: pull fresh totalFilteredCount from the UI so
-    // the "X notes selected" label is accurate if SAF gets toggled on.
-    _syncTotalFilteredCount();
-    updateSelectActionBar();
   }
+  // updateSelectActionBar() is the single source of truth for the bar's
+  // visibility — it hides it when there are no selected notes.
+  updateSelectActionBar();
 }
 
 function toggleNoteSelection(card, noteId) {
@@ -4389,9 +4334,6 @@ function clearSelection() {
   selectedNoteIds.clear();
   excludedNoteIds.clear();
   selectAllFiltered = false;
-
-  const safCb = document.getElementById('selectAllFilteredCheckbox');
-  if (safCb) safCb.checked = false;
 
   document.querySelectorAll('.quote-card.selected').forEach(c => c.classList.remove('selected'));
   updateSelectActionBar();
@@ -4446,21 +4388,19 @@ function handleSelectAllFilteredToggle(ev) {
  */
 function updateSelectActionBar() {
   const bar    = document.getElementById('selectActionBar');
-  const right  = document.getElementById('selectActionBarRight');
   const label  = document.getElementById('sabCountLabel');
   if (!bar) return;
 
-  bar.style.display = selectionMode ? 'flex' : 'none';
   const count = getEffectiveSelectionCount();
-
-  if (right) right.style.display = (selectionMode && count > 0) ? 'flex' : 'none';
+  // The stripe only appears once the user has actually picked at least one
+  // note — until then selection-mode is silent (just a visual state on the
+  // Latest header button + per-card checkboxes).
+  bar.style.display = (selectionMode && count > 0) ? 'flex' : 'none';
   if (label) label.textContent = `${count} note${count === 1 ? '' : 's'} selected`;
 
-  // Keep legacy modal count elements synced in case the user opens the modal.
+  // Keep the hidden legacy selection-bar counter in sync for any stray reader.
   const legacyCount = document.getElementById('selectionCount');
   if (legacyCount) legacyCount.textContent = String(count);
-  const modalSelCount = document.getElementById('bulkScopeSelectedCount');
-  if (modalSelCount) modalSelCount.textContent = String(count);
 }
 
 // Back-compat alias: many call sites still invoke updateSelectionBar().
@@ -4538,158 +4478,22 @@ function getFilterSummary() {
   return parts.length > 0 ? parts.join(' | ') : 'No filters applied';
 }
 
-async function openBulkOperationsModal() {
-  const modal = getElementByIdSafe("bulkOperationsModal");
-  const countElement = getElementByIdSafe("bulkOpsCount");
-  const filtersElement = getElementByIdSafe("bulkOpsFilters");
-  const scopeRow = document.getElementById('bulkOpsScopeRow');
-  const scopeLabel = document.getElementById('bulkOpsScopeLabel');
-  
-  modal.style.display = "block";
-  countElement.textContent = "...";
-  filtersElement.textContent = "";
-
-  // Show/hide scope toggle based on whether there are selected notes
-  const hasSelection = selectedNoteIds.size > 0;
-  if (scopeRow) scopeRow.style.display = hasSelection ? 'block' : 'none';
-
-  // Populate scope button counts
-  const selCountEl = document.getElementById('bulkScopeSelectedCount');
-  if (selCountEl) selCountEl.textContent = selectedNoteIds.size;
-
-  // Sync scope button active states
-  _syncScopeBtns();
-
-  try {
-    if (bulkOpsScope === 'selected') {
-      // Selected scope — count is already known
-      countElement.textContent = selectedNoteIds.size;
-      if (scopeLabel) scopeLabel.textContent = 'Selected notes:';
-      if (filtersElement) filtersElement.textContent = `${selectedNoteIds.size} notes manually selected`;
-    } else {
-      // Filter scope — fetch from server
-      if (scopeLabel) scopeLabel.textContent = 'Currently filtered:';
-      const filters = getCurrentFilters();
-      const response = await fetch(`${API_URL}/quotes/bulk-count`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filters })
-      });
-      const result = await response.json();
-      countElement.textContent = result.count || 0;
-      // Keep scope filtered count in sync
-      const filtCountEl = document.getElementById('bulkScopeFilteredCount');
-      if (filtCountEl) filtCountEl.textContent = result.count || 0;
-      if (filtersElement) filtersElement.textContent = getFilterSummary();
-    }
-    
-    // Setup autocomplete
-    const bulkTagInput = getElementByIdSafe("bulkTagInput");
-    const bulkTagSuggestions = getElementByIdSafe("bulkTagSuggestions");
-    if (bulkTagInput && bulkTagSuggestions) {
-      setupAutocompleteInput(bulkTagInput, bulkTagSuggestions, 'tags', currentNoteTypeFilter);
-    }
-    const bulkUntagInput = getElementByIdSafe("bulkUntagInput");
-    const bulkUntagSuggestions = getElementByIdSafe("bulkUntagSuggestions");
-    if (bulkUntagInput && bulkUntagSuggestions) {
-      setupAutocompleteInput(bulkUntagInput, bulkUntagSuggestions, 'tags', currentNoteTypeFilter);
-    }
-    
-  } catch (error) {
-    console.error("Error fetching filtered count:", error);
-    countElement.textContent = "Error";
-  }
-}
-
-function _syncScopeBtns() {
-  const btnFiltered = document.getElementById('bulkScopeFiltered');
-  const btnSelected = document.getElementById('bulkScopeSelected');
-  if (btnFiltered) btnFiltered.classList.toggle('bulk-scope-active', bulkOpsScope === 'filtered');
-  if (btnSelected) btnSelected.classList.toggle('bulk-scope-active', bulkOpsScope === 'selected');
-}
-
-function closeBulkOperationsModal() {
-  const modal = getElementByIdSafe("bulkOperationsModal");
-  modal.style.display = "none";
-  _clearBulkTagQueue();
-  const groupInput = document.getElementById('bulkGroupInput');
-  if (groupInput) groupInput.value = '';
-}
-
-// ── Multi-tag queue for bulk tagging ──────────────────────────────────────
-let _bulkTagQueue = [];
-
-function addBulkTagFromInput() {
-  const input = document.getElementById('bulkTagInput');
-  const value = input?.value?.trim();
-  if (!value) return;
-  if (_bulkTagQueue.includes(value)) { input.value = ''; return; }
-  _bulkTagQueue.push(value);
-  input.value = '';
-  // hide autocomplete
-  const sug = document.getElementById('bulkTagSuggestions');
-  if (sug) sug.classList.remove('show');
-  _renderBulkTagBadges();
-}
-
-function _removeBulkTag(name) {
-  _bulkTagQueue = _bulkTagQueue.filter(t => t !== name);
-  _renderBulkTagBadges();
-}
-window._removeBulkTag = _removeBulkTag;
-
-function _renderBulkTagBadges() {
-  const container = document.getElementById('bulkTagBadges');
-  const applyBtn  = document.getElementById('bulkTagExecuteBtn');
-  if (!container) return;
-
-  container.innerHTML = _bulkTagQueue.map(tag => `
-    <span class="bulk-tag-badge">
-      ${escapeHtml(tag)}
-      <span onclick="_removeBulkTag('${escapeHtml(tag).replace(/'/g, "\\'")}')">×</span>
-    </span>
-  `).join('');
-
-  if (applyBtn) {
-    if (_bulkTagQueue.length > 0) {
-      applyBtn.style.display = 'block';
-      applyBtn.textContent = `Apply ${_bulkTagQueue.length} tag${_bulkTagQueue.length > 1 ? 's' : ''} to Notes`;
-    } else {
-      applyBtn.style.display = 'none';
-    }
-  }
-}
-
-function _clearBulkTagQueue() {
-  _bulkTagQueue = [];
-  _renderBulkTagBadges();
-  const input = document.getElementById('bulkTagInput');
-  if (input) input.value = '';
-}
-// ─────────────────────────────────────────────────────────────────────────────
-
-function _isBulkOpsModalOpen() {
-  const modal = document.getElementById('bulkOperationsModal');
-  return !!modal && modal.style.display !== 'none' && modal.style.display !== '';
-}
-
+/**
+ * Build the payload + user-facing label for a bulk operation triggered from
+ * the Select-Action-Bar. Always derives scope from the current selection:
+ *   • explicit picks  → { noteIds }
+ *   • SAF (legacy)    → { filters [, excludeIds] }   (dead code path; kept
+ *     in case SAF is ever re-introduced, since selectAllFiltered is still
+ *     declared but never set to true)
+ * When nothing is selected the fallback returns { filters } against the
+ * current filter state so the handlers can still show a "no notes" alert
+ * cleanly.
+ */
 function _getBulkPayloadAndLabel() {
-  // If the Bulk Operations modal is currently open, it owns the scope —
-  // the menu button always starts it in 'filtered' mode (so "Bulk Ops from
-  // the menu" ALWAYS targets all filtered notes, regardless of whatever
-  // selection may be active in the Select-Action-Bar underneath).
-  const modalOpen = _isBulkOpsModalOpen();
-
-  // Priority 1: the new Select-Action Bar (selection-mode on, modal closed).
-  //   • SAF on, no exclusions  → {filters}
-  //   • SAF on, with exclusions → {filters, excludeIds}
-  //   • SAF off, explicit picks → {noteIds}
-  if (selectionMode && !modalOpen) {
+  if (selectionMode) {
     if (selectAllFiltered) {
       const base = { filters: getCurrentFilters(), noteType: currentNoteTypeFilter || 'quote' };
-      if (excludedNoteIds.size > 0) {
-        base.excludeIds = [...excludedNoteIds];
-      }
+      if (excludedNoteIds.size > 0) base.excludeIds = [...excludedNoteIds];
       return {
         payload: base,
         count: getEffectiveSelectionCount(),
@@ -4704,170 +4508,11 @@ function _getBulkPayloadAndLabel() {
       };
     }
   }
-
-  // Priority 2: legacy Bulk-Operations modal scope.
-  if (bulkOpsScope === 'selected' && selectedNoteIds.size > 0) {
-    return {
-      payload: { noteIds: [...selectedNoteIds], noteType: currentNoteTypeFilter || 'quote' },
-      count: selectedNoteIds.size,
-      label: 'selected notes'
-    };
-  }
   return {
     payload: { filters: getCurrentFilters() },
-    count: parseInt(document.getElementById('bulkOpsCount')?.textContent, 10) || 0,
+    count: 0,
     label: 'filtered notes'
   };
-}
-
-async function handleBulkTag() {
-  // If there's still text in the input, add it to the queue first
-  const tagInput = document.getElementById("bulkTagInput");
-  const pendingValue = tagInput?.value?.trim();
-  if (pendingValue && !_bulkTagQueue.includes(pendingValue)) {
-    _bulkTagQueue.push(pendingValue);
-    if (tagInput) tagInput.value = '';
-    _renderBulkTagBadges();
-  }
-
-  if (_bulkTagQueue.length === 0) {
-    alert("⚠️ Please add at least one tag");
-    tagInput?.focus();
-    return;
-  }
-
-  const { payload, count, label } = _getBulkPayloadAndLabel();
-
-  if (count === 0) {
-    alert("⚠️ No notes to tag");
-    return;
-  }
-
-  const tagList = _bulkTagQueue.map(t => `"${t}"`).join(', ');
-  if (!await showConfirm(`Add ${_bulkTagQueue.length} tag(s) — ${tagList} — to ${count} ${label}?`, {
-    icon: '🏷️', title: 'Bulk tag notes', confirmLabel: 'Add tags'
-  })) {
-    return;
-  }
-
-  const applyBtn = document.getElementById('bulkTagExecuteBtn');
-  if (applyBtn) { applyBtn.disabled = true; applyBtn.textContent = '⏳ Applying…'; }
-
-  try {
-    // Apply each tag in sequence
-    const results = [];
-    for (const tagName of _bulkTagQueue) {
-      const response = await fetch(`${API_URL}/quotes/bulk-tag`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...payload, tagName })
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || `Failed to apply tag "${tagName}"`);
-      results.push(`"${tagName}" → ${result.count} notes tagged`);
-    }
-
-    _clearBulkTagQueue();
-    closeBulkOperationsModal();
-    loadQuotes();
-    alert(`✅ Done!\n\n${results.join('\n')}`);
-  } catch (error) {
-    console.error("Bulk tag error:", error);
-    alert(`❌ ${error.message}`);
-  } finally {
-    if (applyBtn) { applyBtn.disabled = false; _renderBulkTagBadges(); }
-  }
-}
-
-async function handleBulkUntag() {
-  const untagInput = getElementByIdSafe("bulkUntagInput");
-  const tagName = untagInput?.value?.trim();
-  
-  if (!tagName) {
-    alert("⚠️ Please enter a tag name to remove");
-    untagInput?.focus();
-    return;
-  }
-  
-  const { payload, count, label } = _getBulkPayloadAndLabel();
-  
-  if (count === 0) {
-    alert("⚠️ No notes to untag");
-    return;
-  }
-  
-  if (!await showConfirm(`Remove tag "${tagName}" from ${count} ${label}?`, {
-    icon: '🏷️', title: 'Bulk remove tag', danger: true, confirmLabel: 'Remove'
-  })) {
-    return;
-  }
-  
-  try {
-    const response = await fetch(`${API_URL}/quotes/bulk-untag`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...payload, tagName })
-    });
-    
-    const result = await response.json();
-    
-    if (response.ok) {
-      alert(`✅ ${result.message}`);
-      untagInput.value = '';
-      closeBulkOperationsModal();
-      loadQuotes();
-    } else {
-      alert(`❌ Error: ${result.error}`);
-    }
-  } catch (error) {
-    console.error("Bulk untag error:", error);
-    alert("❌ Failed to remove tag from notes. Check console for details.");
-  }
-}
-
-async function handleBulkSetGroup() {
-  const input = document.getElementById('bulkGroupInput');
-  const groupName = input?.value?.trim();
-
-  if (!groupName) {
-    alert("⚠️ Please enter a group name");
-    input?.focus();
-    return;
-  }
-
-  const { payload, count, label } = _getBulkPayloadAndLabel();
-
-  if (count === 0) {
-    alert("⚠️ No notes to group");
-    return;
-  }
-
-  if (!await showConfirm(`Set group "${groupName}" on ${count} ${label}?`, {
-    icon: '🔗', title: 'Set Group', confirmLabel: 'Set Group'
-  })) return;
-
-  const btn = document.getElementById('bulkGroupExecuteBtn');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Applying…'; }
-
-  try {
-    const response = await fetch(`${API_URL}/quotes/bulk-set-group`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...payload, groupName })
-    });
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error || 'Failed to set group');
-
-    if (input) input.value = '';
-    closeBulkOperationsModal();
-    loadQuotes();
-    alert(`✅ Group "${groupName}" set on ${result.count} notes`);
-  } catch (error) {
-    console.error("Bulk set-group error:", error);
-    alert(`❌ Error: ${error.message}`);
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = 'Set Group'; }
-  }
 }
 
 async function handleBulkDuplicate() {
@@ -4894,7 +4539,6 @@ async function handleBulkDuplicate() {
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || 'Failed to duplicate');
 
-    closeBulkOperationsModal();
     loadQuotes();
     alert(`✅ ${result.message}`);
   } catch (error) {
@@ -4930,7 +4574,6 @@ async function handleBulkSplit() {
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || 'Failed to split');
 
-    closeBulkOperationsModal();
     loadQuotes();
     alert(`✅ ${result.message}`);
   } catch (error) {
@@ -4970,7 +4613,6 @@ async function handleBulkDelete() {
     
     if (response.ok) {
       alert(`✅ ${result.message}`);
-      closeBulkOperationsModal();
       clearSelection();
       currentPage = 1;
       setLibCurrentPage(1);
@@ -5104,6 +4746,95 @@ async function dispatchSabAction(action) {
     case 'delete':    await handleBulkDelete();    break;
     default:
       console.warn('Unknown SAB action:', action);
+  }
+}
+
+// ── Select-Action-Bar tag/group mini-form ─────────────────────────────────
+// Placeholder text is driven by the chosen op so users know what to type.
+const _SAB_TAGOP_PLACEHOLDERS = {
+  addTag:    'Tag name to add…',
+  removeTag: 'Tag name to remove…',
+  setGroup:  'Group name…',
+};
+
+function _updateSabTagOpPlaceholder() {
+  const sel   = document.getElementById('sabTagOpSelect');
+  const input = document.getElementById('sabTagOpInput');
+  if (!sel || !input) return;
+  input.placeholder = _SAB_TAGOP_PLACEHOLDERS[sel.value] || '';
+}
+
+/**
+ * Run the op selected in #sabTagOpSelect (Add Tag / Remove Tag / Set Group)
+ * against the current selection. Uses _getBulkPayloadAndLabel() so payload +
+ * count/label match whatever scope the SAB is operating on.
+ */
+async function handleSabTagOpApply() {
+  const sel   = document.getElementById('sabTagOpSelect');
+  const input = document.getElementById('sabTagOpInput');
+  const btn   = document.getElementById('sabTagOpApplyBtn');
+  if (!sel || !input) return;
+
+  const op    = sel.value;
+  const value = (input.value || '').trim();
+  if (!value) {
+    alert('⚠️ Please enter a value.');
+    input.focus();
+    return;
+  }
+
+  if (getEffectiveSelectionCount() === 0) {
+    alert('⚠️ No notes selected.');
+    return;
+  }
+
+  const { payload, count, label } = _getBulkPayloadAndLabel();
+  if (count === 0) {
+    alert('⚠️ No notes selected.');
+    return;
+  }
+
+  let endpoint, bodyKey, message, confirmOpts;
+  if (op === 'addTag') {
+    endpoint    = `${API_URL}/quotes/bulk-tag`;
+    bodyKey     = 'tagName';
+    message     = `Add tag "${value}" to ${count} ${label}?`;
+    confirmOpts = { icon: '🏷️', title: 'Bulk tag notes', confirmLabel: 'Add tag' };
+  } else if (op === 'removeTag') {
+    endpoint    = `${API_URL}/quotes/bulk-untag`;
+    bodyKey     = 'tagName';
+    message     = `Remove tag "${value}" from ${count} ${label}?`;
+    confirmOpts = { icon: '🏷️', title: 'Bulk remove tag', danger: true, confirmLabel: 'Remove' };
+  } else if (op === 'setGroup') {
+    endpoint    = `${API_URL}/quotes/bulk-set-group`;
+    bodyKey     = 'groupName';
+    message     = `Set group "${value}" on ${count} ${label}?`;
+    confirmOpts = { icon: '🔗', title: 'Set Group', confirmLabel: 'Set Group' };
+  } else {
+    console.warn('Unknown SAB tag-op:', op);
+    return;
+  }
+
+  if (!await showConfirm(message, confirmOpts)) return;
+
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Applying…'; }
+  try {
+    const resp = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...payload, [bodyKey]: value }),
+    });
+    const result = await resp.json();
+    if (!resp.ok) throw new Error(result.error || 'Operation failed');
+
+    input.value = '';
+    loadQuotes();
+    alert(`✅ ${result.message || `${result.count || count} notes updated`}`);
+  } catch (err) {
+    console.error('SAB tag-op error:', err);
+    alert(`❌ ${err.message}`);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Apply'; }
   }
 }
 

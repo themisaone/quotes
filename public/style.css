@@ -102,7 +102,9 @@ body {
   position: fixed;
   height: 100vh;
   overflow-y: auto;
+  overflow-x: hidden;
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
+  transition: width 0.25s ease, padding 0.25s ease;
 }
 
 /* ── Side-menu override — white-on-dark because the menu is dark ── */
@@ -194,9 +196,87 @@ html { scrollbar-width: thin; scrollbar-color: rgba(0, 0, 0, 0.2) transparent; }
   margin: 1.0rem 0;
 }
 
-/* Sidebar collapse toggle — only visible on medium screens */
+/* ── Side-menu header (title + collapse toggle) ──────────────────────────
+   Available on desktop and medium; hidden on mobile (bottom-bar layout). */
+.side-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0 0.1rem;
+}
+.side-menu-header .side-menu-title {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Sidebar collapse toggle — plain triangle, no circle / no border. */
 .menu-toggle-btn {
-  display: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  font-size: 0.8rem;
+  line-height: 1;
+  transition: background 0.15s, color 0.15s;
+}
+.menu-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+}
+
+/* ── Collapsed side-menu (icon-only strip) ───────────────────────────────
+   Applies across desktop and medium. Mobile has its own bottom-bar layout
+   and disables the toggle via the mobile media query. */
+.side-menu.menu-collapsed {
+  width: 48px !important;
+  padding: 0.5rem 0.2rem !important;
+  align-items: stretch !important;
+  overflow-x: hidden !important;
+}
+.side-menu.menu-collapsed .side-menu-header {
+  justify-content: center;
+  margin-bottom: 0.4rem;
+}
+.side-menu.menu-collapsed .side-menu-title,
+.side-menu.menu-collapsed .side-menu-mode-row,
+.side-menu.menu-collapsed .menu-section-title,
+.side-menu.menu-collapsed .menu-divider,
+.side-menu.menu-collapsed .menu-sub-list,
+.side-menu.menu-collapsed .note-type-expand-btn,
+.side-menu.menu-collapsed .menu-text {
+  display: none !important;
+}
+.side-menu.menu-collapsed .menu-list {
+  padding-left: 0 !important;
+}
+.side-menu.menu-collapsed .menu-item {
+  justify-content: center !important;
+  padding: 0.5rem 0 !important;
+  width: 100% !important;
+  gap: 0 !important;
+}
+.side-menu.menu-collapsed .menu-icon {
+  font-size: 1.15rem;
+  margin: 0 !important;
+}
+
+/* Main content expands when side-menu is collapsed */
+.app-layout.menu-collapsed .main-content {
+  margin-left: 48px !important;
+  width: calc(100% - 48px) !important;
 }
 
 /* ── Highlighted-tag sub-menu ── */
@@ -266,6 +346,7 @@ html { scrollbar-width: thin; scrollbar-color: rgba(0, 0, 0, 0.2) transparent; }
   flex: 1;
   padding: var(--d-pad-2xl);
   width: calc(100% - var(--side-menu-width));
+  transition: margin-left 0.25s ease, width 0.25s ease;
 }
 
 .view-container {
@@ -1587,7 +1668,6 @@ input[type="text"],
 input[type="date"],
 textarea,
 select {
-  width: 100%;
   padding: var(--d-pad-sm);
   border: 1px solid var(--input-border);
   border-radius: var(--bradius-small);
@@ -1962,10 +2042,11 @@ body.selection-mode .quote-card::after {
 }
 
 /* ─── New Select-Action Bar (below "Latest" header) ───────────────────── */
+/* Layout: three zones — [count] [tag/group mini-form]          [action buttons]
+              left           centered                     right-adjusted     */
 .select-action-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
   padding: 1rem 1.5rem;
   margin: 0 0 1rem 0;
@@ -1978,45 +2059,65 @@ body.selection-mode .quote-card::after {
   flex-wrap: wrap;
 }
 
-.select-action-bar .sab-left {
-  display: flex;
-  align-items: center;
-  align-self: center;
-  gap: 10px;
-  flex: 0 0 auto;
-  min-height: 100%;
-}
-
-.select-action-bar .sab-saf-label,
-.select-action-bar .sab-saf-label span,
-.select-action-bar .sab-saf-label input[type="checkbox"] {
-  line-height: 1;
-  margin: 0;
-}
-
-.select-action-bar .sab-saf-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  font-weight: 600;
-  user-select: none;
-  color: var(--text-primary);
-}
-
-.select-action-bar .sab-saf-label input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  cursor: pointer;
-  accent-color: #fff;
-}
-
 .select-action-bar .sab-right {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex: 1 1 auto;
   flex-wrap: wrap;
-  margin-left: auto;
+  min-width: 0;
+}
+
+/* Count badge (X notes selected) → pinned left. */
+.select-action-bar .sab-count {
+  flex: 0 0 auto;
+  margin-right: auto;
+}
+
+/* Tag/Group mini-form: centered between the count and the action buttons. */
+.select-action-bar .sab-tagop {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  border-radius: var(--bradius-small);
+  flex: 0 1 auto;
+  margin-right: auto; /* pushes it away from the counter, actions go far right */
+}
+
+.select-action-bar .sab-tagop-select {
+  height: calc(var(--d-btn-height) - 6px);
+  padding: 0 0.5rem;
+  background: var(--input-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--bradius-small);
+  font-size: var(--d-font-base);
+  cursor: pointer;
+}
+
+.select-action-bar .sab-tagop-input {
+  height: calc(var(--d-btn-height) - 6px);
+  padding: 0 0.7rem;
+  background: var(--input-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--bradius-small);
+  font-size: var(--d-font-base);
+  width: 240px;
+  min-width: 180px;
+  max-width: 100%;
+}
+
+/* All per-op action buttons (Export PDF, Duplicate, …) stay tightly grouped
+   on the right regardless of how the mini-form flexes. */
+.select-action-bar .btn-sab {
+  flex: 0 0 auto;
+}
+.select-action-bar .btn-sab:first-of-type {
+  margin-left: 0;
 }
 
 .select-action-bar .sab-count {
@@ -2073,7 +2174,18 @@ body.saf-locked .quote-card .note-select-checkbox {
   }
   .select-action-bar .sab-right {
     justify-content: flex-start;
-    margin-left: 0;
+  }
+  .select-action-bar .sab-count {
+    margin-right: 0;
+  }
+  .select-action-bar .sab-tagop {
+    margin-right: 0;
+    flex-wrap: wrap;
+  }
+  .select-action-bar .sab-tagop-input {
+    flex: 1 1 140px;
+    width: auto;
+    min-width: 120px;
   }
   .select-action-bar .btn-sab {
     flex: 1 1 auto;
@@ -3492,28 +3604,18 @@ body.selection-mode .quote-card:hover {
     overflow-x: hidden;
   }
 
-  /* Collapse toggle button — pinned to bottom of menu via order */
-  .menu-toggle-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    align-self: center;
-    order: 999;
-    width: 26px;
-    height: 26px;
-    flex-shrink: 0;
-    margin-top: auto;
-    margin-bottom: 0.4rem;
-    background: rgba(255, 255, 255, 0.12);
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    border-radius: 50%;
-    color: white;
-    cursor: pointer;
-    font-size: 0.65rem;
-    transition: background 0.2s;
+  /* Collapse-toggle and collapsed-state styling live at the top level of the
+     stylesheet so desktop and medium share the same behaviour. The medium
+     query only tweaks the header-row bottom margin to match its spacing
+     scale. */
+  .side-menu-header {
+    margin-bottom: var(--m-pad-sm);
   }
-  .menu-toggle-btn:hover {
-    background: rgba(255, 255, 255, 0.25);
+  .side-menu.menu-collapsed {
+    padding: var(--m-pad-sm) 0.2rem !important;
+  }
+  .side-menu.menu-collapsed .side-menu-header {
+    margin-bottom: var(--m-pad-xs);
   }
 
   .quote-card.has-image .quote-image-thumb {
@@ -3521,26 +3623,6 @@ body.selection-mode .quote-card:hover {
   }
   .quote-card.has-image .quote-image-thumb img {
     max-width: 160px;
-  }
-
-  /* Collapsed state — slim strip showing only the toggle arrow */
-  .side-menu.menu-collapsed {
-    width: 38px !important;
-    padding: 0.5rem 0.3rem !important;
-    align-items: center !important;
-  }
-  .side-menu.menu-collapsed > *:not(.menu-toggle-btn) {
-    display: none !important;
-  }
-  .side-menu.menu-collapsed .menu-toggle-btn {
-    margin-top: auto;
-    margin-bottom: 0.4rem;
-  }
-
-  /* Main content expands when menu is collapsed */
-  .app-layout.menu-collapsed .main-content {
-    margin-left: 38px !important;
-    width: calc(100% - 38px) !important;
   }
   .side-menu-title {
     font-size: var(--m-font-meny-top) !important;
@@ -5385,11 +5467,17 @@ body.selection-mode .quote-card:hover {
     align-items: center !important;
     gap: 0.5rem !important;
   }
-  
+
   .side-menu-title {
     display: none !important;
   }
-  
+
+  /* Hide the collapse toggle on mobile — the bottom-bar layout doesn't need it. */
+  .side-menu-header,
+  .menu-toggle-btn {
+    display: none !important;
+  }
+
   .menu-divider {
     display: none !important;
   }
@@ -5881,15 +5969,21 @@ body.selection-mode .quote-card:hover {
     overflow-x: hidden !important;
     overflow-y: hidden !important;
   }
-  
+
   .side-menu-title {
     display: none !important;
   }
-  
+
+  /* Hide the collapse toggle on mobile — the bottom-bar layout doesn't need it. */
+  .side-menu-header,
+  .menu-toggle-btn {
+    display: none !important;
+  }
+
   .menu-divider {
     display: none !important;
   }
-  
+
   .menu-section-title {
     display: none !important;
   }

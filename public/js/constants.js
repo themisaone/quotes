@@ -111,18 +111,6 @@ export const MODAL_IDS = {
   CLOSE_IMPORT_MODAL: 'closeImportModal',
   CANCEL_IMPORT_BTN: 'cancelImportBtn',
   
-  // Bulk Operations modal
-  BULK_OPS_MODAL: 'bulkOperationsModal',
-  BULK_OPS_COUNT: 'bulkOpsCount',
-  BULK_OPS_FILTERS: 'bulkOpsFilters',
-  BULK_TAG_INPUT: 'bulkTagInput',
-  BULK_TAG_SUGGESTIONS: 'bulkTagSuggestions',
-  BULK_TAG_EXECUTE_BTN: 'bulkTagExecuteBtn',
-  BULK_EXPORT_PDF_BTN: 'bulkExportPdfBtn',
-  BULK_DELETE_BTN: 'bulkDeleteBtn',
-  CLOSE_BULK_OPS_MODAL: 'closeBulkOpsModal',
-  CANCEL_BULK_OPS_BTN: 'cancelBulkOpsBtn',
-  
   // Entity modals (Author/Source)
   ENTITY_MODAL: 'entityModal',
   ENTITY_FORM: 'entityForm',
@@ -155,7 +143,7 @@ export const BUTTON_IDS = {
   EXPORT_PDF_BTN: 'exportPdfBtn',
   EXPORT_JSON_BTN: 'exportJsonBtn',
   IMPORT_JSON_BTN: 'importJsonBtn',
-  BULK_OPERATIONS_BTN: 'bulkOperationsBtn',
+  EXPORT_PDF_MENU_BTN: 'exportPdfMenuBtn',
   SETTINGS_BTN: 'settingsBtn',
   
   // Refresh buttons

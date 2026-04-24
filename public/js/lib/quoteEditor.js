@@ -291,15 +291,22 @@ function parseNorwegianDate(dateStr) {
 
 /**
  * Read the group input that is actually visible for the given note type.
- * Using || across all three inputs fails when the user clears the visible one,
- * because the hidden inputs still hold the old value from when the modal opened.
+ * Three separate inputs exist (quote/training/generic); all three get
+ * pre-filled when the modal opens, so falling back via || would return a
+ * stale value from a hidden input whenever the user clears the visible one.
+ * Pick exactly one input based on behavior + note type.
  */
 function _readGroupInput(noteType) {
   const behavior = getNoteTypeConfig(noteType)?.behavior;
-  const raw = behavior === 'generic'
-    ? getElementValue('genericTranslationGroup')
-    : (getElementValue(MODAL_IDS.TRANSLATION_GROUP_INPUT) ||
-       getElementValue('quoteTranslationGroup'));
+  let inputId;
+  if (behavior === 'generic') {
+    inputId = 'genericTranslationGroup';
+  } else if (noteType === 'training' || behavior === 'training') {
+    inputId = MODAL_IDS.TRANSLATION_GROUP_INPUT; // 'translationGroup' — training form
+  } else {
+    inputId = 'quoteTranslationGroup'; // quote / tegneserie / ... default
+  }
+  const raw = getElementValue(inputId) || '';
   return raw.trim() || null;
 }
 
