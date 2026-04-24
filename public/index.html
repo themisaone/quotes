@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Note Archive</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
-    <link rel="stylesheet" href="style.css?v=202604110011" />
+    <link rel="stylesheet" href="style.css?v=202604110420" />
     <!-- Font Awesome for dice icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <!-- Quill Editor -->
@@ -590,18 +590,16 @@
               </div>
             </div>
 
-            <!-- Selection Bar (visible when notes are selected) -->
-            <div id="selectionBar" class="selection-bar" style="display: none;">
-              <div class="selection-bar-left">
-                <span class="selection-count-badge" id="selectionCount">0</span>
-                <span class="selection-bar-label">notes selected</span>
-              </div>
-              <div class="selection-bar-right">
-                <button id="selectAllPageBtn" class="btn-sel-action">Select page</button>
-                <button id="clearSelectionBtn" class="btn-sel-action btn-sel-clear">✕ Clear</button>
-                <button id="mergeSelectedBtn" class="btn-sel-action btn-sel-merge" onclick="openMergeModalFromSelection()" title="Merge selected notes into one">🔀 Merge</button>
-                <button id="bulkTagSelectedBtn" class="btn-sel-action btn-sel-primary">⚡ Bulk Ops →</button>
-              </div>
+            <!-- Legacy selection bar — hidden permanently now that selection
+                 UI lives in #selectActionBar below the Latest header.  Kept
+                 in the DOM so any lingering references (updateSelectionBar
+                 etc.) don't throw; its contents are never shown. -->
+            <div id="selectionBar" class="selection-bar" style="display: none !important;" aria-hidden="true">
+              <span id="selectionCount" style="display:none;">0</span>
+              <button id="selectAllPageBtn" style="display:none;"></button>
+              <button id="clearSelectionBtn" style="display:none;"></button>
+              <button id="mergeSelectedBtn" style="display:none;"></button>
+              <button id="bulkTagSelectedBtn" style="display:none;"></button>
             </div>
 
             <!-- Quotes List -->
@@ -634,6 +632,30 @@
                   </select>
                 </div>
               </div>
+
+              <!-- Selection action bar — appears below the Latest header when
+                   the user enters select-mode. Left side: "Select All filtered"
+                   checkbox. Right side (only when at least one note is
+                   selected): count + action buttons (Export PDF, Duplicate,
+                   Split attachments, Merge, Delete All). Mirrors the buttons
+                   available in the Bulk Operations modal. -->
+              <div id="selectActionBar" class="select-action-bar" style="display: none;">
+                <div class="sab-left">
+                  <label class="sab-saf-label">
+                    <input type="checkbox" id="selectAllFilteredCheckbox" />
+                    <span>Select All filtered</span>
+                  </label>
+                </div>
+                <div class="sab-right" id="selectActionBarRight" style="display: none;">
+                  <span class="sab-count" id="sabCountLabel">0 notes selected</span>
+                  <button id="sabExportPdfBtn"  class="btn btn-sab"                title="Export selection to PDF">📄 Export to PDF</button>
+                  <button id="sabDuplicateBtn"  class="btn btn-sab"                title="Duplicate selected notes">⧉ Duplicate</button>
+                  <button id="sabSplitBtn"      class="btn btn-sab"                title="Split multi-attachment notes">✂️ Split attachments</button>
+                  <button id="sabMergeBtn"      class="btn btn-sab"                title="Merge selected notes into one">🔀 Merge</button>
+                  <button id="sabDeleteBtn"     class="btn btn-sab btn-sab-danger" title="Delete selected notes">🗑️ Delete All</button>
+                </div>
+              </div>
+
               <div id="quotesList" class="quotes-list">
                 <div class="loading">Loading quotes...</div>
               </div>
@@ -2105,6 +2127,6 @@ Quote number three..."
     <!-- Quill Editor Script -->
     <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
     <script type="module" src="js/lib/confirmDialog.js"></script>
-    <script type="module" src="app.js?v=20260411k"></script>
+    <script type="module" src="app.js?v=20260411saf2"></script>
   </body>
 </html>

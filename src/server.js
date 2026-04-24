@@ -2872,6 +2872,27 @@ app.delete("/api/quotes/:id", async (req, res) => {
 
 // ============= BULK OPERATIONS API =============
 
+/**
+ * Return the list of note IDs that match a given filter set.
+ * Used by the front-end "Select All filtered" flow when we need to
+ * materialise the full ID list (e.g. to support excluding some notes
+ * from an otherwise-all-filtered operation like Merge or PDF export).
+ *
+ * Body: { filters: { ... } }
+ * Response: { ids: number[] }
+ */
+app.post("/api/quotes/ids", async (req, res) => {
+  try {
+    const { filters } = req.body || {};
+    const { query, params } = buildFilterQuery(filters || {});
+    const result = await pool.query(`SELECT q.id ${query}`, params);
+    res.json({ ids: result.rows.map(r => r.id) });
+  } catch (error) {
+    console.error("Error fetching filtered note IDs:", error);
+    res.status(500).json({ error: "Failed to fetch note IDs" });
+  }
+});
+
 // Get count of filtered quotes (for bulk operations preview)
 app.post("/api/quotes/bulk-count", async (req, res) => {
   try {
@@ -3257,7 +3278,10 @@ app.post("/api/quotes/bulk-duplicate", async (req, res) => {
   try {
     await client.query("BEGIN");
 
-    const { filters, noteIds } = req.body;
+    const { filters, noteIds, excludeIds } = req.body;
+    const excludeSet = new Set(
+      Array.isArray(excludeIds) ? excludeIds.map(id => parseInt(id, 10)).filter(Number.isFinite) : []
+    );
 
     let quoteIds;
     if (noteIds && Array.isArray(noteIds) && noteIds.length > 0) {
@@ -3266,6 +3290,10 @@ app.post("/api/quotes/bulk-duplicate", async (req, res) => {
       const { query, params } = buildFilterQuery(filters);
       const result = await client.query(`SELECT q.id ${query}`, params);
       quoteIds = result.rows.map(r => r.id);
+    }
+
+    if (excludeSet.size > 0) {
+      quoteIds = quoteIds.filter(id => !excludeSet.has(id));
     }
 
     if (quoteIds.length === 0) {
@@ -3374,7 +3402,10 @@ app.post("/api/quotes/bulk-split", async (req, res) => {
   try {
     await client.query("BEGIN");
 
-    const { filters, noteIds } = req.body;
+    const { filters, noteIds, excludeIds } = req.body;
+    const excludeSet = new Set(
+      Array.isArray(excludeIds) ? excludeIds.map(id => parseInt(id, 10)).filter(Number.isFinite) : []
+    );
 
     let quoteIds;
     if (noteIds && Array.isArray(noteIds) && noteIds.length > 0) {
@@ -3383,6 +3414,10 @@ app.post("/api/quotes/bulk-split", async (req, res) => {
       const { query, params } = buildFilterQuery(filters);
       const result = await client.query(`SELECT q.id ${query}`, params);
       quoteIds = result.rows.map(r => r.id);
+    }
+
+    if (excludeSet.size > 0) {
+      quoteIds = quoteIds.filter(id => !excludeSet.has(id));
     }
 
     if (quoteIds.length === 0) {
@@ -3521,7 +3556,10 @@ app.post("/api/quotes/bulk-delete", async (req, res) => {
   try {
     await client.query("BEGIN");
     
-    const { filters, noteIds } = req.body;
+    const { filters, noteIds, excludeIds } = req.body;
+    const excludeSet = new Set(
+      Array.isArray(excludeIds) ? excludeIds.map(id => parseInt(id, 10)).filter(Number.isFinite) : []
+    );
 
     let notesResult;
     if (noteIds && Array.isArray(noteIds) && noteIds.length > 0) {
@@ -3536,7 +3574,11 @@ app.post("/api/quotes/bulk-delete", async (req, res) => {
         params
       );
     }
-    
+
+    if (excludeSet.size > 0) {
+      notesResult.rows = notesResult.rows.filter(r => !excludeSet.has(r.id));
+    }
+
     if (notesResult.rows.length === 0) {
       await client.query("ROLLBACK");
       return res.json({ count: 0, message: "No notes match" });

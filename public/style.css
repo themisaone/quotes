@@ -1946,12 +1946,132 @@ body.selection-mode .quote-card::after {
 
 /* Selected card state */
 .quote-card.selected {
-  border-color: #2563eb !important;
-  background: #eff6ff !important;
-  box-shadow: 0 0 0 3px #bfdbfe !important;
+  background: #1f2f3f !important;
+  box-shadow: 0 0 0 1px #7f9fc7 !important;
 }
 
-/* Selection bar */
+/* ─── New Select-Action Bar (below "Latest" header) ───────────────────── */
+.select-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 1rem 1.5rem;
+  margin: 0 0 1rem 0;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--bradius-medium);
+  color: #fff;
+  box-shadow: 0 1px 2px rgba(0,0,0,.08);
+  animation: selBarIn 0.18s ease;
+  flex-wrap: wrap;
+}
+
+.select-action-bar .sab-left {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  gap: 10px;
+  flex: 0 0 auto;
+  min-height: 100%;
+}
+
+.select-action-bar .sab-saf-label,
+.select-action-bar .sab-saf-label span,
+.select-action-bar .sab-saf-label input[type="checkbox"] {
+  line-height: 1;
+  margin: 0;
+}
+
+.select-action-bar .sab-saf-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  user-select: none;
+  color: #fff;
+}
+
+.select-action-bar .sab-saf-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #fff;
+}
+
+.select-action-bar .sab-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+.select-action-bar .sab-count {
+  font-weight: 700;
+  padding: 4px 10px;
+  background: #dc2626;
+  border-radius: 12px;
+  font-size: var(--d-font-base);
+  white-space: nowrap;
+}
+
+.select-action-bar .btn-sab {
+  background: var(--primary-color);
+  color: white;
+  padding: var(--d-pad-base) var(--d-pad-xl);
+  border: none;
+  border-radius: var(--bradius-small);
+  font-size: var(--d-font-base);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.select-action-bar .btn-sab:hover:not(:disabled) {
+  background: #f3f4f6;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0,0,0,.15);
+}
+
+.select-action-bar .btn-sab:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.select-action-bar .btn-sab-danger {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.select-action-bar .btn-sab-danger:hover:not(:disabled) {
+  background: #fecaca;
+}
+
+/* Dim individual-card checkboxes when SAF is on and the user can't untick */
+body.saf-locked .quote-card .note-select-checkbox {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+@media (max-width: 720px) {
+  .select-action-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .select-action-bar .sab-right {
+    justify-content: flex-start;
+    margin-left: 0;
+  }
+  .select-action-bar .btn-sab {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
+/* Legacy selection bar (still in DOM for back-compat, never displayed) */
 .selection-bar {
   display: flex;
   align-items: center;
@@ -2045,8 +2165,7 @@ body.selection-mode .quote-card::after {
 }
 
 .btn-select-mode.active {
-  background: #1e3a8a;
-  outline: 3px solid #bfdbfe;
+  background: #be9533;
   outline-offset: 1px;
 }
 
@@ -2114,6 +2233,17 @@ body.selection-mode .quote-card::after {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   transform: translateY(-2px);
   cursor: pointer;
+}
+
+/* Suppress the light-blue hover treatment while in bulk selection mode —
+   cards shouldn't look like they're about to be opened when the user is
+   actually picking items for a bulk operation. Selected-card highlighting
+   (the .selected class) still applies. */
+body.selection-mode .quote-card:hover {
+  background: inherit;
+  border-color: var(--border);
+  box-shadow: none;
+  transform: none;
 }
 
 .quote-image-thumb {

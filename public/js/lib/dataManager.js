@@ -272,6 +272,10 @@ async function generatePdf(quotes, filters) {
  * @param {Array} config.selectedTrainingTypes - Selected training types
  * @param {HTMLElement} config.exportBtn - Export button element
  * @param {Function} config.getQuoteTypes - Get quote types from settings
+ * @param {Array} [config.notes] - Optional pre-fetched notes array. When
+ *     provided, the filter-based fetch is skipped and only these notes are
+ *     exported (used by the Select-Action-Bar "Export to PDF" action so the
+ *     PDF contains exactly the notes the user selected).
  */
 export async function exportToPdf(config) {
   const {
@@ -279,22 +283,29 @@ export async function exportToPdf(config) {
     exportBtn,
     getQuoteTypes,
     getTrainingTypes,
+    notes: preFetchedNotes,
   } = config;
 
   try {
     const typeLabel = getTypeLabel(currentNoteTypeFilter);
     const originalText = exportBtn ? setButtonLoading(exportBtn, "⏳ Generating PDF...") : null;
 
-    // Build filter parameters — uses the exact same filters as the current view
-    // (search text, type, training year/month, metadata filters, etc.)
-    const params = buildExportParams(
-      currentNoteTypeFilter,
-      getQuoteTypes,
-      getTrainingTypes
-    );
+    let allQuotes;
+    if (Array.isArray(preFetchedNotes)) {
+      // Select-Action-Bar path: caller already resolved the exact set of
+      // notes to export (explicit picks, or all-filtered-minus-excluded).
+      allQuotes = preFetchedNotes;
+    } else {
+      // Default path: export everything matching the current view's filters
+      // (search text, type, training year/month, metadata filters, etc.)
+      const params = buildExportParams(
+        currentNoteTypeFilter,
+        getQuoteTypes,
+        getTrainingTypes
+      );
+      allQuotes = await fetchQuotesForExport(params);
+    }
 
-    const allQuotes = await fetchQuotesForExport(params);
-    
     console.log(`Exporting ${allQuotes.length} ${typeLabel.toLowerCase()} to PDF...`);
 
     if (allQuotes.length === 0) {

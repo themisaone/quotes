@@ -346,6 +346,16 @@ let selectedNoteIds = new Set();
 // 'filtered' | 'selected' — which scope the bulk ops modal targets
 let bulkOpsScope = 'filtered';
 
+// ── Select-Action-Bar state (new stripe below Latest header) ──
+// When "Select All filtered" is ON, we operate in *virtual* select-all mode:
+//   effective selection = (all filtered notes) − excludedNoteIds
+// When it is OFF, traditional explicit-ID selection is used (selectedNoteIds).
+let selectAllFiltered = false;
+let excludedNoteIds   = new Set();
+// totalFilteredCount mirrors the #quoteCount / #lpListCount value; it's the
+// count of the current filter set (used for the "X notes selected" display).
+let totalFilteredCount = 0;
+
 // ============= VIEW STATE MANAGEMENT =============
 
 // Save current view to localStorage
@@ -1051,6 +1061,25 @@ function setupEventListeners() {
   if (selectModeBtn) {
     selectModeBtn.addEventListener("click", toggleSelectionMode);
   }
+
+  // ── New Select-Action-Bar wiring (below the Latest header) ───────────────
+  const safCheckbox = document.getElementById('selectAllFilteredCheckbox');
+  if (safCheckbox) {
+    safCheckbox.addEventListener('change', handleSelectAllFilteredToggle);
+  }
+
+  // Each action button routes through a single dispatcher that produces the
+  // correct backend payload based on the current selection mode (SAF on/off,
+  // with/without exclusions) and then calls the existing bulk handler.
+  const _wireSab = (btnId, action) => {
+    const b = document.getElementById(btnId);
+    if (b) b.addEventListener('click', () => dispatchSabAction(action));
+  };
+  _wireSab('sabExportPdfBtn', 'export');
+  _wireSab('sabDuplicateBtn', 'duplicate');
+  _wireSab('sabSplitBtn',     'split');
+  _wireSab('sabMergeBtn',     'merge');
+  _wireSab('sabDeleteBtn',    'delete');
 
   // ── Column count / Gallery mode ──────────────────────────────────────────
   let _galleryNormalPageSize = null;
@@ -1834,14 +1863,8 @@ async function loadQuotes() {
   // Display quotes using app wrapper (which adds click handlers)
   displayQuotes(quotes);
 
-  // Re-apply selection highlights after DOM rebuild
-  if (selectedNoteIds.size > 0) {
-    document.querySelectorAll('.quote-card').forEach(card => {
-      if (selectedNoteIds.has(parseInt(card.dataset.quoteId, 10))) {
-        card.classList.add('selected');
-      }
-    });
-  }
+  // Re-apply selection highlights after DOM rebuild — respects SAF mode.
+  reapplyCardSelectionClasses();
   
   // Update pagination controls after loading quotes
   updatePaginationControls();
@@ -1864,7 +1887,11 @@ async function loadTotalCount() {
   if (totalCountElement) {
     totalQuotes = parseInt(totalCountElement.textContent) || 0;
   }
-  
+
+  // Keep Select-Action-Bar's SAF count accurate as filters/pages change.
+  _syncTotalFilteredCount();
+  if (selectionMode && selectAllFiltered) updateSelectActionBar();
+
   updatePaginationControls();
 }
 
@@ -4275,63 +4302,185 @@ async function handleImportFile(event) {
 }
 
 // ============= MANUAL SELECTION =============
+//
+// There are two coexisting selection modes, controlled by the
+// "Select All filtered" (SAF) checkbox in the action bar:
+//
+//   • SAF OFF  → explicit selection: selectedNoteIds.has(id) ≡ selected.
+//   • SAF ON   → inverted selection: every filtered note is selected EXCEPT
+//                those in excludedNoteIds. selectedNoteIds is unused here.
+//
+// Effective count shown to the user:
+//   SAF OFF → selectedNoteIds.size
+//   SAF ON  → totalFilteredCount − excludedNoteIds.size
+
+function isNoteEffectivelySelected(id) {
+  const n = parseInt(id, 10);
+  if (!Number.isFinite(n)) return false;
+  if (selectAllFiltered) return !excludedNoteIds.has(n);
+  return selectedNoteIds.has(n);
+}
+
+function getEffectiveSelectionCount() {
+  if (selectAllFiltered) {
+    return Math.max(0, (totalFilteredCount || 0) - excludedNoteIds.size);
+  }
+  return selectedNoteIds.size;
+}
+
+function reapplyCardSelectionClasses() {
+  document.querySelectorAll('.quote-card').forEach(card => {
+    const id = parseInt(card.dataset.quoteId, 10);
+    if (isNoteEffectivelySelected(id)) {
+      card.classList.add('selected');
+    } else {
+      card.classList.remove('selected');
+    }
+  });
+}
 
 function toggleSelectionMode() {
   selectionMode = !selectionMode;
   document.body.classList.toggle('selection-mode', selectionMode);
+
   const btn = document.getElementById('selectModeBtn');
   if (btn) {
     btn.classList.toggle('active', selectionMode);
-    btn.textContent = selectionMode ? '✕ Exit Select' : '☑ Select';
+    btn.textContent = selectionMode ? '✕ Exit Selection' : '☑ Select';
   }
+
+  const bar = document.getElementById('selectActionBar');
+  if (bar) bar.style.display = selectionMode ? 'flex' : 'none';
+
   if (!selectionMode) {
     clearSelection();
+  } else {
+    // Entering selection mode: pull fresh totalFilteredCount from the UI so
+    // the "X notes selected" label is accurate if SAF gets toggled on.
+    _syncTotalFilteredCount();
+    updateSelectActionBar();
   }
 }
 
 function toggleNoteSelection(card, noteId) {
   const id = parseInt(noteId, 10);
-  if (selectedNoteIds.has(id)) {
-    selectedNoteIds.delete(id);
-    card.classList.remove('selected');
+  if (!Number.isFinite(id)) return;
+
+  if (selectAllFiltered) {
+    // Inverted semantics: clicking toggles membership in the exclusion set.
+    if (excludedNoteIds.has(id)) {
+      excludedNoteIds.delete(id);
+      card.classList.add('selected');
+    } else {
+      excludedNoteIds.add(id);
+      card.classList.remove('selected');
+    }
   } else {
-    selectedNoteIds.add(id);
-    card.classList.add('selected');
+    if (selectedNoteIds.has(id)) {
+      selectedNoteIds.delete(id);
+      card.classList.remove('selected');
+    } else {
+      selectedNoteIds.add(id);
+      card.classList.add('selected');
+    }
   }
-  updateSelectionBar();
+  updateSelectActionBar();
 }
 
 function selectAllOnPage() {
+  // Retained for backwards-compat (legacy Select-page button), but the new
+  // stripe exposes SAF instead. Behaves as a manual multi-select helper.
   document.querySelectorAll('.quote-card').forEach(card => {
     const id = parseInt(card.dataset.quoteId, 10);
-    if (id) {
+    if (Number.isFinite(id)) {
       selectedNoteIds.add(id);
       card.classList.add('selected');
     }
   });
-  updateSelectionBar();
+  updateSelectActionBar();
 }
 
 function clearSelection() {
   selectedNoteIds.clear();
+  excludedNoteIds.clear();
+  selectAllFiltered = false;
+
+  const safCb = document.getElementById('selectAllFilteredCheckbox');
+  if (safCb) safCb.checked = false;
+
   document.querySelectorAll('.quote-card.selected').forEach(c => c.classList.remove('selected'));
-  updateSelectionBar();
+  updateSelectActionBar();
 }
 
-function updateSelectionBar() {
-  const bar = document.getElementById('selectionBar');
-  const countEl = document.getElementById('selectionCount');
-  if (!bar) return;
-  const count = selectedNoteIds.size;
-  if (count > 0) {
-    bar.style.display = 'flex';
-    if (countEl) countEl.textContent = count;
-  } else {
-    bar.style.display = 'none';
+function _syncTotalFilteredCount() {
+  // Prefer the authoritative #filteredQuotesCount element (updated by
+  // loadTotalCount); fall back to parsing #quoteCount like "(42)".
+  const fEl = document.getElementById('filteredQuotesCount');
+  if (fEl) {
+    const n = parseInt(fEl.textContent, 10);
+    if (Number.isFinite(n)) {
+      totalFilteredCount = n;
+      return;
+    }
   }
-  // Keep bulk-scope-selected count in sync if modal is open
-  const selCount = document.getElementById('bulkScopeSelectedCount');
-  if (selCount) selCount.textContent = count;
+  const el = document.getElementById('quoteCount');
+  if (el) {
+    const m = el.textContent.match(/\d+/);
+    if (m) {
+      totalFilteredCount = parseInt(m[0], 10);
+      return;
+    }
+  }
+  totalFilteredCount = parseInt(filteredQuotes, 10) || 0;
+}
+
+/**
+ * Select-All-filtered checkbox toggle handler.
+ * ON  → clear excluded+explicit sets, paint every visible card as selected,
+ *       reveal the action buttons (count = totalFilteredCount).
+ * OFF → clear everything and hide the action buttons.
+ */
+function handleSelectAllFilteredToggle(ev) {
+  const cb = ev?.target || document.getElementById('selectAllFilteredCheckbox');
+  if (!cb) return;
+
+  selectAllFiltered = !!cb.checked;
+  excludedNoteIds.clear();
+  selectedNoteIds.clear();
+
+  _syncTotalFilteredCount();
+  reapplyCardSelectionClasses();
+  updateSelectActionBar();
+}
+
+/**
+ * Renders the new selection strip state:
+ *   - show/hide the right side (count + action buttons)
+ *   - update the "X notes selected" label
+ *   - keep the legacy modal's selection count in sync
+ */
+function updateSelectActionBar() {
+  const bar    = document.getElementById('selectActionBar');
+  const right  = document.getElementById('selectActionBarRight');
+  const label  = document.getElementById('sabCountLabel');
+  if (!bar) return;
+
+  bar.style.display = selectionMode ? 'flex' : 'none';
+  const count = getEffectiveSelectionCount();
+
+  if (right) right.style.display = (selectionMode && count > 0) ? 'flex' : 'none';
+  if (label) label.textContent = `${count} note${count === 1 ? '' : 's'} selected`;
+
+  // Keep legacy modal count elements synced in case the user opens the modal.
+  const legacyCount = document.getElementById('selectionCount');
+  if (legacyCount) legacyCount.textContent = String(count);
+  const modalSelCount = document.getElementById('bulkScopeSelectedCount');
+  if (modalSelCount) modalSelCount.textContent = String(count);
+}
+
+// Back-compat alias: many call sites still invoke updateSelectionBar().
+function updateSelectionBar() {
+  updateSelectActionBar();
 }
 
 // ============= BULK OPERATIONS =============
@@ -4534,7 +4683,44 @@ function _clearBulkTagQueue() {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
+function _isBulkOpsModalOpen() {
+  const modal = document.getElementById('bulkOperationsModal');
+  return !!modal && modal.style.display !== 'none' && modal.style.display !== '';
+}
+
 function _getBulkPayloadAndLabel() {
+  // If the Bulk Operations modal is currently open, it owns the scope —
+  // the menu button always starts it in 'filtered' mode (so "Bulk Ops from
+  // the menu" ALWAYS targets all filtered notes, regardless of whatever
+  // selection may be active in the Select-Action-Bar underneath).
+  const modalOpen = _isBulkOpsModalOpen();
+
+  // Priority 1: the new Select-Action Bar (selection-mode on, modal closed).
+  //   • SAF on, no exclusions  → {filters}
+  //   • SAF on, with exclusions → {filters, excludeIds}
+  //   • SAF off, explicit picks → {noteIds}
+  if (selectionMode && !modalOpen) {
+    if (selectAllFiltered) {
+      const base = { filters: getCurrentFilters(), noteType: currentNoteTypeFilter || 'quote' };
+      if (excludedNoteIds.size > 0) {
+        base.excludeIds = [...excludedNoteIds];
+      }
+      return {
+        payload: base,
+        count: getEffectiveSelectionCount(),
+        label: excludedNoteIds.size > 0 ? 'filtered notes (minus excluded)' : 'filtered notes'
+      };
+    }
+    if (selectedNoteIds.size > 0) {
+      return {
+        payload: { noteIds: [...selectedNoteIds], noteType: currentNoteTypeFilter || 'quote' },
+        count: selectedNoteIds.size,
+        label: 'selected notes'
+      };
+    }
+  }
+
+  // Priority 2: legacy Bulk-Operations modal scope.
   if (bulkOpsScope === 'selected' && selectedNoteIds.size > 0) {
     return {
       payload: { noteIds: [...selectedNoteIds], noteType: currentNoteTypeFilter || 'quote' },
@@ -4816,6 +5002,128 @@ async function handleBulkDelete() {
   } catch (error) {
     console.error("Bulk delete error:", error);
     alert("❌ Failed to delete notes. Check console for details.");
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Select-Action-Bar dispatcher & helpers
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Fetch all note IDs matching the current filters (for SAF materialisation).
+ * Used by Merge and (optionally) Export when we need a concrete ID list.
+ */
+async function _fetchFilteredNoteIds() {
+  try {
+    const res = await fetch(`${API_URL}/quotes/ids`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filters: getCurrentFilters() })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return Array.isArray(data.ids) ? data.ids : [];
+  } catch (err) {
+    console.error('Failed to fetch filtered note IDs:', err);
+    alert('❌ Could not fetch the list of filtered notes. Please try again.');
+    return null;
+  }
+}
+
+/**
+ * Materialise the *effective* selected-ID list from the current stripe state.
+ * Returns null on error, [] if empty.
+ */
+async function _getEffectiveSelectedIds() {
+  if (selectAllFiltered) {
+    const all = await _fetchFilteredNoteIds();
+    if (all === null) return null;
+    if (excludedNoteIds.size === 0) return all;
+    return all.filter(id => !excludedNoteIds.has(id));
+  }
+  return [...selectedNoteIds];
+}
+
+/**
+ * Merge from the stripe: must materialise the list of IDs (Merge UI needs
+ * concrete note objects to render the preview).
+ */
+async function handleSabMerge() {
+  const ids = await _getEffectiveSelectedIds();
+  if (ids === null) return;
+  if (ids.length < 2) {
+    alert('⚠️ Select at least 2 notes to merge.');
+    return;
+  }
+  try {
+    const notes = await fetchNotesByIds(ids);
+    openMergeModal(notes);
+  } catch (err) {
+    console.error('Merge fetch error:', err);
+    alert('❌ Could not load notes for merging: ' + err.message);
+  }
+}
+
+/**
+ * Export-to-PDF from the stripe.
+ *   • SAF on, no exclusions → filter-driven fast path (same as menu export).
+ *   • Otherwise             → resolve the effective ID list, fetch those
+ *     notes, and hand the pre-built array to exportToPdfLib so the PDF
+ *     contains exactly the selected notes (not every filtered one).
+ */
+async function handleSabExportPdf() {
+  // Fast path — user wants the full filtered set.
+  if (selectAllFiltered && excludedNoteIds.size === 0) {
+    await exportToPdf();
+    return;
+  }
+
+  const ids = await _getEffectiveSelectedIds();
+  if (ids === null) return;
+  if (ids.length === 0) {
+    alert('⚠️ No notes to export.');
+    return;
+  }
+
+  let notes;
+  try {
+    notes = await fetchNotesByIds(ids);
+  } catch (err) {
+    console.error('Export PDF fetch error:', err);
+    alert('❌ Could not load selected notes for export: ' + err.message);
+    return;
+  }
+  if (!notes || notes.length === 0) {
+    alert('⚠️ Could not fetch the selected notes.');
+    return;
+  }
+
+  await exportToPdfLib({
+    currentNoteTypeFilter,
+    exportBtn: getElementByIdSafe('exportPdfBtn', 'handleSabExportPdf'),
+    getQuoteTypes,
+    getTrainingTypes,
+    notes,
+  });
+}
+
+/**
+ * Central dispatcher for the stripe action buttons.
+ * Routes to the right handler and reuses all existing confirmation dialogs.
+ */
+async function dispatchSabAction(action) {
+  if (getEffectiveSelectionCount() === 0) {
+    alert('⚠️ No notes selected.');
+    return;
+  }
+  switch (action) {
+    case 'export':    await handleSabExportPdf();  break;
+    case 'duplicate': await handleBulkDuplicate(); break;
+    case 'split':     await handleBulkSplit();     break;
+    case 'merge':     await handleSabMerge();      break;
+    case 'delete':    await handleBulkDelete();    break;
+    default:
+      console.warn('Unknown SAB action:', action);
   }
 }
 
