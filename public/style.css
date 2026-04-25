@@ -2126,7 +2126,7 @@ body.selection-mode .quote-card::after {
   background: var(--active-counter-color);
   color: white;
   border-radius: 12px;
-  font-size: var(--d-font-base);
+  font-size: var(--d-font-xs);
   white-space: nowrap;
 }
 
@@ -2156,8 +2156,8 @@ body.selection-mode .quote-card::after {
 }
 
 .select-action-bar .btn-sab-danger {
-  background: #fee2e2;
-  color: #b91c1c;
+  background: #db4b4b;
+  color: #f7f4f4;
   border-color: #fecaca;
 }
 
@@ -2165,6 +2165,45 @@ body.selection-mode .quote-card::after {
 body.saf-locked .quote-card .note-select-checkbox {
   pointer-events: none;
   opacity: 0.5;
+}
+
+/* On medium: SAB action buttons collapse to icon-only (with bigger glyph)
+   to fit in the narrower main-content area. The "Apply" button has no
+   icon span and stays as a text-only button — its label remains visible.
+   Tooltips on each btn-sab make the meaning of every icon discoverable. */
+@media (min-width: 768px) and (max-width: 1100px) {
+  .select-action-bar {
+    padding: var(--m-pad-sm) var(--m-pad-xl) !important;
+    gap: 8px !important;
+  }
+  .select-action-bar .sab-right {
+    gap: 6px !important;
+  }
+  .select-action-bar .btn-sab .sab-btn-label {
+    display: none !important;
+  }
+  .select-action-bar .btn-sab .sab-btn-icon {
+    font-size: 0.9rem !important;
+    line-height: 1 !important;
+  }
+  .select-action-bar .btn-sab {
+    padding: 0 0.6rem !important;
+    min-width: 2.4rem !important;
+    height: var(--m-btn-height) !important;
+  }
+  .select-action-bar .sab-tagop {
+    padding: 2px 6px !important;
+    gap: 4px !important;
+  }
+  .select-action-bar .sab-tagop-input {
+    width: 160px !important;
+    min-width: 100px !important;
+  }
+  .select-action-bar .sab-tagop-select,
+  .select-action-bar .sab-tagop-input {
+    height: calc(var(--m-btn-height) - 6px) !important;
+    font-size: var(--m-font-md) !important;
+  }
 }
 
 @media (max-width: 720px) {
@@ -3652,11 +3691,14 @@ body.selection-mode .quote-card:hover {
     display: none !important;
   }
   
-  /* Modal — medium screens: wider + tall (internal padding does the compacting) */
+  /* Modal — medium screens: as wide as the viewport allows (95vw) so the
+     two-column form rows aren't cramped. Internal padding still drives the
+     vertical compacting. */
   .modal-content {
     padding: 0 !important;
-    width: min(1100px, 82vw) !important;
-    max-height: 92vh !important;   /* keep tall; reduced internal spacing shows all buttons */
+    width: 95vw !important;
+    max-width: 95vw !important;
+    max-height: 92vh !important;
   }
 
   .modal-header {
@@ -3913,7 +3955,6 @@ body.selection-mode .quote-card:hover {
   .btn-refresh,
   .btn-icon-only,
   .btn-select-mode,
-  .view-mode-toggle,
   .search-item button {
     height: var(--m-btn-height) !important;
     min-height: unset !important;
@@ -3928,8 +3969,7 @@ body.selection-mode .quote-card:hover {
   }
 
   /* Icon-only: slightly larger icon character, compact horizontal padding */
-  .btn-icon-only,
-  .view-mode-toggle {
+  .btn-icon-only {
     font-size: var(--m-font-lg) !important;
     padding-left: var(--m-pad-sm) !important;
     padding-right: var(--m-pad-sm) !important;
@@ -3937,7 +3977,7 @@ body.selection-mode .quote-card:hover {
   }
 
   /* Text buttons keep their horizontal padding */
-  .btn:not(.btn-icon-only):not(.view-mode-toggle):not(.desktop-text) {
+  .btn:not(.btn-icon-only):not(.desktop-text) {
     padding-left: 0.75rem !important;
     padding-right: 0.75rem !important;
   }
@@ -3957,6 +3997,31 @@ body.selection-mode .quote-card:hover {
   .search-section {
     padding: var(--m-pad-xl) !important;
     margin-bottom: 1.25rem !important;
+  }
+
+  /* ── Medium search-grid: compress so Tags|Text|Score|Clear fits in the
+        narrower main-content width without overflowing ────────────────── */
+  .search-grid {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 3fr) minmax(0, 1.4fr) auto !important;
+    gap: 0.5rem 0.75rem !important;
+  }
+  .search-grid #searchAuthorContainer { grid-column: 1 / span 2 !important; }
+  .search-grid #searchSourceContainer { grid-column: 3 / span 2 !important; }
+  .search-item {
+    gap: 0.35rem !important;
+  }
+  .search-item label {
+    font-size: var(--m-font-base) !important;
+    min-width: 0 !important;
+  }
+  .search-item input[type="text"],
+  .search-item select {
+    font-size: var(--m-font-base) !important;
+    min-width: 0 !important;
+  }
+  .search-grid .search-clear-item .search-clear-btn {
+    padding: 0 0.7rem !important;
+    font-size: var(--m-font-md) !important;
   }
 
   /* Metadata filters: collapse to 2 columns */
@@ -3986,16 +4051,24 @@ body.selection-mode .quote-card:hover {
     box-shadow: var(--shadow) !important;
   }
 
+  /* "⏳ Latest (N)" — flatten line-height so the title sits at the same
+     vertical centre as the action buttons in the same flex row. */
   .quotes-section-header h2 {
     background: transparent !important;
     padding: 0 !important;
+    margin: 0 !important;
     box-shadow: none !important;
+    line-height: 1 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    height: var(--m-btn-height) !important;
   }
 
-  /* Card grid */
+  /* Card grid — column count is JS-driven via --card-column-count, so the
+     column-count selector (2/3/Gallery on medium) actually takes effect. */
   .quotes-list {
     display: grid;
-    grid-template-columns: 1fr 1fr !important;
+    grid-template-columns: repeat(var(--card-column-count, 2), 1fr) !important;
     gap: var(--m-card-gap) !important;
     margin: 0 !important;
     padding: 0 !important;
@@ -4003,7 +4076,7 @@ body.selection-mode .quote-card:hover {
 
   .quotes-list.natural-sizing {
     display: block !important;
-    column-count: 2 !important;
+    column-count: var(--card-column-count, 2) !important;
     column-gap: var(--m-card-gap) !important;
   }
 
@@ -7088,29 +7161,6 @@ body.selection-mode .quote-card:hover {
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.4;
-}
-
-.view-mode-toggle {
-  font-size: 1.3rem;
-  padding: 0.5rem 0.6rem;
-  min-width: 3rem;
-  height: 2.5rem;
-  text-align: center;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: #d97706;  /* amber-600 */
-  border-color: #b45309;
-  color: #fff;
-}
-.view-mode-toggle:hover {
-  background: #b45309;  /* amber-700 */
-  border-color: #92400e;
-}
-/* Slightly darker when list-pane mode is active */
-.view-mode-toggle.active {
-  background: #92400e;  /* amber-800 */
-  border-color: #78350f;
 }
 
 /* lpWrapper: full-width block container for the list-pane view */

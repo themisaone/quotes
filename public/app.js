@@ -4,7 +4,7 @@ import {
   updateUrlHash as updateUrlHashLib,
   updateActiveMenuState as updateActiveMenuStateLib,
   updatePageTitle as updatePageTitleLib
-} from './js/lib/viewManager.js?v=20260317f';
+} from './js/lib/viewManager.js?v=20260425clean';
 
 import {
   escapeHtml,
@@ -473,7 +473,6 @@ const cancelBtn = getElementByIdSafe("cancelBtn");
 const quotesList = getElementByIdSafe("quotesList");
 const lpWrapper = getElementByIdSafe("lpWrapper");   // dedicated container for list-pane view
 const quoteCount = getElementByIdSafe("quoteCount");
-const viewModeToggleBtn = getElementByIdSafe("viewModeToggleBtn");
 const columnCountSelect = getElementByIdSafe("columnCountSelect");
 const modalTitle = getElementByIdSafe("modalTitle");
 
@@ -1153,22 +1152,29 @@ function setupEventListeners() {
   }
 
   if (columnCountSelect) {
-    // On medium screens the grid is locked to 2 columns by CSS — hide numbered options,
-    // keep only gallery so the user can still activate gallery mode.
+    const COLUMN_KEY = 'quotesColumnCount';
+
+    // On medium screens we have less horizontal room — keep only 2-column,
+    // 3-column, and gallery; drop 1 and 4.
     const isMediumScreen = window.matchMedia('(min-width: 768px) and (max-width: 1100px)').matches;
     if (isMediumScreen) {
+      const allowedInMedium = new Set(['2', '3', 'gallery']);
       Array.from(columnCountSelect.options)
-        .filter(opt => opt.value !== 'gallery' && opt.value !== '2')
+        .filter(opt => !allowedInMedium.has(opt.value))
         .forEach(opt => opt.remove());
-      // Default the select to gallery if a numbered value was previously saved
-      const currentSaved = localStorage.getItem('quotesColumnCount');
-      if (currentSaved && currentSaved !== 'gallery') {
-        columnCountSelect.value = 'gallery';
-      }
     }
 
-    const COLUMN_KEY = 'quotesColumnCount';
-    const saved = localStorage.getItem(COLUMN_KEY);
+    // Sanitize the saved value against the options that actually exist now.
+    // Otherwise a stale value (e.g. '4' saved on desktop, then resized to
+    // medium where '4' is gone) makes `select.value = saved` silently fail
+    // and renders the select as blank.
+    const validValues = Array.from(columnCountSelect.options).map(o => o.value);
+    let saved = localStorage.getItem(COLUMN_KEY);
+    if (saved && !validValues.includes(saved)) {
+      saved = '2';
+      localStorage.setItem(COLUMN_KEY, saved);
+    }
+
     if (saved) {
       columnCountSelect.value = saved;
       if (saved === 'gallery') {
@@ -1197,24 +1203,6 @@ function setupEventListeners() {
         }
         // Plain column change (1↔2↔3↔4): CSS variable update is instant, no reload needed
       }
-    });
-  }
-
-  // View mode toggle (Cards ↔ List-Pane)
-  if (viewModeToggleBtn) {
-    viewModeToggleBtn.addEventListener('click', () => {
-      currentViewMode = currentViewMode === 'list-pane' ? 'cards' : 'list-pane';
-      saveViewMode(currentNoteTypeFilter, currentViewMode);
-      if (currentViewMode === 'list-pane') {
-        viewModeToggleBtn.textContent = '⊞ Cards';
-        viewModeToggleBtn.classList.add('active');
-      } else {
-        viewModeToggleBtn.textContent = '≡ List';
-        viewModeToggleBtn.classList.remove('active');
-      }
-      // Re-render with the current notes in new layout
-      const notes = getCurrentQuotesData();
-      if (notes && notes.length > 0) displayQuotes(notes);
     });
   }
 
@@ -1453,36 +1441,18 @@ function updateSourcesFilterVisibility() {
   updateSourcesFilterVisibilityLib2(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes);
 }
 
-// Show/hide and label the view-mode toggle button based on current note type.
-// Also applies quotesList display style immediately so layout is correct
-// even before the first async fetch completes.
+// Decide which renderer (card grid vs list-pane) to use for the current note
+// type, sync page size, and show/hide the Select button accordingly. The user-
+// facing toggle was removed since training is the only list-pane type and it
+// is locked to list-pane (LIST_PANE_ONLY_TYPES === LIST_PANE_SUPPORTED_TYPES);
+// the function is still the single source of truth for view-mode side effects.
 function updateViewModeToggle() {
   const supported = LIST_PANE_SUPPORTED_TYPES.has(currentNoteTypeFilter);
-  const listPaneOnly = LIST_PANE_ONLY_TYPES.has(currentNoteTypeFilter);
   const selectModeBtn = getElementByIdSafe('selectModeBtn');
   const isGallery = quotesList && quotesList.classList.contains('gallery-mode');
 
-  if (viewModeToggleBtn) {
-    // Hide the toggle for unsupported types AND for list-pane-only types
-    // (training) — there's nothing to switch to.
-    viewModeToggleBtn.style.display = (supported && !listPaneOnly) ? '' : 'none';
-  }
-
   if (supported) {
     currentViewMode = getStoredViewMode(currentNoteTypeFilter);
-    if (viewModeToggleBtn) {
-      if (currentViewMode === 'list-pane') {
-        // Icon: grid = "you can switch to cards"
-        viewModeToggleBtn.textContent = '⊞';
-        viewModeToggleBtn.title = 'Switch to card grid view';
-        viewModeToggleBtn.classList.add('active');
-      } else {
-        // Icon: lines = "you can switch to list"
-        viewModeToggleBtn.textContent = '☰';
-        viewModeToggleBtn.title = 'Switch to list+pane view';
-        viewModeToggleBtn.classList.remove('active');
-      }
-    }
 
     if (!isGallery) {
       // Gallery manages its own page size — don't overwrite it
@@ -4396,7 +4366,8 @@ function updateSelectActionBar() {
   // note — until then selection-mode is silent (just a visual state on the
   // Latest header button + per-card checkboxes).
   bar.style.display = (selectionMode && count > 0) ? 'flex' : 'none';
-  if (label) label.textContent = `${count} note${count === 1 ? '' : 's'} selected`;
+  if (label) label.textContent = `${count} selected`;
+  // if (label) label.textContent = `${count} note${count === 1 ? '' : 's'} selected`;
 
   // Keep the hidden legacy selection-bar counter in sync for any stray reader.
   const legacyCount = document.getElementById('selectionCount');

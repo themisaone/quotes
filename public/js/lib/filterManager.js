@@ -427,6 +427,10 @@ function updateSearchGridLayout(noteType) {
  * Update the search header title based on the current note type
  */
 function updateSearchHeaderTitle(currentNoteTypeFilter) {
+  // Note-type-specific search header disabled — UI uses a fixed "🔍 Search"
+  // label set in index.html. Kept as a no-op so call sites still work and
+  // we can re-enable per-type labels by removing this early return.
+  return;
   const searchHeaderTitle = getElementByIdSafe('searchHeaderTitle', 'updateSearchHeaderTitle');
   if (!searchHeaderTitle) return;
 

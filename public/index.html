@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Note Archive</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
-    <link rel="stylesheet" href="style.css?v=202604241820" />
+    <link rel="stylesheet" href="style.css?v=202604251142" />
     <!-- Font Awesome for dice icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <!-- Quill Editor -->
@@ -276,14 +276,14 @@
                   + Add Multiple Quotes
                 </button>
                 <button id="addQuoteBtn" class="btn btn-add desktop-text">
-                  <span id="addNoteBtnText">+ Add New Note</span>
+                  <span id="addNoteBtnText">+ Add New</span>
                 </button>
                 <!-- Tablet buttons (short text) -->
                 <button id="addBulkBtnTablet" class="btn btn-bulk tablet-text">
                   + Add Multiple
                 </button>
                 <button id="addQuoteBtnTablet" class="btn btn-add tablet-text">
-                  <span id="addNoteBtnTextTablet">+ Add Note</span>
+                  <span id="addNoteBtnTextTablet">+ Add New</span>
                 </button>
 
                 <!-- Popup menu for note type selection (only shown on "All Notes") -->
@@ -297,7 +297,7 @@
               <div class="search-header">
                 <div class="search-title-row">
                   <div class="search-title-with-summary">
-                    <h2 id="searchHeaderTitle">🔍 Search Quotes</h2>
+                    <h2 id="searchHeaderTitle">🔍 Search</h2>
                     <div class="search-type-summaries">
                       <span id="quoteSourcesSummary" class="filter-type-summary" style="display:none;"></span>
                       <span id="trainingTypeSummary" class="filter-type-summary" style="display:none;"></span>
@@ -623,7 +623,6 @@
                     ☑ Select
                   </button>
                   <button id="mergeGroupBtn" class="btn-merge-group" style="display:none;" onclick="openMergeModalFromGroup()" title="Merge all notes in this group">🔀 Merge group</button>
-                  <button id="viewModeToggleBtn" class="btn view-mode-toggle" title="Switch view" style="display:none;">☰</button>
                   <select id="columnCountSelect" class="column-count-select" title="Number of columns">
                     <option value="1">⬜ 1</option>
                     <option value="2" selected>⬜⬜ 2</option>
@@ -641,7 +640,7 @@
                    (Export PDF, Duplicate, Split attachments, Merge, Delete). -->
               <div id="selectActionBar" class="select-action-bar" style="display: none;">
                 <div class="sab-right" id="selectActionBarRight">
-                  <span class="sab-count" id="sabCountLabel">0 notes selected</span>
+                  <span class="sab-count" id="sabCountLabel">0 selected</span>
 
                   <!-- Tag / Group mini-form: pick op, type value, Apply. -->
                   <div class="sab-tagop" id="sabTagOpGroup">
@@ -654,11 +653,11 @@
                     <button id="sabTagOpApplyBtn" class="btn btn-sab" title="Apply the chosen operation to the selected notes">Apply</button>
                   </div>
 
-                  <button id="sabExportPdfBtn"  class="btn btn-sab"                title="Export selection to PDF">📄 Export to PDF</button>
-                  <button id="sabDuplicateBtn"  class="btn btn-sab"                title="Duplicate selected notes">⧉ Duplicate</button>
-                  <button id="sabSplitBtn"      class="btn btn-sab"                title="Split multi-attachment notes">✂️ Split attachments</button>
-                  <button id="sabMergeBtn"      class="btn btn-sab"                title="Merge selected notes into one">🔀 Merge</button>
-                  <button id="sabDeleteBtn"     class="btn btn-sab btn-sab-danger" title="Delete selected notes">🗑️ Delete All</button>
+                  <button id="sabExportPdfBtn"  class="btn btn-sab"                title="Export selection to PDF"><span class="sab-btn-icon">📄</span><span class="sab-btn-label"> Export to PDF</span></button>
+                  <button id="sabDuplicateBtn"  class="btn btn-sab"                title="Duplicate selected notes"><span class="sab-btn-icon">⧉</span><span class="sab-btn-label"> Duplicate</span></button>
+                  <button id="sabSplitBtn"      class="btn btn-sab"                title="Split multi-attachment notes"><span class="sab-btn-icon">✂️</span><span class="sab-btn-label"> Split attachments</span></button>
+                  <button id="sabMergeBtn"      class="btn btn-sab"                title="Merge selected notes into one"><span class="sab-btn-icon">🔀</span><span class="sab-btn-label"> Merge</span></button>
+                  <button id="sabDeleteBtn"     class="btn btn-sab btn-sab-danger" title="Delete selected notes"><span class="sab-btn-icon">🗑️</span><span class="sab-btn-label"> Delete All</span></button>
                 </div>
               </div>
 
@@ -1975,6 +1974,6 @@ Quote number three..."
     <!-- Quill Editor Script -->
     <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
     <script type="module" src="js/lib/confirmDialog.js"></script>
-    <script type="module" src="app.js?v=20260424modelabel"></script>
+    <script type="module" src="app.js?v=20260425colsel"></script>
   </body>
 </html>

@@ -45,12 +45,16 @@ Note type configuration and field visibility logic.
 ---
 
 ### `viewManager.js`
-URL hash routing and menu state.
+URL hash parsing, active-menu state, and page-title text only.
 - `parseUrlHash()` — hash → filter string
 - `updateUrlHash(filter)`, `updateActiveMenuState(filter)`, `updatePageTitle(filter)`
-- `initializeView()` — reads hash on load, returns current filter
-- `switchView(filter)` — programmatic navigation
-- `setupHashChangeListener(callback)`
+
+Search-header text is set statically in `index.html`. The Add-button text comes
+from `noteTypes.js::updateAddButtonText`. Filter-visibility is owned by
+`filterManager.js::updateSourcesFilterVisibility`. Navigation (`switchView`,
+hash listener) is owned by `app.js` (`window.switchView`) and
+`pageCoordinator.js` — earlier duplicates that lived in `viewManager.js` were
+never wired up and have been removed.
 
 ---
 

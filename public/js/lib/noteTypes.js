@@ -206,6 +206,7 @@ export function prepareSubmissionData(noteType, formData) {
 // ───── Add button & header ─────
 
 export function updateAddButtonText(currentNoteTypeFilter, updateSourcesFilterVisibilityFn) {
+  return;
   const btnTextDesktop = getElementByIdSafe('addNoteBtnText');
   const btnTextTablet = getElementByIdSafe('addNoteBtnTextTablet');
 
@@ -221,51 +222,6 @@ export function updateAddButtonText(currentNoteTypeFilter, updateSourcesFilterVi
   if (updateSourcesFilterVisibilityFn) updateSourcesFilterVisibilityFn();
 }
 
-// ───── Search header ─────
-
-function updateSearchHeaderForType(noteTypeFilter) {
-  const searchHeaderTitle = getElementByIdSafe('searchHeaderTitle');
-  if (!searchHeaderTitle) return;
-
-  if (!noteTypeFilter) {
-    searchHeaderTitle.textContent = '🔍 Search All Notes';
-    return;
-  }
-  const config = getNoteTypeConfig(noteTypeFilter);
-  searchHeaderTitle.textContent = `🔍 Search ${config.label}`;
-}
-
-function showHideQuoteSearchFields(isQuoteView) {
-  const searchAuthorContainer = getElementByIdSafe('searchAuthorContainer');
-  const searchSourceContainer = getElementByIdSafe('searchSourceContainer');
-  if (searchAuthorContainer) searchAuthorContainer.style.display = isQuoteView ? 'flex' : 'none';
-  if (searchSourceContainer) searchSourceContainer.style.display = isQuoteView ? 'flex' : 'none';
-}
-
-function showHideQuoteSourcesFilter(noteTypeFilter) {
-  const quoteSourcesContainer = getElementByIdSafe('quoteSourcesFilterContainer');
-  if (quoteSourcesContainer) {
-    quoteSourcesContainer.style.display = (noteTypeFilter !== null && hasAuthorField(noteTypeFilter)) ? 'block' : 'none';
-  }
-}
-
-function showHideTrainingFilters(noteTypeFilter, populateTrainingYearsFn) {
-  const trainingTypesContainer = getElementByIdSafe('trainingTypesFilterContainer');
-  const trainingYearContainer = getElementByIdSafe('trainingYearContainer');
-  const trainingMonthContainer = getElementByIdSafe('trainingMonthContainer');
-
-  const isTrainingView = noteTypeFilter !== null && hasDateField(noteTypeFilter);
-
-  if (trainingTypesContainer) trainingTypesContainer.style.display = isTrainingView ? 'block' : 'none';
-  if (trainingYearContainer) trainingYearContainer.style.display = isTrainingView ? 'block' : 'none';
-  if (trainingMonthContainer) trainingMonthContainer.style.display = isTrainingView ? 'block' : 'none';
-
-  if (isTrainingView && populateTrainingYearsFn) populateTrainingYearsFn();
-}
-
-export function updateSourcesFilterVisibility(currentNoteTypeFilter, populateTrainingYearsFn) {
-  updateSearchHeaderForType(currentNoteTypeFilter);
-  showHideQuoteSearchFields(currentNoteTypeFilter !== null && hasAuthorField(currentNoteTypeFilter));
-  showHideQuoteSourcesFilter(currentNoteTypeFilter);
-  showHideTrainingFilters(currentNoteTypeFilter, populateTrainingYearsFn);
-}
+// Search-header / filter-visibility logic lives in `filterManager.js`
+// (`updateSearchHeaderTitle` + `updateSourcesFilterVisibility`). The earlier
+// duplicates that lived here were never wired up and have been removed.

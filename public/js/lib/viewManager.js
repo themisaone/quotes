@@ -1,9 +1,18 @@
 /**
  * View Manager
- * Handles navigation, URL routing, and menu state
+ * URL hash parsing, active-menu state, and page-title text.
+ *
+ * NOTE: search-header text, "+ Add" button text, filter visibility, and the
+ * `switchView`/`initializeView`/`setupHashChangeListener` flow used to live
+ * here too, but they were never wired up — `app.js` uses
+ * `filterManager.js::updateSourcesFilterVisibility` for filter visibility,
+ * `noteTypes.js::updateAddButtonText` for the Add button, and its own
+ * `window.switchView` / `pageCoordinator.js::switchView` for navigation.
+ * The duplicates were removed; do not re-introduce them here without checking
+ * who actually consumes them.
  */
 
-import { getElementByIdSafe, BUTTON_IDS, CONTAINER_IDS } from '../constants.js';
+import { getElementByIdSafe } from '../constants.js';
 import { getNoteTypeConfig, getNoteTypes } from './noteTypes.js';
 
 /**
@@ -93,121 +102,4 @@ export function updatePageTitle(noteTypeFilter) {
   const config = getNoteTypeConfig(noteTypeFilter);
   titleIcon.textContent = config.icon || '📝';
   titleText.textContent = config.label || noteTypeFilter;
-}
-
-/**
- * Update search header text — driven by configured note types.
- */
-export function updateSearchHeader(noteTypeFilter) {
-  const searchHeader = getElementByIdSafe('searchHeaderTitle', 'updateSearchHeader');
-  if (!searchHeader) return;
-  
-  if (!noteTypeFilter) {
-    searchHeader.textContent = 'Search All Notes';
-    return;
-  }
-
-  const config = getNoteTypeConfig(noteTypeFilter);
-  searchHeader.textContent = `Search ${config.label || noteTypeFilter}`;
-}
-
-/**
- * Update filter visibility based on note type
- */
-export function updateFilterVisibility(noteTypeFilter) {
-  // Quote sources filter
-  const sourcesContainer = getElementByIdSafe('quoteSourcesFilterContainer', 'updateFilterVisibility');
-  const authorSearchContainer = document.querySelector('.search-item:has(#searchAuthor)');
-  const sourceSearchContainer = document.querySelector('.search-item:has(#searchSource)');
-  
-  const showQuoteFilters = noteTypeFilter === null || noteTypeFilter === 'quote';
-  
-  if (sourcesContainer) {
-    sourcesContainer.style.display = showQuoteFilters ? 'block' : 'none';
-  }
-  
-  // Show/hide author and source search fields
-  if (authorSearchContainer) {
-    authorSearchContainer.style.display = showQuoteFilters ? 'block' : 'none';
-  }
-  if (sourceSearchContainer) {
-    sourceSearchContainer.style.display = showQuoteFilters ? 'block' : 'none';
-  }
-  
-  // Training filters
-  const trainingTypesContainer = getElementByIdSafe('trainingTypesFilterContainer', 'updateFilterVisibility');
-  const trainingYearContainer = getElementByIdSafe('trainingYearContainer', 'updateFilterVisibility');
-  const trainingMonthContainer = getElementByIdSafe('trainingMonthContainer', 'updateFilterVisibility');
-  
-  const trainingInMode = !window._modeAllowedTypes || window._modeAllowedTypes.includes('training');
-  const showTrainingFilters = trainingInMode && noteTypeFilter === 'training';
-
-  if (trainingTypesContainer) {
-    trainingTypesContainer.style.display = showTrainingFilters ? 'block' : 'none';
-  }
-  if (trainingYearContainer) {
-    trainingYearContainer.style.display = showTrainingFilters ? 'block' : 'none';
-  }
-  if (trainingMonthContainer) {
-    trainingMonthContainer.style.display = showTrainingFilters ? 'block' : 'none';
-  }
-}
-
-/**
- * Update add button text — driven by configured note types.
- */
-export function updateAddButtonText(noteTypeFilter) {
-  const addBtn = getElementByIdSafe(BUTTON_IDS.ADD_QUOTE_BTN, 'updateAddButtonText');
-  if (!addBtn) return;
-  
-  if (!noteTypeFilter) {
-    addBtn.textContent = '+ Add New Note';
-    return;
-  }
-
-  const config = getNoteTypeConfig(noteTypeFilter);
-  addBtn.textContent = `+ Add New ${config.label || 'Note'}`;
-}
-
-/**
- * Initialize view from URL hash
- */
-export function initializeView() {
-  const noteTypeFilter = parseUrlHash();
-  updateActiveMenuState(noteTypeFilter);
-  updatePageTitle(noteTypeFilter);
-  updateSearchHeader(noteTypeFilter);
-  updateFilterVisibility(noteTypeFilter);
-  updateAddButtonText(noteTypeFilter);
-  
-  return noteTypeFilter;
-}
-
-/**
- * Switch to a new view
- */
-export function switchView(noteTypeFilter) {
-  updateUrlHash(noteTypeFilter);
-  updateActiveMenuState(noteTypeFilter);
-  updatePageTitle(noteTypeFilter);
-  updateSearchHeader(noteTypeFilter);
-  updateFilterVisibility(noteTypeFilter);
-  updateAddButtonText(noteTypeFilter);
-  
-  return noteTypeFilter;
-}
-
-/**
- * Setup hash change listener
- */
-export function setupHashChangeListener(callback) {
-  window.addEventListener('hashchange', () => {
-    const noteTypeFilter = parseUrlHash();
-    switchView(noteTypeFilter);
-    
-    // Call the provided callback (e.g., to reload data)
-    if (callback) {
-      callback(noteTypeFilter);
-    }
-  });
 }
