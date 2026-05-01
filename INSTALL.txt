@@ -1,0 +1,26 @@
+0) Fullfill the installation of depenendecies
+   npm install
+
+1) Check if postgres is already installed
+   sudo -u postgres psql
+   if you see the prompt proceed to 3 
+
+1) Install postgress and start service 
+   sudo apt update
+   sudo apt install postgresql postgresql-contrib -y
+   # start service
+   sudo systemctl start postgresql
+   sudo systemctl enable postgresql
+
+3) Create user and database
+   sudo -u postgres psql
+   # in prompt
+   CREATE USER <notes_user> WITH PASSWORD '<notes_user's_password>';
+   CREATE DATABASE notes_db OWNER <notes_user>
+   # exit 
+   \q
+
+4) Prepare .env file
+   cp .env.example .env
+   edit .env with your DB_USER, DB_PASSWORD and DB_NAME
+

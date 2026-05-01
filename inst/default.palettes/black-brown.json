@@ -1,0 +1,22 @@
+{
+  "name": "black-brown",
+  "savedAt": "2026-04-09T05:14:35.454Z",
+  "colors": {
+    "button": "#977b53",
+    "header": "#2d6a4f",
+    "tag": "#b88d51",
+    "delete": "#ef4444",
+    "cancel": "#6b7280",
+    "activeCounter": "#dc2626",
+    "totalCounter": "#2d6a4f",
+    "menu": "#1f1f21",
+    "appBg": "#29292a",
+    "modalFooter": "#3c3d3e",
+    "inputBg": "#191a1d",
+    "card": "#2b2c2f",
+    "textColor": "#ffffff",
+    "cardHover": "#404a43",
+    "inputBorder": "#5a5b5c",
+    "linkColor": "#dba861"
+  }
+}

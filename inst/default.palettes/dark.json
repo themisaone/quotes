@@ -1,0 +1,22 @@
+{
+  "name": "Midnight Ink",
+  "description": "Deep navy backgrounds with crisp cyan/teal accents. High contrast, easy on the eyes at night.",
+  "colors": {
+    "appBg":         "#0b1120",
+    "menu":          "#0f172a",
+    "card":          "#1e293b",
+    "cardHover":     "#263449",
+    "inputBg":       "#162032",
+    "inputBorder":   "#334155",
+    "textColor":     "#f1f5f9",
+    "header":        "#0e7490",
+    "modalFooter":   "#162032",
+    "button":        "#0891b2",
+    "linkColor":     "#22d3ee",
+    "delete":        "#f43f5e",
+    "cancel":        "#64748b",
+    "tag":           "#164e63",
+    "activeCounter": "#22d3ee",
+    "totalCounter":  "#67e8f9"
+  }
+}

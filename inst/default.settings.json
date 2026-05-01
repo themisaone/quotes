@@ -1,0 +1,115 @@
+{
+  "noteTypes": [
+    {
+      "value": "quote",
+      "label": "Quotes",
+      "icon": "💬",
+      "behavior": "quote",
+      "core": true,
+      "subTypes": [
+        {
+          "value": "BOOK",
+          "label": "Book",
+          "icon": "📖",
+          "isDefault": false
+        },
+        {
+          "value": "MOVIE-TV",
+          "label": "Movies & TV",
+          "icon": "🎬",
+          "isDefault": false
+        },
+        {
+          "value": "POETRY",
+          "label": "Poetry",
+          "icon": "📜",
+          "isDefault": false
+        },
+        {
+          "value": "LYRICS",
+          "label": "Lyrics",
+          "icon": "🎵",
+          "isDefault": false
+        },
+        {
+          "value": "JOKES",
+          "label": "Jokes",
+          "icon": "😂",
+          "isDefault": false
+        },
+        {
+          "value": "ASSORTED",
+          "label": "Assorted",
+          "icon": "📝",
+          "isDefault": true
+        }
+      ],
+      "displaySettings": {
+        "showLongExpanded": false,
+        "displayByRealSize": false
+      }
+    },
+    {
+      "value": "note",
+      "label": "Assorted Notes",
+      "icon": "📝",
+      "behavior": "generic",
+      "core": true,
+      "displaySettings": {
+        "showLongExpanded": false,
+        "displayByRealSize": false
+      },
+      "subTypes": [
+        {
+          "icon": "📝",
+          "value": "FILMER",
+          "label": "Filmer",
+          "isDefault": false
+        },
+        {
+          "icon": "📝",
+          "value": "ASSORTED",
+          "label": "Assorted",
+          "isDefault": true
+        }
+      ]
+    }
+  ],
+  "downscaleQuoteImages": false,
+  "externalStorageThreshold": 2,
+  "compactMode": false,
+  "enableTagOperations": true,
+  "enableQuoteMetaSearches": false,
+  "displayQuotesByRealSize": false,
+  "displayImageQuotesLong": false,
+  "showLongQuotesExpanded": false,
+  "displayScoreInCards": true,
+  "colors": {
+    "button": "#386e53",
+    "header": "#2d6a4f",
+    "tag": "#b88d51",
+    "delete": "#ef4444",
+    "cancel": "#6b7280",
+    "activeCounter": "#dc2626",
+    "totalCounter": "#2d6a4f",
+    "menu": "#1f1f21",
+    "appBg": "#29292a",
+    "modalFooter": "#3c3d3e",
+    "inputBg": "#191a1d",
+    "card": "#2b2c2f",
+    "textColor": "#ffffff",
+    "cardHover": "#404a43",
+    "inputBorder": "#5a5b5c",
+    "linkColor": "#16dba5"
+  },
+  "wordWrapChars": 82,
+  "enableWordWrap": true,
+  "highlightedTags": {
+  },
+  "enableEncryption": true,
+  "hideEncryptedNotes": true,
+  "hideNotesWithTag": true,
+  "hideTagName": "hidden",
+  "stretchImagesWhenEmpty": true,
+  "displayEmptyTitleInCard": true
+}
