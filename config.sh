@@ -49,11 +49,11 @@ echo ""
 echo "Creating vault directories..."
 mkdir -p "$VAULT_PATH/attachments"
 mkdir -p "$VAULT_PATH/palettes"
-mkdir -p "$VAULT_PATH/config/palettes"
+mkdir -p "$VAULT_PATH/config"
 
 # ── Copy default palettes → vault ─────────────────────────────────────────────
 echo "Copying default palettes..."
-cp -r "$SCRIPT_DIR/inst/default.palettes/." "$VAULT_PATH/config/palettes/"
+cp -r "$SCRIPT_DIR/inst/default.palettes/." "$VAULT_PATH/palettes/"
 
 # ── Copy default settings.json → vault ───────────────────────────────────────
 echo "Copying default settings..."
@@ -75,7 +75,7 @@ echo "  Setup complete!"
 echo ""
 echo "  Vault location : $VAULT_PATH"
 echo "  Attachments    : $VAULT_PATH/attachments"
-echo "  Palettes       : $VAULT_PATH/config/palettes"
+echo "  Palettes       : $VAULT_PATH/palettes"
 echo "  Settings       : $VAULT_PATH/config/settings.json"
 echo ""
 echo "  All good now — start your note app with:"
