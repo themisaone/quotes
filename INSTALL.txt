@@ -1,26 +1,37 @@
-0) Fullfill the installation of depenendecies
+0) Check that you have Node.js instaled.
+   # Check the version 
+   node --version 
+   # needs v18+, update if needed
+
+1) Fullfill the installation of depenendecies
    npm install
 
-1) Check if postgres is already installed
+2) Check if postgres is already installed
    sudo -u postgres psql
-   if you see the prompt proceed to 3 
+   if you see the prompt proceed to 4
 
-1) Install postgress and start service 
+3) Install postgress and start service 
    sudo apt update
    sudo apt install postgresql postgresql-contrib -y
    # start service
    sudo systemctl start postgresql
    sudo systemctl enable postgresql
 
-3) Create user and database
+4) Create user and database
    sudo -u postgres psql
    # in prompt
    CREATE USER <notes_user> WITH PASSWORD '<notes_user's_password>';
-   CREATE DATABASE notes_db OWNER <notes_user>
+   CREATE DATABASE notes_db OWNER <notes_user>;
    # exit 
    \q
 
-4) Prepare .env file
+5) Prepare .env file
    cp .env.example .env
    edit .env with your DB_USER, DB_PASSWORD and DB_NAME
+   NOTE! Never commit .env to version control — it contains your database password.
+
+6) The installation is done - proceed with running the script config.sh  
+   (This is the one that will be created)
+
+
 
