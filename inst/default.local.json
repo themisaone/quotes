@@ -1,4 +1,4 @@
 {
-  "vaultPath": "$VAULT_PATH$",
-  "activeMode": "DEFAULT"
+  "vaultPath": "VAULT_PATH",
+  "activeMode": "ALL"
 }

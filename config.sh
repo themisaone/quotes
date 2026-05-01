@@ -63,9 +63,9 @@ cp "$SCRIPT_DIR/inst/default.settings.json" "$VAULT_PATH/config/settings.json"
 echo "Copying default modes..."
 cp "$SCRIPT_DIR/inst/default.modes.json" "$SCRIPT_DIR/config/modes.json"
 
-# ── Patch and copy local.json → ./config/  ($VAULT_PATH$ → actual path) ──────
+# ── Patch and copy local.json → ./config/  (VAULT_PATH → actual path) ────────
 echo "Configuring local.json..."
-sed "s|\$VAULT_PATH\$|$VAULT_PATH|g" \
+sed "s|VAULT_PATH|$VAULT_PATH|g" \
     "$SCRIPT_DIR/inst/default.local.json" > "$SCRIPT_DIR/config/local.json"
 
 # ── Done ──────────────────────────────────────────────────────────────────────
