@@ -225,6 +225,53 @@ Wraps the Quill rich-text editor instance inside the note modal. Handles initial
 
 ---
 
+### `notifications.js`
+Toast-style top-right notifications used by the rename modal and tag-operations code.
+- `showNotification(message, type)` — `type` is `'info' | 'success' | 'error'` (default `'info'`)
+
+CSS animations `slideIn` / `slideOut` are defined in `style.entities.css`.
+
+---
+
+### `htmlSourceViewer.js`
+"📄 HTML" toggle inside the note-edit modal — shows / pastes back the raw HTML behind the Quill editor.
+- `initHtmlSourceViewer({ getQuillEditor })` — wires `window.toggleHtmlSource` and `window.applyHtmlSource` for the inline `onclick` attributes in `index.html`. The `getQuillEditor` callback is read each time so the module never holds a stale reference.
+
+---
+
+### `mergeModal.js`
+Owns the `#mergeModal` UI: candidate-list rendering, "main" radio selection, the `POST /api/notes/merge` call, and the post-merge cleanup (clear selection, reload list, open the merged note).
+- `initMergeModal({ escapeHtml, getApiUrl, getCurrentQuotes, getSelectedNoteIds, clearSelection, loadQuotes, loadTotalCount, openEditModal })` — wires `window.closeMergeModal`, `window.selectMergeMain`, `window.executeMerge`, `window.openMergeModalFromSelection`, `window.openMergeModalFromGroup` for the inline onclick handlers rendered into the modal.
+- `openMergeModal(notes)` — entry point with an explicit list of notes.
+- `fetchNotesByIds(ids)` — helper used by both this module and the bulk-ops code in `app.js`.
+
+---
+
+### `encryptedAttachments.js`
+End-to-end encrypted attachment flow: passphrase prompt → `encryptFileBuffer` → upload as `.enc`, plus the matching decrypt-and-view path.
+- `initEncryptedAttachments({ encryptFileBuffer, decryptFileBuffer, showFullImage, showPDFViewer, showVideoPlayer, showAudioPlayer, displayAttachmentPreview, renderModalAttachmentStrip, updateAttachmentPanelVisibility, loadQuotes, getEditingQuoteId, getCurrentNoteTypeFilter, getQuoteImagePreviewEl, getPendingExtraAttachments, hasPrimaryAttachment, setPrimaryEncryptedState })` — wires `window.addEncryptedAttachment` and `window.openEncryptedAttachment`. The latter is invoked from inline onclick handlers rendered by `cardRenderer.js`.
+
+The viewer for decrypted output is chosen from the **original** filename's extension (the on-disk file is always `.enc`).
+
+---
+
+### `renameModal.js`
+Generic rename dialog for tag / author / source. **Note (May 2026):** appears to be orphaned — none of the `window.*` exports are referenced from `index.html`, the rendered card HTML, or any other lib module. The DOM (`#renameModal`) still exists; once we've confirmed nothing uses it, the file (and the HTML) can be deleted.
+- `initRenameModal({ getApiUrl, loadTags, loadAuthors, loadSources })` — wires `window.editAuthor`, `window.editSource`, `window.showRenameModal`, `window.hideRenameModal`, `window.performRename` plus the dialog's button/keyboard handlers.
+
+---
+
+### `entityListPage.js`
+Renders the Authors and Sources list pages — same shape, shared private helpers.
+- `initEntityListPage({ escapeHtml, getApiUrl, getElementByIdSafe, showFetchError })`
+- `loadAuthors()` — fetch + filter + sort + display, also updates the `#totalAuthorsCount` / `#filteredAuthorsCount` counters.
+- `loadSources()` — same as above but adds the BOOK / MOVIE-TV / POETRY / LYRICS / JOKES / ASSORTED type filter (`ASSORTED` is always shown).
+- `displayAuthors(authors)`, `displaySources(sources)` — direct render entry points (used by `pageCoordinator.js` and `historyManager.js`).
+
+The card HTML uses inline `onclick` calls to `window.openAuthorModal` / `window.openSourceModal` / `window.filterByAuthor` / `window.filterBySource` — those globals are wired up by `app.js`, `authorModal.js`, `sourceModal.js`, and `searchManager.js` respectively.
+
+---
+
 ## Backend Modules (src/)
 
 ### `tagHelpers.js`

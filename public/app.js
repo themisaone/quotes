@@ -175,6 +175,24 @@ import {
 } from './js/lib/listPaneView.js';
 // They are kept as local functions due to tight coupling with app-specific state
 
+// ── Round-1 extracted modules (May 2026 split — see lib/README.md) ────────
+import { showNotification } from './js/lib/notifications.js?v=20260502a';
+import { initHtmlSourceViewer } from './js/lib/htmlSourceViewer.js?v=20260502a';
+import {
+  initMergeModal,
+  openMergeModal,
+  fetchNotesByIds
+} from './js/lib/mergeModal.js?v=20260502a';
+import { initEncryptedAttachments } from './js/lib/encryptedAttachments.js?v=20260502a';
+import { initRenameModal } from './js/lib/renameModal.js?v=20260502a';
+import {
+  initEntityListPage,
+  loadAuthors,
+  loadSources,
+  displayAuthors,
+  displaySources
+} from './js/lib/entityListPage.js?v=20260502a';
+
 // ============= CONSTANTS =============
 // Auto-detect API URL based on current host
 const API_URL = `${window.location.protocol}//${window.location.hostname}:${window.location.port || '4000'}/api`;
@@ -1685,30 +1703,7 @@ function closeQuoteModal() {
   if (htmlPanel) htmlPanel.style.display = 'none';
 }
 
-// ── HTML source viewer ──────────────────────────────────────────────────────
-window.toggleHtmlSource = function() {
-  const panel = document.getElementById('htmlSourcePanel');
-  const area  = document.getElementById('htmlSourceArea');
-  if (!panel || !area) return;
-  if (panel.style.display === 'none') {
-    // Show: populate with current editor HTML
-    const hidden = document.getElementById('quoteText');
-    area.value = hidden ? hidden.value : (quillEditor?.root?.innerHTML || '');
-    panel.style.display = 'block';
-    document.getElementById('viewHtmlBtn').textContent = '📄 Hide HTML';
-  } else {
-    panel.style.display = 'none';
-    document.getElementById('viewHtmlBtn').textContent = '📄 HTML';
-  }
-};
-
-window.applyHtmlSource = function() {
-  const area = document.getElementById('htmlSourceArea');
-  if (!area || !quillEditor) return;
-  quillEditor.clipboard.dangerouslyPasteHTML(area.value);
-  document.getElementById('htmlSourcePanel').style.display = 'none';
-  document.getElementById('viewHtmlBtn').textContent = '📄 HTML';
-};
+// HTML source viewer is now in lib/htmlSourceViewer.js (initialised below).
 
 // Clear filters functionality
 function clearFilters() {
@@ -2880,128 +2875,8 @@ async function removePendingAttachment(pendingIdx) {
 }
 window.removePendingAttachment = removePendingAttachment;
 
-// ── Merge Modal ───────────────────────────────────────────────────────────────
-
-let mergeModalNotes    = [];   // notes shown in the merge modal
-let mergeMainNoteId    = null; // which note is marked as Main
-
-function openMergeModal(notes) {
-  if (!notes || notes.length < 2) {
-    alert('Select at least 2 notes to merge.');
-    return;
-  }
-  mergeModalNotes = notes;
-  mergeMainNoteId = notes[0].id; // first is pre-selected as main
-  renderMergeNotesList();
-  document.getElementById('mergeCountLabel').textContent = `${notes.length} notes`;
-  document.getElementById('mergeModal').style.display = 'block';
-}
-
-function closeMergeModal() {
-  document.getElementById('mergeModal').style.display = 'none';
-  mergeModalNotes = [];
-  mergeMainNoteId = null;
-  // Re-enable button without touching its inner HTML (the span#mergeCountLabel must stay)
-  const btn = document.getElementById('executeMergeBtn');
-  if (btn) btn.disabled = false;
-  const lbl = document.getElementById('mergeCountLabel');
-  if (lbl) lbl.textContent = '';
-}
-window.closeMergeModal = closeMergeModal;
-
-function renderMergeNotesList() {
-  const list = document.getElementById('mergeNotesList');
-  if (!list) return;
-  list.innerHTML = mergeModalNotes.map(note => {
-    const isMain  = note.id === mergeMainNoteId;
-    const thumb   = note.thumbnail
-      ? `<img src="${note.thumbnail}" class="merge-note-thumb" alt="">`
-      : `<div class="merge-note-thumb merge-note-nothumb">${note.attachment_type === 'pdf' ? '📄' : note.attachment_type === 'video' ? '🎬' : '📝'}</div>`;
-    const title   = note.comment || note.note_date || `Note #${note.id}`;
-    const snippet = (note.note_text || '').replace(/<[^>]+>/g, '').slice(0, 80);
-    const attCount = note.attachments?.length || (note.thumbnail || note.attachment_full ? 1 : 0);
-    const attBadge = attCount ? `<span class="merge-note-att-badge">📎 ${attCount}</span>` : '';
-    return `<div class="merge-note-row ${isMain ? 'merge-note-main' : ''}" data-note-id="${note.id}" onclick="selectMergeMain(${note.id})">
-      <div class="merge-note-main-radio">${isMain ? '★' : '○'}</div>
-      ${thumb}
-      <div class="merge-note-info">
-        <div class="merge-note-title">${escapeHtml(title)}${attBadge}</div>
-        <div class="merge-note-snippet">${escapeHtml(snippet)}</div>
-      </div>
-      ${isMain ? '<div class="merge-note-main-label">MAIN</div>' : ''}
-    </div>`;
-  }).join('');
-}
-
-function selectMergeMain(noteId) {
-  mergeMainNoteId = noteId;
-  renderMergeNotesList();
-}
-window.selectMergeMain = selectMergeMain;
-
-async function executeMerge() {
-  if (!mergeMainNoteId || mergeModalNotes.length < 2) return;
-  const otherIds = mergeModalNotes.filter(n => n.id !== mergeMainNoteId).map(n => n.id);
-  const appendTexts = document.getElementById('mergeAppendTexts')?.checked ?? true;
-  const mergeTags   = document.getElementById('mergeTags')?.checked ?? true;
-
-  const btn = document.getElementById('executeMergeBtn');
-  if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Merging… <span id="mergeCountLabel"></span>'; }
-
-  try {
-    const resp = await fetch('/api/notes/merge', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mainNoteId: mergeMainNoteId, otherNoteIds: otherIds, appendTexts, mergeTags }),
-    });
-    if (!resp.ok) throw new Error(await resp.text());
-    const mergedNote = await resp.json();
-
-    closeMergeModal();
-    clearSelection();
-    loadQuotes();
-    loadTotalCount();
-
-    // Open the merged note for cleanup
-    setTimeout(() => openEditModal(mergedNote), 400);
-
-  } catch (err) {
-    alert('Merge failed: ' + err.message);
-    if (btn) { btn.disabled = false; btn.innerHTML = `🔀 Merge <span id="mergeCountLabel">${mergeModalNotes.length} notes</span>`; }
-  }
-}
-window.executeMerge = executeMerge;
-
-function openMergeModalFromSelection() {
-  // Collect full note objects for selected IDs
-  const notes = [...selectedNoteIds]
-    .map(id => currentQuotesData?.find(n => n.id === id))
-    .filter(Boolean);
-  if (notes.length < 2) {
-    // currentQuotesData may not have all; fall back to fetching
-    fetchNotesByIds([...selectedNoteIds]).then(openMergeModal);
-    return;
-  }
-  openMergeModal(notes);
-}
-window.openMergeModalFromSelection = openMergeModalFromSelection;
-
-function openMergeModalFromGroup() {
-  const notes = window._currentGroupNotes;
-  if (!notes || notes.length < 2) {
-    alert('No group loaded or group has fewer than 2 notes.');
-    return;
-  }
-  openMergeModal(notes);
-}
-window.openMergeModalFromGroup = openMergeModalFromGroup;
-
-async function fetchNotesByIds(ids) {
-  const results = await Promise.all(
-    ids.map(id => fetch(`${API_URL}/quotes/${id}`).then(r => r.json()).catch(() => null))
-  );
-  return results.filter(Boolean);
-}
+// Merge modal is now in lib/mergeModal.js (initialised below).
+// `openMergeModal` and `fetchNotesByIds` are imported at the top.
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -3108,249 +2983,9 @@ if (addEncryptedAttachBtn && encryptedAttachFileInput) {
   });
 }
 
-// ── Attachment encryption ──────────────────────────────────────────────────
-
-/**
- * Show the passphrase modal.
- * mode: 'encrypt' | 'decrypt'
- * Returns a Promise<string|null> — null means cancelled.
- */
-function _promptPassword(mode) {
-  return new Promise((resolve) => {
-    const modal       = document.getElementById('encPasswordModal');
-    const titleEl     = document.getElementById('encPwModalTitle');
-    const hintEl      = document.getElementById('encPwModalHint');
-    const iconEl      = document.getElementById('encPwModalIcon');
-    const pwInput     = document.getElementById('encPwField');
-    const confirmGrp  = document.getElementById('encPwConfirmGroup');
-    const confirmInput = document.getElementById('encPwConfirmField');
-    const errEl       = document.getElementById('encPwError');
-    const okBtn       = document.getElementById('encPwOkBtn');
-    const cancelBtn   = document.getElementById('encPwCancelBtn');
-
-    if (!modal) { resolve(null); return; }
-
-    const isEncrypt = mode === 'encrypt';
-    iconEl.textContent  = isEncrypt ? '🔒' : '🔓';
-    titleEl.textContent = isEncrypt ? 'Encrypt selected text' : 'Decrypt note';
-    hintEl.textContent  = isEncrypt
-      ? 'Enter a password to encrypt the selected text.'
-      : 'Enter the password used when encrypting.';
-    // Use visibility+max-height instead of display:none so LastPass always
-    // sees two password fields in the DOM (single-field = LP injects icon).
-    if (isEncrypt) {
-      confirmGrp.style.visibility = '';
-      confirmGrp.style.maxHeight  = '';
-      confirmGrp.style.overflow   = '';
-      confirmGrp.style.margin     = '';
-    } else {
-      confirmGrp.style.visibility = 'hidden';
-      confirmGrp.style.maxHeight  = '0';
-      confirmGrp.style.overflow   = 'hidden';
-      confirmGrp.style.margin     = '0';
-    }
-    errEl.style.display = 'none';
-    pwInput.value = '';
-    confirmInput.value = '';
-
-    modal.style.display = 'block';
-
-    // Remove readonly after a tick so autofill triggers on load are ignored,
-    // but the user can still type. Re-apply readonly on next open (handled
-    // by HTML attribute staying until JS removes it each time).
-    [pwInput, confirmInput].forEach(el => el.setAttribute('readonly', 'true'));
-    setTimeout(() => {
-      [pwInput, confirmInput].forEach(el => el.removeAttribute('readonly'));
-      pwInput.focus();
-    }, 80);
-
-    function cleanup() {
-      modal.style.display = 'none';
-      okBtn.removeEventListener('click', onOk);
-      cancelBtn.removeEventListener('click', onCancel);
-      modal.removeEventListener('keydown', onKey);
-    }
-
-    function onOk() {
-      const pw = pwInput.value;
-      if (!pw) { errEl.textContent = 'Password cannot be empty.'; errEl.style.display = ''; return; }
-      if (isEncrypt && pw !== confirmInput.value) {
-        errEl.textContent = 'Passwords do not match.'; errEl.style.display = ''; return;
-      }
-      cleanup(); resolve(pw);
-    }
-
-    function onCancel() { cleanup(); resolve(null); }
-
-    function onKey(e) {
-      if (e.key === 'Enter') { e.preventDefault(); onOk(); }
-      if (e.key === 'Escape') { onCancel(); }
-    }
-
-    okBtn.addEventListener('click', onOk);
-    cancelBtn.addEventListener('click', onCancel);
-    modal.addEventListener('keydown', onKey);
-  });
-}
-
-// ── Encrypted attachment: encrypt a File → upload as .enc ─────────────────
-
-/**
- * Encrypt a File object, then upload it as an encrypted attachment.
- * The original extension is preserved in the filename: e.g. note.txt → note.txt.enc
- */
-window.addEncryptedAttachment = async function(file) {
-  const password = await _promptPassword('encrypt');
-  if (!password) return;
-
-  try {
-    const buf      = await file.arrayBuffer();
-    const encBytes = await encryptFileBuffer(buf, password);
-
-    if (editingQuoteId) {
-      // ── Existing note: upload straight to the server ──────────────────
-      const encFilename = file.name + '.enc';
-      const folder      = document.getElementById('noteType')?.value || currentNoteTypeFilter || 'note';
-      const formData    = new FormData();
-      formData.append('file', new File([encBytes], encFilename, { type: 'application/octet-stream' }), encFilename);
-      formData.append('attachment_type', 'encrypted');
-      formData.append('original_name', file.name);
-      formData.append('folder', folder);
-
-      const resp = await fetch(`/api/notes/${editingQuoteId}/attachments/file`, {
-        method: 'POST',
-        body: formData,
-      });
-      if (!resp.ok) throw new Error(await resp.text());
-
-      const updated = await fetch(`/api/quotes/${editingQuoteId}`).then(r => r.json());
-      renderModalAttachmentStrip(updated);
-
-      // Update the primary preview area for the encrypted attachment
-      const primary = updated.attachments?.[0];
-      if (primary?.attachment_type === 'encrypted') {
-        const rawPath = (primary.attachment_full || '').replace(/^file:/, '').split('/').pop();
-        const origName = rawPath.replace(/^\d+\./, '').replace(/\.enc$/i, '');
-        currentAttachmentType     = 'encrypted';
-        currentAttachmentFileName = origName;
-        currentQuoteImageFull     = primary.attachment_full;
-        currentQuoteImage         = null;
-        displayAttachmentPreview(quoteImagePreview, '🔒', origName, '', null);
-        updateAttachmentPanelVisibility();
-      }
-      loadQuotes();
-
-    } else {
-      // ── New (unsaved) note: queue as pending attachment ───────────────
-      // Store the encrypted Blob so the save flow can multipart-upload it
-      // via the dedicated file endpoint (preserving .enc extension).
-      const encBlob = new Blob([encBytes], { type: 'application/octet-stream' });
-      const attData = {
-        thumbnail:        null,
-        attachment_full:  null,        // filled in after note creation
-        attachment_type:  'encrypted',
-        filename:         file.name + '.enc',
-        _encryptedBlob:   encBlob,     // raw blob, handled by save flow
-        _origName:        file.name,
-      };
-
-      // Show in the primary preview
-      if (!currentQuoteImage && !currentQuoteImageFull) {
-        currentAttachmentType     = 'encrypted';
-        currentAttachmentFileName = file.name;
-        currentQuoteImage         = null;
-        currentQuoteImageFull     = '_pending_enc_';
-        displayAttachmentPreview(quoteImagePreview, '🔒', file.name, '', null);
-        updateAttachmentPanelVisibility();
-      } else {
-        pendingExtraAttachments.push(attData);
-      }
-      // Stash as the "primary" pending encrypted attachment on the modal state
-      if (!currentQuoteImageFull || currentQuoteImageFull === '_pending_enc_') {
-        window._primaryEncAttData = attData;
-      }
-    }
-  } catch (err) {
-    alert('Encryption failed: ' + err.message);
-  }
-};
-
-// ── Encrypted attachment: open / decrypt for viewing ──────────────────────
-
-/**
- * Fetch, decrypt, and display an encrypted attachment.
- * Determines how to show the result from the original filename (before .enc).
- */
-window.openEncryptedAttachment = async function(fileUrl, originalName) {
-  const password = await _promptPassword('decrypt');
-  if (!password) return;
-
-  try {
-    // Resolve file: references to HTTP paths the browser can fetch
-    const httpUrl = fileUrl && fileUrl.startsWith('file:')
-      ? `/attachments/${fileUrl.slice('file:'.length)}`
-      : fileUrl;
-    const resp     = await fetch(httpUrl);
-    if (!resp.ok) throw new Error('Could not fetch file');
-    const encBytes = new Uint8Array(await resp.arrayBuffer());
-    const plainBuf = await decryptFileBuffer(encBytes, password);
-
-    // Determine MIME type from original filename extension
-    const ext  = (originalName || '').split('.').pop().toLowerCase();
-    const mime = _extToMime(ext);
-    const blob = new Blob([plainBuf], { type: mime });
-    const url  = URL.createObjectURL(blob);
-
-    if (mime.startsWith('image/')) {
-      showFullImage(url, null, 'image', {});
-    } else if (mime === 'application/pdf') {
-      showPDFViewer(url);
-    } else if (mime.startsWith('video/')) {
-      showVideoPlayer(url);
-    } else if (mime.startsWith('audio/')) {
-      showAudioPlayer(url, originalName, mime);
-    } else {
-      // Text or unknown — show in a simple overlay
-      const text = await blob.text();
-      _showTextViewer(text, originalName || 'Decrypted file');
-    }
-  } catch {
-    alert('Wrong passphrase or corrupted file.');
-  }
-};
-
-function _extToMime(ext) {
-  const map = {
-    jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif',
-    webp: 'image/webp', svg: 'image/svg+xml',
-    pdf: 'application/pdf',
-    mp4: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime',
-    mp3: 'audio/mpeg', ogg: 'audio/ogg', wav: 'audio/wav', m4a: 'audio/mp4', flac: 'audio/flac',
-    txt: 'text/plain', md: 'text/plain', csv: 'text/plain', json: 'application/json',
-  };
-  return map[ext] || 'application/octet-stream';
-}
-
-/** Show decrypted text in a simple full-screen overlay. */
-function _showTextViewer(text, title) {
-  const existing = document.getElementById('encTextViewerOverlay');
-  if (existing) existing.remove();
-
-  const overlay = document.createElement('div');
-  overlay.id = 'encTextViewerOverlay';
-  overlay.className = 'enc-text-viewer-overlay';
-  overlay.innerHTML = `
-    <div class="enc-text-viewer-box">
-      <div class="enc-text-viewer-header">
-        <span>🔓 ${title}</span>
-        <button type="button" class="modal-close-x" onclick="document.getElementById('encTextViewerOverlay').remove()">✕</button>
-      </div>
-      <pre class="enc-text-viewer-body"></pre>
-    </div>`;
-  overlay.querySelector('.enc-text-viewer-body').textContent = text;
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
-  document.body.appendChild(overlay);
-}
+// Encrypted attachment flow lives in lib/encryptedAttachments.js (initialised below).
+// `window.addEncryptedAttachment` and `window.openEncryptedAttachment` are
+// exposed from there for the inline onclick handlers in cardRenderer.js.
 
 // Handle click on modal image preview - open full-size viewer if image exists, otherwise open file dialog
 quoteImagePreview.addEventListener('click', (e) => {
@@ -3548,243 +3183,9 @@ window.setNoteTypeFilter = function(noteType) {
   updateSourcesFilterVisibility?.();
 };
 
-async function loadAuthors() {
-  try {
-    const response = await fetch(`${API_URL}/authors`);
-    let authors = await response.json();
-    
-    // Store total count
-    const totalCount = authors.length;
-
-    // Filter by search term
-    const searchTerm = document
-      .getElementById("searchAuthorName")
-      ?.value.toLowerCase()
-      .trim();
-    if (searchTerm) {
-      authors = authors.filter((author) =>
-        author.name.toLowerCase().includes(searchTerm),
-      );
-    }
-    
-    // Store filtered count
-    const filteredCount = authors.length;
-
-    // Sort authors
-    const sortBy = window.authorSortBy || "name"; // Default to name
-    if (sortBy === "name") {
-      authors.sort((a, b) => a.name.localeCompare(b.name));
-    } else if (sortBy === "count") {
-      authors.sort(
-        (a, b) =>
-          (parseInt(b.quote_count) || 0) - (parseInt(a.quote_count) || 0),
-      );
-    }
-
-    displayAuthors(authors);
-    
-    // Update counters
-    const totalCountElement = getElementByIdSafe("totalAuthorsCount");
-    const filteredCountElement = getElementByIdSafe("filteredAuthorsCount");
-    if (totalCountElement) {
-      totalCountElement.textContent = totalCount;
-    }
-    if (filteredCountElement) {
-      filteredCountElement.textContent = filteredCount;
-    }
-  } catch (error) {
-    console.error("Error loading authors:", error);
-    showFetchError(error.message || 'Failed to load authors');
-    const el = getElementByIdSafe("authorsList");
-    if (el) el.innerHTML = '<div class="no-items">Failed to load authors.</div>';
-  }
-}
-
-function displayAuthors(authors) {
-  const authorsList = getElementByIdSafe("authorsList");
-
-  if (!authorsList) {
-    console.error("authorsList element not found!");
-    return;
-  }
-
-  if (authors.length === 0) {
-    authorsList.innerHTML = '<div class="no-items">No authors found.</div>';
-    return;
-  }
-
-  authorsList.innerHTML = authors
-    .map(
-      (author) => `
-        <div class="card author-card" onclick="openAuthorModal(${author.id}, '${escapeHtml(author.name)}', ${parseInt(author.quote_count) || 0})">
-            <div class="card-image">
-                ${author.image ? `<img src="${author.image}" alt="${escapeHtml(author.name)}">` : "✍️"}
-            </div>
-            <div class="card-name">
-                <a href="#" onclick="event.stopPropagation(); filterByAuthor('${escapeHtml(author.name)}'); return false;" class="card-link">
-                    ${escapeHtml(author.name)}
-                </a>
-            </div>
-            <div class="card-quote-count">${parseInt(author.quote_count) || 0} quotes</div>
-        </div>
-    `,
-    )
-    .join("");
-
-  // Original code commented out for testing
-  /*
-    if (authors.length === 0) {
-        authorsList.innerHTML = '<div class="no-quotes">No authors found.</div>';
-        return;
-    }
-    
-    const html = authors.map(author => {
-        const quoteCount = parseInt(author.quote_count) || 0;
-        return `
-            <div class="author-card" onclick="openAuthorModal(${author.id}, '${escapeHtml(author.name).replace(/'/g, "\\'")}')">
-                ${author.image ? `<img src="${author.image}" alt="${escapeHtml(author.name)}" class="card-image">` : '<div class="card-image">✍️</div>'}
-                <div class="card-name">${escapeHtml(author.name)}</div>
-                <div class="card-quote-count">${quoteCount} quote${quoteCount !== 1 ? 's' : ''}</div>
-            </div>
-        `;
-    }).join('');
-    
-    console.log('Setting authorsList HTML, length:', html.length);
-    authorsList.innerHTML = html;
-    
-    // Force a test with simple visible content
-    setTimeout(() => {
-        console.log('After setting HTML - offsetHeight:', authorsList.offsetHeight);
-        console.log('First child:', authorsList.firstChild);
-    }, 100);
-    */
-}
-
-async function loadSources() {
-  try {
-    // Get checked source types
-    const filterBook = getElementByIdSafe("filterBook")?.checked !== false;
-    const filterMovie = getElementByIdSafe("filterMovie")?.checked !== false;
-    const filterPoetry = getElementByIdSafe("filterPoetry")?.checked !== false;
-    const filterLyrics = getElementByIdSafe("filterLyrics")?.checked !== false;
-    const filterJokes = getElementByIdSafe("filterJokes")?.checked !== false;
-
-    const response = await fetch(`${API_URL}/sources`);
-    let sources = await response.json();
-    
-    // Store total count
-    const totalCount = sources.length;
-
-    // Filter by type if filters exist AND at least one is unchecked
-    if (getElementByIdSafe("filterBook")) {
-      // Only apply filter if not all are checked (i.e., user is actually filtering)
-      if (!filterBook || !filterMovie || !filterPoetry || !filterLyrics || !filterJokes) {
-        sources = sources.filter((source) => {
-          if (!source.type) return filterBook; // Default to BOOK if no type
-          if (source.type === "BOOK") return filterBook;
-          if (source.type === "MOVIE-TV") return filterMovie;
-          if (source.type === "POETRY") return filterPoetry;
-          if (source.type === "LYRICS") return filterLyrics;
-          if (source.type === "JOKES") return filterJokes;
-          if (source.type === "ASSORTED") return true; // Always show ASSORTED
-          return false;
-        });
-      }
-    }
-
-    // Filter by search term
-    const searchTerm = document
-      .getElementById("searchSourceName")
-      ?.value.toLowerCase()
-      .trim();
-    if (searchTerm) {
-      sources = sources.filter((source) =>
-        source.name.toLowerCase().includes(searchTerm),
-      );
-    }
-    
-    // Store filtered count
-    const filteredCount = sources.length;
-
-    // Sort sources
-    const sortBy = window.sourceSortBy || "name"; // Default to name
-    if (sortBy === "name") {
-      sources.sort((a, b) => a.name.localeCompare(b.name));
-    } else if (sortBy === "count") {
-      sources.sort(
-        (a, b) =>
-          (parseInt(b.quote_count) || 0) - (parseInt(a.quote_count) || 0),
-      );
-    }
-
-    displaySources(sources);
-    
-    // Update counters
-    const totalCountElement = getElementByIdSafe("totalSourcesCount");
-    const filteredCountElement = getElementByIdSafe("filteredSourcesCount");
-    if (totalCountElement) {
-      totalCountElement.textContent = totalCount;
-    }
-    if (filteredCountElement) {
-      filteredCountElement.textContent = filteredCount;
-    }
-  } catch (error) {
-    console.error("Error loading sources:", error);
-    showFetchError(error.message || 'Failed to load sources');
-    const el = getElementByIdSafe("sourcesList");
-    if (el) el.innerHTML = '<div class="no-items">Failed to load sources.</div>';
-  }
-}
-
-function displaySources(sources) {
-  const sourcesList = getElementByIdSafe("sourcesList");
-
-  if (!sourcesList) {
-    console.error("sourcesList element not found!");
-    return;
-  }
-
-  if (sources.length === 0) {
-    sourcesList.innerHTML = '<div class="no-items">No sources found.</div>';
-    return;
-  }
-
-  sourcesList.innerHTML = sources
-    .map((source) => {
-      const typeIcon =
-        source.type === "MOVIE-TV" ? "🎬" :
-        source.type === "ASSORTED" ? "📝" :
-        source.type === "POETRY" ? "📜" :
-        source.type === "LYRICS" ? "🎵" :
-        source.type === "JOKES" ? "😂" :
-        "📖";
-      return `
-        <div class="card source-card" onclick="openSourceModal(${source.id}, '${escapeHtml(source.name)}', '${source.type}', ${parseInt(source.quote_count) || 0})">
-            <div class="card-image">
-                ${source.image ? `<img src="${source.image}" alt="${escapeHtml(source.name)}">` : typeIcon}
-            </div>
-            <div class="card-name">
-                <a href="#" onclick="event.stopPropagation(); filterBySource('${escapeHtml(source.name)}'); return false;" class="card-link">
-                    ${escapeHtml(source.name)}
-                </a>
-            </div>
-            <div class="card-quote-count">${parseInt(source.quote_count) || 0} quotes</div>
-            ${
-              source.primary_author_name
-                ? `
-                <div class="card-author">
-                    <a href="#" onclick="event.stopPropagation(); filterByAuthor('${escapeHtml(source.primary_author_name)}'); return false;">
-                        by ${escapeHtml(source.primary_author_name)}
-                    </a>
-                </div>
-            `
-                : ""
-            }
-        </div>
-    `;
-    })
-    .join("");
-}
+// Authors / Sources list pages are now in lib/entityListPage.js (initialised below).
+// `loadAuthors`, `loadSources`, `displayAuthors`, `displaySources` are imported
+// from there at the top of this file.
 
 // ============= TAGS PAGE - MIGRATED TO tagsManager.js =============
 async function loadTags(typeFilter = null) {
@@ -3816,180 +3217,11 @@ window.filterByAuthor = filterByAuthorLib;
 window.filterBySource = filterBySourceLib;
 
 // ============= RENAME FUNCTIONALITY =============
-
-let renameContext = {
-  type: null, // 'tag', 'author', 'source'
-  id: null,
-  oldName: null
-};
-
-// deleteTag moved above (see TAGS PAGE section)
-
-function editAuthor(id, name) {
-  renameContext = { type: 'author', id, oldName: name };
-  showRenameModal('Author', name);
-}
-
-function editSource(id, name) {
-  renameContext = { type: 'source', id, oldName: name };
-  showRenameModal('Source', name);
-}
-
-function showRenameModal(type, currentName) {
-  const modal = getElementByIdSafe('renameModal');
-  const title = getElementByIdSafe('renameModalTitle');
-  const input = getElementByIdSafe('renameInput');
-  const warning = getElementByIdSafe('renameWarning');
-  
-  title.textContent = `Rename ${type}`;
-  input.value = currentName;
-  warning.style.display = 'none';
-  
-  modal.style.display = 'flex';
-  input.focus();
-  input.select();
-}
-
-function hideRenameModal() {
-  const modal = getElementByIdSafe('renameModal');
-  modal.style.display = 'none';
-  renameContext = { type: null, id: null, oldName: null };
-}
-
-async function performRename() {
-  const input = getElementByIdSafe('renameInput');
-  const newName = input.value.trim();
-  
-  if (!newName) {
-    alert('Please enter a name');
-    return;
-  }
-  
-  if (newName === renameContext.oldName) {
-    hideRenameModal();
-    return;
-  }
-  
-  const confirmBtn = getElementByIdSafe('renameConfirmBtn');
-  const originalText = confirmBtn.textContent;
-  confirmBtn.textContent = '⏳ Renaming...';
-  confirmBtn.disabled = true;
-  
-  try {
-    let endpoint, refreshFunction;
-    
-    switch (renameContext.type) {
-      case 'tag':
-        endpoint = `tags/${renameContext.id}`;
-        refreshFunction = loadTags;
-        break;
-      case 'author':
-        endpoint = `authors/${renameContext.id}`;
-        refreshFunction = loadAuthors;
-        break;
-      case 'source':
-        endpoint = `sources/${renameContext.id}`;
-        refreshFunction = loadSources;
-        break;
-    }
-    
-    const response = await fetch(`${API_URL}/${endpoint}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: newName })
-    });
-    
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to rename');
-    }
-    
-    const result = await response.json();
-    
-    hideRenameModal();
-    
-    // Show appropriate message
-    if (result.merged) {
-      showNotification(
-        `✅ ${result.message}\n\nAll quotes have been moved to the existing ${renameContext.type}.`,
-        'success'
-      );
-    } else {
-      showNotification(
-        `✅ ${result.message}`,
-        'success'
-      );
-    }
-    
-    // Refresh the view
-    refreshFunction();
-    
-  } catch (error) {
-    console.error('Error renaming:', error);
-    showNotification(`❌ ${error.message}`, 'error');
-    confirmBtn.textContent = originalText;
-    confirmBtn.disabled = false;
-  }
-}
-
-function showNotification(message, type = 'info') {
-  // Create notification element
-  const notification = document.createElement('div');
-  notification.className = `notification notification-${type}`;
-  notification.textContent = message;
-  notification.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: ${type === 'success' ? '#4caf50' : type === 'error' ? '#f44336' : '#2196f3'};
-    color: white;
-    padding: 16px 24px;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    z-index: 10000;
-    font-size: 14px;
-    max-width: 400px;
-    animation: slideIn 0.3s ease;
-  `;
-  
-  document.body.appendChild(notification);
-  
-  // Auto-remove after 4 seconds
-  setTimeout(() => {
-    notification.style.animation = 'slideOut 0.3s ease';
-    setTimeout(() => notification.remove(), 300);
-  }, 4000);
-}
-
-// Event listeners for rename modal
-document.addEventListener('DOMContentLoaded', () => {
-  const renameModal = getElementByIdSafe('renameModal');
-  const renameCancelBtn = getElementByIdSafe('renameCancelBtn');
-  const renameConfirmBtn = getElementByIdSafe('renameConfirmBtn');
-  const renameInput = getElementByIdSafe('renameInput');
-  
-  // Cancel button
-  renameCancelBtn.addEventListener('click', hideRenameModal);
-  
-  // Confirm button
-  renameConfirmBtn.addEventListener('click', performRename);
-  
-  // Enter key to confirm
-  renameInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      performRename();
-    } else if (e.key === 'Escape') {
-      hideRenameModal();
-    }
-  });
-  
-  // Click outside to close
-  renameModal.addEventListener('click', (e) => {
-    if (e.target === renameModal) {
-      hideRenameModal();
-    }
-  });
-});
+// All rename-modal logic now lives in lib/renameModal.js (initialised below).
+// `showNotification` is imported at the top from lib/notifications.js so the
+// tag-operations code below still has access to it.
+// NOTE: as of May 2026 the rename modal appears to be orphaned (no callers);
+// see the header of lib/renameModal.js for details.
 
 // ============= TAG OPERATIONS =============
 
@@ -5378,7 +4610,62 @@ function setupMetadataSearchListeners() {
 // Call when switching to quotes view or when metadata section is shown
 document.addEventListener('DOMContentLoaded', () => {
   setupMetadataSearchListeners();
-  
+
+  // ── Round-1 module wire-up (May 2026 split) ─────────────────────────────
+  // These have to run after `loadQuotes`, `openEditModal`, `clearSelection`,
+  // etc. have all been declared, so we do them inside the DOMContentLoaded
+  // handler.  Each `init*` is idempotent — safe to call again later if any
+  // dep needs to swap.
+  initEntityListPage({
+    escapeHtml,
+    getApiUrl: () => API_URL,
+    getElementByIdSafe,
+    showFetchError: window.showFetchError,
+  });
+  initHtmlSourceViewer({ getQuillEditor: () => quillEditor });
+  initMergeModal({
+    escapeHtml,
+    getApiUrl: () => API_URL,
+    getCurrentQuotes: () => currentQuotesData,
+    getSelectedNoteIds: () => [...selectedNoteIds],
+    clearSelection,
+    loadQuotes,
+    loadTotalCount,
+    openEditModal,
+  });
+  initEncryptedAttachments({
+    encryptFileBuffer,
+    decryptFileBuffer,
+    // showFullImage is exposed via `window.showFullImage` (a thin wrapper
+    // around showFullImageLib that adds modal-state defaults) so we have
+    // to reach for it through `window` here.
+    showFullImage: (...args) => window.showFullImage(...args),
+    showPDFViewer,
+    showVideoPlayer,
+    showAudioPlayer,
+    displayAttachmentPreview,
+    renderModalAttachmentStrip,
+    updateAttachmentPanelVisibility,
+    loadQuotes,
+    getEditingQuoteId:        () => editingQuoteId,
+    getCurrentNoteTypeFilter: () => currentNoteTypeFilter,
+    getQuoteImagePreviewEl:   () => quoteImagePreview,
+    getPendingExtraAttachments: () => pendingExtraAttachments,
+    hasPrimaryAttachment:     () => !!(currentQuoteImage || currentQuoteImageFull),
+    setPrimaryEncryptedState: ({ thumbnail, full, type, fileName }) => {
+      currentAttachmentType     = type;
+      currentAttachmentFileName = fileName;
+      currentQuoteImageFull     = full;
+      currentQuoteImage         = thumbnail;
+    },
+  });
+  initRenameModal({
+    getApiUrl: () => API_URL,
+    loadTags,
+    loadAuthors,
+    loadSources,
+  });
+
   // Setup modal handlers for Author and Source
   setupAuthorModalHandlers({
     onAuthorSaved: () => {
@@ -5390,7 +4677,7 @@ document.addEventListener('DOMContentLoaded', () => {
       loadQuotes(); // Refresh if on quotes view
     }
   });
-  
+
   setupSourceModalHandlers({
     onSourceSaved: () => {
       loadSources();
@@ -5402,7 +4689,7 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     getQuoteTypes: getQuoteTypes
   });
-  
+
   // Note: setupTagOperations() is called automatically by displayTags()
   // after autocomplete setup clones the input elements
 });
