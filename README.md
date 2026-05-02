@@ -96,7 +96,20 @@ quotes/
 ├── public/
 │   ├── index.html         # Single-page HTML (~2000 lines)
 │   ├── app.js             # Main frontend logic (~5200 lines)
-│   ├── style.css          # All styles (~7000 lines)
+│   ├── style.css          # Base — root vars, body, scrollbar, app-layout
+│   ├── style.sidemenu.css # Left-side menu
+│   ├── style.search.css   # Search panel + filters + counters
+│   ├── style.buttons.css  # Button variants
+│   ├── style.modal.css    # Note-editor modal + form fields
+│   ├── style.cards.css    # Note cards (grid + content + Quill text)
+│   ├── style.selection.css     # Bulk-select mode
+│   ├── style.attachments.css   # Attachment uploads & viewers
+│   ├── style.entities.css      # Authors / sources / tags / rename / tag-ops
+│   ├── style.settings.css      # Settings page
+│   ├── style.dialogs.css       # Merge modal + confirm dialog
+│   ├── style.views.css         # Gallery / list-pane / calendar / encryption UI
+│   ├── style.mobile.css        # @media (max-width: …) overrides
+│   ├── style.medium.css        # @media (768–1100px) overrides
 │   └── js/lib/            # Frontend ES modules (see ARCHITECTURE.md)
 ├── migrations/
 │   ├── 001_schema.js      # Full schema (safe to re-run)

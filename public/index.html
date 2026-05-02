@@ -5,7 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Note Archive</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
-    <link rel="stylesheet" href="style.css?v=202604251142" />
+    <!-- Stylesheet load order matters and mirrors the original cascade.
+         Feature files come first (in original-line order), then the two
+         responsive overlays.  See ARCHITECTURE.md "CSS File Layout".
+         The same ?v= cache-buster must be on every link so reloads pick
+         up changes together. -->
+    <link rel="stylesheet" href="style.css?v=202605021100" />
+    <link rel="stylesheet" href="style.sidemenu.css?v=202605021100" />
+    <link rel="stylesheet" href="style.search.css?v=202605021100" />
+    <link rel="stylesheet" href="style.buttons.css?v=202605021100" />
+    <link rel="stylesheet" href="style.modal.css?v=202605021100" />
+    <link rel="stylesheet" href="style.cards.css?v=202605021100" />
+    <link rel="stylesheet" href="style.selection.css?v=202605021100" />
+    <link rel="stylesheet" href="style.attachments.css?v=202605021100" />
+    <link rel="stylesheet" href="style.entities.css?v=202605021100" />
+    <link rel="stylesheet" href="style.settings.css?v=202605021100" />
+    <link rel="stylesheet" href="style.dialogs.css?v=202605021100" />
+    <link rel="stylesheet" href="style.views.css?v=202605021100" />
+    <link rel="stylesheet" href="style.mobile.css?v=202605021100" />
+    <link rel="stylesheet" href="style.medium.css?v=202605021100" />
     <!-- Font Awesome for dice icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <!-- Quill Editor -->

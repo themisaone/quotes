@@ -215,11 +215,46 @@ The `/api/quotes` and `/api/quotes/count` endpoints accept these filter params t
 
 ---
 
+## CSS File Layout
+
+Styles are split across **14 files** so each one is small enough to read without burning huge tokens. They are loaded **in this exact order** by `index.html`; the order mirrors the original line order in the pre-split monolith so cascade behaviour is preserved.
+
+```
+public/style.css              ← base — root vars, body, scrollbar, app-layout (~95 lines)
+public/style.sidemenu.css     ← left-side menu (~310 lines)
+public/style.search.css       ← search panel + filters + counters (~600 lines)
+public/style.buttons.css      ← all button variants + refresh animations (~200 lines)
+public/style.modal.css        ← note-editor modal + form fields + score dice (~620 lines)
+public/style.cards.css        ← note cards (grid + content + Quill text) (~640 lines)
+public/style.selection.css    ← bulk-select mode + select-action-bar (~565 lines)
+public/style.attachments.css  ← image upload + attachment viewers + multi-attachment strip (~715 lines)
+public/style.entities.css     ← author/source/tag cards, rename modal, tag-ops panel, notifications (~865 lines)
+public/style.settings.css     ← settings page, type management, translations (~540 lines)
+public/style.dialogs.css      ← merge modal + custom confirm dialog (~300 lines)
+public/style.views.css        ← gallery + list-pane + training calendar + encryption UI + banners (~710 lines)
+public/style.mobile.css       ← all max-width @media queries (mobile + 480 + 720 + 767 + 900 tablet)
+public/style.medium.css       ← all (min-width: 768px) and (max-width: 1100px) @media queries
+```
+
+**Why this order matters.** CSS picks the *last* rule when specificity ties. The feature files load in the same order their rules originally appeared in the monolith, then the responsive overlays come last so they override base rules at their breakpoints. The two responsive files keep their previous relative order (`mobile` before `medium`) so the `.lp-layout` overlap at 900px still resolves the same way.
+
+A few features had non-contiguous content in the original (e.g. `.search-section` rules appeared at lines 405-899 *and* 1709-1810). Both fragments now live in the **same** feature file, in their original relative order — verified that no selector in the gap (buttons, modal, selection) overlaps the fragments, so the cascade outcome is unchanged.
+
+**Cache-busting.** All `<link>` tags use the same `?v=` query string. Bump the version on every link together when shipping CSS changes.
+
+**Adding new rules:**
+- Pick the file whose theme matches (e.g. button styles → `style.buttons.css`, anything inside the note modal → `style.modal.css`).
+- Anything inside a `@media (max-width: ...)` query: append to `public/style.mobile.css`.
+- Anything inside `@media (min-width: 768px) and (max-width: 1100px)`: append to `public/style.medium.css`.
+- If a new top-level theme emerges (large enough to warrant its own file), add it to `index.html` *in the position that matches its original-cascade place* and update this list.
+
+**Re-splitting if needed.** Two one-shot parser scripts live at `scripts/split-css.js` (responsive split) and `scripts/split-base-css.js` (feature split). Neither is part of the regular build — they should not be re-run on the already-split files. They are kept as reference if the layering is ever reorganised again.
+
 ## Medium-Screen Layout (768px – 1100px)
 
-A dedicated media query in `style.css` (~line 3172) overrides font sizes using `--m-font-*` variables (e.g. `--m-font-base: 0.75rem`, `--m-font-xl: 1.0rem`). These are *separate* from the desktop `--d-font-*` variables. The card grid is locked to 2 columns on medium screens.
+The medium file (`public/style.medium.css`) overrides font sizes using `--m-font-*` variables (e.g. `--m-font-base: 0.75rem`, `--m-font-xl: 1.0rem`) declared inside its first `@media` block. These are *separate* from the desktop `--d-font-*` variables in `style.css`. The card grid is locked to 2 columns on medium screens.
 
-**Adding medium overrides:** Always put them inside the `@media (min-width: 768px) and (max-width: 1100px)` block and use `!important` (the same pattern as existing rules in that block).
+**Adding medium overrides:** Always put them inside the `@media (min-width: 768px) and (max-width: 1100px)` block in `style.medium.css` and use `!important` (the same pattern as existing rules).
 
 ---
 
@@ -236,6 +271,19 @@ A dedicated media query in `style.css` (~line 3172) overrides font sizes using `
 | `public/js/lib/settingsManager.js` | Settings load/save, settings panel UI |
 | `public/js/lib/cryptoUtils.js` | Encryption/decryption |
 | `public/js/lib/noteTypes.js` | Note type config, field visibility rules |
-| `public/style.css` | All styles (desktop top, medium breakpoint ~line 3172) |
+| `public/style.css` | Base — root vars, body, scrollbar, app-layout |
+| `public/style.sidemenu.css` | Left-side menu |
+| `public/style.search.css` | Search panel + filters + counters |
+| `public/style.buttons.css` | Button variants + refresh animations |
+| `public/style.modal.css` | Note-editor modal + form fields + score dice |
+| `public/style.cards.css` | Note cards (grid + content + Quill text) |
+| `public/style.selection.css` | Bulk-select mode + select-action-bar |
+| `public/style.attachments.css` | Attachment uploads & viewers |
+| `public/style.entities.css` | Author/source/tag cards, rename, tag-ops, notifications |
+| `public/style.settings.css` | Settings page, type management |
+| `public/style.dialogs.css` | Merge modal + custom confirm dialog |
+| `public/style.views.css` | Gallery / list-pane / calendar / encryption UI / banners |
+| `public/style.mobile.css` | All `max-width` @media queries |
+| `public/style.medium.css` | `(768px – 1100px)` @media queries |
 | `config/settings.json` | Note types, training sub-types, colors, feature flags |
 | `config/modes.json` | Mode → note type mappings |
