@@ -172,7 +172,11 @@ function generateImportSuccessHtml(stats) {
         <p style="margin: 0;"><strong>📖 Sources:</strong> ${stats.sources.created} imported, ${stats.sources.skipped} skipped (duplicates)</p>
         <p style="margin: 0;"><strong>🏷️ Tags:</strong> ${stats.tags.created} imported</p>
       </div>
-      ${stats.errors.length > 0 ? `<p style="color: #dc2626; margin-top: 12px; margin-bottom: 0;"><strong>⚠️ Errors:</strong> ${stats.errors.length} (check console)</p>` : ""}
+      ${stats.errors.length > 0 ? `
+        <details style="margin-top: 12px; color: #991b1b;">
+          <summary style="cursor: pointer;"><strong>⚠️ ${stats.errors.length} row-level error(s)</strong> — expand for details</summary>
+          <pre style="max-height: 220px; overflow: auto; font-size: 11px; background: #fef2f2; padding: 8px; border-radius: 6px; margin-top: 8px;">${stats.errors.slice(0, 80).map(e => String(e).replace(/</g, '&lt;')).join('\n')}${stats.errors.length > 80 ? '\n… ' + (stats.errors.length - 80) + ' more' : ''}</pre>
+        </details>` : ""}
     </div>
   `;
 }
@@ -483,7 +487,24 @@ function handleImportSuccess(result, importStatus, selectFileBtn, importModal, o
   selectFileBtn.textContent = "Select Backup File";
   selectFileBtn.disabled = false;
 
-  // Reload data after delay
+  const errN = result.stats?.errors?.length || 0;
+  if (errN > 0) {
+    // Leave the modal open so the expandable error list stays readable; no auto-reload.
+    const reloadBtn = document.createElement("button");
+    reloadBtn.type = "button";
+    reloadBtn.className = "btn-primary";
+    reloadBtn.style.marginTop = "12px";
+    reloadBtn.textContent = "Reload page";
+    reloadBtn.addEventListener("click", () => {
+      importModal.style.display = "none";
+      if (onImportComplete) onImportComplete();
+      location.reload();
+    });
+    importStatus.appendChild(reloadBtn);
+    return;
+  }
+
+  // Reload data after delay (happy path)
   setTimeout(() => {
     importModal.style.display = "none";
     if (onImportComplete) {

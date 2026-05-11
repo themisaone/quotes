@@ -656,9 +656,9 @@ app.post("/api/authors", async (req, res) => {
 
     // Try to insert, or return existing if already exists
     const result = await pool.query(
-      `INSERT INTO authors (name, thumbnail) 
+      `INSERT INTO authors (name, image) 
        VALUES ($1, $2) 
-       ON CONFLICT (name) DO UPDATE SET thumbnail = COALESCE(NULLIF($2, ''), authors.image)
+       ON CONFLICT (name) DO UPDATE SET image = COALESCE(NULLIF($2, ''), authors.image)
        RETURNING *`,
       [name.trim(), thumbnail],
     );
@@ -913,9 +913,9 @@ app.post("/api/sources", async (req, res) => {
 
     // Try to insert, or return existing if already exists
     const result = await pool.query(
-      `INSERT INTO sources (name, thumbnail, type) 
+      `INSERT INTO sources (name, image, type) 
        VALUES ($1, $2, $3) 
-       ON CONFLICT (name) DO UPDATE SET thumbnail = COALESCE(NULLIF($2, ''), sources.image), type = COALESCE(NULLIF($3, ''), sources.type)
+       ON CONFLICT (name) DO UPDATE SET image = COALESCE(NULLIF($2, ''), sources.image), type = COALESCE(NULLIF($3, ''), sources.type)
        RETURNING *`,
       [name.trim(), thumbnail, type],
     );
@@ -4156,6 +4156,23 @@ app.get("/api/export/big-files-zip", (req, res) => {
   });
 });
 
+/**
+ * Align notes.id SERIAL with MAX(id). Required for JSON import when the
+ * sequence is behind (manual restores, older tools) — otherwise INSERT …
+ * RETURNING id picks an id that already exists and aborts the transaction.
+ */
+async function syncNotesIdSequence(client) {
+  const { rows } = await client.query(
+    "SELECT pg_get_serial_sequence('notes', 'id') AS seq",
+  );
+  const seq = rows[0]?.seq;
+  if (!seq) return;
+  await client.query(
+    `SELECT setval($1::regclass, COALESCE((SELECT MAX(id) FROM notes), 1), true)`,
+    [seq],
+  );
+}
+
 // Import data from JSON
 app.post("/api/import/json", async (req, res) => {
   const client = await pool.connect();
@@ -4177,18 +4194,24 @@ app.post("/api/import/json", async (req, res) => {
       errors: [],
     };
 
+    // JSON export uses DB column names (`image`). Older backups may still use `thumbnail`.
+    const authorImage = (a) => a.image ?? a.thumbnail ?? "";
+    const authorDesc = (a) => a.description ?? "";
+    const sourceImage = (s) => s.image ?? s.thumbnail ?? "";
+
     // Import authors
     for (const author of data.authors) {
+      await client.query("SAVEPOINT import_author");
       try {
         if (options?.replaceExisting) {
           // Replace: upsert by name
           const result = await client.query(
-            `INSERT INTO authors (name, thumbnail) 
-             VALUES ($1, $2) 
+            `INSERT INTO authors (name, image, description) 
+             VALUES ($1, $2, $3) 
              ON CONFLICT (name) DO UPDATE 
-             SET thumbnail = EXCLUDED.thumbnail
+             SET image = EXCLUDED.image, description = EXCLUDED.description
              RETURNING id, (xmax = 0) as inserted`,
-            [author.name, author.thumbnail],
+            [author.name, authorImage(author), authorDesc(author)],
           );
           if (result.rows[0].inserted) {
             stats.authors.created++;
@@ -4205,28 +4228,31 @@ app.post("/api/import/json", async (req, res) => {
             stats.authors.skipped++;
           } else {
             await client.query(
-              "INSERT INTO authors (name, thumbnail) VALUES ($1, $2)",
-              [author.name, author.thumbnail],
+              "INSERT INTO authors (name, image, description) VALUES ($1, $2, $3)",
+              [author.name, authorImage(author), authorDesc(author)],
             );
             stats.authors.created++;
           }
         }
+        await client.query("RELEASE SAVEPOINT import_author");
       } catch (error) {
+        await client.query("ROLLBACK TO SAVEPOINT import_author");
         stats.errors.push(`Author "${author.name}": ${error.message}`);
       }
     }
 
     // Import sources
     for (const source of data.sources) {
+      await client.query("SAVEPOINT import_source");
       try {
         if (options?.replaceExisting) {
           const result = await client.query(
-            `INSERT INTO sources (name, type, thumbnail) 
+            `INSERT INTO sources (name, type, image) 
              VALUES ($1, $2, $3) 
              ON CONFLICT (name) DO UPDATE 
-             SET type = EXCLUDED.type, thumbnail = EXCLUDED.thumbnail
+             SET type = EXCLUDED.type, image = EXCLUDED.image
              RETURNING id, (xmax = 0) as inserted`,
-            [source.name, source.type, source.thumbnail],
+            [source.name, source.type, sourceImage(source)],
           );
           if (result.rows[0].inserted) {
             stats.sources.created++;
@@ -4242,13 +4268,15 @@ app.post("/api/import/json", async (req, res) => {
             stats.sources.skipped++;
           } else {
             await client.query(
-              "INSERT INTO sources (name, type, thumbnail) VALUES ($1, $2, $3)",
-              [source.name, source.type, source.thumbnail],
+              "INSERT INTO sources (name, type, image) VALUES ($1, $2, $3)",
+              [source.name, source.type, sourceImage(source)],
             );
             stats.sources.created++;
           }
         }
+        await client.query("RELEASE SAVEPOINT import_source");
       } catch (error) {
+        await client.query("ROLLBACK TO SAVEPOINT import_source");
         stats.errors.push(`Source "${source.name}": ${error.message}`);
       }
     }
@@ -4256,6 +4284,7 @@ app.post("/api/import/json", async (req, res) => {
     // Import tags (if present in backup)
     if (data.tags && data.tags.length > 0) {
       for (const tag of data.tags) {
+        await client.query("SAVEPOINT import_tag");
         try {
           if (options?.replaceExisting) {
             const result = await client.query(
@@ -4286,7 +4315,9 @@ app.post("/api/import/json", async (req, res) => {
               stats.tags.created++;
             }
           }
+          await client.query("RELEASE SAVEPOINT import_tag");
         } catch (error) {
+          await client.query("ROLLBACK TO SAVEPOINT import_tag");
           stats.errors.push(`Tag "${tag.name}" (${tag.type}): ${error.message}`);
         }
       }
@@ -4295,8 +4326,11 @@ app.post("/api/import/json", async (req, res) => {
     // Import quotes
     // Get storage threshold from settings
     const storageThresholdMB = options?.storageThresholdMB || 1;
-    
+
+    await syncNotesIdSequence(client);
+
     for (const note of data.quotes) {
+      await client.query("SAVEPOINT import_note");
       try {
         // Get author_id
         let authorId = null;
@@ -4486,12 +4520,15 @@ app.post("/api/import/json", async (req, res) => {
           
           stats.quotes.created++;
         }
+        await client.query("RELEASE SAVEPOINT import_note");
       } catch (error) {
-        stats.errors.push(
-          `Note "${note.note_text.substring(0, 50)}...": ${error.message}`,
-        );
+        await client.query("ROLLBACK TO SAVEPOINT import_note");
+        const preview = (note.note_text && note.note_text.substring(0, 50)) || "";
+        stats.errors.push(`Note "${preview}...": ${error.message}`);
       }
     }
+
+    await syncNotesIdSequence(client);
 
     await client.query("COMMIT");
 

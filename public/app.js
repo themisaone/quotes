@@ -46,7 +46,7 @@ import {
   exportToPdf as exportToPdfLib,
   exportToJson as exportToJsonLib,
   handleImportFile as handleImportFileLib
-} from './js/lib/dataManager.js?v=20260318u';
+} from './js/lib/dataManager.js?v=20260511importfix';
 
 import {
   loadSettings,
