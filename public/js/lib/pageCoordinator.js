@@ -244,20 +244,33 @@ function showTagsView(callbacks, state) {
  */
 function showSettingsView(callbacks) {
   showView(VIEW_IDS.SETTINGS);
-  
-  // Re-render type lists to ensure they show current settings
-  callbacks.renderQuoteTypesList(
-    callbacks.populateTypeDropdowns,
-    callbacks.populateTypeFilterCheckboxes
-  );
-  callbacks.renderTrainingTypesList(callbacks.populateTrainingTypeFilterCheckboxes);
-  
-  // Setup event listeners for add buttons
-  callbacks.setupTypeManagementListeners(
-    callbacks.populateTypeDropdowns,
-    callbacks.populateTypeFilterCheckboxes,
-    callbacks.populateTrainingTypeFilterCheckboxes
-  );
+
+  void (async () => {
+    try {
+      if (callbacks.prepareSettingsView) {
+        await callbacks.prepareSettingsView();
+      }
+    } catch (e) {
+      console.error('Failed to refresh settings for Options:', e);
+    }
+
+    callbacks.renderQuoteTypesList(
+      callbacks.populateTypeDropdowns,
+      callbacks.populateTypeFilterCheckboxes,
+    );
+    callbacks.renderTrainingTypesList(callbacks.populateTrainingTypeFilterCheckboxes);
+
+    if (callbacks.renderNoteTypesList) {
+      callbacks.renderNoteTypesList();
+    }
+
+    callbacks.setupTypeManagementListeners(
+      callbacks.populateTypeDropdowns,
+      callbacks.populateTypeFilterCheckboxes,
+      callbacks.populateTrainingTypeFilterCheckboxes,
+      callbacks.rebuildNoteTypeMenu,
+    );
+  })();
 }
 
 /**

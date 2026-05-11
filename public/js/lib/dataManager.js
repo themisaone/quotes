@@ -341,10 +341,18 @@ export async function exportToPdf(config) {
  * Fetch JSON backup from server
  */
 async function fetchJsonBackup(currentNoteTypeFilter) {
-  let url = `${API_URL}/export/json`;
+  const params = new URLSearchParams();
   if (currentNoteTypeFilter) {
-    url += `?note_type=${currentNoteTypeFilter}`;
+    params.set('note_type', currentNoteTypeFilter);
   }
+  // Tegneserie: strips are usually on disk and under the global embed MB limit, so
+  // a normal export embeds everything and never offers the ZIP. Request external
+  // refs + big-files list so the usual ZIP / report flow runs.
+  if (currentNoteTypeFilter === 'tegneserie') {
+    params.set('embed_external', '1');
+  }
+  const q = params.toString();
+  const url = `${API_URL}/export/json${q ? `?${q}` : ''}`;
 
   const response = await fetch(url);
 
@@ -427,7 +435,7 @@ export async function exportToJson(config) {
     // Ask the user whether to also download the large attachments as a ZIP
     const doZip = await showConfirm(
       `✅ JSON backup saved.\n\n` +
-      `⚠️ ${info.count} large attachment(s) (${info.totalMB} MB total) exceed the embed threshold and were not included in the JSON.\n\n` +
+      `⚠️ ${info.count} attachment file(s) (${info.totalMB} MB total) were kept as vault file references and were not embedded in the JSON.\n\n` +
       `Download them now as a ZIP archive to create a complete backup?\n` +
       `(This may take a while for large collections.)`,
       { icon: '📦', title: 'Download large attachments?', confirmLabel: 'Download ZIP', cancelLabel: 'Skip (JSON only)' }

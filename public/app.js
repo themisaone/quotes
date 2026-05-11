@@ -46,7 +46,7 @@ import {
   exportToPdf as exportToPdfLib,
   exportToJson as exportToJsonLib,
   handleImportFile as handleImportFileLib
-} from './js/lib/dataManager.js?v=20260511importfix';
+} from './js/lib/dataManager.js?v=20260511tegneseriezip';
 
 import {
   loadSettings,
@@ -62,8 +62,9 @@ import {
   applyQuoteSizingMode,
   toggleTagOperationsPanel,
   getDisplaySetting,
-  initializeSettings as initializeSettingsLib
-} from './js/lib/settingsManager.js?v=20260411counters1';
+  initializeSettings as initializeSettingsLib,
+  refreshSettingsForOptionsPanel
+} from './js/lib/settingsManager.js?v=20260511settingsrefresh';
 
 import {
   openAuthorModal as openAuthorModalLib,
@@ -3144,6 +3145,10 @@ function switchView(view) {
       renderQuoteTypesList,
       renderTrainingTypesList,
       renderNoteTypesList: () => renderNoteTypesList(generateNoteTypeMenu),
+      prepareSettingsView: async () => {
+        await refreshSettingsForOptionsPanel();
+        globalSettings = getGlobalSettings();
+      },
       setupTypeManagementListeners,
       rebuildNoteTypeMenu: generateNoteTypeMenu,
       populateTypeDropdowns,

@@ -7,6 +7,7 @@
     "start": "npm run migrate && node src/server.js",
     "dev": "npm run migrate && nodemon src/server.js",
     "migrate": "node migrations/run-migrations.js",
+    "split-backup": "node scripts/split-json-backup.js",
     "default": "npm run migrate && MODE=DEFAULT node src/server.js",
     "all": "npm run migrate && MODE=ALL node src/server.js",
     "quotes": "npm run migrate && MODE=QUOTES node src/server.js",

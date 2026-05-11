@@ -3947,6 +3947,8 @@ app.post("/api/tags/bulk-add", async (req, res) => {
 // Remembers big-file entries from the most recent export so the companion
 // big-files report can be served immediately after without reprocessing.
 let _lastExportBigFiles = [];
+/** Dedupe ZIP/report entries when the same vault path appears on multiple rows */
+let _lastExportBigFilePaths = new Set();
 
 /**
  * Resolve a single attachment value for JSON export:
@@ -3966,7 +3968,10 @@ function resolveAttachmentForExport(value, noteId, bigFiles, thresholdMB = 1) {
   const sizeMB    = sizeBytes / 1024 / 1024;
 
   if (sizeMB > thresholdMB) {
-    bigFiles.push({ noteId, path: relPath, sizeMB: sizeMB.toFixed(2) });
+    if (!_lastExportBigFilePaths.has(relPath)) {
+      _lastExportBigFilePaths.add(relPath);
+      bigFiles.push({ noteId, path: relPath, sizeMB: sizeMB.toFixed(2) });
+    }
     return value; // keep file: reference — too large to embed
   }
 
@@ -3989,6 +3994,7 @@ app.get("/api/export/json", async (req, res) => {
 
   try {
     _lastExportBigFiles = []; // reset for this run
+    _lastExportBigFilePaths.clear();
 
     // Read the embed-threshold from settings (repurposed from old DB storage threshold)
     let exportEmbedThresholdMB = 1; // default: 1 MB
@@ -3999,6 +4005,15 @@ app.get("/api/export/json", async (req, res) => {
         exportEmbedThresholdMB = settings.externalStorageThreshold;
       }
     } catch (_) { /* use default if settings unreadable */ }
+
+    // Keep vault `file:` refs in JSON (do not base64-embed) so the companion ZIP
+    // lists every on-disk attachment. Used for tegneserie-style exports where
+    // strips are often below the normal embed MB limit but users still want a ZIP.
+    const embedExternal =
+      req.query.embed_external === '1' || req.query.embed_external === 'true';
+    if (embedExternal) {
+      exportEmbedThresholdMB = 0;
+    }
 
     // ── Small tables: authors, sources, tags ─────────────────────────────────
     const authorsResult = await pool.query("SELECT * FROM authors ORDER BY id");
@@ -4063,10 +4078,65 @@ app.get("/api/export/json", async (req, res) => {
 
       if (batch.rows.length === 0) break;
 
+      const noteIds = batch.rows.map((r) => r.id);
+      const attByNote = new Map();
+      if (noteIds.length > 0) {
+        const attResult = await pool.query(
+          `SELECT note_id, position, thumbnail, attachment_full, attachment_type, filename
+           FROM note_attachments
+           WHERE note_id = ANY($1::int[])
+           ORDER BY note_id, position`,
+          [noteIds],
+        );
+        for (const att of attResult.rows) {
+          if (!attByNote.has(att.note_id)) attByNote.set(att.note_id, []);
+          attByNote.get(att.note_id).push(att);
+        }
+      }
+
       for (const note of batch.rows) {
-        // Resolve file: references → base64 (≤ threshold) or keep as-is (> threshold → big-files list)
-        note.attachment_full = resolveAttachmentForExport(note.attachment_full, note.id, _lastExportBigFiles, exportEmbedThresholdMB);
-        note.thumbnail       = resolveAttachmentForExport(note.thumbnail,       note.id, _lastExportBigFiles, exportEmbedThresholdMB);
+        const attRows = attByNote.get(note.id);
+        if (attRows && attRows.length > 0) {
+          // Primary storage is note_attachments (tegneserie, multi-attach, migrated notes).
+          // Import prefers `attachments` when present; mirror flat columns from position 0.
+          note.attachments = attRows.map((att) => ({
+            position: att.position,
+            thumbnail: resolveAttachmentForExport(
+              att.thumbnail,
+              note.id,
+              _lastExportBigFiles,
+              exportEmbedThresholdMB,
+            ),
+            attachment_full: resolveAttachmentForExport(
+              att.attachment_full,
+              note.id,
+              _lastExportBigFiles,
+              exportEmbedThresholdMB,
+            ),
+            attachment_type: att.attachment_type,
+            filename: att.filename,
+          }));
+          const primaryRow = attRows.find((a) => a.position === 0) || attRows[0];
+          const primaryOut = note.attachments.find((a) => a.position === primaryRow.position)
+            || note.attachments[0];
+          note.thumbnail = primaryOut.thumbnail;
+          note.attachment_full = primaryOut.attachment_full;
+          if (primaryRow.attachment_type) note.attachment_type = primaryRow.attachment_type;
+        } else {
+          // Legacy: attachments only on notes row
+          note.attachment_full = resolveAttachmentForExport(
+            note.attachment_full,
+            note.id,
+            _lastExportBigFiles,
+            exportEmbedThresholdMB,
+          );
+          note.thumbnail = resolveAttachmentForExport(
+            note.thumbnail,
+            note.id,
+            _lastExportBigFiles,
+            exportEmbedThresholdMB,
+          );
+        }
         if (!first) res.write(',');
         res.write(JSON.stringify(note));
         first = false;
@@ -4100,7 +4170,7 @@ app.get("/api/export/big-files-report", (req, res) => {
   const ts = new Date().toISOString();
   const lines = [
     `NoteArchive Export — ${ts}`,
-    `Large attachments NOT embedded in JSON (> 2 MB):`,
+    `Large attachments NOT embedded in JSON (kept as file references; see embed threshold / embed_external):`,
     `These files must be present in your vault to be usable after import.`,
     ``,
   ];

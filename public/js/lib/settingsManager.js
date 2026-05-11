@@ -12,6 +12,7 @@
 import { API_URL } from './api.js';
 import { getElementByIdSafe } from '../constants.js';
 import { showConfirm } from './confirmDialog.js';
+import { initNoteTypes } from './noteTypes.js';
 
 // ============= GLOBAL STATE =============
 
@@ -44,6 +45,49 @@ export async function loadSettings() {
   // Fallback to localStorage if server fails
   console.warn('⚠️  Using localStorage fallback');
   return null;
+}
+
+/**
+ * Reload settings.json from the server and sync in-memory note types the same
+ * way as startup (respecting `window._modeAllowedTypes` when set).
+ * Call when opening Options so manual edits to the settings file show up
+ * without a full page reload.
+ */
+export async function refreshSettingsForOptionsPanel() {
+  const prev = await loadSettings();
+  if (!globalSettings?.noteTypes) return prev;
+
+  const allowed =
+    typeof window !== 'undefined' && Array.isArray(window._modeAllowedTypes)
+      ? window._modeAllowedTypes
+      : null;
+  if (allowed?.length) {
+    const filtered = globalSettings.noteTypes.filter((t) => allowed.includes(t.value));
+    initNoteTypes(filtered.length ? filtered : globalSettings.noteTypes);
+  } else {
+    initNoteTypes(globalSettings.noteTypes);
+  }
+
+  refreshShortcutNoteTypeSelect();
+  return globalSettings;
+}
+
+/** Repopulate the "Quick tag shortcuts" note-type dropdown from globalSettings */
+function refreshShortcutNoteTypeSelect() {
+  const shortcutTypeSelect = getElementByIdSafe('shortcutNoteTypeSelect');
+  if (!shortcutTypeSelect || !globalSettings?.noteTypes) return;
+  const prev = shortcutTypeSelect.value;
+  shortcutTypeSelect.innerHTML = '';
+  for (const nt of globalSettings.noteTypes) {
+    const opt = document.createElement('option');
+    opt.value = nt.value;
+    opt.textContent = `${nt.icon || ''} ${nt.label}`.trim();
+    shortcutTypeSelect.appendChild(opt);
+  }
+  if (prev && globalSettings.noteTypes.some((t) => t.value === prev)) {
+    shortcutTypeSelect.value = prev;
+  }
+  shortcutTypeSelect.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
 /**
