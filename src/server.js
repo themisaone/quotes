@@ -106,6 +106,45 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+// Prune unused authors/sources/tags — before static so POST is never mistaken for a file fetch
+app.post("/api/maintenance/prune-unused-entities", async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const authorsResult = await client.query(`
+      DELETE FROM authors a
+      WHERE NOT EXISTS (SELECT 1 FROM notes n WHERE n.author_id = a.id)
+      RETURNING id
+    `);
+    const sourcesResult = await client.query(`
+      DELETE FROM sources s
+      WHERE NOT EXISTS (SELECT 1 FROM notes n WHERE n.source_id = s.id)
+      RETURNING id
+    `);
+    const tagsResult = await client.query(`
+      DELETE FROM tags t
+      WHERE NOT EXISTS (SELECT 1 FROM note_tags nt WHERE nt.tag_id = t.id)
+      RETURNING id
+    `);
+
+    await client.query("COMMIT");
+    res.json({
+      ok: true,
+      authorsRemoved: authorsResult.rowCount,
+      sourcesRemoved: sourcesResult.rowCount,
+      tagsRemoved: tagsResult.rowCount,
+    });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("prune-unused-entities:", error);
+    res.status(500).json({ error: error.message || "Prune failed" });
+  } finally {
+    client.release();
+  }
+});
+
 app.use(express.static(path.join(__dirname, "../public")));
 // Serve attachment files from the configured vault (dynamic — honours vaultPath setting)
 app.get('/attachments/*', (req, res) => {
@@ -4055,19 +4094,9 @@ app.get("/api/export/json", async (req, res) => {
       }
     } catch (_) { /* use default if settings unreadable */ }
 
-    // Keep vault `file:` refs in JSON (do not base64-embed) so the companion ZIP
-    // lists every on-disk attachment. Used for tegneserie-style exports where
-    // strips are often below the normal embed MB limit but users still want a ZIP.
-    const embedExternal =
-      req.query.embed_external === '1' || req.query.embed_external === 'true';
-    if (embedExternal) {
-      exportEmbedThresholdMB = 0;
-    }
-
     console.log("[export/json] start", {
       note_type: note_type || "all",
       exportEmbedThresholdMB,
-      embedExternal: !!embedExternal,
     });
 
     // ── Small tables: authors, sources, tags ─────────────────────────────────
@@ -4231,7 +4260,7 @@ app.get("/api/export/big-files-report", (req, res) => {
   const ts = new Date().toISOString();
   const lines = [
     `NoteArchive Export — ${ts}`,
-    `Large attachments NOT embedded in JSON (kept as file references; see embed threshold / embed_external):`,
+    `Large attachments NOT embedded in JSON (kept as file references; see embed threshold in Settings):`,
     `These files must be present in your vault to be usable after import.`,
     ``,
   ];

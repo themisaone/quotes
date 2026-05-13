@@ -345,12 +345,6 @@ async function fetchJsonBackup(currentNoteTypeFilter) {
   if (currentNoteTypeFilter) {
     params.set('note_type', currentNoteTypeFilter);
   }
-  // Tegneserie: strips are usually on disk and under the global embed MB limit, so
-  // a normal export embeds everything and never offers the ZIP. Request external
-  // refs + big-files list so the usual ZIP / report flow runs.
-  if (currentNoteTypeFilter === 'tegneserie') {
-    params.set('embed_external', '1');
-  }
   const q = params.toString();
   const url = `${API_URL}/export/json${q ? `?${q}` : ''}`;
 
@@ -460,6 +454,27 @@ export async function exportToJson(config) {
     exportBtn.textContent = "💾 Backup Data";
     exportBtn.disabled = false;
   }
+}
+
+/**
+ * Remove authors, sources, and tags that have no linked notes (server-side bulk delete).
+ */
+export async function pruneUnusedEntitiesRequest() {
+  const url = `${API_URL}/maintenance/prune-unused-entities`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error(
+        "Prune API not found (404). Restart the backend (e.g. stop and run `npm start` again) so it loads the latest server code.",
+      );
+    }
+    throw new Error(data.error || `Prune failed (${response.status})`);
+  }
+  return data;
 }
 
 // ============= IMPORT FUNCTION =============

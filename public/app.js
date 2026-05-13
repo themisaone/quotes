@@ -45,8 +45,9 @@ import {
 import {
   exportToPdf as exportToPdfLib,
   exportToJson as exportToJsonLib,
-  handleImportFile as handleImportFileLib
-} from './js/lib/dataManager.js?v=20260511tegneseriezip';
+  handleImportFile as handleImportFileLib,
+  pruneUnusedEntitiesRequest,
+} from './js/lib/dataManager.js?v=20260512prune404';
 
 import {
   loadSettings,
@@ -1084,6 +1085,47 @@ function setupEventListeners() {
 
   if (importFileInput) {
     importFileInput.addEventListener("change", handleImportFile);
+  }
+
+  const pruneUnusedEntitiesBtn = getElementByIdSafe("pruneUnusedEntitiesBtn");
+  if (pruneUnusedEntitiesBtn) {
+    pruneUnusedEntitiesBtn.addEventListener("click", async () => {
+      if (
+        !(await showConfirm(
+          "Remove every author, source, and tag that is not linked to any note?\n\nThis cannot be undone.",
+          {
+            icon: "🧹",
+            title: "Prune unused metadata",
+            confirmLabel: "Prune",
+            danger: true,
+          },
+        ))
+      ) {
+        return;
+      }
+      const prevLabel = pruneUnusedEntitiesBtn.textContent;
+      pruneUnusedEntitiesBtn.disabled = true;
+      pruneUnusedEntitiesBtn.textContent = "⏳ Pruning…";
+      try {
+        const r = await pruneUnusedEntitiesRequest();
+        const lines = [
+          `Authors removed: ${r.authorsRemoved}`,
+          `Sources removed: ${r.sourcesRemoved}`,
+          `Tags removed: ${r.tagsRemoved}`,
+        ];
+        if (!r.authorsRemoved && !r.sourcesRemoved && !r.tagsRemoved) {
+          lines.push("", "Nothing to remove — all entries are in use.");
+        }
+        alert(lines.join("\n"));
+        await Promise.all([loadAuthors(), loadSources(), loadTags()]);
+      } catch (err) {
+        console.error(err);
+        alert(err.message || "Prune failed");
+      } finally {
+        pruneUnusedEntitiesBtn.disabled = false;
+        pruneUnusedEntitiesBtn.textContent = prevLabel;
+      }
+    });
   }
 
   // Select mode button
