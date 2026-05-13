@@ -3980,6 +3980,42 @@ function resolveAttachmentForExport(value, noteId, bigFiles, thresholdMB = 1) {
   return `data:${mimeType};base64,${buffer.toString('base64')}`;
 }
 
+/** Honor TCP backpressure so chunked JSON export does not buffer unbounded RAM. */
+function writeExportChunk(res, chunk, encoding = "utf8") {
+  return new Promise((resolve, reject) => {
+    const onErr = (err) => {
+      res.off("drain", onDrain);
+      reject(err);
+    };
+    const onDrain = () => {
+      res.off("error", onErr);
+      resolve();
+    };
+    res.once("error", onErr);
+    try {
+      const ok =
+        typeof chunk === "string"
+          ? res.write(chunk, encoding)
+          : res.write(chunk);
+      if (ok) {
+        res.off("error", onErr);
+        resolve();
+      } else {
+        res.once("drain", onDrain);
+      }
+    } catch (e) {
+      res.off("error", onErr);
+      reject(e);
+    }
+  });
+}
+
+function endExportResponse(res) {
+  return new Promise((resolve, reject) => {
+    res.end((err) => (err ? reject(err) : resolve()));
+  });
+}
+
 // Export all data as JSON
 app.get("/api/export/json", async (req, res) => {
   const { note_type } = req.query;
@@ -3993,6 +4029,15 @@ app.get("/api/export/json", async (req, res) => {
   );
 
   try {
+    req.on("close", () => {
+      if (!res.writableEnded) {
+        console.warn("[export/json] client closed connection before export finished");
+      }
+    });
+    res.on("error", (err) => {
+      console.error("[export/json] response stream error:", err?.message || err);
+    });
+
     _lastExportBigFiles = []; // reset for this run
     _lastExportBigFilePaths.clear();
 
@@ -4001,8 +4046,12 @@ app.get("/api/export/json", async (req, res) => {
     try {
       const settingsRaw = fs.readFileSync(getSettingsFile(), 'utf8');
       const settings    = JSON.parse(settingsRaw);
-      if (typeof settings.externalStorageThreshold === 'number') {
-        exportEmbedThresholdMB = settings.externalStorageThreshold;
+      const rawThresh   = settings?.externalStorageThreshold;
+      if (rawThresh != null && rawThresh !== "") {
+        const n = Number(rawThresh);
+        if (Number.isFinite(n) && n > 0) {
+          exportEmbedThresholdMB = n;
+        }
       }
     } catch (_) { /* use default if settings unreadable */ }
 
@@ -4014,6 +4063,12 @@ app.get("/api/export/json", async (req, res) => {
     if (embedExternal) {
       exportEmbedThresholdMB = 0;
     }
+
+    console.log("[export/json] start", {
+      note_type: note_type || "all",
+      exportEmbedThresholdMB,
+      embedExternal: !!embedExternal,
+    });
 
     // ── Small tables: authors, sources, tags ─────────────────────────────────
     const authorsResult = await pool.query("SELECT * FROM authors ORDER BY id");
@@ -4037,14 +4092,14 @@ app.get("/api/export/json", async (req, res) => {
 
 
     // ── Write JSON preamble ───────────────────────────────────────────────────
-    res.write('{"version":"2.0"');
-    res.write(`,"exportedAt":${JSON.stringify(new Date().toISOString())}`);
-    res.write(`,"noteTypeFilter":${JSON.stringify(note_type || 'all')}`);
-    res.write(`,"counts":${JSON.stringify(counts)}`);
-    res.write(`,"data":{"authors":${JSON.stringify(authorsResult.rows)}`);
-    res.write(`,"sources":${JSON.stringify(sourcesResult.rows)}`);
-    res.write(`,"tags":${JSON.stringify(tagsResult.rows)}`);
-    res.write(',"quotes":[');
+    await writeExportChunk(res, '{"version":"2.0"');
+    await writeExportChunk(res, `,"exportedAt":${JSON.stringify(new Date().toISOString())}`);
+    await writeExportChunk(res, `,"noteTypeFilter":${JSON.stringify(note_type || "all")}`);
+    await writeExportChunk(res, `,"counts":${JSON.stringify(counts)}`);
+    await writeExportChunk(res, `,"data":{"authors":${JSON.stringify(authorsResult.rows)}`);
+    await writeExportChunk(res, `,"sources":${JSON.stringify(sourcesResult.rows)}`);
+    await writeExportChunk(res, `,"tags":${JSON.stringify(tagsResult.rows)}`);
+    await writeExportChunk(res, ',"quotes":[');
 
     // ── Stream notes in batches using cursor pagination ───────────────────────
     // Each batch uses a single query with json_agg to avoid N+1 tag queries.
@@ -4098,7 +4153,8 @@ app.get("/api/export/json", async (req, res) => {
         const attRows = attByNote.get(note.id);
         if (attRows && attRows.length > 0) {
           // Primary storage is note_attachments (tegneserie, multi-attach, migrated notes).
-          // Import prefers `attachments` when present; mirror flat columns from position 0.
+          // Import prefers `attachments` when present — do not duplicate onto flat fields
+          // (q.* would re-serialize the same blobs twice and ~double export size).
           note.attachments = attRows.map((att) => ({
             position: att.position,
             thumbnail: resolveAttachmentForExport(
@@ -4117,11 +4173,12 @@ app.get("/api/export/json", async (req, res) => {
             filename: att.filename,
           }));
           const primaryRow = attRows.find((a) => a.position === 0) || attRows[0];
-          const primaryOut = note.attachments.find((a) => a.position === primaryRow.position)
-            || note.attachments[0];
-          note.thumbnail = primaryOut.thumbnail;
-          note.attachment_full = primaryOut.attachment_full;
           if (primaryRow.attachment_type) note.attachment_type = primaryRow.attachment_type;
+          // Import prefers `attachments` when present. `SELECT q.*` still puts
+          // thumbnail / attachment_full on the row — omit them here or the same
+          // bytes appear twice in JSON (near ~2× export size after migration).
+          delete note.thumbnail;
+          delete note.attachment_full;
         } else {
           // Legacy: attachments only on notes row
           note.attachment_full = resolveAttachmentForExport(
@@ -4137,8 +4194,8 @@ app.get("/api/export/json", async (req, res) => {
             exportEmbedThresholdMB,
           );
         }
-        if (!first) res.write(',');
-        res.write(JSON.stringify(note));
+        if (!first) await writeExportChunk(res, ",");
+        await writeExportChunk(res, JSON.stringify(note));
         first = false;
       }
 
@@ -4146,8 +4203,12 @@ app.get("/api/export/json", async (req, res) => {
       if (batch.rows.length < BATCH) break;
     }
 
-    res.write(`],"_bigFilesCount":${_lastExportBigFiles.length}}}`);
-    res.end();
+    await writeExportChunk(
+      res,
+      `],"_bigFilesCount":${_lastExportBigFiles.length}}}`,
+    );
+    await endExportResponse(res);
+    console.log("[export/json] done", { quotes: quoteCount });
 
   } catch (error) {
     console.error("Error exporting data:", error);
