@@ -4,6 +4,9 @@
  * by dividing data.quotes only. Each part keeps the same authors, sources, and
  * tags so imports resolve names; import order: _1, _2, … (duplicates are skipped).
  *
+ * Large backups are read with a streaming JSON parser (stream-json) so Node does
+ * not load the entire file as one string (avoids ERR_STRING_TOO_LONG / heap blowups).
+ *
  * Usage:
  *   node scripts/split-json-backup.js <backup.json> [output-dir] [--mb=30]
  *
@@ -11,7 +14,7 @@
  *   node scripts/split-json-backup.js ~/Downloads/all_notes_backup_2026-05-11.json
  *   node scripts/split-json-backup.js ./backup.json ./chunks --mb=25
  *
- * Very large inputs may need more heap:
+ * Very large inputs may still need more heap for in-memory quote objects:
  *   node --max-old-space-size=8192 scripts/split-json-backup.js huge.json
  */
 
@@ -19,6 +22,11 @@
 
 const fs = require('fs');
 const path = require('path');
+const { chain } = require('stream-chain');
+const { parser } = require('stream-json');
+const { pick } = require('stream-json/filters/pick.js');
+const { streamArray } = require('stream-json/streamers/stream-array.js');
+const { streamValues } = require('stream-json/streamers/stream-values.js');
 
 function usage() {
   console.log(`
@@ -83,6 +91,42 @@ function byteLength(obj) {
   return Buffer.byteLength(JSON.stringify(obj), 'utf8');
 }
 
+/** First matching value for a root or nested path (once: true recommended for scalars). */
+function streamPickValue(inputPath, filter, { once = true } = {}) {
+  return new Promise((resolve, reject) => {
+    let value;
+    const pipeline = chain([
+      fs.createReadStream(inputPath),
+      parser(),
+      pick({ filter, once }),
+      streamValues(),
+    ]);
+    pipeline.on('data', (d) => {
+      value = d.value;
+    });
+    pipeline.on('end', () => resolve(value));
+    pipeline.on('error', reject);
+  });
+}
+
+/** Collect all array elements under path (e.g. data.authors). */
+function streamPickArray(inputPath, filter) {
+  return new Promise((resolve, reject) => {
+    const arr = [];
+    const pipeline = chain([
+      fs.createReadStream(inputPath),
+      parser(),
+      pick({ filter }),
+      streamArray(),
+    ]);
+    pipeline.on('data', (d) => {
+      arr.push(d.value);
+    });
+    pipeline.on('end', () => resolve(arr));
+    pipeline.on('error', reject);
+  });
+}
+
 function validateBackup(raw) {
   if (!raw || typeof raw !== 'object') throw new Error('Root must be an object');
   const { data } = raw;
@@ -118,7 +162,56 @@ function buildPart(base, authors, sources, tags, quotesSlice, meta) {
   return out;
 }
 
-function main() {
+async function loadBackupWithoutQuotes(inputPath) {
+  const version = await streamPickValue(inputPath, 'version', { once: true });
+  const exportedAt = await streamPickValue(inputPath, 'exportedAt', { once: true });
+  const noteTypeFilter = await streamPickValue(inputPath, 'noteTypeFilter', { once: true });
+  const counts = await streamPickValue(inputPath, 'counts', { once: true });
+  const splitBackup = await streamPickValue(inputPath, 'splitBackup', { once: true });
+  const authors = await streamPickArray(inputPath, 'data.authors');
+  const sources = await streamPickArray(inputPath, 'data.sources');
+  const tags = await streamPickArray(inputPath, 'data.tags');
+
+  const base = {
+    version: version != null ? version : '2.0',
+    exportedAt: exportedAt != null ? exportedAt : new Date().toISOString(),
+    noteTypeFilter: noteTypeFilter != null ? noteTypeFilter : 'all',
+    counts: counts && typeof counts === 'object' ? counts : {},
+    splitBackup,
+  };
+
+  const data = {
+    authors: authors || [],
+    sources: sources || [],
+    tags: tags || [],
+    quotes: [],
+  };
+
+  return { base, data };
+}
+
+/** Stream data.quotes; call onQuote(quote) for each; resolves when done. */
+function streamQuotes(inputPath, onQuote) {
+  return new Promise((resolve, reject) => {
+    const pipeline = chain([
+      fs.createReadStream(inputPath),
+      parser(),
+      pick({ filter: 'data.quotes' }),
+      streamArray(),
+    ]);
+    pipeline.on('data', (d) => {
+      try {
+        onQuote(d.value);
+      } catch (e) {
+        reject(e);
+      }
+    });
+    pipeline.on('end', resolve);
+    pipeline.on('error', reject);
+  });
+}
+
+async function main() {
   const { input, outDir, mb } = parseArgs(process.argv);
   const targetBytes = mb * 1024 * 1024;
 
@@ -130,27 +223,23 @@ function main() {
   const dir = outDir || path.dirname(input);
   fs.mkdirSync(dir, { recursive: true });
 
-  console.log(`Reading ${input} …`);
-  const rawText = fs.readFileSync(input, 'utf8');
-  let base;
-  try {
-    base = JSON.parse(rawText);
-  } catch (e) {
-    console.error('Invalid JSON:', e.message);
-    process.exit(1);
-  }
+  console.log(`Reading ${input} (streaming) …`);
 
+  let { base, data } = await loadBackupWithoutQuotes(input);
+  const authors = data.authors;
+  const sources = data.sources;
+  const tags = data.tags;
+
+  const full = {
+    ...base,
+    data: { authors, sources, tags, quotes: [] },
+  };
   try {
-    validateBackup(base);
+    validateBackup(full);
   } catch (e) {
     console.error('Not a recognized backup:', e.message);
     process.exit(1);
   }
-
-  const authors = base.data.authors;
-  const sources = base.data.sources;
-  const tags = base.data.tags || [];
-  const quotes = base.data.quotes;
 
   const emptyQuotesDoc = buildPart(base, authors, sources, tags, [], { part: 1, parts: 1 });
   const baseBytes = byteLength(emptyQuotesDoc);
@@ -163,43 +252,50 @@ function main() {
   }
 
   const quoteSlices = [];
-  let i = 0;
+  let chunk = [];
 
-  while (i < quotes.length) {
-    const chunk = [quotes[i]];
-    let doc = buildPart(base, authors, sources, tags, chunk, { part: 1, parts: 1 });
+  await streamQuotes(input, (quote) => {
+    const trial = chunk.length === 0 ? [quote] : [...chunk, quote];
+    let doc = buildPart(base, authors, sources, tags, trial, { part: 1, parts: 1 });
     let sz = byteLength(doc);
 
     if (sz > targetBytes) {
-      console.warn(
-        `⚠️  First note at index ${i} (id=${quotes[i].id}) alone is ${(sz / 1024 / 1024).toFixed(2)} MB > ${mb} MB — writing it as its own part.`,
-      );
-      quoteSlices.push(chunk);
-      i += 1;
-      continue;
-    }
-
-    let j = i + 1;
-    while (j < quotes.length) {
-      chunk.push(quotes[j]);
-      doc = buildPart(base, authors, sources, tags, chunk, { part: 1, parts: 1 });
-      sz = byteLength(doc);
-      if (sz > targetBytes) {
-        chunk.pop();
-        break;
+      if (chunk.length > 0) {
+        quoteSlices.push(chunk);
+        chunk = [quote];
+        doc = buildPart(base, authors, sources, tags, chunk, { part: 1, parts: 1 });
+        sz = byteLength(doc);
+        if (sz > targetBytes) {
+          console.warn(
+            `⚠️  Note (id=${quote.id}) alone is ${(sz / 1024 / 1024).toFixed(2)} MB > ${mb} MB — writing it as its own part.`,
+          );
+          quoteSlices.push(chunk);
+          chunk = [];
+        }
+      } else {
+        console.warn(
+          `⚠️  Note (id=${quote.id}) alone is ${(sz / 1024 / 1024).toFixed(2)} MB > ${mb} MB — writing it as its own part.`,
+        );
+        quoteSlices.push(trial);
+        chunk = [];
       }
-      j++;
+      return;
     }
 
+    chunk = trial;
+  });
+
+  if (chunk.length > 0) {
     quoteSlices.push(chunk);
-    i += chunk.length;
   }
 
   const parts = quoteSlices.length;
   const baseName = path.basename(input, path.extname(input));
   const ext = path.extname(input) || '.json';
 
-  console.log(`Splitting ${quotes.length} notes into ${parts} part(s) (~≤ ${mb} MB each, UTF-8 bytes)…\n`);
+  let quoteCount = 0;
+  for (const s of quoteSlices) quoteCount += s.length;
+  console.log(`Splitting ${quoteCount} notes into ${parts} part(s) (~≤ ${mb} MB each, UTF-8 bytes)…\n`);
 
   for (let p = 0; p < parts; p++) {
     const slice = quoteSlices[p];
@@ -215,4 +311,7 @@ function main() {
   console.log(`\nDone. Import ${baseName}_1${ext} first, then _2, … in order.`);
 }
 
-main();
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

@@ -34,7 +34,9 @@
     "pdfjs-dist": "^5.6.205",
     "pg": "^8.11.3",
     "puppeteer": "^24.37.5",
-    "sharp": "^0.34.5"
+    "sharp": "^0.34.5",
+    "stream-chain": "^3.6.3",
+    "stream-json": "^2.1.0"
   },
   "devDependencies": {
     "canvas": "^3.2.1",
