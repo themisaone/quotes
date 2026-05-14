@@ -4042,6 +4042,32 @@ function resolveAttachmentForExport(value, noteId, bigFiles, thresholdMB = 1) {
   return `data:${mimeType};base64,${buffer.toString('base64')}`;
 }
 
+/**
+ * Normalize a value for PostgreSQL `DATE` (calendar day only).
+ * - Export: avoids JSON.stringify(Date) → ISO midnight shifting on re-import.
+ * - Import: accepts legacy ISO strings and stores the intended calendar day.
+ */
+function toPgDateOnlyString(val) {
+  if (val === null || val === undefined || val === "") return null;
+  if (typeof val === "string") {
+    const m = val.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (m) return m[1];
+    const d = new Date(val);
+    if (Number.isNaN(d.getTime())) return null;
+    const y = d.getFullYear();
+    const mo = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${mo}-${day}`;
+  }
+  if (val instanceof Date && !Number.isNaN(val.getTime())) {
+    const y = val.getFullYear();
+    const mo = String(val.getMonth() + 1).padStart(2, "0");
+    const day = String(val.getDate()).padStart(2, "0");
+    return `${y}-${mo}-${day}`;
+  }
+  return null;
+}
+
 /** Honor TCP backpressure so chunked JSON export does not buffer unbounded RAM. */
 function writeExportChunk(res, chunk, encoding = "utf8") {
   return new Promise((resolve, reject) => {
@@ -4247,6 +4273,7 @@ app.get("/api/export/json", async (req, res) => {
           );
         }
         if (!first) await writeExportChunk(res, ",");
+        note.note_date = toPgDateOnlyString(note.note_date);
         await writeExportChunk(res, JSON.stringify(note));
         first = false;
       }
@@ -4567,6 +4594,18 @@ app.post("/api/import/json", async (req, res) => {
           
           let quoteId;
           const noteType = note.note_type || 'quote';
+
+          const importNoteTitle =
+            note.note_title !== undefined &&
+            note.note_title !== null &&
+            String(note.note_title).trim() !== ""
+              ? String(note.note_title).trim()
+              : null;
+          const importScore =
+            note.score === undefined || note.score === null || note.score === ""
+              ? null
+              : String(note.score).trim() || null;
+          const importNoteDate = toPgDateOnlyString(note.note_date);
           
           // Check if this import has an ID (from backup/restore) or not (from ENEX/new imports)
           const hasId = note.id !== null && note.id !== undefined;
@@ -4575,18 +4614,20 @@ app.post("/api/import/json", async (req, res) => {
             // ID exists but content is different - this is a modified quote
             // Insert with new auto-generated ID
             const insertResult = await client.query(
-              `INSERT INTO notes (note_text, author_id, source_id, type, comment, note_type, note_date, 
+              `INSERT INTO notes (note_text, note_title, author_id, source_id, type, comment, note_type, note_date, score,
                                    attachment_type, created_at, updated_at, translation_group)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
                RETURNING id`,
               [
                 note.note_text,
+                importNoteTitle,
                 authorId,
                 sourceId,
                 note.type,
                 note.comment,
                 noteType,
-                note.note_date || null,
+                importNoteDate,
+                importScore,
                 note.attachment_type || null,
                 note.created_at || new Date(),
                 note.updated_at || new Date(),
@@ -4598,18 +4639,20 @@ app.post("/api/import/json", async (req, res) => {
             // ID doesn't exist - use the original ID from export
             quoteId = note.id;
             await client.query(
-              `INSERT INTO notes (id, note_text, author_id, source_id, type, comment, note_type, note_date, 
+              `INSERT INTO notes (id, note_text, note_title, author_id, source_id, type, comment, note_type, note_date, score,
                                    attachment_type, created_at, updated_at, translation_group)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
               [
                 quoteId,
                 note.note_text,
+                importNoteTitle,
                 authorId,
                 sourceId,
                 note.type,
                 note.comment,
                 noteType,
-                note.note_date || null,
+                importNoteDate,
+                importScore,
                 note.attachment_type || null,
                 note.created_at || new Date(),
                 note.updated_at || new Date(),
@@ -4619,18 +4662,20 @@ app.post("/api/import/json", async (req, res) => {
           } else {
             // No ID provided (e.g., ENEX import) - let database auto-generate ID
             const insertResult = await client.query(
-              `INSERT INTO notes (note_text, author_id, source_id, type, comment, note_type, note_date, 
+              `INSERT INTO notes (note_text, note_title, author_id, source_id, type, comment, note_type, note_date, score,
                                    attachment_type, created_at, updated_at, translation_group)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
                RETURNING id`,
               [
                 note.note_text,
+                importNoteTitle,
                 authorId,
                 sourceId,
                 note.type,
                 note.comment,
                 noteType,
-                note.note_date || null,
+                importNoteDate,
+                importScore,
                 note.attachment_type || null,
                 note.created_at || new Date(),
                 note.updated_at || new Date(),
