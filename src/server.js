@@ -709,6 +709,17 @@ app.post("/api/authors", async (req, res) => {
   }
 });
 
+/**
+ * Author/source PUT bodies: if the client sends `image: null` to clear a portrait,
+ * we must not use `image ?? legacyThumbnail` — that yields `undefined` when legacy
+ * is absent, so the UPDATE skips and the old image stays in the DB.
+ */
+function pickEntityImagePayload(body) {
+  if (Object.prototype.hasOwnProperty.call(body, "image")) return body.image;
+  if (Object.prototype.hasOwnProperty.call(body, "thumbnail")) return body.thumbnail;
+  return undefined;
+}
+
 // Update author (rename with auto-merge detection)
 app.put("/api/authors/:id", async (req, res) => {
   const client = await pool.connect();
@@ -717,12 +728,15 @@ app.put("/api/authors/:id", async (req, res) => {
     await client.query("BEGIN");
     
     const { id } = req.params;
-    let { name, description, image, thumbnail: thumbnailLegacy } = req.body;
-    // Accept either 'image' (current frontend) or legacy 'thumbnail' key
-    const thumbnail = image ?? thumbnailLegacy;
+    let { name, description } = req.body;
+    const thumbnail = pickEntityImagePayload(req.body);
 
-    // Validate it's a proper data URL when an image is provided
-    if (thumbnail && !thumbnail.startsWith("data:")) {
+    // Validate: allow null/empty to clear; otherwise expect a data URL
+    if (
+      thumbnail != null &&
+      thumbnail !== "" &&
+      !String(thumbnail).startsWith("data:")
+    ) {
       return res.status(400).json({ error: "Invalid image format" });
     }
 
@@ -974,12 +988,14 @@ app.put("/api/sources/:id", async (req, res) => {
     await client.query("BEGIN");
     
     const { id } = req.params;
-    let { name, image, thumbnail: thumbnailLegacy, type } = req.body;
-    // Accept either 'image' (current frontend) or legacy 'thumbnail' key
-    const thumbnail = image ?? thumbnailLegacy;
+    let { name, type } = req.body;
+    const thumbnail = pickEntityImagePayload(req.body);
 
-    // Validate it's a proper data URL when an image is provided
-    if (thumbnail && !thumbnail.startsWith("data:")) {
+    if (
+      thumbnail != null &&
+      thumbnail !== "" &&
+      !String(thumbnail).startsWith("data:")
+    ) {
       return res.status(400).json({ error: "Invalid image format" });
     }
 

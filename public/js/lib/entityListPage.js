@@ -11,7 +11,7 @@
 //
 // Usage:
 //   import { initEntityListPage, loadAuthors, loadSources, displayAuthors, displaySources }
-//     from './js/lib/entityListPage.js?v=20260502a';
+//     from './js/lib/entityListPage.js?v=20260512cardnbtn';
 //
 //   initEntityListPage({
 //     escapeHtml,
@@ -87,21 +87,22 @@ export function displayAuthors(authors) {
 
   const { escapeHtml } = _deps;
   authorsList.innerHTML = authors
-    .map(
-      (author) => `
-        <div class="card author-card" onclick="openAuthorModal(${author.id}, '${escapeHtml(author.name)}', ${parseInt(author.quote_count) || 0})">
+    .map((author) => {
+      const n = parseInt(author.quote_count, 10) || 0;
+      return `
+        <div class="card author-card" onclick="openAuthorModal(${author.id}, '${escapeHtml(author.name)}', ${n})">
             <div class="card-image">
                 ${author.image ? `<img src="${author.image}" alt="${escapeHtml(author.name)}">` : '✍️'}
             </div>
             <div class="card-name">
-                <a href="#" onclick="event.stopPropagation(); filterByAuthor('${escapeHtml(author.name)}'); return false;" class="card-link">
+                <a href="#" onclick="event.stopPropagation(); filterByAuthor('${escapeHtml(author.name)}'); return false;" class="card-name-action">
                     ${escapeHtml(author.name)}
                 </a>
             </div>
-            <div class="card-quote-count">${parseInt(author.quote_count) || 0} quotes</div>
+            <div class="card-quote-count">${n} quotes</div>
         </div>
-    `
-    )
+    `;
+    })
     .join('');
 }
 
@@ -192,17 +193,18 @@ export function displaySources(sources) {
         source.type === 'LYRICS'   ? '🎵' :
         source.type === 'JOKES'    ? '😂' :
         '📖';
+      const n = parseInt(source.quote_count, 10) || 0;
       return `
-        <div class="card source-card" onclick="openSourceModal(${source.id}, '${escapeHtml(source.name)}', '${source.type}', ${parseInt(source.quote_count) || 0})">
+        <div class="card source-card" onclick="openSourceModal(${source.id}, '${escapeHtml(source.name)}', '${source.type}', ${n})">
             <div class="card-image">
                 ${source.image ? `<img src="${source.image}" alt="${escapeHtml(source.name)}">` : typeIcon}
             </div>
             <div class="card-name">
-                <a href="#" onclick="event.stopPropagation(); filterBySource('${escapeHtml(source.name)}'); return false;" class="card-link">
+                <a href="#" onclick="event.stopPropagation(); filterBySource('${escapeHtml(source.name)}'); return false;" class="card-name-action">
                     ${escapeHtml(source.name)}
                 </a>
             </div>
-            <div class="card-quote-count">${parseInt(source.quote_count) || 0} quotes</div>
+            <div class="card-quote-count">${n} quotes</div>
             ${
               source.primary_author_name
                 ? `

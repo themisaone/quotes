@@ -100,6 +100,18 @@
   width: 100%;
 }
 
+/* Title on author/source cards: clickable but same look as body text (not link-blue) */
+.card-name .card-name-action {
+  color: inherit;
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.card-name .card-name-action:hover {
+  text-decoration: underline;
+}
+
 .card-quote-count {
   font-size: 0.8rem;
   color: var(--text-secondary);

@@ -30,7 +30,6 @@ import {
 // ============= CONSTANTS =============
 
 const DEBOUNCE_DELAY_MS = 300;
-const VIEW_SWITCH_DELAY_MS = 50;
 
 // Using constants from constants.js instead of hardcoded IDs
 const SEARCH_INPUT_IDS = [
@@ -217,35 +216,31 @@ function setupTextSearchInputs() {
  */
 function applyFilterAndSwitchView(viewName, filterFieldId, filterValue, logContext) {
   console.log(`Filtering by ${logContext}:`, filterValue);
-  
-  // Switch to quotes view
-  if (callbacks.switchView) {
-    callbacks.switchView(viewName);
+
+  // Reset pagination before loading so the list is page 1.
+  if (callbacks.setCurrentPage) {
+    callbacks.setCurrentPage(1);
   }
-  
-  // Clear other filters
+
+  // IMPORTANT: set search fields *before* switchView(). showQuotesView() calls
+  // loadQuotes() immediately; if we switched first, that request would still see
+  // stale filters (e.g. leftover author), and a slow response could overwrite the
+  // correct follow-up load — especially noticeable for filterBySource.
   clearOtherFilters(filterFieldId);
-  
-  // Set target filter
+
   const filterField = getElementByIdSafe(filterFieldId, 'activateFilter');
   if (filterField) {
     filterField.value = filterValue;
   }
-  
-  console.log(`${logContext} field value:`, filterField?.value);
-  
-  // Reset pagination
-  if (callbacks.setCurrentPage) {
-    callbacks.setCurrentPage(1);
-  }
-  
-  // Small delay to ensure view switch completes
-  setTimeout(() => {
-    console.log(`Loading quotes for ${logContext}:`, filterValue);
-    callbacks.loadQuotes();
-  }, VIEW_SWITCH_DELAY_MS);
 
-  // Update active menu item
+  console.log(`${logContext} field value:`, filterField?.value);
+
+  if (callbacks.switchView) {
+    callbacks.switchView(viewName);
+  }
+
+  // showQuotesView already runs loadQuotes + loadTotalCount; no delayed second load.
+
   updateMenuActiveState(viewName);
 }
 

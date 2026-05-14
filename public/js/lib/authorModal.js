@@ -87,6 +87,12 @@ const authorModalConfig = {
         window.toggleAuthorAttachmentPanel();
       }
     }, 50);
+
+    const showNotesBtn = document.getElementById('authorModalShowNotesBtn');
+    if (showNotesBtn) {
+      const n = parseInt(entity.quote_count, 10) || 0;
+      showNotesBtn.textContent = `Show notes (${n})`;
+    }
   }
 };
 
@@ -113,11 +119,25 @@ export async function openAuthorModal(authorId, authorName, quoteCount = null) {
  * @param {Function} callbacks.onAuthorDeleted - Called after author is deleted
  */
 export function setupAuthorModalHandlers(callbacks = {}) {
-  // Map callback names to generic names
   const genericCallbacks = {
     onSaved: callbacks.onAuthorSaved,
     onDeleted: callbacks.onAuthorDeleted
   };
-  
-  return authorModalManager.setupHandlers(genericCallbacks);
+
+  authorModalManager.setupHandlers(genericCallbacks);
+
+  const showNotesBtn = getElementByIdSafe('authorModalShowNotesBtn', 'setupAuthorModalHandlers');
+  if (showNotesBtn && !showNotesBtn.dataset.boundShowNotes) {
+    showNotesBtn.dataset.boundShowNotes = '1';
+    showNotesBtn.addEventListener('click', () => {
+      const name = getElementByIdSafe('authorName', 'authorModalShowNotes')?.value?.trim();
+      if (!name) return;
+      const modal = getElementByIdSafe('authorModal', 'authorModalShowNotes');
+      if (modal) modal.style.display = 'none';
+      if (typeof window.filterByAuthor === 'function') {
+        window.filterByAuthor(name);
+      }
+    });
+  }
+
 }

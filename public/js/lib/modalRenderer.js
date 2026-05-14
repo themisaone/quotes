@@ -28,6 +28,7 @@
  */
 
 import { normalizeTextColors } from './utils.js';
+import { hasAuthorField, hasDateField } from './noteTypes.js';
 
 /**
  * Format metadata display (created/updated timestamps)
@@ -88,11 +89,19 @@ function formatDateForPicker(dateString) {
  * Set default fields for Quote type
  */
 export function setDefaultQuoteFields(elements) {
-  const { authorInput, sourceTypeSelect } = elements;
+  const { authorInput, sourceInput, sourceTypeSelect } = elements;
   
   if (authorInput) {
     authorInput.value = "Unknown Author";
   }
+  if (sourceInput) {
+    sourceInput.value = "";
+  }
+
+  const authorIdEl = document.getElementById('noteModalAuthorId');
+  const sourceIdEl = document.getElementById('noteModalSourceId');
+  if (authorIdEl) authorIdEl.value = '';
+  if (sourceIdEl) sourceIdEl.value = '';
   
   if (sourceTypeSelect) {
     sourceTypeSelect.value = "ASSORTED";
@@ -108,6 +117,15 @@ export function setQuoteFields(note, elements) {
   if (authorInput) authorInput.value = note.author_name || "";
   if (sourceInput) sourceInput.value = note.source_name || "";
   if (sourceTypeSelect) sourceTypeSelect.value = note.source_type || "BOOK";
+
+  const authorIdEl = document.getElementById('noteModalAuthorId');
+  const sourceIdEl = document.getElementById('noteModalSourceId');
+  if (authorIdEl) {
+    authorIdEl.value = note.author_id != null && note.author_id !== '' ? String(note.author_id) : '';
+  }
+  if (sourceIdEl) {
+    sourceIdEl.value = note.source_id != null && note.source_id !== '' ? String(note.source_id) : '';
+  }
 }
 
 /**
@@ -251,6 +269,11 @@ export function resetModalFields(quillEditor, elements) {
   // Clear note title
   const noteTitleInput = document.getElementById('noteTitle');
   if (noteTitleInput) noteTitleInput.value = '';
+
+  const authorIdEl = document.getElementById('noteModalAuthorId');
+  const sourceIdEl = document.getElementById('noteModalSourceId');
+  if (authorIdEl) authorIdEl.value = '';
+  if (sourceIdEl) sourceIdEl.value = '';
 }
 
 /**
@@ -327,9 +350,9 @@ export function setupAddModal(noteType, currentNoteTypeFilter, elements, quillEd
   }
   
   // Set default values based on note type
-  if (noteType === 'quote') {
+  if (hasAuthorField(noteType)) {
     setDefaultQuoteFields(elements);
-  } else if (noteType === 'training') {
+  } else if (hasDateField(noteType)) {
     setDefaultTrainingFields(elements);
   }
 
@@ -411,9 +434,9 @@ export function setupEditModal(note, elements, quillEditor, updateFieldVisibilit
   setCommonFields(note, elements, quillEditor);
   
   // Set type-specific fields
-  if (noteType === 'quote') {
+  if (hasAuthorField(noteType)) {
     setQuoteFields(note, elements);
-  } else if (noteType === 'training') {
+  } else if (hasDateField(noteType)) {
     setTrainingFields(note, elements);
   }
   

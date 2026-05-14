@@ -16,7 +16,7 @@
 
 import { API_URL, fetchWithRetry } from './api.js?v=20260318a';
 import { createQuoteCard } from './cardRenderer.js?v=20260318a';
-import { getSearchValues, getTrainingFilters } from './searchManager.js?v=20260318a';
+import { getSearchValues, getTrainingFilters } from './searchManager.js?v=20260512filterfix';
 import { 
   FILTER_IDS,
   CONTAINER_IDS,

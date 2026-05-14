@@ -99,6 +99,12 @@ const sourceModalConfig = {
         window.toggleSourceAttachmentPanel();
       }
     }, 50);
+
+    const showNotesBtn = document.getElementById('sourceModalShowNotesBtn');
+    if (showNotesBtn) {
+      const n = parseInt(entity.quote_count, 10) || 0;
+      showNotesBtn.textContent = `Show notes (${n})`;
+    }
   }
 };
 
@@ -127,12 +133,25 @@ export async function openSourceModal(sourceId, sourceName, sourceType, quoteCou
  * @param {Function} callbacks.getQuoteTypes - Function to get quote types for dropdown
  */
 export function setupSourceModalHandlers(callbacks = {}) {
-  // Map callback names to generic names, preserve getQuoteTypes
   const genericCallbacks = {
     onSaved: callbacks.onSourceSaved,
     onDeleted: callbacks.onSourceDeleted,
     getQuoteTypes: callbacks.getQuoteTypes
   };
-  
-  return sourceModalManager.setupHandlers(genericCallbacks);
+
+  sourceModalManager.setupHandlers(genericCallbacks);
+
+  const showNotesBtn = getElementByIdSafe('sourceModalShowNotesBtn', 'setupSourceModalHandlers');
+  if (showNotesBtn && !showNotesBtn.dataset.boundShowNotes) {
+    showNotesBtn.dataset.boundShowNotes = '1';
+    showNotesBtn.addEventListener('click', () => {
+      const name = getElementByIdSafe('sourceName', 'sourceModalShowNotes')?.value?.trim();
+      if (!name) return;
+      const modal = getElementByIdSafe('sourceModal', 'sourceModalShowNotes');
+      if (modal) modal.style.display = 'none';
+      if (typeof window.filterBySource === 'function') {
+        window.filterBySource(name);
+      }
+    });
+  }
 }

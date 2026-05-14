@@ -30,7 +30,9 @@ import {
   updateModalLabels,
   updateAddButtonText as updateAddButtonTextLib,
   hasGenericSubTypeField,
-  getGenericSubTypes
+  getGenericSubTypes,
+  hasAuthorField,
+  hasSourceField
 } from './js/lib/noteTypes.js';
 
 import {
@@ -40,7 +42,7 @@ import {
 import {
   setupAddModal,
   setupEditModal
-} from './js/lib/modalRenderer.js?v=20260512modallabels';
+} from './js/lib/modalRenderer.js?v=20260512entityshow';
 
 import {
   exportToPdf as exportToPdfLib,
@@ -70,12 +72,12 @@ import {
 import {
   openAuthorModal as openAuthorModalLib,
   setupAuthorModalHandlers
-} from './js/lib/authorModal.js?v=20260317f';
+} from './js/lib/authorModal.js?v=20260512modalshownotes';
 
 import {
   openSourceModal as openSourceModalLib,
   setupSourceModalHandlers
-} from './js/lib/sourceModal.js?v=20260317f';
+} from './js/lib/sourceModal.js?v=20260512modalshownotes';
 
 import {
   loadTags as loadTagsLib,
@@ -96,7 +98,7 @@ import {
   setCurrentPage as setLibCurrentPage,
   setQuotesPerPage,
   getQuotesPerPage
-} from './js/lib/displayManager.js?v=20260318h';
+} from './js/lib/displayManager.js?v=20260512filterfix';
 
 import {
   populateTypeFilterCheckboxes as populateTypeFilterCheckboxesLib,
@@ -114,12 +116,12 @@ import {
   initializeSearchHandlers,
   registerGlobalSearchFunctions,
   clearSearchFields
-} from './js/lib/searchManager.js?v=20260317g';
+} from './js/lib/searchManager.js?v=20260512filterfix';
 
 import {
   initializeAutocomplete,
   setupAutocompleteInput
-} from './js/lib/autocompleteManager.js?v=20260317f';
+} from './js/lib/autocompleteManager.js?v=20260512entityshow';
 
 import {
   FILTER_IDS,
@@ -193,7 +195,7 @@ import {
   loadSources,
   displayAuthors,
   displaySources
-} from './js/lib/entityListPage.js?v=20260502a';
+} from './js/lib/entityListPage.js?v=20260512cardnbtn';
 
 // ============= CONSTANTS =============
 // Auto-detect API URL based on current host
@@ -1561,18 +1563,9 @@ function updateViewModeToggle() {
 // Wrapper with app-specific additions
 function updateFieldVisibility() {
   const noteType = getElementByIdSafe('noteType').value;
-  const isQuote = noteType === 'quote';
   
-  // Use library function for standard field visibility
+  // Use library function for standard field visibility (author/source, training, etc.)
   updateModalFieldVisibility(noteType);
-  
-  // App-specific fields not in library
-  const quoteSpecificFields = getElementByIdSafe('quoteSpecificFields');
-  const translationGroupContainer = getElementByIdSafe('translationGroupContainer');
-  
-  if (quoteSpecificFields) {
-    quoteSpecificFields.style.display = isQuote ? 'flex' : 'none';
-  }
   
   // Repopulate the generic sub-type dropdown whenever the note type changes
   populateGenericSubTypeDropdown(noteType);
@@ -1581,16 +1574,73 @@ function updateFieldVisibility() {
   updateModalLabels(noteType);
   
   // Update modal title based on type
-  // Check the hidden input (already set by setupEditModal before this callback fires)
-  // rather than the module-level editingQuoteId which is set only after setupEditModal returns
   const quoteIdInput = document.getElementById('quoteId');
   const isEditing = quoteIdInput && quoteIdInput.value;
   if (!isEditing) {
     modalTitle.textContent = "Add";
   }
+
+  syncNoteModalEntityShowButtons();
 }
 
-// function updateModalLabels is imported from noteTypes.js
+function syncNoteModalEntityShowButtons() {
+  const noteType = document.getElementById('noteType')?.value || '';
+  const authorBtn = document.getElementById('showAuthorFromNoteBtn');
+  const sourceBtn = document.getElementById('showSourceFromNoteBtn');
+  const authorIdEl = document.getElementById('noteModalAuthorId');
+  const sourceIdEl = document.getElementById('noteModalSourceId');
+  const showAuthor = hasAuthorField(noteType);
+  const showSource = hasSourceField(noteType);
+  if (authorBtn) {
+    authorBtn.style.display = showAuthor ? '' : 'none';
+    authorBtn.disabled = !showAuthor || !authorIdEl?.value?.trim();
+  }
+  if (sourceBtn) {
+    sourceBtn.style.display = showSource ? '' : 'none';
+    sourceBtn.disabled = !showSource || !sourceIdEl?.value?.trim();
+  }
+}
+window.syncNoteModalEntityShowButtons = syncNoteModalEntityShowButtons;
+
+function initializeNoteModalEntityNav() {
+  const authorBtn = getElementByIdSafe('showAuthorFromNoteBtn');
+  const sourceBtn = getElementByIdSafe('showSourceFromNoteBtn');
+  if (authorBtn) {
+    authorBtn.addEventListener('click', async () => {
+      const id = getElementByIdSafe('noteModalAuthorId')?.value?.trim();
+      const name = (authorInput?.value || '').trim() || 'Author';
+      if (!id) return;
+      closeQuoteModal();
+      switchView('authors');
+      await openAuthorModalLib(id, name, null);
+    });
+  }
+  if (sourceBtn) {
+    sourceBtn.addEventListener('click', async () => {
+      const id = getElementByIdSafe('noteModalSourceId')?.value?.trim();
+      const name = (sourceInput?.value || '').trim() || 'Source';
+      const sourceType = getElementByIdSafe('sourceType')?.value || 'BOOK';
+      if (!id) return;
+      closeQuoteModal();
+      switchView('sources');
+      await openSourceModalLib(id, name, sourceType, null);
+    });
+  }
+  if (authorInput) {
+    authorInput.addEventListener('input', () => {
+      const h = getElementByIdSafe('noteModalAuthorId');
+      if (h) h.value = '';
+      syncNoteModalEntityShowButtons();
+    });
+  }
+  if (sourceInput) {
+    sourceInput.addEventListener('input', () => {
+      const h = getElementByIdSafe('noteModalSourceId');
+      if (h) h.value = '';
+      syncNoteModalEntityShowButtons();
+    });
+  }
+}
 
 function openAddModal() {
   // MIGRATED: Using library function
@@ -4417,6 +4467,7 @@ function updateSelectedTagsDisplay() {
 
 // Initialize tag input when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
+  initializeNoteModalEntityNav();
   initializeTagInput();
 });
 

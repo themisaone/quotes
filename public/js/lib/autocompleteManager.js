@@ -105,10 +105,14 @@ function buildTagValue(fullValue, selectedTag) {
 /**
  * Create suggestion item HTML
  * @param {string} name - Suggestion name
+ * @param {string|number|undefined|null} id - Optional entity id (authors/sources)
  * @returns {string} HTML string
  */
-function createSuggestionItem(name) {
-  return `<div class="${CSS_CLASSES.AUTOCOMPLETE_ITEM}" data-value="${escapeHtmlFn(name)}">${escapeHtmlFn(name)}</div>`;
+function createSuggestionItem(name, id) {
+  const safeName = escapeHtmlFn(name);
+  const idStr = id != null && id !== '' ? String(id) : '';
+  const idAttr = idStr ? ` data-id="${escapeHtmlFn(idStr)}"` : '';
+  return `<div class="${CSS_CLASSES.AUTOCOMPLETE_ITEM}" data-value="${safeName}"${idAttr}>${safeName}</div>`;
 }
 
 /**
@@ -132,7 +136,8 @@ function attachSuggestionClickHandlers(container, input, onSelect) {
   container.querySelectorAll(`.${CSS_CLASSES.AUTOCOMPLETE_ITEM}`).forEach((item) => {
     item.addEventListener("click", () => {
       const value = item.dataset.value;
-      onSelect(value);
+      const entityId = item.dataset.id;
+      onSelect(value, entityId);
       hideSuggestions(container);
     });
   });
@@ -173,7 +178,7 @@ async function fetchSuggestions(search, endpoint, container, input) {
       return;
     }
 
-    displaySuggestions(items, container, input);
+    displaySuggestions(items, container, input, endpoint);
   } catch (error) {
     console.error(`Error fetching ${endpoint} suggestions:`, error);
     hideSuggestions(container);
@@ -223,8 +228,9 @@ async function fetchTagSuggestions(search, container, input) {
  * @param {Array} items - Array of suggestion items
  * @param {HTMLElement} container - Suggestions container element
  * @param {HTMLElement} input - Input element
+ * @param {string} endpoint - API segment (authors, sources, tags)
  */
-function displaySuggestions(items, container, input) {
+function displaySuggestions(items, container, input, endpoint) {
   currentFocus = -1;
 
   if (items.length === 0) {
@@ -236,12 +242,24 @@ function displaySuggestions(items, container, input) {
   const limitedItems = items.slice(0, MAX_SUGGESTIONS);
 
   container.innerHTML = limitedItems
-    .map(item => createSuggestionItem(item.name))
+    .map((item) => createSuggestionItem(item.name, item.id))
     .join("");
 
   // Add click handlers
-  attachSuggestionClickHandlers(container, input, (value) => {
+  attachSuggestionClickHandlers(container, input, (value, entityId) => {
     input.value = value;
+    if (entityId != null && entityId !== '') {
+      if (endpoint === 'authors') {
+        const h = document.getElementById('noteModalAuthorId');
+        if (h) h.value = String(entityId);
+      } else if (endpoint === 'sources') {
+        const h = document.getElementById('noteModalSourceId');
+        if (h) h.value = String(entityId);
+      }
+    }
+    if (typeof window.syncNoteModalEntityShowButtons === 'function') {
+      window.syncNoteModalEntityShowButtons();
+    }
   });
 
   showSuggestions(container);
@@ -267,7 +285,7 @@ function displayTagSuggestions(tags, container, input, fullValue) {
     .join("");
 
   // Add click handlers with tag-specific logic
-  attachSuggestionClickHandlers(container, input, (selectedTag) => {
+  attachSuggestionClickHandlers(container, input, (selectedTag, _entityId) => {
     input.value = buildTagValue(fullValue, selectedTag);
     
     // Trigger search after tag selection (if callback provided)
