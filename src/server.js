@@ -4616,7 +4616,7 @@ app.post("/api/import/json", async (req, res) => {
             const insertResult = await client.query(
               `INSERT INTO notes (note_text, note_title, author_id, source_id, type, comment, note_type, note_date, score,
                                    attachment_type, created_at, updated_at, translation_group)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
                RETURNING id`,
               [
                 note.note_text,
@@ -4641,7 +4641,7 @@ app.post("/api/import/json", async (req, res) => {
             await client.query(
               `INSERT INTO notes (id, note_text, note_title, author_id, source_id, type, comment, note_type, note_date, score,
                                    attachment_type, created_at, updated_at, translation_group)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
               [
                 quoteId,
                 note.note_text,
@@ -4664,7 +4664,7 @@ app.post("/api/import/json", async (req, res) => {
             const insertResult = await client.query(
               `INSERT INTO notes (note_text, note_title, author_id, source_id, type, comment, note_type, note_date, score,
                                    attachment_type, created_at, updated_at, translation_group)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
                RETURNING id`,
               [
                 note.note_text,
