@@ -69,11 +69,6 @@ export function hasTrainingTypeField(noteType) {
 
 // ───── Labels & titles ─────
 
-export function getModalTitle(noteType, isEdit = false) {
-  const config = getNoteTypeConfig(noteType);
-  return `${isEdit ? 'Edit' : 'Add'} ${config.label}`;
-}
-
 export function getMainTextLabel(noteType) {
   return getNoteTypeConfig(noteType).behavior === 'quote' ? '📝 Note text *' : '📝 Text *';
 }
@@ -87,11 +82,6 @@ export function getAttachmentLabel(noteType) {
   if (config.behavior === 'quote') return 'Quote Attachment';
   if (config.behavior === 'training') return 'Training Attachment';
   return 'Attachment';
-}
-
-export function getDeleteButtonText(noteType) {
-  const config = getNoteTypeConfig(noteType);
-  return `Delete ${config.label}`;
 }
 
 export function getAddButtonText(noteTypeFilter) {

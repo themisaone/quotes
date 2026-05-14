@@ -27,7 +27,6 @@
  * - Reusable helper functions
  */
 
-import { getNoteTypeConfig } from './noteTypes.js';
 import { normalizeTextColors } from './utils.js';
 
 /**
@@ -257,7 +256,7 @@ export function resetModalFields(quillEditor, elements) {
 /**
  * Show/hide and configure delete button
  */
-export function configureDeleteButton(isEditMode, noteType, deleteBtn) {
+export function configureDeleteButton(isEditMode, deleteBtn) {
   if (!deleteBtn) return;
   
   if (!isEditMode) {
@@ -265,9 +264,8 @@ export function configureDeleteButton(isEditMode, noteType, deleteBtn) {
     return;
   }
   
-  const typeLabel = getNoteTypeConfig(noteType).label;
   deleteBtn.style.display = "inline-block";
-  deleteBtn.textContent = `Delete ${typeLabel}`;
+  deleteBtn.textContent = "Delete";
 }
 
 /**
@@ -309,11 +307,10 @@ export function setupAddModal(noteType, currentNoteTypeFilter, elements, quillEd
   console.log('🎨 ModalRenderer - Setting up ADD modal for:', noteType);
   
   const { modalTitle, noteTypeSelect } = elements;
-  const typeInfo = getNoteTypeConfig(noteType);
-  
+
   // Set modal title
   if (modalTitle) {
-    modalTitle.textContent = `Add ${typeInfo.label}`;
+    modalTitle.textContent = "Add";
   }
   
   // Update field labels
@@ -365,7 +362,7 @@ export function setupAddModal(noteType, currentNoteTypeFilter, elements, quillEd
   
   // Hide metadata and delete button
   hideMetadata(elements.metadataElement);
-  configureDeleteButton(false, noteType, elements.deleteBtn);
+  configureDeleteButton(false, elements.deleteBtn);
   
   return {
     editingQuoteId: null,
@@ -391,11 +388,10 @@ export function setupEditModal(note, elements, quillEditor, updateFieldVisibilit
   
   const { modalTitle, quoteIdInput } = elements;
   const noteType = note.note_type || 'quote';
-  const typeLabel = getNoteTypeConfig(noteType).label;
-  
+
   // Set modal title
   if (modalTitle) {
-    modalTitle.textContent = `Edit ${typeLabel}`;
+    modalTitle.textContent = "Edit";
   }
   
   // Update field labels
@@ -432,7 +428,7 @@ export function setupEditModal(note, elements, quillEditor, updateFieldVisibilit
   }
   
   // Configure delete button
-  configureDeleteButton(true, noteType, elements.deleteBtn);
+  configureDeleteButton(true, elements.deleteBtn);
   
   return {
     editingQuoteId: note.id,

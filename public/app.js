@@ -40,7 +40,7 @@ import {
 import {
   setupAddModal,
   setupEditModal
-} from './js/lib/modalRenderer.js?v=20260317f';
+} from './js/lib/modalRenderer.js?v=20260512modallabels';
 
 import {
   exportToPdf as exportToPdfLib,
@@ -786,6 +786,7 @@ async function loadAndApplyMode() {
   const has = (type) => allowedTypes.includes(type);
   const hasQuotes   = has('quote');
   const hasTraining = has('training');
+  const hasTegneserie = has('tegneserie');
   const isSingle    = allowedTypes.length === 1;
 
   // ── Single-type mode: hide "All Notes" row + its separator, auto-activate
@@ -812,16 +813,21 @@ async function loadAndApplyMode() {
   if (elAuthors) elAuthors.style.display = hasQuotes ? '' : 'none';
   if (elSources) elSources.style.display = hasQuotes ? '' : 'none';
 
-  // Random Quote — only relevant when quotes are visible
+  // Random Quote / Random Tegneserie — show each control only when that type exists in the mode
   const elRandom    = document.getElementById('menuItemRandomQuote');
+  const elRandomTeg = document.getElementById('menuItemRandomTegneserie');
   const elUtilDiv   = document.getElementById('menuDividerUtilities');
   const elUtilTitle = document.getElementById('menuTitleUtilities');
   const elUtilList  = document.getElementById('menuListUtilities');
   if (elRandom) elRandom.style.display = hasQuotes ? '' : 'none';
-  const utilsVisible = hasQuotes;
+  if (elRandomTeg) elRandomTeg.style.display = hasTegneserie ? '' : 'none';
+  const utilsVisible = hasQuotes || hasTegneserie;
   if (elUtilDiv)   elUtilDiv.style.display   = utilsVisible ? '' : 'none';
   if (elUtilTitle) elUtilTitle.style.display  = utilsVisible ? '' : 'none';
   if (elUtilList)  elUtilList.style.display   = utilsVisible ? '' : 'none';
+
+  const tabRandTeg = document.getElementById('tabletRandomTegneserieBtn');
+  if (tabRandTeg) tabRandTeg.style.display = hasTegneserie ? '' : 'none';
 
   // Training type filter row — only show when training is in the mode
   const elTrainingFilter  = document.getElementById('trainingTypesFilterContainer');
@@ -1580,8 +1586,7 @@ function updateFieldVisibility() {
   const quoteIdInput = document.getElementById('quoteId');
   const isEditing = quoteIdInput && quoteIdInput.value;
   if (!isEditing) {
-    const typeInfo = getNoteTypeConfig(noteType);
-    modalTitle.textContent = `Add ${typeInfo.label}`;
+    modalTitle.textContent = "Add";
   }
 }
 
@@ -2188,8 +2193,12 @@ function displayQuotes(quotes) {
 }
 
 // ============= CARD RENDERING =============
-function createQuoteCard(quote) {
-  return createQuoteCardLib(quote, currentNoteTypeFilter, getTrainingTypes, getQuoteTypes, globalSettings);
+function createQuoteCard(quote, noteTypeFilterOverride = null) {
+  const filter =
+    noteTypeFilterOverride !== null && noteTypeFilterOverride !== undefined
+      ? noteTypeFilterOverride
+      : currentNoteTypeFilter;
+  return createQuoteCardLib(quote, filter, getTrainingTypes, getQuoteTypes, globalSettings);
 }
 
 // Store full quotes for expand/collapse
@@ -4088,18 +4097,30 @@ async function handleSabTagOpApply() {
   }
 }
 
-// Welcome Quote Feature
-async function showWelcomeQuote(force = false) {
+// Welcome / random note overlay (optional randomNoteType, e.g. 'tegneserie')
+async function showWelcomeQuote(force = false, randomNoteType = null) {
   try {
     // Only show automatically if not already shown in this session
     if (!force && sessionStorage.getItem('welcomeQuoteShown')) {
       return;
     }
     
-    // Fetch a random quote
-    const response = await fetch(`${API_URL}/quotes/random`);
+    const url = randomNoteType
+      ? `${API_URL}/quotes/random?note_type=${encodeURIComponent(randomNoteType)}`
+      : `${API_URL}/quotes/random`;
+    const response = await fetch(url);
     if (!response.ok) {
-      console.log("No quotes available for welcome screen");
+      if (response.status === 404) {
+        if (force) {
+          const msg =
+            randomNoteType === 'tegneserie'
+              ? 'No Tegneserie notes in the library yet.'
+              : 'No quotes in the library yet.';
+          alert(msg);
+        } else {
+          console.log('No notes available for welcome / random overlay');
+        }
+      }
       return;
     }
 
@@ -4111,7 +4132,7 @@ async function showWelcomeQuote(force = false) {
     
     // Clear container and create quote card HTML
     container.innerHTML = "";
-    const cardHTML = createQuoteCard(quote);
+    const cardHTML = createQuoteCard(quote, randomNoteType);
     container.innerHTML = cardHTML;
     
     // Get the card element and style it
@@ -4165,6 +4186,8 @@ async function showWelcomeQuote(force = false) {
   }
 }
 
+window.showWelcomeQuote = showWelcomeQuote;
+
 // Show welcome quote on app load
 window.addEventListener("DOMContentLoaded", () => {
   // Show welcome quote after a short delay to ensure smooth loading
@@ -4174,6 +4197,11 @@ window.addEventListener("DOMContentLoaded", () => {
   const randomQuoteBtn = getElementByIdSafe("randomQuoteBtn");
   if (randomQuoteBtn) {
     randomQuoteBtn.addEventListener("click", () => showWelcomeQuote(true));
+  }
+
+  const randomTegneserieBtn = getElementByIdSafe("randomTegneserieBtn");
+  if (randomTegneserieBtn) {
+    randomTegneserieBtn.addEventListener("click", () => showWelcomeQuote(true, "tegneserie"));
   }
 });
 

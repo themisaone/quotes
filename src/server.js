@@ -1928,9 +1928,13 @@ app.get("/api/quotes", async (req, res) => {
   }
 });
 
-// Get random quote (must be before /:id route)
+// Get random note (must be before /:id route). Default note_type=quote for backward compatibility.
 app.get("/api/quotes/random", async (req, res) => {
   try {
+    const raw = req.query.note_type;
+    const noteType =
+      typeof raw === "string" && raw.trim() !== "" ? raw.trim() : "quote";
+
     const result = await pool.query(
       `
       SELECT q.*, 
@@ -1939,14 +1943,17 @@ app.get("/api/quotes/random", async (req, res) => {
       FROM notes q
       LEFT JOIN authors a ON q.author_id = a.id
       LEFT JOIN sources s ON q.source_id = s.id
-      WHERE q.note_type = 'quote'
+      WHERE q.note_type = $1
       ORDER BY RANDOM()
       LIMIT 1
-    `
+    `,
+      [noteType],
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: "No quotes found" });
+      return res
+        .status(404)
+        .json({ error: `No notes of type "${noteType}"` });
     }
 
     // Add tags and attachments to response

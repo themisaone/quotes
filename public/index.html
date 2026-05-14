@@ -179,6 +179,9 @@
           <li id="menuItemRandomQuote">
             <button id="randomQuoteBtn" class="menu-item" title="Random Quote"><span class="menu-icon">🎲</span><span class="menu-text"> Random Quote</span></button>
           </li>
+          <li id="menuItemRandomTegneserie" style="display: none;">
+            <button id="randomTegneserieBtn" class="menu-item" title="Open a random Tegneserie note"><span class="menu-icon">🎲</span><span class="menu-text"> Random Tegneserie</span></button>
+          </li>
         </ul>
 
         <div class="menu-divider desktop-only"></div>
@@ -268,6 +271,11 @@
               <button class="tablet-menu-btn" onclick="switchView('quotes'); setTimeout(() => showWelcomeQuote(true), 150)">
                 <span class="menu-btn-icon">🎲</span>
                 <span class="menu-btn-text">Random Note</span>
+              </button>
+
+              <button id="tabletRandomTegneserieBtn" type="button" class="tablet-menu-btn" style="display: none;" onclick="switchView('quotes'); setTimeout(() => showWelcomeQuote(true, 'tegneserie'), 150)">
+                <span class="menu-btn-icon">🎲</span>
+                <span class="menu-btn-text">Random Tegneserie</span>
               </button>
 
               <button class="tablet-menu-btn" onclick="switchView('settings')">
@@ -1387,7 +1395,7 @@
         <div class="modal-header">
           <div class="modal-header-left">
             <span class="modal-header-icon">💬</span>
-            <h2 id="modalTitle">Add New Quote</h2>
+            <h2 id="modalTitle">Add</h2>
           </div>
           <div style="display:flex; align-items:center; gap:0.4rem; flex-shrink:0; margin-right:0.75rem;">
             <span style="color:rgba(255,255,255,0.75); font-size:0.8rem; white-space:nowrap;">Note type:</span>
@@ -1644,8 +1652,8 @@
           </div>
 
           <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Save Quote</button>
-            <button type="button" id="deleteQuoteBtn" class="btn btn-danger" style="display: none">Delete Quote</button>
+            <button type="submit" class="btn btn-primary">Save</button>
+            <button type="button" id="deleteQuoteBtn" class="btn btn-danger" style="display: none">Delete</button>
             <button type="button" id="cancelBtn" class="btn btn-secondary">
               Cancel
             </button>
@@ -1997,6 +2005,6 @@ Quote number three..."
     <!-- Quill Editor Script -->
     <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
     <script type="module" src="js/lib/confirmDialog.js"></script>
-    <script type="module" src="app.js?v=20260511settingsrefresh"></script>
+    <script type="module" src="app.js?v=20260512randomtegneserie"></script>
   </body>
 </html>
