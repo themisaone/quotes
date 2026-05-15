@@ -6,24 +6,26 @@
     <title>Note Archive</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <!-- Stylesheet load order matters and mirrors the original cascade.
-         Feature files come first (in original-line order), then the two
-         responsive overlays.  See ARCHITECTURE.md "CSS File Layout".
+         Feature files come first (in original-line order), then responsive
+         overlays: broad mobile, then extra-small phones, then medium width.
+         See ARCHITECTURE.md "CSS File Layout".
          The same ?v= cache-buster must be on every link so reloads pick
          up changes together. -->
-    <link rel="stylesheet" href="style.css?v=202605021100" />
-    <link rel="stylesheet" href="style.sidemenu.css?v=202605021100" />
-    <link rel="stylesheet" href="style.search.css?v=202605021100" />
-    <link rel="stylesheet" href="style.buttons.css?v=202605021100" />
-    <link rel="stylesheet" href="style.modal.css?v=20260512modallayout" />
-    <link rel="stylesheet" href="style.cards.css?v=202605021100" />
-    <link rel="stylesheet" href="style.selection.css?v=202605021100" />
-    <link rel="stylesheet" href="style.attachments.css?v=202605021100" />
-    <link rel="stylesheet" href="style.entities.css?v=202605021100" />
-    <link rel="stylesheet" href="style.settings.css?v=202605021100" />
-    <link rel="stylesheet" href="style.dialogs.css?v=202605021100" />
-    <link rel="stylesheet" href="style.views.css?v=202605021100" />
-    <link rel="stylesheet" href="style.mobile.css?v=202605021100" />
-    <link rel="stylesheet" href="style.medium.css?v=202605021100" />
+    <link rel="stylesheet" href="style.css?v=20260510layout" />
+    <link rel="stylesheet" href="style.sidemenu.css?v=20260510layout" />
+    <link rel="stylesheet" href="style.search.css?v=20260510layout" />
+    <link rel="stylesheet" href="style.buttons.css?v=20260510layout" />
+    <link rel="stylesheet" href="style.modal.css?v=20260510modalgap" />
+    <link rel="stylesheet" href="style.cards.css?v=20260510cardpad2" />
+    <link rel="stylesheet" href="style.selection.css?v=20260510layout" />
+    <link rel="stylesheet" href="style.attachments.css?v=20260510attachcollapse" />
+    <link rel="stylesheet" href="style.entities.css?v=20260510layout" />
+    <link rel="stylesheet" href="style.settings.css?v=20260510metadata" />
+    <link rel="stylesheet" href="style.dialogs.css?v=20260510layout" />
+    <link rel="stylesheet" href="style.views.css?v=20260510layout" />
+    <link rel="stylesheet" href="style.mobile.css?v=20260510lplistcal" />
+    <link rel="stylesheet" href="style.small.css?v=20260510cardpad2" />
+    <link rel="stylesheet" href="style.medium.css?v=20260510cardpad2" />
     <!-- Font Awesome for dice icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <!-- Quill Editor -->
@@ -579,14 +581,14 @@
                     </select>
                     <span>🏷️ Title</span>
                   </div>
-       <!-- Find by ID -->
-       <div style="margin-top: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+       <!-- Find by ID (full-width row inside the metadata grid on small screens) -->
+       <div class="metadata-filter-noteid-row" style="margin-top: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
         <label style="font-size: 0.85rem; color: var(--text-secondary); white-space: nowrap; display: flex; align-items: center; gap: 0.2rem;"># Note ID</label>
         <input
           id="searchNoteId"
           placeholder="e.g. 1234"
           min="1"
-          style="width: 120px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; background: var(--input-bg); color: var(--text-primary);"
+          style="width: 120px; max-width: 100%; min-width: 0; flex: 1 1 auto; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; background: var(--input-bg); color: var(--text-primary); box-sizing: border-box;"
         />
       </div>
                   <!-- Row 3: attachment-related (Image and Multiple depend on Attachment = Have) -->
@@ -1465,10 +1467,10 @@
               </div>
             </div>
 
-            <!-- Quill editor and Attachment side by side -->
-            <div style="display: flex; gap: 0; align-items: flex-start; margin-top: 0;">
-              <!-- Left: Attachment (collapsible) -->
-              <div id="attachmentContainer" style="width: auto; max-width: 250px; flex-shrink: 0; transition: all 0.3s ease;">
+            <!-- Quill editor and Attachment: row on wide screens, column on phones -->
+            <div class="quote-modal-editor-split">
+              <!-- Attachment (left / above on small screens) -->
+              <div id="attachmentContainer" class="quote-modal-attachment-col hidden" style="width: auto; max-width: 250px; flex-shrink: 0; transition: all 0.3s ease;">
                 <div style="position: relative;">
                   <div id="quoteImagePreview" class="image-preview image-preview-vertical">
                     <div class="image-placeholder">
@@ -1495,8 +1497,8 @@
                 <span id="attachmentLabel" style="display: none;">📎 Attachment</span>
               </div>
               
-              <!-- Right: Quill editor -->
-              <div style="flex: 1; min-width: 0;">
+              <!-- Quill editor (right / below on small screens) -->
+              <div class="quote-modal-editor-col" style="flex: 1; min-width: 0;">
                 <div id="quoteEditor" style="min-height: 204px; height: 204px;"></div>
                 <input type="hidden" id="quoteText" required />
               </div>
@@ -2019,6 +2021,6 @@ Quote number three..."
     <!-- Quill Editor Script -->
     <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
     <script type="module" src="js/lib/confirmDialog.js"></script>
-    <script type="module" src="app.js?v=20260512randomtegneserie"></script>
+    <script type="module" src="app.js?v=20260510menucards"></script>
   </body>
 </html>

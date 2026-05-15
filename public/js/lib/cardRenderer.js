@@ -387,18 +387,16 @@ export function createQuoteCard(note, currentNoteTypeFilter, getTrainingTypes, g
     </div>`;
   })() : null;
 
+  const expandBtnHtml = isLong
+    ? `<button class="expand-btn" id="${expandBtnId}" onclick="event.stopPropagation(); toggleQuoteExpand('${note.id}')">▼ Show more</button>`
+    : '';
+  const quoteBodyHtml = `<div class="quote-text ${isLong ? 'collapsible' : ''}" id="${quoteId}" data-expanded="false">${normalizeTextColors(note.note_text)}</div>${expandBtnHtml}`;
+
   const topSection = (isImageOnly && imageOnlySection)
     ? imageOnlySection
-    : `<div class="quote-top-section">
-                    <div class="quote-left-column">
-                        ${noteScoreLine}
-                        <div class="quote-text-wrapper">
-                            <div class="quote-text ${isLong ? "collapsible" : ""}" id="${quoteId}" data-expanded="false">${normalizeTextColors(note.note_text)}</div>
-                            ${isLong ? `<button class="expand-btn" id="${expandBtnId}" onclick="event.stopPropagation(); toggleQuoteExpand('${note.id}')">▼ Show more</button>` : ""}
-                        </div>
-                    </div>
-                    ${attachmentSection}
-                </div>`;
+    /* No whitespace between </div></div> and ${attachmentSection}: in column flex,
+       whitespace-only text nodes become flex items and look like an image placeholder gap. */
+    : `<div class="quote-top-section"><div class="quote-left-column">${noteScoreLine}<div class="quote-text-wrapper">${quoteBodyHtml}</div></div>${attachmentSection}</div>`;
 
   // Gallery-mode thumbnail overlay (hidden unless .gallery-mode is active)
   const galleryThumbHtml = (() => {

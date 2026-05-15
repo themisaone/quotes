@@ -14,8 +14,8 @@
  * - cardRenderer.js for createQuoteCard
  */
 
-import { API_URL, fetchWithRetry } from './api.js?v=20260318a';
-import { createQuoteCard } from './cardRenderer.js?v=20260318a';
+import { API_URL, fetchWithRetry } from './api.js?v=20260510apiorigin';
+import { createQuoteCard } from './cardRenderer.js?v=20260510cardgap';
 import { getSearchValues, getTrainingFilters } from './searchManager.js?v=20260512filterfix';
 import { 
   FILTER_IDS,

@@ -4,7 +4,7 @@
  */
 
 // Auto-detect API URL based on current host
-export const API_URL = `${window.location.protocol}//${window.location.hostname}:${window.location.port || '4000'}/api`;
+export const API_URL = `${window.location.origin}/api`;
 
 /**
  * Fetch with automatic retry logic

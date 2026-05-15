@@ -37,7 +37,7 @@ import {
 
 import {
   createQuoteCard as createQuoteCardLib
-} from './js/lib/cardRenderer.js?v=20260318i';
+} from './js/lib/cardRenderer.js?v=20260510cardgap';
 
 import {
   setupAddModal,
@@ -198,8 +198,8 @@ import {
 } from './js/lib/entityListPage.js?v=20260512cardnbtn';
 
 // ============= CONSTANTS =============
-// Auto-detect API URL based on current host
-const API_URL = `${window.location.protocol}//${window.location.hostname}:${window.location.port || '4000'}/api`;
+// Same origin as the page (correct when port is omitted, e.g. http://localhost or reverse proxy)
+const API_URL = `${window.location.origin}/api`;
 window.API_URL = API_URL; // Make available to modules that need it
 
 // ── Global UI helpers ────────────────────────────────────────────────────────
@@ -779,10 +779,16 @@ async function loadAndApplyMode() {
     });
   }
 
-  // Filter noteTypes down to allowed ones
+  // Menu note types: in ALL mode show every type from settings so the sidebar
+  // matches "all types" even if modes.json lags behind settings.json. Other
+  // modes still list only types allowed by the server for filtering/API scope.
   if (globalSettings?.noteTypes) {
     const filtered = globalSettings.noteTypes.filter(t => allowedTypes.includes(t.value));
-    initNoteTypes(filtered.length ? filtered : globalSettings.noteTypes);
+    const useFullMenu = String(mode).toUpperCase() === 'ALL';
+    const menuTypes = useFullMenu
+      ? globalSettings.noteTypes
+      : (filtered.length ? filtered : globalSettings.noteTypes);
+    initNoteTypes(menuTypes);
   }
 
   const has = (type) => allowedTypes.includes(type);
@@ -4542,7 +4548,7 @@ function updateAttachmentPanelVisibility() {
   } else {
     container.classList.add('hidden');
     modal?.classList.remove('has-attachment');
-    toggleBtn.textContent = '� Add';;
+    toggleBtn.textContent = '📎 Add attachment';
     toggleBtn.title = 'Show attachment panel';
   }
 }
