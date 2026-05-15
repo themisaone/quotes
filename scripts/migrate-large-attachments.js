@@ -1,18 +1,24 @@
 /**
- * Migrate Large Attachments to External Storage
- * 
- * This script finds all attachments > threshold (default 1 MB) stored as base64 in the database
- * and moves them to the external attachments/ folder, updating the database with file references.
- * 
- * Usage: node scripts/migrate-large-attachments.js [threshold-in-MB]
- * 
- * Example:
- *   node scripts/migrate-large-attachments.js      (uses 1 MB threshold)
- *   node scripts/migrate-large-attachments.js 2    (uses 2 MB threshold)
+ * Migrate large base64 attachments to external storage (`attachments/`).
+ *
+ * Finds `notes` rows where `thumbnail` and/or `attachment_full` is a data-URL
+ * larger than the threshold and passes them through `fileStorage.processForStorage`.
+ *
+ * Usage:
+ *   node scripts/migrate-large-attachments.js [threshold-in-MB]
+ *
+ * Examples:
+ *   node scripts/migrate-large-attachments.js       (default 1 MB)
+ *   node scripts/migrate-large-attachments.js 2
+ *
+ * Requires `.env` (or env) with DB_* set. Run from repository root.
  */
 
+'use strict';
+
 const { Pool } = require('pg');
-const fileStorage = require('../src/fileStorage');
+const path = require('path');
+const fileStorage = require(path.join(__dirname, '..', 'src', 'fileStorage.js'));
 require('dotenv').config();
 
 const pool = new Pool({
@@ -23,131 +29,114 @@ const pool = new Pool({
   database: process.env.DB_NAME
 });
 
-/**
- * Get size of base64 string in bytes
- */
 function getBase64Size(base64String) {
   if (!base64String || !base64String.startsWith('data:')) return 0;
-  
   const base64Data = base64String.split(',')[1] || '';
   const padding = (base64Data.match(/=/g) || []).length;
   return (base64Data.length * 3) / 4 - padding;
 }
 
-/**
- * Get folder name based on note type
- */
 function getFolderForNoteType(noteType) {
   if (noteType === 'training') return 'training';
   if (noteType === 'note') return 'notes';
   if (noteType === 'puzzle') return 'puzzles';
-  return 'quotes'; // default for 'quote' or null
+  return 'quotes';
 }
 
 async function migrateLargeAttachments(thresholdMB = 1) {
   console.log(`\n🔄 Starting migration of large attachments (> ${thresholdMB} MB)...\n`);
-  
+
   const thresholdBytes = thresholdMB * 1024 * 1024;
-  
+
   try {
-    // Fetch all quotes with base64 attachments
     const query = `
-      SELECT id, note_type, image, image_full, attachment_type
-      FROM quotes
-      WHERE (image IS NOT NULL AND image LIKE 'data:%')
-         OR (image_full IS NOT NULL AND image_full LIKE 'data:%')
+      SELECT id, note_type, thumbnail, attachment_full, attachment_type
+      FROM notes
+      WHERE (thumbnail IS NOT NULL AND thumbnail LIKE 'data:%')
+         OR (attachment_full IS NOT NULL AND attachment_full LIKE 'data:%')
       ORDER BY id
     `;
-    
+
     const result = await pool.query(query);
-    
+
     if (result.rows.length === 0) {
       console.log('✅ No base64 attachments found in database - all clean!');
       return;
     }
-    
-    console.log(`📊 Found ${result.rows.length} quotes with base64 attachments\n`);
-    
+
+    console.log(`📊 Found ${result.rows.length} notes with base64 thumbnail and/or attachment_full\n`);
+
     let migrated = 0;
     let skipped = 0;
     let errors = 0;
-    const stats = {
-      byType: {},
-      totalSizeMB: 0
-    };
-    
+    const stats = { byType: {}, totalSizeMB: 0 };
+
     for (const row of result.rows) {
-      const { id, note_type, image, image_full, attachment_type } = row;
+      const { id, note_type, thumbnail, attachment_full } = row;
       const folder = getFolderForNoteType(note_type || 'quote');
-      
+
       let needsUpdate = false;
-      let newImage = image;
-      let newImageFull = image_full;
+      let newThumb = thumbnail;
+      let newFull = attachment_full;
       let sizeMB = 0;
-      
+
       try {
-        // Check and migrate image (thumbnail)
-        if (image && image.startsWith('data:')) {
-          const imageSize = getBase64Size(image);
+        if (thumbnail && thumbnail.startsWith('data:')) {
+          const imageSize = getBase64Size(thumbnail);
           if (imageSize > thresholdBytes) {
-            console.log(`   📦 Migrating thumbnail for quote ${id} (${(imageSize / 1024 / 1024).toFixed(2)} MB)...`);
-            newImage = fileStorage.processForStorage(image, folder, id, '', thresholdMB);
+            console.log(`   📦 Migrating thumbnail for note ${id} (${(imageSize / 1024 / 1024).toFixed(2)} MB)...`);
+            newThumb = fileStorage.processForStorage(thumbnail, folder, id, '', thresholdMB);
             needsUpdate = true;
             sizeMB += imageSize / 1024 / 1024;
           }
         }
-        
-        // Check and migrate image_full
-        if (image_full && image_full.startsWith('data:')) {
-          const fullSize = getBase64Size(image_full);
+
+        if (attachment_full && attachment_full.startsWith('data:')) {
+          const fullSize = getBase64Size(attachment_full);
           if (fullSize > thresholdBytes) {
-            console.log(`   📦 Migrating full attachment for quote ${id} (${(fullSize / 1024 / 1024).toFixed(2)} MB, type: ${note_type || 'quote'})...`);
-            newImageFull = fileStorage.processForStorage(image_full, folder, id, '_full', thresholdMB);
+            console.log(`   📦 Migrating full attachment for note ${id} (${(fullSize / 1024 / 1024).toFixed(2)} MB)...`);
+            newFull = fileStorage.processForStorage(attachment_full, folder, id, '_full', thresholdMB);
             needsUpdate = true;
             sizeMB += fullSize / 1024 / 1024;
           }
         }
-        
+
         if (needsUpdate) {
-          // Update database with file references
           await pool.query(
-            `UPDATE quotes SET image = $1, image_full = $2 WHERE id = $3`,
-            [newImage, newImageFull, id]
+            `UPDATE notes SET thumbnail = $1, attachment_full = $2 WHERE id = $3`,
+            [newThumb, newFull, id]
           );
-          
+
           migrated++;
           stats.totalSizeMB += sizeMB;
-          
+
           const typeKey = `${note_type || 'quote'}`;
           if (!stats.byType[typeKey]) stats.byType[typeKey] = { count: 0, sizeMB: 0 };
           stats.byType[typeKey].count++;
           stats.byType[typeKey].sizeMB += sizeMB;
-          
-          console.log(`   ✅ Quote ${id} migrated (freed ${sizeMB.toFixed(2)} MB from DB)`);
+
+          console.log(`   ✅ Note ${id} migrated (freed ~${sizeMB.toFixed(2)} MB from DB)`);
         } else {
           skipped++;
         }
       } catch (error) {
-        console.error(`   ❌ Error migrating quote ${id}:`, error.message);
+        console.error(`   ❌ Error migrating note ${id}:`, error.message);
         errors++;
       }
     }
-    
-    console.log(`\n📊 Migration Complete!\n`);
-    console.log(`   ✅ Migrated: ${migrated} attachments`);
+
+    console.log(`\n📊 Migration complete!\n`);
+    console.log(`   ✅ Migrated: ${migrated} notes`);
     console.log(`   ⏭️  Skipped: ${skipped} (below ${thresholdMB} MB threshold)`);
     console.log(`   ❌ Errors: ${errors}`);
-    console.log(`   💾 Database space freed: ${stats.totalSizeMB.toFixed(2)} MB\n`);
-    
+    console.log(`   💾 Approx. DB payload moved: ${stats.totalSizeMB.toFixed(2)} MB\n`);
+
     if (Object.keys(stats.byType).length > 0) {
-      console.log(`📁 Migrated by type:`);
+      console.log('📁 By note_type:');
       Object.entries(stats.byType).forEach(([type, data]) => {
-        console.log(`   ${type}: ${data.count} attachments, ${data.sizeMB.toFixed(2)} MB`);
+        console.log(`   ${type}: ${data.count} rows, ~${data.sizeMB.toFixed(2)} MB`);
       });
     }
-    
-    console.log(`\n✅ All large attachments now stored in attachments/ folder!`);
-    
   } catch (error) {
     console.error('❌ Migration failed:', error);
     throw error;
@@ -156,17 +145,16 @@ async function migrateLargeAttachments(thresholdMB = 1) {
   }
 }
 
-// Main execution
 const thresholdMB = parseFloat(process.argv[2] || '1');
 
-if (isNaN(thresholdMB) || thresholdMB <= 0) {
+if (Number.isNaN(thresholdMB) || thresholdMB <= 0) {
   console.error('❌ Invalid threshold. Usage: node scripts/migrate-large-attachments.js [threshold-in-MB]');
   process.exit(1);
 }
 
 migrateLargeAttachments(thresholdMB)
   .then(() => {
-    console.log('\n✅ Migration script completed successfully!');
+    console.log('\n✅ Done.');
     process.exit(0);
   })
   .catch((error) => {

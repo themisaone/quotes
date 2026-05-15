@@ -1,5 +1,7 @@
 # ENEX Import Script
 
+See **`scripts/README.md`** for an index of all repo scripts (dependencies, DB tools, etc.).
+
 This script converts Evernote ENEX export files into a format that can be directly imported into your Notes application using the "Restore Data" feature.
 
 ## Usage

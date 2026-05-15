@@ -1,3 +1,8 @@
+#!/usr/bin/env node
+/**
+ * Parse Evernote ENEX → Note Archive import JSON.
+ * Full usage, flags, and examples: see header block below and `scripts/ENEX-IMPORT.md`.
+ */
 const fs    = require('fs');
 const path  = require('path');
 const sharp = require('sharp');

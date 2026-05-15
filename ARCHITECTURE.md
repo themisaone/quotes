@@ -248,7 +248,7 @@ A few features had non-contiguous content in the original (e.g. `.search-section
 - Anything inside `@media (min-width: 768px) and (max-width: 1100px)`: append to `public/style.medium.css`.
 - If a new top-level theme emerges (large enough to warrant its own file), add it to `index.html` *in the position that matches its original-cascade place* and update this list.
 
-**Re-splitting if needed.** Two one-shot parser scripts live at `scripts/split-css.js` (responsive split) and `scripts/split-base-css.js` (feature split). Neither is part of the regular build — they should not be re-run on the already-split files. They are kept as reference if the layering is ever reorganised again.
+**Re-splitting if needed.** Archival one-shot parsers live under `scripts/done-once/`: `split-css.js` (responsive split) and `split-base-css.js` (feature split). See `scripts/done-once/README.md`. Neither is part of the regular build — they should not be re-run on the already-split files unless you deliberately merge CSS and re-split. They are kept as reference if the layering is ever reorganised again.
 
 ## Medium-Screen Layout (768px – 1100px)
 

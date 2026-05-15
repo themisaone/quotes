@@ -13,6 +13,12 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Run from repository root so `.env` resolves (paths are relative to CWD).
+if [ ! -f .env ] && [ -z "$DB_NAME" ]; then
+  echo -e "${RED}❌ No .env in current directory. cd to repo root first.${NC}"
+  exit 1
+fi
+
 # Load database config from .env
 if [ -f .env ]; then
   export $(cat .env | grep -v '^#' | xargs)
@@ -34,6 +40,11 @@ if [ -z "$1" ]; then
 fi
 
 TAG_NAME="$1"
+
+if [[ "$TAG_NAME" == *"'"* ]]; then
+  echo -e "${RED}❌ Tag name must not contain single quotes (SQL safety).${NC}"
+  exit 1
+fi
 
 echo -e "${BLUE}🔍 Checking for untagged training notes...${NC}"
 echo ""

@@ -164,4 +164,7 @@ To share **your data**: export a JSON backup from Data Management → Export, th
 - `DOCKER.md` — Docker setup details, Linux/Mac differences, common commands
 - `ARCHITECTURE.md` — Code patterns, module system, data flow, gotchas
 - `FEATURES.md` — All features documented with implementation notes
+- `scripts/README.md` — CLI utilities (imports, DB scripts, backup splitter)
+- `scripts/safe-housekeeping/README.md` — Re-runnable DB tidy-ups (e.g. H2 → title)
+- `scripts/done-once/README.md` — Archival one-shot tools (CSS splitters)
 - `public/js/lib/README.md` — Frontend module reference
