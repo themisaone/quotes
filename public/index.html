@@ -20,7 +20,7 @@
     <link rel="stylesheet" href="style.selection.css?v=20260510layout" />
     <link rel="stylesheet" href="style.attachments.css?v=20260510attachcollapse" />
     <link rel="stylesheet" href="style.entities.css?v=20260510layout" />
-    <link rel="stylesheet" href="style.settings.css?v=20260510metadata" />
+    <link rel="stylesheet" href="style.settings.css?v=20260510deduplayout" />
     <link rel="stylesheet" href="style.dialogs.css?v=20260510layout" />
     <link rel="stylesheet" href="style.views.css?v=20260510layout" />
     <link rel="stylesheet" href="style.mobile.css?v=20260510lplistcal" />
@@ -1038,6 +1038,18 @@
               </div>
             </div>
             </div><!-- end settings-row: Tag Management + Search Features -->
+
+            <div class="settings-row dedup-settings-row">
+            <div class="settings-section dedup-settings-section">
+              <h2>👯 Duplicate inspection</h2>
+              <p class="setting-description">
+                Finds notes that share the same text, title, type, dates, and author/source (non-empty body).
+                Cards match the main list — open one to edit the title (e.g. add <code>_2</code>) or attachments.
+              </p>
+              <button type="button" id="dedupSuspectsScanBtn" class="btn btn-primary">Scan for duplicate groups</button>
+              <div id="dedupSuspectsRoot" class="dedup-suspects-root"></div>
+            </div>
+            </div>
 
             <div class="settings-row">
             <div class="settings-section">

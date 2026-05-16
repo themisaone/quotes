@@ -541,3 +541,63 @@
 }
 
 /* ── Merge Modal ────────────────────────────────────────────────────────── */
+
+/* ── Options → Duplicate inspection (side-by-side cards) ───────────────── */
+.settings-row.dedup-settings-row {
+  grid-template-columns: 1fr;
+}
+
+.dedup-settings-section {
+  margin-top: 0.75rem;
+}
+
+.dedup-suspects-root {
+  margin-top: 1rem;
+}
+
+.dedup-group {
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.dedup-group:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.dedup-group-head {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.75rem;
+  line-height: 1.4;
+}
+
+.dedup-id-list {
+  font-family: ui-monospace, monospace;
+  font-size: 0.82em;
+  word-break: break-all;
+}
+
+.dedup-group-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.dedup-card-slot {
+  min-width: 0;
+}
+
+/* One card per inner grid — never use natural-sizing/column-count here (narrow
+   slots + column-count caused one-character-wide “columns” and broken layout). */
+.dedup-single-quote-grid {
+  --card-column-count: 1;
+}
+
+.dedup-single-quote-grid .quote-card {
+  width: 100%;
+  max-width: 100%;
+}

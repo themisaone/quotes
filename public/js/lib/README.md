@@ -255,6 +255,11 @@ The viewer for decrypted output is chosen from the **original** filename's exten
 
 ---
 
+### `dedupSuspectsPanel.js`
+Options → **Duplicate inspection**: fetches `/api/dedup/suspects`, renders each note inside a **one-column** `.quotes-list` (never `natural-sizing` / `column-count` in a narrow slot — that used to break card width). Cards sit in a responsive CSS grid (`repeat(auto-fill, minmax(300px, 1fr))`).
+
+---
+
 ### `renameModal.js`
 Generic rename dialog for tag / author / source. **Note (May 2026):** appears to be orphaned — none of the `window.*` exports are referenced from `index.html`, the rendered card HTML, or any other lib module. The DOM (`#renameModal`) still exists; once we've confirmed nothing uses it, the file (and the HTML) can be deleted.
 - `initRenameModal({ getApiUrl, loadTags, loadAuthors, loadSources })` — wires `window.editAuthor`, `window.editSource`, `window.showRenameModal`, `window.hideRenameModal`, `window.performRename` plus the dialog's button/keyboard handlers.

@@ -1944,6 +1944,110 @@ app.get("/api/quotes", async (req, res) => {
   }
 });
 
+/**
+ * Duplicate suspects for Options → Dedup: notes sharing the same fingerprint as
+ * sync-db-notes (includes note_title). Skips empty / markup-only bodies.
+ */
+app.get("/api/dedup/suspects", async (req, res) => {
+  try {
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 40, 1), 100);
+    const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
+
+    const gRes = await pool.query(
+      `
+      WITH annotated AS (
+        SELECT
+          n.id,
+          md5(concat_ws(E'\\x1e',
+            COALESCE(n.note_type, ''),
+            COALESCE(n.type, ''),
+            COALESCE(n.note_date::text, ''),
+            COALESCE(n.note_text, ''),
+            COALESCE(n.comment, ''),
+            COALESCE(n.note_title, ''),
+            COALESCE(n.translation_group, ''),
+            COALESCE(a.name, ''),
+            COALESCE(s.name, '')
+          )) AS dup_key
+        FROM notes n
+        LEFT JOIN authors a ON a.id = n.author_id
+        LEFT JOIN sources s ON s.id = n.source_id
+        WHERE char_length(
+          trim(regexp_replace(COALESCE(n.note_text, ''), '<[^>]+>', '', 'gi'))
+        ) > 0
+      ),
+      grouped AS (
+        SELECT dup_key,
+               array_agg(id ORDER BY id) AS ids,
+               COUNT(*)::int AS cnt
+        FROM annotated
+        GROUP BY dup_key
+        HAVING COUNT(*) > 1
+      )
+      SELECT dup_key, ids, cnt FROM grouped
+      ORDER BY cnt DESC, ids[1] ASC
+      LIMIT $1 OFFSET $2
+    `,
+      [limit, offset],
+    );
+
+    if (gRes.rows.length === 0) {
+      return res.json({ groups: [], limit, offset });
+    }
+
+    const allIds = [...new Set(gRes.rows.flatMap((g) => g.ids))];
+    const notesResult = await pool.query(
+      `
+      SELECT q.*,
+             a.name AS author_name, a.image AS author_image,
+             s.name AS source_name, s.image AS source_image, q.type AS source_type
+      FROM notes q
+      LEFT JOIN authors a ON q.author_id = a.id
+      LEFT JOIN sources s ON q.source_id = s.id
+      WHERE q.id = ANY($1::int[])
+    `,
+      [allIds],
+    );
+
+    const idToRow = new Map(notesResult.rows.map((r) => [r.id, r]));
+    const attachmentsMap = await getAttachmentsForNotes(allIds);
+    const hasNewTables = await checkTagTablesExist();
+    let tagsMap = new Map();
+    if (hasNewTables) {
+      tagsMap = await getTagsForNotes(allIds);
+    }
+
+    const assemble = (note) => {
+      const quoteTags = hasNewTables ? tagsMap.get(note.id) || [] : [];
+      const withImages = retrieveQuoteImages(note);
+      const withAll = applyAttachments(withImages, attachmentsMap.get(note.id));
+      if (hasNewTables) {
+        return {
+          ...withAll,
+          tags:
+            quoteTags.length > 0
+              ? quoteTags.map((t) => t.name).join(", ")
+              : note.tags || "",
+          tag_objects: quoteTags,
+        };
+      }
+      return withAll;
+    };
+
+    const groups = gRes.rows.map((g) => ({
+      dup_key: g.dup_key,
+      ids: g.ids,
+      count: g.cnt,
+      notes: g.ids.map((id) => assemble(idToRow.get(id))).filter(Boolean),
+    }));
+
+    res.json({ groups, limit, offset });
+  } catch (error) {
+    console.error("Error fetching dedup suspects:", error);
+    res.status(500).json({ error: "Failed to fetch duplicate suspects" });
+  }
+});
+
 // Get random note (must be before /:id route). Default note_type=quote for backward compatibility.
 app.get("/api/quotes/random", async (req, res) => {
   try {

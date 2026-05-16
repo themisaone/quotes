@@ -79,6 +79,8 @@ import {
   setupSourceModalHandlers
 } from './js/lib/sourceModal.js?v=20260512modalshownotes';
 
+import { initDedupSuspectsPanel } from './js/lib/dedupSuspectsPanel.js?v=20260510deduplayout';
+
 import {
   loadTags as loadTagsLib,
   filterByTag as filterByTagLib,
@@ -4796,6 +4798,24 @@ document.addEventListener('DOMContentLoaded', () => {
     loadTags,
     loadAuthors,
     loadSources,
+  });
+
+  initDedupSuspectsPanel({
+    apiUrl: API_URL,
+    getElementByIdSafe,
+    createQuoteCardHtml: (note) =>
+      createQuoteCardLib(note, null, getTrainingTypes, getQuoteTypes, getGlobalSettings()),
+    openEditModal,
+    toggleCardExpand,
+    getSelectionMode: () => selectionMode,
+    toggleNoteSelection,
+    getGlobalSettings,
+    openAuthorModal: (id, name) => {
+      void openAuthorModalLib(id, name, null);
+    },
+    openSourceModal: (id, name, type) => {
+      void openSourceModalLib(id, name, type || 'BOOK', null);
+    },
   });
 
   // Setup modal handlers for Author and Source

@@ -29,6 +29,21 @@ function setAttachmentsDir(vaultRoot) {
   console.log(`📁 Vault attachments dir: ${_attachmentsDir}`);
 }
 
+/**
+ * Set the attachments directory to an absolute path (the folder that contains
+ * `training/`, `quote/`, etc.). Use this when the caller already knows the
+ * full `…/attachments` path. For app settings UX, prefer {@link setAttachmentsDir}
+ * with the vault *parent* (it appends `attachments`).
+ */
+function setAttachmentsDirAbsolute(attachmentsRoot) {
+  if (attachmentsRoot && String(attachmentsRoot).trim()) {
+    _attachmentsDir = path.resolve(String(attachmentsRoot).trim());
+  } else {
+    _attachmentsDir = DEFAULT_ATTACHMENTS_DIR;
+  }
+  console.log(`📁 Attachments dir (absolute): ${_attachmentsDir}`);
+}
+
 // MIME type mappings (centralized to avoid duplication)
 const MIME_TO_EXT = {
   "image/jpeg": "jpg",
@@ -380,6 +395,7 @@ module.exports = {
   get ATTACHMENTS_DIR() { return _attachmentsDir; }, // backwards-compatible getter
   getAttachmentsDir,
   setAttachmentsDir,
+  setAttachmentsDirAbsolute,
   MIME_TO_EXT,
   EXT_TO_MIME,
   ensureDirectories,
