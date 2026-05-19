@@ -628,7 +628,6 @@ export function renderNoteTypesList(rebuildMenuFn) {
       <input type="text" class="subtype-icon"  value="${sub.icon}"  placeholder="📝" maxlength="2" />
       <input type="text" class="subtype-value" value="${sub.value}" placeholder="VALUE" style="width:90px;text-transform:uppercase;" />
       <input type="text" class="subtype-label" value="${sub.label}" placeholder="Label" />
-      <input type="color" class="subtype-color" value="${sub.color || '#4f46e5'}" title="Color (used by the Training calendar)" />
       ${canDelete ? `<button type="button" class="btn-icon-small btn-delete-subtype" title="Delete subtype">🗑️</button>` : ''}
     </div>`;
 
@@ -709,7 +708,6 @@ export function renderNoteTypesList(rebuildMenuFn) {
       const iconI    = sRow.querySelector('.subtype-icon');
       const valueI   = sRow.querySelector('.subtype-value');
       const labelI   = sRow.querySelector('.subtype-label');
-      const colorI   = sRow.querySelector('.subtype-color');
       const defaultR = sRow.querySelector('.subtype-default');
       const delBtn   = sRow.querySelector('.btn-delete-subtype');
 
@@ -721,14 +719,12 @@ export function renderNoteTypesList(rebuildMenuFn) {
           icon:  iconI.value  || '📝',
           value: (valueI.value || 'CUSTOM').toUpperCase().replace(/[^A-Z0-9/\-_]/g, ''),
           label: labelI.value || 'Custom',
-          color: colorI?.value || current[ntIdx].subTypes[siIdx].color || '#4f46e5'
         };
         saveNoteTypesAndRefresh(current, rebuildMenuFn);
       };
       iconI.addEventListener('change', updateSub);
       valueI.addEventListener('change', updateSub);
       labelI.addEventListener('change', updateSub);
-      if (colorI) colorI.addEventListener('change', updateSub);
 
       if (defaultR) {
         defaultR.addEventListener('change', () => {
@@ -1736,15 +1732,15 @@ function initializeColorCustomization() {
   if (hideTagNameInput && globalSettings?.hideTagName) {
     hideTagNameInput.value = globalSettings.hideTagName;
   }
-  // Show/hide the tag-name row based on current checkbox state
+  // Show/hide the tag-name field based on current checkbox state
   if (hideTagNameRow && hideTagCheckbox) {
-    hideTagNameRow.style.display = hideTagCheckbox.checked ? '' : 'none';
+    hideTagNameRow.style.display = hideTagCheckbox.checked ? "flex" : "none";
   }
 
   if (hideTagCheckbox) {
     hideTagCheckbox.addEventListener('change', (e) => {
       updateSetting('hideNotesWithTag', e.target.checked);
-      if (hideTagNameRow) hideTagNameRow.style.display = e.target.checked ? '' : 'none';
+      if (hideTagNameRow) hideTagNameRow.style.display = e.target.checked ? "flex" : "none";
       if (callbacks?.loadQuotes) callbacks.loadQuotes();
     });
   }

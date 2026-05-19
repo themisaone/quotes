@@ -603,13 +603,6 @@
   align-items: center;
   gap: 0.3rem;
 }
-.tc-legend-swatch {
-  display: inline-block;
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
-  border: 1px solid rgba(0, 0, 0, 0.15);
-}
 .tc-legend-empty { font-style: italic; }
 
 .tc-loading {
@@ -695,16 +688,3 @@
   margin-bottom: 8px;
   margin-left: 2px;
 }
-
-/* ── Subtype color picker inside settings ─────────────────────────────── */
-.subtype-item .subtype-color {
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: transparent;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-

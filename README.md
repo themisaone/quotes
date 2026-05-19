@@ -62,7 +62,9 @@ The app supports **modes** that control which note types are visible. Set via th
 | `npm run training` | TRAINING | training only |
 | `npm run notes` | NOTES | note only |
 | `npm run historical` | HISTORICAL | historical only |
-| `npm run brain` | BRAIN | custom set |
+| `npm run brain` | BRAIN | puzzle only |
+| `npm run job` | JOB | job only |
+| `npm run tegneserie` | TEGNESERIE | tegneserie only |
 
 Modes are defined in `config/modes.json`. Active mode persists in `config/local.json`.
 
@@ -89,13 +91,13 @@ Training sub-types are configured under `trainingTypes` in `settings.json`.
 ```
 quotes/
 ├── src/
-│   ├── server.js          # Express server + all API routes (~4800 lines)
+│   ├── server.js          # Express server + all API routes (~5600 lines)
 │   ├── db.js              # PostgreSQL connection pool
 │   ├── fileStorage.js     # Disk attachment helpers
 │   └── tagHelpers.js      # Tag DB helpers
 ├── public/
 │   ├── index.html         # Single-page HTML (~2000 lines)
-│   ├── app.js             # Main frontend logic (~5200 lines)
+│   ├── app.js             # Main frontend logic (~4800 lines)
 │   ├── style.css          # Base — root vars, body, scrollbar, app-layout
 │   ├── style.sidemenu.css # Left-side menu
 │   ├── style.search.css   # Search panel + filters + counters
@@ -109,6 +111,7 @@ quotes/
 │   ├── style.dialogs.css       # Merge modal + confirm dialog
 │   ├── style.views.css         # Gallery / list-pane / calendar / encryption UI
 │   ├── style.mobile.css        # @media (max-width: …) overrides
+│   ├── style.small.css         # portrait-phone overrides (after mobile)
 │   ├── style.medium.css        # @media (768–1100px) overrides
 │   └── js/lib/            # Frontend ES modules (see ARCHITECTURE.md)
 ├── migrations/
@@ -161,6 +164,7 @@ To share **your data**: export a JSON backup from Data Management → Export, th
 
 ## Further Reading
 
+- `.cursor/rules/project-context.mdc` — Cursor rule: read the docs below before substantial work
 - `DOCKER.md` — Docker setup details, Linux/Mac differences, common commands
 - `ARCHITECTURE.md` — Code patterns, module system, data flow, gotchas
 - `FEATURES.md` — All features documented with implementation notes

@@ -12,7 +12,7 @@ Single-user personal note app. Node.js/Express backend with a PostgreSQL databas
 
 ## Backend (`src/server.js`)
 
-One large file (~4800 lines) containing all Express routes. Split into logical sections by comments.
+One large file (~5600 lines) containing all Express routes. Split into logical sections by comments.
 
 **Key globals:**
 ```js
@@ -217,7 +217,7 @@ The `/api/quotes` and `/api/quotes/count` endpoints accept these filter params t
 
 ## CSS File Layout
 
-Styles are split across **14 files** so each one is small enough to read without burning huge tokens. They are loaded **in this exact order** by `index.html`; the order mirrors the original line order in the pre-split monolith so cascade behaviour is preserved.
+Styles are split across **15 files** so each one is small enough to read without burning huge tokens. They are loaded **in this exact order** by `index.html`; the order mirrors the original line order in the pre-split monolith so cascade behaviour is preserved.
 
 ```
 public/style.css              ← base — root vars, body, scrollbar, app-layout (~95 lines)
@@ -229,14 +229,15 @@ public/style.cards.css        ← note cards (grid + content + Quill text) (~640
 public/style.selection.css    ← bulk-select mode + select-action-bar (~565 lines)
 public/style.attachments.css  ← image upload + attachment viewers + multi-attachment strip (~715 lines)
 public/style.entities.css     ← author/source/tag cards, rename modal, tag-ops panel, notifications (~865 lines)
-public/style.settings.css     ← settings page, type management, translations (~540 lines)
+public/style.settings.css     ← settings page, type management, translations, dedup panel (~540 lines)
 public/style.dialogs.css      ← merge modal + custom confirm dialog (~300 lines)
 public/style.views.css        ← gallery + list-pane + training calendar + encryption UI + banners (~710 lines)
 public/style.mobile.css       ← all max-width @media queries (mobile + 480 + 720 + 767 + 900 tablet)
+public/style.small.css        ← portrait-phone refinements (max-width 767px + orientation: portrait); hand-maintained
 public/style.medium.css       ← all (min-width: 768px) and (max-width: 1100px) @media queries
 ```
 
-**Why this order matters.** CSS picks the *last* rule when specificity ties. The feature files load in the same order their rules originally appeared in the monolith, then the responsive overlays come last so they override base rules at their breakpoints. The two responsive files keep their previous relative order (`mobile` before `medium`) so the `.lp-layout` overlap at 900px still resolves the same way.
+**Why this order matters.** CSS picks the *last* rule when specificity ties. The feature files load in the same order their rules originally appeared in the monolith, then the responsive overlays come last so they override base rules at their breakpoints. Load order among responsive files: `mobile` → `small` → `medium` (portrait tweaks sit between broad mobile and the medium-width band).
 
 A few features had non-contiguous content in the original (e.g. `.search-section` rules appeared at lines 405-899 *and* 1709-1810). Both fragments now live in the **same** feature file, in their original relative order — verified that no selector in the gap (buttons, modal, selection) overlaps the fragments, so the cascade outcome is unchanged.
 
@@ -245,6 +246,7 @@ A few features had non-contiguous content in the original (e.g. `.search-section
 **Adding new rules:**
 - Pick the file whose theme matches (e.g. button styles → `style.buttons.css`, anything inside the note modal → `style.modal.css`).
 - Anything inside a `@media (max-width: ...)` query: append to `public/style.mobile.css`.
+- Portrait-phone-only tweaks (`max-width: 767px` **and** `orientation: portrait`): append to `public/style.small.css`.
 - Anything inside `@media (min-width: 768px) and (max-width: 1100px)`: append to `public/style.medium.css`.
 - If a new top-level theme emerges (large enough to warrant its own file), add it to `index.html` *in the position that matches its original-cascade place* and update this list.
 
@@ -255,6 +257,18 @@ A few features had non-contiguous content in the original (e.g. `.search-section
 The medium file (`public/style.medium.css`) overrides font sizes using `--m-font-*` variables (e.g. `--m-font-base: 0.75rem`, `--m-font-xl: 1.0rem`) declared inside its first `@media` block. These are *separate* from the desktop `--d-font-*` variables in `style.css`. The card grid is locked to 2 columns on medium screens.
 
 **Adding medium overrides:** Always put them inside the `@media (min-width: 768px) and (max-width: 1100px)` block in `style.medium.css` and use `!important` (the same pattern as existing rules).
+
+---
+
+## View Modes (frontend)
+
+| Mode | Trigger | Module |
+|------|---------|--------|
+| Card grid | Default | `cardRenderer.js` + `displayManager.js` |
+| Gallery | Column control → `gallery` | `app.js` adds `gallery-mode` class, forces image filters |
+| List + pane | Layout toggle when not in gallery | `listPaneView.js`; training calendar via `trainingCalendar.js` |
+
+Gallery and list-pane are mutually exclusive (gallery always uses the card grid).
 
 ---
 
@@ -284,6 +298,11 @@ The medium file (`public/style.medium.css`) overrides font sizes using `--m-font
 | `public/style.dialogs.css` | Merge modal + custom confirm dialog |
 | `public/style.views.css` | Gallery / list-pane / calendar / encryption UI / banners |
 | `public/style.mobile.css` | All `max-width` @media queries |
+| `public/style.small.css` | Portrait-phone overrides (loads after mobile) |
 | `public/style.medium.css` | `(768px – 1100px)` @media queries |
+| `public/js/lib/listPaneView.js` | List + detail pane layout |
+| `public/js/lib/trainingCalendar.js` | Training calendar in list-pane left column |
+| `public/js/lib/mergeModal.js` | Note merge UI |
+| `public/js/lib/dedupSuspectsPanel.js` | Duplicate inspection (Options) |
 | `config/settings.json` | Note types, training sub-types, colors, feature flags |
 | `config/modes.json` | Mode → note type mappings |

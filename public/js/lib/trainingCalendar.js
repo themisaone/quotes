@@ -2,10 +2,9 @@
  * trainingCalendar.js
  *
  * Renders a monthly calendar of training notes into a container (typically the
- * left column of the list-pane view).  Days on which a training took place are
- * coloured using the sub-type's configured `color` (from settings.noteTypes →
- * subTypes[].color).  Days with multiple sub-types display vertical stripes
- * (one per sub-type).
+ * left column of the list-pane view).  Days on which a training took place show
+ * an icon row per distinct sub-type (from settings).  The legend lists
+ * sub-types by icon + label.
  *
  * Public API
  * ----------
@@ -85,8 +84,8 @@ function monthLabel(year, month) {
 }
 
 /**
- * Build a map: subTypeValue → { label, icon, color }.  Unknown values fall
- * back to a neutral colour so we always render something.
+ * Build a map: subTypeValue → { label, icon }.  Unknown values fall back to a
+ * generic label so we always render something.
  */
 function buildTypeMap(getTrainingTypes) {
   const map = new Map();
@@ -96,7 +95,6 @@ function buildTypeMap(getTrainingTypes) {
       map.set(t.value, {
         label: t.label || t.value,
         icon:  t.icon  || '',
-        color: t.color || '#4f46e5',
       });
     });
   } catch { /* ignore */ }
@@ -104,7 +102,7 @@ function buildTypeMap(getTrainingTypes) {
 }
 
 function fallbackTypeMeta(value) {
-  return { label: value || 'Unknown', icon: '', color: '#9ca3af' };
+  return { label: value || 'Unknown', icon: '' };
 }
 
 // ─── Data fetching ───────────────────────────────────────────────────────────
@@ -219,7 +217,6 @@ function renderLegend(typeMap) {
   const items = Array.from(typeMap.entries())
     .map(([value, meta]) => `
       <span class="tc-legend-item">
-        <span class="tc-legend-swatch" style="background:${meta.color}"></span>
         <span class="tc-legend-label">${meta.icon ? meta.icon + ' ' : ''}${meta.label}</span>
       </span>`)
     .join('');

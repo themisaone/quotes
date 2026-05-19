@@ -11,21 +11,21 @@
          See ARCHITECTURE.md "CSS File Layout".
          The same ?v= cache-buster must be on every link so reloads pick
          up changes together. -->
-    <link rel="stylesheet" href="style.css?v=20260510layout" />
-    <link rel="stylesheet" href="style.sidemenu.css?v=20260510layout" />
-    <link rel="stylesheet" href="style.search.css?v=20260510layout" />
-    <link rel="stylesheet" href="style.buttons.css?v=20260510layout" />
-    <link rel="stylesheet" href="style.modal.css?v=20260510modalgap" />
-    <link rel="stylesheet" href="style.cards.css?v=20260510cardpad2" />
-    <link rel="stylesheet" href="style.selection.css?v=20260510layout" />
-    <link rel="stylesheet" href="style.attachments.css?v=20260510attachcollapse" />
-    <link rel="stylesheet" href="style.entities.css?v=20260510layout" />
-    <link rel="stylesheet" href="style.settings.css?v=20260510deduplayout" />
-    <link rel="stylesheet" href="style.dialogs.css?v=20260510layout" />
-    <link rel="stylesheet" href="style.views.css?v=20260510layout" />
-    <link rel="stylesheet" href="style.mobile.css?v=20260510lplistcal" />
-    <link rel="stylesheet" href="style.small.css?v=20260510cardpad2" />
-    <link rel="stylesheet" href="style.medium.css?v=20260510cardpad2" />
+    <link rel="stylesheet" href="style.css?v=20260519nosubcolor" />
+    <link rel="stylesheet" href="style.sidemenu.css?v=20260519nosubcolor" />
+    <link rel="stylesheet" href="style.search.css?v=20260519nosubcolor" />
+    <link rel="stylesheet" href="style.buttons.css?v=20260519nosubcolor" />
+    <link rel="stylesheet" href="style.modal.css?v=20260519nosubcolor" />
+    <link rel="stylesheet" href="style.cards.css?v=20260519nosubcolor" />
+    <link rel="stylesheet" href="style.selection.css?v=20260519nosubcolor" />
+    <link rel="stylesheet" href="style.attachments.css?v=20260519nosubcolor" />
+    <link rel="stylesheet" href="style.entities.css?v=20260519nosubcolor" />
+    <link rel="stylesheet" href="style.settings.css?v=20260519nosubcolor" />
+    <link rel="stylesheet" href="style.dialogs.css?v=20260519nosubcolor" />
+    <link rel="stylesheet" href="style.views.css?v=20260519nosubcolor" />
+    <link rel="stylesheet" href="style.mobile.css?v=20260519nosubcolor" />
+    <link rel="stylesheet" href="style.small.css?v=20260519nosubcolor" />
+    <link rel="stylesheet" href="style.medium.css?v=20260519nosubcolor" />
     <!-- Font Awesome for dice icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <!-- Quill Editor -->
@@ -176,13 +176,13 @@
 
         <div id="menuDividerUtilities" class="menu-divider desktop-only"></div>
 
-        <h3 id="menuTitleUtilities" class="menu-section-title desktop-only">Utilities</h3>
+        <h3 id="menuTitleUtilities" class="menu-section-title desktop-only">Random</h3>
         <ul id="menuListUtilities" class="menu-list desktop-only">
           <li id="menuItemRandomQuote">
-            <button id="randomQuoteBtn" class="menu-item" title="Random Quote"><span class="menu-icon">🎲</span><span class="menu-text"> Random Quote</span></button>
+            <button id="randomQuoteBtn" class="menu-item" title="Quote"><span class="menu-icon">🎲</span><span class="menu-text"> Quote</span></button>
           </li>
           <li id="menuItemRandomTegneserie" style="display: none;">
-            <button id="randomTegneserieBtn" class="menu-item" title="Open a random Tegneserie note"><span class="menu-icon">🎲</span><span class="menu-text"> Random Tegneserie</span></button>
+            <button id="randomTegneserieBtn" class="menu-item" title="Open a random Tegneserie note"><span class="menu-icon">🎲</span><span class="menu-text"> Tegneserie</span></button>
           </li>
         </ul>
 
@@ -201,11 +201,6 @@
           <li>
             <button id="importJsonBtn" class="menu-item" title="Import notes from a JSON backup file">
               <span class="menu-icon">📥</span><span class="menu-text"> Import Notes</span>
-            </button>
-          </li>
-          <li>
-            <button id="pruneUnusedEntitiesBtn" class="menu-item" title="Delete authors, sources, and tags that have zero notes">
-              <span class="menu-icon">🧹</span><span class="menu-text"> Prune unused authors, sources &amp; tags</span>
             </button>
           </li>
         </ul>
@@ -1017,66 +1012,111 @@
             
             <div class="settings-row">
             <div class="settings-section">
-              <h2>🏷️ Tag Management</h2>
+              <div class="settings-section-header">
+                <span class="settings-section-heading">🏷️ Tag Management</span>
+                <details class="settings-section-desc">
+                  <summary class="settings-section-desc-summary" aria-label="Show section description"><span class="settings-section-desc-label">Description</span></summary>
+                  <div class="settings-section-lead">Show advanced tag operations panel in the Tags page (rename, bulk add, etc.)</div>
+                </details>
+              </div>
+              <div class="settings-section-body">
               <div class="setting-item">
                 <label class="setting-label">
                   <input type="checkbox" id="enableTagOperations" />
                   <span>Enable Tag Operations</span>
                 </label>
-                <p class="setting-description">Show advanced tag operations panel in the Tags page (rename, bulk add, etc.)</p>
+              </div>
               </div>
             </div>
 
             <div class="settings-section">
-              <h2>🔍 Search Features</h2>
+              <div class="settings-section-header">
+                <span class="settings-section-heading">🔍 Meta Features</span>
+                <details class="settings-section-desc">
+                  <summary class="settings-section-desc-summary" aria-label="Show section description"><span class="settings-section-desc-label">Description</span></summary>
+                  <div class="settings-section-lead">Extra metadata search fields on the main notes view (author/source filters, etc.).</div>
+                </details>
+              </div>
+              <div class="settings-section-body">
               <div class="setting-item">
                 <label class="setting-label">
                   <input type="checkbox" id="enableQuoteMetaSearches" />
-                  <span>Quote Meta Searches</span>
+                  <span>Note Meta Searches</span>
                 </label>
-                <p class="setting-description">Enable advanced metadata search capabilities for quotes.</p>
+              </div>
               </div>
             </div>
-            </div><!-- end settings-row: Tag Management + Search Features -->
+            </div><!-- end settings-row: Tag Management + Meta Features -->
 
-            <div class="settings-row dedup-settings-row">
+            <div class="settings-row maintenance-settings-row">
             <div class="settings-section dedup-settings-section">
-              <h2>👯 Duplicate inspection</h2>
-              <p class="setting-description">
-                Finds notes that share the same text, title, type, dates, and author/source (non-empty body).
-                Cards match the main list — open one to edit the title (e.g. add <code>_2</code>) or attachments.
-              </p>
+              <div class="settings-section-header">
+                <span class="settings-section-heading">👯 Duplicate inspection</span>
+                <details class="settings-section-desc">
+                  <summary class="settings-section-desc-summary" aria-label="Show section description"><span class="settings-section-desc-label">Description</span></summary>
+                  <div class="settings-section-lead">Find groups of notes with the same text, title, type, dates, and author/source — then fix titles or merge.</div>
+                </details>
+              </div>
+              <div class="settings-section-body">
               <button type="button" id="dedupSuspectsScanBtn" class="btn btn-primary">Scan for duplicate groups</button>
               <div id="dedupSuspectsRoot" class="dedup-suspects-root"></div>
+              </div>
+            </div>
+
+            <div class="settings-section prune-settings-section">
+              <div class="settings-section-header">
+                <span class="settings-section-heading">🧹 Prune unused metadata</span>
+                <details class="settings-section-desc">
+                  <summary class="settings-section-desc-summary" aria-label="Show section description"><span class="settings-section-desc-label">Description</span></summary>
+                  <div class="settings-section-lead">Delete authors, sources, and tags that are not linked to any note. This cannot be undone.</div>
+                </details>
+              </div>
+              <div class="settings-section-body">
+              <button type="button" id="pruneUnusedEntitiesBtn" class="btn btn-primary" title="Delete authors, sources, and tags that have zero notes">
+                <span class="prune-btn-label">🧹 Prune unused authors, sources &amp; tags</span>
+              </button>
+              </div>
             </div>
             </div>
 
             <div class="settings-row">
             <div class="settings-section">
-              <h2>🔒 Encryption</h2>
+              <div class="settings-section-header">
+                <span class="settings-section-heading">🔒 Encryption</span>
+                <details class="settings-section-desc">
+                  <summary class="settings-section-desc-summary" aria-label="Show section description"><span class="settings-section-desc-label">Description</span></summary>
+                  <div class="settings-section-lead">Hide notes that have encrypted attachments from all views and search results.</div>
+                </details>
+              </div>
+              <div class="settings-section-body">
               <div class="setting-item">
                 <label class="setting-label">
                   <input type="checkbox" id="hideEncryptedNotes" />
                   <span>Hide Notes with Encrypted Attachments</span>
                 </label>
-                <p class="setting-description">When enabled, notes that have one or more encrypted attachments are excluded from all views and search results.</p>
+              </div>
               </div>
             </div>
             <div class="settings-section">
-              <h2>🏷️ Hidden Tag</h2>
-              <div class="setting-item">
-                <label class="setting-label">
+              <div class="settings-section-header">
+                <span class="settings-section-heading">🏷️ Hidden Tag</span>
+                <details class="settings-section-desc">
+                  <summary class="settings-section-desc-summary" aria-label="Show section description"><span class="settings-section-desc-label">Description</span></summary>
+                  <div class="settings-section-lead">Hide notes that carry a specific tag from all views and search results.</div>
+                </details>
+              </div>
+              <div class="settings-section-body">
+              <div class="setting-item hide-notes-with-tag-row">
+                <label class="setting-label hide-notes-with-tag-label">
                   <input type="checkbox" id="hideNotesWithTag" />
                   <span>Hide Notes with Tag</span>
                 </label>
-                <p class="setting-description">When enabled, notes that carry the tag below are excluded from all views and search results.</p>
+                <span id="hideTagNameRow" class="hide-tag-name-wrap" style="display:none;">
+                  <input type="text" id="hideTagName" placeholder="hidden" aria-label="Tag name to hide"
+                    class="hide-tag-name-input"
+                    style="flex:1; min-width:120px; max-width:280px; width:100%; padding:0.35rem 0.6rem; border:1px solid var(--border); border-radius:4px; font-size:var(--d-font-base); background:var(--bg-secondary); color:var(--text-primary);" />
+                </span>
               </div>
-              <div class="setting-item" id="hideTagNameRow" style="display:none; margin-top:0.5rem;">
-                <label for="hideTagName" class="setting-label" style="flex-direction:row; gap:0.75rem; align-items:center;">
-                  <span style="white-space:nowrap;">Tag to hide:</span>
-                  <input type="text" id="hideTagName" placeholder="hidden"
-                    style="flex:1; max-width:220px; padding:0.35rem 0.6rem; border:1px solid var(--border); border-radius:4px; font-size:var(--d-font-base); background:var(--bg-secondary); color:var(--text-primary);" />
-                </label>
               </div>
             </div>
             </div><!-- end settings-row: Encryption + Hidden Tag -->
@@ -1084,15 +1124,22 @@
             <!-- Quick Tag Shortcuts -->
             <div class="settings-row">
             <div class="settings-section" style="flex: 1;">
-              <h2>⭐ Quick Tag Shortcuts</h2>
-              <p class="setting-description" style="margin-bottom:0.75rem;">Tags shown as sub-menu items under each note type. Click one to jump straight to filtered results.</p>
+              <div class="settings-section-header">
+                <span class="settings-section-heading">⭐ Quick Tag Shortcuts</span>
+                <details class="settings-section-desc">
+                  <summary class="settings-section-desc-summary" aria-label="Show section description"><span class="settings-section-desc-label">Description</span></summary>
+                  <div class="settings-section-lead">Tags shown as sub-menu items under each note type — click one to jump to filtered results.</div>
+                </details>
+              </div>
+              <div class="settings-section-body">
               <div class="setting-item" style="flex-direction:column; align-items:stretch; gap:0.6rem;">
                 <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
                   <select id="shortcutNoteTypeSelect" class="training-date-select" style="flex:0 0 auto; width:auto; min-width:130px;"></select>
                   <input type="text" id="shortcutTagInput" placeholder="Tag name…" class="search-input" style="flex:1; min-width:120px;" autocomplete="off" />
                   <button id="shortcutTagAddBtn" class="btn btn-primary" style="flex-shrink:0;">Add</button>
                 </div>
-                <div id="shortcutTagsList" style="display:flex; flex-wrap:wrap; gap:0.4rem; min-height:1.5rem;"></div>
+                <div id="shortcutTagsList" style="display:flex; flex-wrap:wrap; gap:0.4rem; margin-top: 0.5rem; min-height:1.5rem;"></div>
+              </div>
               </div>
             </div>
             </div><!-- end settings-row: Quick Tag Shortcuts -->
@@ -1100,11 +1147,14 @@
             <div class="settings-row">
             <!-- Note Types -->
             <div class="settings-section">
-              <h2>📋 Note Types</h2>
-              <p class="setting-description" style="margin-bottom: 1rem;">
-                Manage the note types available in the menu (Quotes, Notes, Training, etc.).
-                Core types cannot be deleted. New types always use "generic" behavior (like Notes/Puzzles).
-              </p>
+              <div class="settings-section-header">
+                <span class="settings-section-heading">📋 Note Types</span>
+                <details class="settings-section-desc">
+                  <summary class="settings-section-desc-summary" aria-label="Show section description"><span class="settings-section-desc-label">Description</span></summary>
+                  <div class="settings-section-lead">Menu types (Quotes, Training, etc.) — add types, icons, labels; core types cannot be deleted.</div>
+                </details>
+              </div>
+              <div class="settings-section-body">
               <div class="setting-item">
                 <div id="noteTypesList" class="quote-types-list">
                   <!-- Populated by JavaScript -->
@@ -1113,9 +1163,17 @@
                   ➕ Add Note Type
                 </button>
               </div>
+              </div>
             </div>
             <div class="settings-section">
-              <h2>🎨 Color Customization</h2>
+              <div class="settings-section-header">
+                <span class="settings-section-heading">🎨 Color Customization</span>
+                <details class="settings-section-desc">
+                  <summary class="settings-section-desc-summary" aria-label="Show section description"><span class="settings-section-desc-label">Description</span></summary>
+                  <div class="settings-section-lead">Customize app colors; save and load palettes as JSON files.</div>
+                </details>
+              </div>
+              <div class="settings-section-body">
               <!-- Palette selector row -->
               <div style="display: flex; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 2px solid var(--border); flex-wrap: wrap;">
                 <select id="paletteSelect" style="min-width: 180px; width: auto; height: 36px;">
@@ -1252,12 +1310,20 @@
                 <button type="button" id="resetModalFooterColor" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;">Reset</button>
                 <span style="color: var(--text-secondary); font-size: 0.85rem;">Background for modal button area (Note, Author & Source modals)</span>
               </div>
+              </div>
             </div>
             </div><!-- end settings-row: Note Types + Color Customization -->
 
             <div class="settings-row">
             <div class="settings-section">
-              <h2>🖥️ Note Display Options</h2>
+              <div class="settings-section-header">
+                <span class="settings-section-heading">🖥️ Note Display Options</span>
+                <details class="settings-section-desc">
+                  <summary class="settings-section-desc-summary" aria-label="Show section description"><span class="settings-section-desc-label">Description</span></summary>
+                  <div class="settings-section-lead">Card layout, masonry, image display, scores, and editor word wrap.</div>
+                </details>
+              </div>
+              <div class="settings-section-body">
               <div class="setting-item">
                 <label class="setting-label">
                   <input type="checkbox" id="displayQuotesByRealSize" />
@@ -1314,10 +1380,18 @@
                 </div>
                 <p class="setting-description">Wrap long lines of text in the note editor at the specified character count for better readability.</p>
               </div>
+              </div>
             </div>
             
             <div class="settings-section">
-              <h2>📦 Storage & Performance</h2>
+              <div class="settings-section-header">
+                <span class="settings-section-heading">📦 Storage & Performance</span>
+                <details class="settings-section-desc">
+                  <summary class="settings-section-desc-summary" aria-label="Show section description"><span class="settings-section-desc-label">Description</span></summary>
+                  <div class="settings-section-lead">Vault path, export embed threshold, and one-time migration of DB attachments to disk.</div>
+                </details>
+              </div>
+              <div class="settings-section-body">
 
               <!-- Vault Path -->
               <div class="setting-item">
@@ -1384,6 +1458,7 @@
                   🔄 Migrate Attachments to Disk
                 </button>
                 <div id="migrateAttachmentsResult" style="margin-top:0.5rem; font-size:0.85em;"></div>
+              </div>
               </div>
             </div>
             </div><!-- end settings-row: Note Display Options + Storage & Performance -->
@@ -2033,6 +2108,6 @@ Quote number three..."
     <!-- Quill Editor Script -->
     <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
     <script type="module" src="js/lib/confirmDialog.js"></script>
-    <script type="module" src="app.js?v=20260510menucards"></script>
+    <script type="module" src="app.js?v=20260519nosubcolor"></script>
   </body>
 </html>

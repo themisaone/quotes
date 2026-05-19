@@ -15,6 +15,8 @@ Notes are typed. Type determines which fields appear in the editor modal and how
 | `historical` | `generic` | None |
 | `puzzle` | `generic` | None |
 | `training` | `training` | Date, Training sub-type |
+| `job` | `generic` (default) | Same as `note` unless you set `behavior: quote` or `training` in Settings |
+| `tegneserie` | `generic` (default) | Comic-strip / series notes; optional welcome random note on load |
 
 Types and their labels/icons are user-configurable in Settings. The `behavior` field determines which editor fields appear — you can add a new type with `behavior: 'quote'` to reuse Author/Source fields.
 
@@ -44,7 +46,13 @@ Cards are displayed in a grid (1, 2, or 3 columns depending on screen width). Th
 - Delete (with confirmation)
 - Duplicate
 
+**Column layout (Settings / toolbar):** 1, 2, or 3 columns on desktop; medium screens lock to 2 columns. **Gallery mode** shows only notes with image attachments, uses a larger page size, and forces image-related filters — toggled from the column-count control (`gallery` option).
+
+**List + pane view:** Alternative to the card grid — compact list on the left, full note in the right pane (reuses the edit modal). For **training** notes the left column can switch between a **list** and a **month calendar** (sub-type **icons** in each day cell); preference is stored in `localStorage`. Implemented in `listPaneView.js` + `trainingCalendar.js`.
+
 **Attachment thumbnail:** Shown inline in card if present. Clicking opens the full attachment viewer or prompts for decryption if encrypted.
+
+**Welcome / random note:** On load, an overlay can show a random note (`GET /api/quotes/random`). Some deployments pass `note_type` (e.g. `tegneserie`) for type-specific random picks.
 
 ---
 
@@ -74,6 +82,7 @@ Opens for both creating and editing notes. Fields shown depend on `note_type` be
 - Multi-attachment strip when 2+ attachments
 - Buttons: upload file, paste image, downscale large image, encrypt & attach, delete attachment
 - Primary attachment mirrored to `notes` flat columns
+- **HTML source** toggle — edit raw Quill HTML in a textarea (`htmlSourceViewer.js`)
 
 ---
 
@@ -205,7 +214,27 @@ Available from a bulk-select mode on the card grid:
 - **Bulk untag** — remove a tag from all selected notes
 - **Bulk set group** — set `translation_group` on selected notes (for linking translations)
 - **Bulk duplicate** — duplicate selected notes
+- **Bulk split** — for notes with 2+ attachments: keep the original with attachment at position 0 only; create one new note per extra attachment (copies text, tags, author, etc.) — `POST /api/quotes/bulk-split`
 - **Bulk delete** — delete selected notes (with confirmation)
+
+---
+
+## Note Merge
+
+Combine multiple notes into one (`POST /api/notes/merge`, UI in `mergeModal.js`):
+
+- Pick a **main** note; other selected notes are deleted after merge
+- **Append texts** (default on): other bodies appended to main with `<hr>` dividers
+- **Merge tags** (default on): union of tags onto main
+- All attachments from other notes are re-assigned to main with new positions
+- Available from bulk selection or from a **translation group** (“Merge group” button)
+- `translation_group` is cleared on the surviving note
+
+---
+
+## Duplicate Inspection (Dedup)
+
+**Options → Duplicate inspection** loads `GET /api/dedup/suspects` and shows groups of notes that share the same fingerprint (likely duplicates). Cards render in a dedicated grid (`dedupSuspectsPanel.js`). Use merge or manual cleanup from there.
 
 ---
 
@@ -235,9 +264,22 @@ Settings → Storage → "Path to vault". When set, all attachment files and exp
 
 ## Data Management
 
-Settings panel → Data Management:
+Side menu → **Data Management** (desktop):
 - Export JSON backup
 - Import JSON backup
 - Export as PDF
-- Export big files report
+
+**Options** page (⚙️):
+- **Duplicate inspection** and **Prune unused metadata** — same row; prune deletes authors, sources, and tags with zero linked notes (`POST /api/maintenance/prune-unused-entities`). Irreversible; confirm before running.
+- Each option card shows the **section title** and controls at all times. Long explanatory text is under a **Description** disclosure (collapsed by default) in the header row.
+
+Settings → **Storage & Performance** (Options page):
 - Migrate attachments to disk (one-time tool, should no longer be needed)
+
+**Vault tools (Options → Storage & Performance):** validate path, show disk usage (`GET /api/vault/info`), and optionally move attachment tree to a new vault folder (`POST /api/vault/move`).
+
+---
+
+## Entity Rename Auto-Merge
+
+Renaming an author, source, or tag to a name that already exists **merges** into the existing entity (all note links move; duplicate row removed). Same pattern on `PUT /api/authors/:id`, `PUT /api/sources/:id`, and `PUT /api/tags/:id`.

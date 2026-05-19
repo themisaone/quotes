@@ -43,6 +43,7 @@ The app will wait for Postgres to be reachable, run migrations automatically
 |------|-----------------|
 | `.env` | DB host/port/name/user/password, HTTP port |
 | `config/settings.json` | Note types, sub-types, UI preferences |
+| `config/local.json` | Active mode, vault path (machine-local; create on first run) |
 
 Both are mounted into the container as volumes — edit them on your host,
 then restart the app to pick up changes:

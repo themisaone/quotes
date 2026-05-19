@@ -178,7 +178,18 @@ Coordinates page-level setup: initializes all managers in the correct order on p
 ---
 
 ### `listPaneView.js`
-Handles the list/detail split-pane view mode.
+Two-column **list + pane** layout (alternative to the card grid). Left: compact rows or (for training) calendar/list toggle; right: full note + actions. Reuses `createQuoteCard` / modals from `app.js`.
+- `renderListPaneView(container, notes, opts)`
+- `refreshPaneNote(noteId, updatedNote, opts)`
+- `getTrainingSubMode()` / training sub-mode in `localStorage` (`calendar` | `list`)
+
+---
+
+### `trainingCalendar.js`
+Monthly calendar for training notes in list-pane left column. Days with trainings show **icons** per distinct sub-type (from settings). Legend lists sub-types by icon + label. Fetches month data via API; `onSelectNote` opens the matching row in the pane.
+- `renderTrainingCalendar(container, opts)` — `getTrainingTypes`, `onSelectNote`, optional `initialYear` / `initialMonth` / `initialNoteId`
+
+**Import note:** `app.js` imports `listPaneView.js` without a `?v=` suffix (single importer — OK). `trainingCalendar.js` imports `api.js` without `?v=`; that can diverge from `api.js?v=…` used elsewhere — avoid adding a second import path for `api.js` from this chain.
 
 ---
 

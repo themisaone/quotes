@@ -67,7 +67,7 @@ import {
   getDisplaySetting,
   initializeSettings as initializeSettingsLib,
   refreshSettingsForOptionsPanel
-} from './js/lib/settingsManager.js?v=20260511settingsrefresh';
+} from './js/lib/settingsManager.js?v=20260519nosubcolor';
 
 import {
   openAuthorModal as openAuthorModalLib,
@@ -1119,9 +1119,11 @@ function setupEventListeners() {
       ) {
         return;
       }
-      const prevLabel = pruneUnusedEntitiesBtn.textContent;
+      const labelEl =
+        pruneUnusedEntitiesBtn.querySelector(".prune-btn-label") || pruneUnusedEntitiesBtn;
+      const prevLabel = labelEl.textContent;
       pruneUnusedEntitiesBtn.disabled = true;
-      pruneUnusedEntitiesBtn.textContent = "⏳ Pruning…";
+      labelEl.textContent = "⏳ Pruning…";
       try {
         const r = await pruneUnusedEntitiesRequest();
         const lines = [
@@ -1139,7 +1141,7 @@ function setupEventListeners() {
         alert(err.message || "Prune failed");
       } finally {
         pruneUnusedEntitiesBtn.disabled = false;
-        pruneUnusedEntitiesBtn.textContent = prevLabel;
+        labelEl.textContent = prevLabel;
       }
     });
   }
