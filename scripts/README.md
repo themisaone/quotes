@@ -4,7 +4,7 @@ Run **database** scripts from the **repository root** so `.env` and `require('..
 
 | Script | Purpose | How to run | Dependencies |
 |--------|---------|------------|--------------|
-| `split-json-backup.js` | Splits a large JSON export into smaller valid backup files (streaming). | `node scripts/split-json-backup.js <file.json> [out-dir] [--mb=30]` | `stream-json`, `stream-chain` |
+| `find-similar-attachment-images.js` | Perceptual hash (dHash): pass a **folder** of candidate images; vault is fully re-hashed every run (no disk cache), then each candidate is checked against that index. Each line is tagged **`[likely]`** vs **`[potential]`** by Hamming band (upper third of `0..max-dist` is potential unless `--likely-max` overrides). Prints **note id** per match via Postgres `file:…` paths (`note_attachments` + `notes`), with a filename fallback. | `node scripts/find-similar-attachment-images.js <candidate-dir> [--likely-max 6] [--database-url …] [--no-db]` | `sharp`, `pg`, `dotenv` |
 | `parse-enex.js` | Evernote `.enex` → import JSON. | See file header + `ENEX-IMPORT.md` | `sharp` |
 | `import-dir.js` | Folder of files → import JSON (one note per file). | See file header | `sharp` |
 | `tag-untagged-trainings.sh` | Interactive: add one tag to all trainings that have **no** tags. | `./scripts/tag-untagged-trainings.sh <tag-name>` (from repo root) | `psql`, `.env` |
