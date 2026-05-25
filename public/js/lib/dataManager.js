@@ -87,6 +87,7 @@ function buildFiltersObject(currentNoteTypeFilter) {
   if (currentNoteTypeFilter) {
     const typeLabel = getNoteTypeConfig(currentNoteTypeFilter)?.label || 'Notes';
     filters.noteType = typeLabel;
+    filters.noteTypeValue = currentNoteTypeFilter;
   }
 
   const s = getSearchValues();
@@ -244,9 +245,21 @@ async function fetchQuotesForExport(params) {
 }
 
 /**
+ * Filename prefix from exported notes (handles mixed selections).
+ */
+function getPdfFilenamePrefix(currentNoteTypeFilter, quotes) {
+  if (Array.isArray(quotes) && quotes.length > 0) {
+    const types = [...new Set(quotes.map(n => n && n.note_type).filter(Boolean))];
+    if (types.length === 1) return types[0];
+    if (types.length > 1) return 'mixed_notes';
+  }
+  return currentNoteTypeFilter || 'all_notes';
+}
+
+/**
  * Generate PDF from quotes
  */
-async function generatePdf(quotes, filters) {
+async function generatePdf(quotes, filters, pdfColumns = 1) {
   const response = await fetch(`${API_URL}/export/pdf`, {
     method: "POST",
     headers: {
@@ -255,6 +268,7 @@ async function generatePdf(quotes, filters) {
     body: JSON.stringify({
       quotes: quotes,
       filters: filters,
+      pdfColumns: pdfColumns === 2 ? 2 : 1,
     }),
   });
 
@@ -278,8 +292,8 @@ async function generatePdf(quotes, filters) {
  * @param {Function} config.getQuoteTypes - Get quote types from settings
  * @param {Array} [config.notes] - Optional pre-fetched notes array. When
  *     provided, the filter-based fetch is skipped and only these notes are
- *     exported (used by the Select-Action-Bar "Export to PDF" action so the
- *     PDF contains exactly the notes the user selected).
+ *     exported (used when the user has an active selection).
+ * @param {number} [config.pdfColumns=1] - PDF layout: 1 or 2 columns.
  */
 export async function exportToPdf(config) {
   const {
@@ -288,6 +302,7 @@ export async function exportToPdf(config) {
     getQuoteTypes,
     getTrainingTypes,
     notes: preFetchedNotes,
+    pdfColumns = 1,
   } = config;
 
   try {
@@ -320,9 +335,9 @@ export async function exportToPdf(config) {
 
     // Generate and download PDF
     const filters = buildFiltersObject(currentNoteTypeFilter);
-    const pdfBlob = await generatePdf(allQuotes, filters);
+    const pdfBlob = await generatePdf(allQuotes, filters, pdfColumns);
     
-    const filePrefix = currentNoteTypeFilter || 'all_notes';
+    const filePrefix = getPdfFilenamePrefix(currentNoteTypeFilter, allQuotes);
     const filename = generateFilename(filePrefix, 'pdf');
     downloadBlob(pdfBlob, filename);
 

@@ -170,7 +170,7 @@ import {
   handleHashChange,
   initializeHashChangeListener
 } from './js/lib/pageCoordinator.js';
-import { showConfirm } from './js/lib/confirmDialog.js';
+import { showConfirm, showPdfExportConfirm } from './js/lib/confirmDialog.js';
 import { encryptFileBuffer, decryptFileBuffer } from './js/lib/cryptoUtils.js';
 import {
   renderListPaneView,
@@ -1300,12 +1300,11 @@ function setupEventListeners() {
   }
 
   // ── Export-to-PDF menu item ──────────────────────────────────────────────
-  // Replaces the old "Bulk Operations" modal entry. Always exports the full
-  // filtered set (never the stripe's selection). For selection-scoped PDF
-  // export the user should use the Select-Action-Bar's "Export to PDF" button.
+  // Exports selected notes when selection mode is active; otherwise the full
+  // filtered set. Same entry point as the Select-Action-Bar export button.
   const exportPdfMenuBtn = getElementByIdSafe("exportPdfMenuBtn");
   if (exportPdfMenuBtn) {
-    exportPdfMenuBtn.addEventListener("click", exportToPdf);
+    exportPdfMenuBtn.addEventListener("click", () => exportToPdf());
   }
 
   if (refreshAuthorsBtn) {
@@ -3521,12 +3520,54 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ============= EXPORT TO PDF =============
 
-async function exportToPdf() {
+async function exportToPdf(options = {}) {
+  const exportBtn = options.exportBtn || getElementByIdSafe('exportPdfBtn', 'exportToPdf');
+  const selectionCount = getEffectiveSelectionCount();
+  const hasSelection = selectionMode && selectionCount > 0;
+  let notes = null;
+  let count;
+
+  if (hasSelection) {
+    count = selectionCount;
+  } else {
+    count = totalFilteredCount || 0;
+    if (count === 0) {
+      alert('⚠️ No notes to export.');
+      return;
+    }
+  }
+
+  const exportChoice = await showPdfExportConfirm(count);
+  if (!exportChoice.ok) return;
+
+  if (hasSelection) {
+    const ids = await _getEffectiveSelectedIds();
+    if (ids === null) return;
+    if (ids.length === 0) {
+      alert('⚠️ No notes to export.');
+      return;
+    }
+
+    try {
+      notes = await fetchNotesByIds(ids);
+    } catch (err) {
+      console.error('Export PDF fetch error:', err);
+      alert('❌ Could not load selected notes for export: ' + err.message);
+      return;
+    }
+    if (!notes || notes.length === 0) {
+      alert('⚠️ Could not fetch the selected notes.');
+      return;
+    }
+  }
+
   await exportToPdfLib({
     currentNoteTypeFilter,
-    exportBtn: getElementByIdSafe("exportPdfBtn", "exportToPdf"),
+    exportBtn,
     getQuoteTypes,
     getTrainingTypes,
+    notes,
+    pdfColumns: exportChoice.columns,
   });
 }
 
@@ -3592,47 +3633,72 @@ function reapplyCardSelectionClasses() {
   });
 }
 
-function toggleSelectionMode() {
-  selectionMode = !selectionMode;
-  document.body.classList.toggle('selection-mode', selectionMode);
+function enterSelectionMode() {
+  if (selectionMode) return;
+  selectionMode = true;
+  document.body.classList.add('selection-mode');
 
   const btn = document.getElementById('selectModeBtn');
   if (btn) {
-    btn.classList.toggle('active', selectionMode);
-    btn.textContent = selectionMode ? '✕ Exit Selection' : '☑ Select';
+    btn.classList.add('active');
+    btn.textContent = '✕ Exit Selection';
   }
-
-  if (!selectionMode) {
-    clearSelection();
-  }
-  // updateSelectActionBar() is the single source of truth for the bar's
-  // visibility — it hides it when there are no selected notes.
   updateSelectActionBar();
+}
+
+function exitSelectionMode() {
+  if (!selectionMode) return;
+  selectionMode = false;
+  document.body.classList.remove('selection-mode');
+
+  const btn = document.getElementById('selectModeBtn');
+  if (btn) {
+    btn.classList.remove('active');
+    btn.textContent = '☑ Select';
+  }
+  clearSelection();
+}
+
+function toggleSelectionMode() {
+  if (selectionMode) exitSelectionMode();
+  else enterSelectionMode();
 }
 
 function toggleNoteSelection(card, noteId) {
   const id = parseInt(noteId, 10);
   if (!Number.isFinite(id)) return;
 
+  let nowSelected = false;
   if (selectAllFiltered) {
     // Inverted semantics: clicking toggles membership in the exclusion set.
     if (excludedNoteIds.has(id)) {
       excludedNoteIds.delete(id);
       card.classList.add('selected');
+      nowSelected = true;
     } else {
       excludedNoteIds.add(id);
       card.classList.remove('selected');
+      nowSelected = false;
     }
   } else {
     if (selectedNoteIds.has(id)) {
       selectedNoteIds.delete(id);
       card.classList.remove('selected');
+      nowSelected = false;
     } else {
       selectedNoteIds.add(id);
       card.classList.add('selected');
+      nowSelected = true;
     }
   }
-  updateSelectActionBar();
+
+  if (nowSelected && !selectionMode) {
+    enterSelectionMode();
+  } else if (!nowSelected && selectionMode && getEffectiveSelectionCount() === 0) {
+    exitSelectionMode();
+  } else {
+    updateSelectActionBar();
+  }
 }
 
 function selectAllOnPage() {
@@ -4005,46 +4071,10 @@ async function handleSabMerge() {
   }
 }
 
-/**
- * Export-to-PDF from the stripe.
- *   • SAF on, no exclusions → filter-driven fast path (same as menu export).
- *   • Otherwise             → resolve the effective ID list, fetch those
- *     notes, and hand the pre-built array to exportToPdfLib so the PDF
- *     contains exactly the selected notes (not every filtered one).
- */
+/** Export-to-PDF from the Select-Action-Bar — same logic as the menu export. */
 async function handleSabExportPdf() {
-  // Fast path — user wants the full filtered set.
-  if (selectAllFiltered && excludedNoteIds.size === 0) {
-    await exportToPdf();
-    return;
-  }
-
-  const ids = await _getEffectiveSelectedIds();
-  if (ids === null) return;
-  if (ids.length === 0) {
-    alert('⚠️ No notes to export.');
-    return;
-  }
-
-  let notes;
-  try {
-    notes = await fetchNotesByIds(ids);
-  } catch (err) {
-    console.error('Export PDF fetch error:', err);
-    alert('❌ Could not load selected notes for export: ' + err.message);
-    return;
-  }
-  if (!notes || notes.length === 0) {
-    alert('⚠️ Could not fetch the selected notes.');
-    return;
-  }
-
-  await exportToPdfLib({
-    currentNoteTypeFilter,
+  await exportToPdf({
     exportBtn: getElementByIdSafe('exportPdfBtn', 'handleSabExportPdf'),
-    getQuoteTypes,
-    getTrainingTypes,
-    notes,
   });
 }
 

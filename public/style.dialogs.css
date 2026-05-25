@@ -297,3 +297,31 @@
   background: #b91c1c;
   box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
 }
+
+.pdf-export-columns {
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border, #d1d5db);
+  border-radius: 8px;
+  text-align: left;
+}
+
+.pdf-export-columns-legend {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted, #6b7280);
+  padding: 0 4px;
+}
+
+.pdf-export-columns-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.pdf-export-columns-option:first-of-type {
+  margin-top: 4px;
+}

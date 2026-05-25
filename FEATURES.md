@@ -205,6 +205,7 @@ Import: POST the JSON to `/api/import/json`. Notes are created/updated; thumbnai
 **Data Management → Export as PDF**
 
 Uses Puppeteer (headless Chrome) to render notes and generate a PDF. Exports the currently filtered set of notes with formatting.
+When selection mode is active and notes are selected, PDF export includes only those notes (from the side menu or the Select-Action-Bar). A confirmation dialog shows the note count and lets you choose **1 column** (default) or **2 columns**. Mixed-type exports use a flat layout with cover title/filename **Mixed notes**; author grouping (including **Unknown Author**) appears only for quote-only exports. Training notes show the type/date meta line. Notes without a title show **No title**.
 
 ---
 

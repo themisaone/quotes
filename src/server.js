@@ -5247,7 +5247,8 @@ app.post("/api/migrate/attachments-to-disk", async (req, res) => {
 
 app.post("/api/export/pdf", async (req, res) => {
   try {
-    const { quotes, filters } = req.body;
+    const { quotes, filters, pdfColumns: rawPdfColumns } = req.body;
+    const pdfColumns = rawPdfColumns === 2 ? 2 : 1;
 
     if (!quotes || quotes.length === 0) {
       return res.status(400).json({ error: "No quotes provided" });
@@ -5257,19 +5258,22 @@ app.post("/api/export/pdf", async (req, res) => {
     // Import puppeteer
     const puppeteer = require("puppeteer");
 
-    // For tegneserie notes, pre-resolve the full image at max 1024px
-    // so the PDF shows the comic at readable size (not the small thumbnail).
+    // Pre-resolve attachment thumbnails for PDF rendering (Puppeteer needs data URLs).
     for (const note of quotes) {
-      if (note && note.note_type === 'tegneserie') {
+      if (!note) continue;
+      if (note.note_type === 'tegneserie') {
         const big = await resolveImageForPdf(note.attachment_full, 1024);
         if (big) note.pdf_full_image = big;
       }
+      await enrichNoteAttachmentsForPdf(note);
     }
 
-    // Group notes by author
+    // Group quote notes by author for optional grouped layout; non-quotes stay flat.
     const groupedByAuthor = {};
     quotes.forEach((note) => {
-      const authorKey = note.author_name || "Unknown Author";
+      if (!note || note.note_type !== 'quote') return;
+
+      const authorKey = note.author_name || 'Unknown Author';
       if (!groupedByAuthor[authorKey]) {
         groupedByAuthor[authorKey] = {
           authorName: authorKey,
@@ -5278,11 +5282,12 @@ app.post("/api/export/pdf", async (req, res) => {
         };
       }
 
-      const sourceKey = note.source_name || "No Source";
+      const sourceName = note.source_name && String(note.source_name).trim();
+      const sourceKey = sourceName || '__no_source__';
       if (!groupedByAuthor[authorKey].sources[sourceKey]) {
         groupedByAuthor[authorKey].sources[sourceKey] = {
-          sourceName: sourceKey,
-          sourceType: note.source_type || "BOOK",
+          sourceName: sourceName || '',
+          sourceType: note.source_type || 'BOOK',
           sourceImage: note.source_image,
           quotes: [],
         };
@@ -5292,7 +5297,7 @@ app.post("/api/export/pdf", async (req, res) => {
     });
 
     // Generate HTML for PDF
-    const html = generatePdfHtml(groupedByAuthor, filters, quotes);
+    const html = generatePdfHtml(groupedByAuthor, filters, quotes, pdfColumns);
 
     // Launch puppeteer
     const browser = await puppeteer.launch({
@@ -5303,15 +5308,14 @@ app.post("/api/export/pdf", async (req, res) => {
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: "networkidle0" });
 
+    const pageMargins = pdfColumns === 2
+      ? { top: "12mm", right: "7mm", bottom: "12mm", left: "7mm" }
+      : { top: "12mm", right: "12mm", bottom: "12mm", left: "12mm" };
+
     // Generate PDF
     const pdfBuffer = await page.pdf({
       format: "A4",
-      margin: {
-        top: "12mm",
-        right: "12mm",
-        bottom: "12mm",
-        left: "12mm",
-      },
+      margin: pageMargins,
       printBackground: true,
     });
 
@@ -5330,19 +5334,121 @@ app.post("/api/export/pdf", async (req, res) => {
   }
 });
 
-function generatePdfHtml(groupedByAuthor, filters, allQuotes) {
-  const hasRealAuthors = allQuotes && allQuotes.some(
-    q => q.author_name && q.author_name !== 'Unknown Author'
-  );
-  const filterInfo = buildFilterInfoHtml(filters);
-  const noteType = (filters && filters.noteType) || '';
-  const titleLabel = noteType || 'Notes';
-  const generatedDate = new Date().toLocaleDateString('en-US', {
-    year: 'numeric', month: 'long', day: 'numeric'
-  });
-  const bodyHtml = hasRealAuthors
-    ? buildGroupedHtml(groupedByAuthor)
-    : buildFlatHtml(allQuotes, noteType);
+function shouldUseGroupedPdfLayout(allQuotes, filterNoteType) {
+  if (!allQuotes || allQuotes.length === 0) return false;
+  if (filterNoteType === 'quote') return true;
+  // Mixed-type exports use flat layout so non-quotes are not lumped under Unknown Author.
+  return allQuotes.every(q => q && q.note_type === 'quote');
+}
+
+function loadNoteTypesConfig() {
+  try {
+    const file = getSettingsFile();
+    if (!fs.existsSync(file)) return [];
+    const settings = JSON.parse(fs.readFileSync(file, 'utf8'));
+    return Array.isArray(settings.noteTypes) ? settings.noteTypes : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function getNoteTypeDisplayLabel(typeValue) {
+  if (!typeValue) return '';
+  const found = loadNoteTypesConfig().find(t => t.value === typeValue);
+  return found ? found.label : typeValue;
+}
+
+function getPdfExportLabels(allQuotes, filterNoteType) {
+  const types = [...new Set((allQuotes || []).map(q => q && q.note_type).filter(Boolean))];
+  if (types.length === 1) {
+    const label = getNoteTypeDisplayLabel(types[0]);
+    return { titleLabel: label, typeLine: label };
+  }
+  if (types.length > 1) {
+    const labels = types.map(t => getNoteTypeDisplayLabel(t)).join(', ');
+    return { titleLabel: 'Mixed notes', typeLine: labels };
+  }
+  if (filterNoteType) {
+    const label = getNoteTypeDisplayLabel(filterNoteType) || filterNoteType;
+    return { titleLabel: label, typeLine: label };
+  }
+  return { titleLabel: 'Notes', typeLine: 'All visible note types' };
+}
+
+function loadTrainingTypesConfig() {
+  try {
+    const file = getSettingsFile();
+    if (!fs.existsSync(file)) return [];
+    const settings = JSON.parse(fs.readFileSync(file, 'utf8'));
+    return Array.isArray(settings.trainingTypes) ? settings.trainingTypes : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function generatePdfHtml(groupedByAuthor, filters, allQuotes, pdfColumns = 1) {
+  const cols = pdfColumns === 2 ? 2 : 1;
+  const filterNoteType = (filters && filters.noteTypeValue) || '';
+  const useGroupedLayout = shouldUseGroupedPdfLayout(allQuotes, filterNoteType);
+  const trainingTypes = loadTrainingTypesConfig();
+  const { titleLabel, typeLine } = getPdfExportLabels(allQuotes, filterNoteType);
+  const filterInfo = buildFilterInfoHtml(filters, typeLine);
+  const bodyHtml = useGroupedLayout
+    ? buildGroupedHtml(groupedByAuthor, cols, trainingTypes)
+    : buildFlatHtml(allQuotes, filterNoteType, cols, trainingTypes);
+  const twoColCss = cols === 2 ? `
+    .notes-two-col {
+      column-count: 2;
+      column-gap: 32px;
+    }
+    .notes-two-col .note-card {
+      break-inside: avoid;
+      page-break-inside: avoid;
+      -webkit-column-break-inside: avoid;
+      display: inline-block;
+      width: 100%;
+      padding: 14px 0 16px;
+      overflow: hidden;
+    }
+    .notes-two-col .tegneserie-img {
+      max-width: 100%;
+      max-height: 110mm;
+    }
+    .note-card-stacked {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0;
+    }
+    .note-card-stacked .note-comment { margin-bottom: 6px; }
+    .note-card-stacked .note-title {
+      margin: 0 0 10px 0;
+      padding-bottom: 0;
+    }
+    .note-card-stacked .pdf-att-col {
+      width: 72px;
+      max-width: 100%;
+      margin: 0 0 12px 0;
+    }
+    .note-card-stacked .pdf-att-main img,
+    .note-card-stacked .pdf-att-second img {
+      width: 100%;
+      max-width: 100%;
+      height: auto;
+      max-height: 72px;
+      object-fit: cover;
+    }
+    .note-card-stacked .pdf-att-strip { width: 34px; }
+    .note-card-stacked .pdf-att-strip img { max-height: 34px; }
+    .note-card-stacked .note-text { margin-top: 0; }` : '';
+  const coverPageHtml = `
+    <section class="cover-page">
+      <div class="cover-page-inner">
+        <div class="page-header">
+          <h1>📋 ${escapeHtml(titleLabel)}</h1>
+        </div>
+        ${filterInfo}
+      </div>
+    </section>`;
 
   return `<!DOCTYPE html>
 <html>
@@ -5360,22 +5466,83 @@ function generatePdfHtml(groupedByAuthor, filters, allQuotes) {
     h1 { color: #1f2937; font-size: 13pt; margin: 0 0 3px 0; font-family: 'Segoe UI', Arial, sans-serif; }
     h2 { color: #1f2937; font-size: 11pt; margin: 0 0 3px 0; font-family: 'Segoe UI', Arial, sans-serif; }
     h3 { color: #4b5563; font-size: 9.5pt;  margin: 0;        font-family: 'Segoe UI', Arial, sans-serif; }
+    .cover-page {
+      min-height: 250mm;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      page-break-after: always;
+      break-after: page;
+    }
+    .cover-page-inner {
+      width: 100%;
+      max-width: 160mm;
+    }
     .page-header {
       text-align: center;
       margin-bottom: 16px;
       padding-bottom: 8px;
       border-bottom: 1.5px solid #d1d5db;
     }
-    .date { color: #6b7280; font-size: 7.5pt; font-family: 'Segoe UI', Arial, sans-serif; }
     .note-card {
-      margin-bottom: 6px;
-      padding: 6px 9px;
-      background: #f9fafb;
-      border-radius: 3px;
+      margin: 0;
+      padding: 16px 0 12px;
       display: flex;
       gap: 9px;
+      border-bottom: 1px solid #d1d5db;
     }
     .note-card-body { flex: 1; min-width: 0; }
+    .note-comment {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 7pt;
+      color: #6b7280;
+      font-style: normal;
+      margin: 0 0 5px 0;
+      line-height: 1.35;
+    }
+    .note-training-meta {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 8.5pt;
+      font-weight: 700;
+      color: #b45309;
+      margin: 0 0 8px 0;
+      line-height: 1.3;
+    }
+    .pdf-att-col {
+      flex-shrink: 0;
+      width: 100px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .pdf-att-main img,
+    .pdf-att-second img,
+    .pdf-att-strip img {
+      width: 100%;
+      height: auto;
+      border-radius: 4px;
+      display: block;
+      object-fit: cover;
+    }
+    .pdf-att-main img { max-height: 120px; }
+    .pdf-att-second img { max-height: 80px; }
+    .pdf-att-row {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .pdf-att-strip { width: 46px; flex-shrink: 0; }
+    .pdf-att-strip img { max-height: 46px; }
+    .pdf-att-file {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f3f4f6;
+      border-radius: 4px;
+      font-size: 13pt;
+      min-height: 46px;
+    }
     .note-title {
       font-family: 'Segoe UI', Arial, sans-serif;
       font-weight: 700;
@@ -5390,6 +5557,8 @@ function generatePdfHtml(groupedByAuthor, filters, allQuotes) {
       align-items: stretch;
       break-inside: avoid;
       page-break-inside: avoid;
+      padding-left: 0;
+      padding-right: 0;
     }
     .tegneserie-card .note-title { font-size: 11pt; margin-bottom: 6px; }
     .tegneserie-img-wrap {
@@ -5428,7 +5597,7 @@ function generatePdfHtml(groupedByAuthor, filters, allQuotes) {
     .flat-group-title   {
       font-size: 8.5pt; font-weight: 700; color: #374151;
       font-family: 'Segoe UI', Arial, sans-serif;
-      padding: 2px 6px; background: #e5e7eb; border-radius: 3px;
+      padding: 0;
       margin-bottom: 5px;
     }
     .filter-info {
@@ -5437,28 +5606,29 @@ function generatePdfHtml(groupedByAuthor, filters, allQuotes) {
       font-family: 'Segoe UI', Arial, sans-serif;
     }
     .filter-info h3 { font-size: 8pt; margin: 0 0 4px 0; color: #374151; }
-    .filter-info p  { margin: 2px 0; }
+    .filter-info p  { margin: 2px 0; }${twoColCss}
   </style>
 </head>
 <body>
-  <div class="page-header">
-    <h1>📋 ${escapeHtml(titleLabel)}</h1>
-    <p class="date">Generated on ${generatedDate}</p>
-  </div>
-  ${filterInfo}
-  ${bodyHtml}
+  ${coverPageHtml}
+  <main class="document-body pdf-cols-${cols}">
+    ${bodyHtml}
+  </main>
 </body>
 </html>`;
 }
 
-function buildFilterInfoHtml(filters) {
-  if (!filters || Object.keys(filters).length === 0) return '';
+function buildFilterInfoHtml(filters, exportTypeLine) {
+  const safeFilters = filters || {};
   const lines = [];
-  if (filters.quote)    lines.push(`<p><strong>Text:</strong> ${filters.quote}</p>`);
-  if (filters.author)   lines.push(`<p><strong>Author:</strong> ${filters.author}</p>`);
-  if (filters.source)   lines.push(`<p><strong>Source:</strong> ${filters.source}</p>`);
-  if (filters.tags)     lines.push(`<p><strong>Tags:</strong> ${filters.tags}</p>`);
-  if (filters.noteType) lines.push(`<p><strong>Type:</strong> ${filters.noteType}</p>`);
+  const exportedType = exportTypeLine
+    || safeFilters.noteType
+    || 'All visible note types';
+  lines.push(`<p><strong>Type:</strong> ${escapeHtml(exportedType)}</p>`);
+  if (safeFilters.quote)  lines.push(`<p><strong>Text:</strong> ${escapeHtml(safeFilters.quote)}</p>`);
+  if (safeFilters.author) lines.push(`<p><strong>Author:</strong> ${escapeHtml(safeFilters.author)}</p>`);
+  if (safeFilters.source) lines.push(`<p><strong>Source:</strong> ${escapeHtml(safeFilters.source)}</p>`);
+  if (safeFilters.tags)   lines.push(`<p><strong>Tags:</strong> ${escapeHtml(safeFilters.tags)}</p>`);
   if (!lines.length) return '';
   return `<div class="filter-info"><h3>Filters Applied:</h3>${lines.join('')}</div>`;
 }
@@ -5492,20 +5662,134 @@ async function resolveImageForPdf(attachmentValue, maxDim) {
   }
 }
 
-function isNoteTitleMeaningful(title) {
-  if (!title) return false;
-  const t = String(title).trim();
-  if (!t) return false;
-  if (t.toLowerCase() === 'no title') return false;
-  return true;
+function getNoteTitleForPdf(note) {
+  const t = note.note_title && String(note.note_title).trim();
+  if (!t || t.toLowerCase() === 'no title') return 'No title';
+  return t;
 }
 
-function buildNoteCardHtml(note) {
-  const titleText = isNoteTitleMeaningful(note.note_title) ? note.note_title : '';
-  const titleHtml = titleText
-    ? `<div class="note-title">${escapeHtml(titleText)}</div>` : '';
+function formatTrainingDateForPdf(dateString) {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return '';
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
+  return `${yyyy}.${mm}.${dd}  ${dayName}`;
+}
+
+function getTrainingTypeIconLabel(typeValue, trainingTypes) {
+  if (!typeValue) return { icon: '🏋️', label: '' };
+  const info = trainingTypes.find(t => t.value === typeValue);
+  return {
+    icon: info ? info.icon : '🏋️',
+    label: info ? info.label : typeValue,
+  };
+}
+
+function buildTrainingMetaHtml(note, trainingTypes) {
+  if (!note || note.note_type !== 'training') return '';
+  // API aliases notes.type as source_type in list/detail queries.
+  const typeValue = note.source_type || note.type || '';
+  const { icon, label } = getTrainingTypeIconLabel(typeValue, trainingTypes);
+  const dateStr = formatTrainingDateForPdf(note.note_date);
+  const trainingTypeStr = typeValue && typeValue !== 'ASSORTED' && label
+    ? `${icon} ${label}`
+    : '';
+
+  let line = '';
+  if (trainingTypeStr && dateStr) line = `${trainingTypeStr} — 📅 ${dateStr}`;
+  else if (dateStr) line = `📅 ${dateStr}`;
+  else if (trainingTypeStr) line = trainingTypeStr;
+  if (!line) return '';
+  return `<div class="note-training-meta">${escapeHtml(line)}</div>`;
+}
+
+function getNoteAttachmentsList(note) {
+  if (note.pdf_attachments && note.pdf_attachments.length > 0) return note.pdf_attachments;
+  if (note.attachments && note.attachments.length > 0) return note.attachments;
+  if (note.thumbnail || note.attachment_full) {
+    return [{
+      thumbnail: note.thumbnail,
+      attachment_full: note.attachment_full,
+      attachment_type: note.attachment_type || 'image',
+      pdf_thumb: note.thumbnail,
+    }];
+  }
+  return [];
+}
+
+async function resolveAttachmentThumbForPdf(att, maxDim = 400) {
+  if (att.pdf_thumb) return att.pdf_thumb;
+  if (att.thumbnail && String(att.thumbnail).startsWith('data:image/')) return att.thumbnail;
+  if (att.thumbnail) {
+    const retrieved = fileStorage.retrieveFromStorage(att.thumbnail);
+    if (retrieved && String(retrieved).startsWith('data:image/')) return retrieved;
+  }
+  const type = att.attachment_type || 'image';
+  if (type === 'image' && att.attachment_full) {
+    return await resolveImageForPdf(att.attachment_full, maxDim);
+  }
+  return null;
+}
+
+async function enrichNoteAttachmentsForPdf(note) {
+  const list = getNoteAttachmentsList(note);
+  for (let i = 0; i < list.length; i++) {
+    const att = list[i];
+    const maxDim = note.note_type === 'tegneserie' && i === 0 ? 1024 : 400;
+    if (note.note_type === 'tegneserie' && i === 0 && note.pdf_full_image) {
+      att.pdf_thumb = note.pdf_full_image;
+    } else {
+      att.pdf_thumb = await resolveAttachmentThumbForPdf(att, maxDim);
+    }
+  }
+  note.pdf_attachments = list;
+}
+
+const PDF_ATT_ICONS = { pdf: '📄', video: '🎬', document: '📎', encrypted: '🔒', audio: '🎵' };
+
+function buildNoteCommentHtml(note) {
+  const comment = note.comment && String(note.comment).trim();
+  if (!comment) return '';
+  return `<div class="note-comment">${escapeHtml(comment)}</div>`;
+}
+
+function buildPdfAttachmentThumbHtml(att, className) {
+  if (att.pdf_thumb) {
+    return `<div class="${className}"><img src="${att.pdf_thumb}" alt=""></div>`;
+  }
+  const type = att.attachment_type || 'document';
+  const icon = PDF_ATT_ICONS[type] || '📎';
+  return `<div class="${className} pdf-att-file"><span>${icon}</span></div>`;
+}
+
+function buildPdfAttachmentColumnHtml(note, attachmentsOverride = null) {
+  const attachments = attachmentsOverride || getNoteAttachmentsList(note);
+  if (attachments.length === 0) return '';
+
+  const mainHtml = buildPdfAttachmentThumbHtml(attachments[0], 'pdf-att-main');
+  const secondHtml = attachments.length > 1
+    ? buildPdfAttachmentThumbHtml(attachments[1], 'pdf-att-second')
+    : '';
+  const rest = attachments.slice(2);
+  const restHtml = rest.length > 0
+    ? `<div class="pdf-att-row">${rest.map(a => buildPdfAttachmentThumbHtml(a, 'pdf-att-strip')).join('')}</div>`
+    : '';
+
+  return `<div class="pdf-att-col">${mainHtml}${secondHtml}${restHtml}</div>`;
+}
+
+function buildNoteCardHtml(note, pdfColumns = 1, trainingTypes = []) {
+  const stacked = pdfColumns === 2;
+  const trainingMetaHtml = buildTrainingMetaHtml(note, trainingTypes);
+  const commentHtml = buildNoteCommentHtml(note);
+  const titleHtml = `<div class="note-title">${escapeHtml(getNoteTitleForPdf(note))}</div>`;
   const tagsHtml = note.tags
     ? `<div class="note-meta">🏷 ${escapeHtml(note.tags)}</div>` : '';
+  const textHtml = `<div class="note-text">${note.note_text || ''}</div>`;
+  const stackedClass = stacked ? ' note-card-stacked' : '';
 
   // Tegneserie: full-width image, title above, text AFTER the image (if any).
   if (note.note_type === 'tegneserie') {
@@ -5513,37 +5797,59 @@ function buildNoteCardHtml(note) {
     const imgHtml = bigImg
       ? `<div class="tegneserie-img-wrap"><img src="${bigImg}" class="tegneserie-img"></div>`
       : '';
-    const textHtml = note.note_text
-      ? `<div class="note-text">${note.note_text}</div>` : '';
+    const extraAttachments = getNoteAttachmentsList(note).slice(1);
+    const extraAttHtml = extraAttachments.length > 0
+      ? buildPdfAttachmentColumnHtml(note, extraAttachments)
+      : '';
     return `
-      <div class="note-card tegneserie-card">
+      <div class="note-card tegneserie-card${stackedClass}">
+        ${commentHtml}
         ${titleHtml}
         ${imgHtml}
+        ${extraAttHtml}
+        ${note.note_text ? textHtml : ''}
+        ${tagsHtml}
+      </div>`;
+  }
+
+  const attColHtml = buildPdfAttachmentColumnHtml(note);
+
+  if (stacked) {
+    return `
+      <div class="note-card note-card-stacked">
+        ${trainingMetaHtml}
+        ${commentHtml}
+        ${titleHtml}
+        ${attColHtml}
         ${textHtml}
         ${tagsHtml}
       </div>`;
   }
 
-  // Default layout: thumbnail on the left, title + text on the right.
-  const quoteImage = note.thumbnail || note.attachment_full;
-  const imgHtml = quoteImage
-    ? `<div style="flex-shrink:0"><img src="${quoteImage}" style="width:100px;height:auto;border-radius:4px;"></div>`
-    : '';
+  // Single-column: attachment column on the left, comment/title/text on the right.
   return `
     <div class="note-card">
-      ${imgHtml}
+      ${attColHtml}
       <div class="note-card-body">
+        ${trainingMetaHtml}
+        ${commentHtml}
         ${titleHtml}
-        <div class="note-text">${note.note_text || ''}</div>
+        ${textHtml}
         ${tagsHtml}
       </div>
     </div>`;
 }
 
-function buildGroupedHtml(groupedByAuthor) {
+function wrapNotesPdfLayout(notesHtml, pdfColumns) {
+  if (!notesHtml) return '';
+  if (pdfColumns === 2) return `<div class="notes-two-col">${notesHtml}</div>`;
+  return `<div class="notes-one-col">${notesHtml}</div>`;
+}
+
+function buildGroupedHtml(groupedByAuthor, pdfColumns = 1, trainingTypes = []) {
   const typeIcon = { BOOK: '📖', MOVIE: '🎬', ASSORTED: '📝' };
   let html = '';
-  Object.values(groupedByAuthor).forEach((author, idx) => {
+  Object.values(groupedByAuthor).forEach((author) => {
     const avatarHtml = author.authorImage
       ? `<img src="${author.authorImage}" class="author-avatar">`
       : `<div class="author-avatar-placeholder">✍️</div>`;
@@ -5553,22 +5859,28 @@ function buildGroupedHtml(groupedByAuthor) {
         <h2>${escapeHtml(author.authorName)}</h2>
       </div>`;
     Object.values(author.sources).forEach(source => {
-      const coverHtml = source.sourceImage
-        ? `<img src="${source.sourceImage}" class="source-cover">` : '';
-      html += `<div class="source-section">
-        <div class="source-header">
-          ${coverHtml}
-          <h3>${typeIcon[source.sourceType] || '📝'} ${escapeHtml(source.sourceName)}</h3>
-        </div>`;
-      source.quotes.forEach(note => { html += buildNoteCardHtml(note); });
-      html += `</div>`;
+      const hasSourceName = !!(source.sourceName && String(source.sourceName).trim());
+      const noteCards = source.quotes
+        .map(note => buildNoteCardHtml(note, pdfColumns, trainingTypes))
+        .join('');
+      if (hasSourceName) {
+        const coverHtml = source.sourceImage
+          ? `<img src="${source.sourceImage}" class="source-cover">` : '';
+        html += `<div class="source-section">
+          <div class="source-header">
+            ${coverHtml}
+            <h3>${typeIcon[source.sourceType] || '📝'} ${escapeHtml(source.sourceName)}</h3>
+          </div>`;
+      }
+      html += wrapNotesPdfLayout(noteCards, pdfColumns);
+      if (hasSourceName) html += `</div>`;
     });
     html += `</div>`;
   });
   return html;
 }
 
-function buildFlatHtml(allQuotes, noteType) {
+function buildFlatHtml(allQuotes, noteType, pdfColumns = 1, trainingTypes = []) {
   if (!allQuotes || allQuotes.length === 0) return '';
 
   // For tegneserie, group by sub-type (note.type), e.g. PONDUS / DILBERT / NEMI.
@@ -5584,32 +5896,21 @@ function buildFlatHtml(allQuotes, noteType) {
     const sortedKeys = Object.keys(byType).sort((a, b) => a.localeCompare(b));
     let html = '';
     sortedKeys.forEach(key => {
+      const noteCards = byType[key]
+        .map(note => buildNoteCardHtml(note, pdfColumns, trainingTypes))
+        .join('');
       html += `<div class="flat-group">
         <div class="flat-group-title">💥 ${escapeHtml(key)}</div>`;
-      byType[key].forEach(note => { html += buildNoteCardHtml(note); });
+      html += wrapNotesPdfLayout(noteCards, pdfColumns);
       html += `</div>`;
     });
     return html;
   }
 
-  const groups = {};
-  allQuotes.forEach(note => {
-    let groupKey = 'Undated';
-    if (note.created_at) {
-      const d = new Date(note.created_at);
-      groupKey = d.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
-    }
-    if (!groups[groupKey]) groups[groupKey] = [];
-    groups[groupKey].push(note);
-  });
-  let html = '';
-  Object.entries(groups).forEach(([label, notes]) => {
-    html += `<div class="flat-group">
-      <div class="flat-group-title">📅 ${escapeHtml(label)}</div>`;
-    notes.forEach(note => { html += buildNoteCardHtml(note); });
-    html += `</div>`;
-  });
-  return html;
+  const noteCards = allQuotes
+    .map(note => buildNoteCardHtml(note, pdfColumns, trainingTypes))
+    .join('');
+  return wrapNotesPdfLayout(noteCards, pdfColumns);
 }
 
 function escapeHtml(text) {
