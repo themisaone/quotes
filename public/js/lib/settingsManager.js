@@ -225,6 +225,17 @@ async function migrateLocalStorageToFile() {
   // localStorage values (e.g. old buttonColor / appBgColor entries).
   if (localStorage.getItem('settingsMigratedToFile') === 'done') return;
 
+  // If the server already returned a "real" vault / custom layout (any note type
+  // beyond the four shipped defaults in server.js), never merge+PUT from localStorage.
+  // Otherwise opening the app via Docker after using localhost can overwrite vault
+  // colors — or worse, if the first GET ever returned bootstrap defaults, persist them.
+  const bootstrapTypeValues = new Set(['quote', 'note', 'training', 'puzzle']);
+  const nt = globalSettings?.noteTypes;
+  if (Array.isArray(nt) && nt.some((t) => t && !bootstrapTypeValues.has(t.value))) {
+    localStorage.setItem('settingsMigratedToFile', 'done');
+    return;
+  }
+
   // Check if localStorage has any settings worth migrating
   const hasLocalSettings = 
     localStorage.getItem('downscaleQuoteImages') !== null ||

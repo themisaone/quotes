@@ -1,0 +1,23 @@
+# For a friend who pulls a pre-built image (no Git, no `build:`).
+# Published image (example): misajokicdocker/misa-quotes:1.0
+# Friend runs:  docker compose pull && docker compose up -d
+
+services:
+  app:
+    image: misajokicdocker/misa-quotes:1.0
+    restart: unless-stopped
+    ports:
+      - "${PORT:-4000}:4000"
+    environment:
+      DB_HOST:     ${DB_HOST}
+      DB_PORT:     ${DB_PORT:-5432}
+      DB_NAME:     ${DB_NAME}
+      DB_USER:     ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      PORT:        4000
+      MODE:        ${MODE:-ALL}
+    volumes:
+      - ./config:/app/config
+      - ./attachments:/app/attachments
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

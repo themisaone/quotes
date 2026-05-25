@@ -107,7 +107,7 @@ All full-size attachments are stored on disk under `attachments/<note_type>/`. O
 - Encrypted: `<noteId>.<originalFilename>.enc` (e.g. `5236.doc.txt.enc`)
 - Legacy (pre-migration): `<noteId>_full.<ext>` (still supported for reading)
 
-**Serving attachments:** Express serves `GET /attachments/*` from `fileStorage.getAttachmentsDir()` which is set from `config/local.json` → `vaultPath` + `/attachments`. If vault path is not set, defaults to `./attachments/` relative to app root.
+**Serving attachments:** Express serves `GET /attachments/*` from `fileStorage.getAttachmentsDir()` which is set from `config/local.json` → `vaultPath` + `/attachments`. If vault path is not set, defaults to `./attachments/` relative to app root. **Docker:** if `vaultPath` is an absolute host path, bind-mount that directory at the same path inside the container (see `DOCKER.md`), or attachments and vault `settings.json` will not resolve.
 
 **Resolving `file:` references (frontend):**
 ```js

@@ -1,0 +1,13 @@
+# Copy to `docker-compose.override.yml` (gitignored) and set the path to match
+# `vaultPath` in `config/local.json` EXACTLY (host:container must be the same path).
+#
+#   cp docker-compose.override.example.yml docker-compose.override.yml
+#   # edit the path below, then:
+#   docker compose up -d --build --force-recreate
+#
+# Docker Compose automatically merges `docker-compose.override.yml` with `docker-compose.yml`.
+
+services:
+  app:
+    volumes:
+      - /home/YOU/Dropbox/MainNoteArchiveVault:/home/YOU/Dropbox/MainNoteArchiveVault:rw

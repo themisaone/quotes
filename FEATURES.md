@@ -31,6 +31,8 @@ Left sidebar lists note types grouped by mode. Each type is a link that sets the
 - The active view is highlighted
 - URL hash encodes the current view: `#training`, `#note`, `#puzzle`, etc. Empty hash = DEFAULT view
 
+**Modes (which types appear):** Controlled by the mode selector, `config/modes.json`, and optionally the `MODE` environment variable (same values as `npm run …` in `README.md`). **Docker Compose** sets `MODE` to **`ALL` by default** (equivalent to `npm run all`); set `MODE` in `.env` to override (e.g. `MODE=DEFAULT`). If you use **`vaultPath`** in `local.json`, bind-mount that vault into the container at the same path (see **`DOCKER.md`**) or Docker will not see your vault `settings.json` (wrong colours / missing note types).
+
 ---
 
 ## Note Cards

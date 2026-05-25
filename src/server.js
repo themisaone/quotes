@@ -160,13 +160,43 @@ app.use('/pdfjs', express.static(path.join(__dirname, '../node_modules/pdfjs-dis
 function initVaultPath() {
   try {
     const { vaultPath } = readLocalConfig();
-    if (vaultPath) fileStorage.setAttachmentsDir(vaultPath);
+    const root = vaultPath && String(vaultPath).trim();
+    if (root) {
+      if (!fs.existsSync(root)) {
+        console.warn(
+          `\n⚠️  Vault path from local.json does not exist here: ${root}\n` +
+            '   Attachments and vault settings.json will not match your host until this path is visible ' +
+            '(e.g. bind-mount the same host folder to this path in Docker).\n'
+        );
+      }
+      fileStorage.setAttachmentsDir(root);
+    }
   } catch (e) {
     console.warn('Could not read vault path from local.json:', e.message);
   }
 }
 initVaultPath();
 fileStorage.ensureDirectories();
+
+(function logResolvedSettingsPath() {
+  try {
+    const sf = getSettingsFile();
+    const exists = fs.existsSync(sf);
+    let nTypes = 0;
+    if (exists) {
+      const parsed = JSON.parse(fs.readFileSync(sf, 'utf8'));
+      nTypes = Array.isArray(parsed.noteTypes) ? parsed.noteTypes.length : 0;
+    }
+    const { vaultPath } = readLocalConfig();
+    const vr = vaultPath && String(vaultPath).trim();
+    console.log(
+      `📄 Settings: ${sf} (exists: ${exists}, noteTypes: ${nTypes})` +
+        (vr ? ` | vault: ${vr} (exists: ${fs.existsSync(vr)})` : '')
+    );
+  } catch (e) {
+    console.warn('Could not log settings path:', e.message);
+  }
+})();
 
 // API to get storage configuration (returns default, actual value set by user in Settings)
 app.get('/api/config/storage', (req, res) => {
@@ -255,6 +285,17 @@ app.get('/api/settings', (req, res) => {
       const settings = JSON.parse(fs.readFileSync(settingsFile, 'utf8'));
       res.json(settings);
     } else {
+      const { vaultPath } = readLocalConfig();
+      const vaultRoot = vaultPath && String(vaultPath).trim();
+      // Do not mkdir/write under a host-only vault path (e.g. Docker without bind-mount) — that
+      // would create the wrong tree inside the container and hide the real settings/colors/types.
+      if (vaultRoot && !fs.existsSync(vaultRoot)) {
+        if (fs.existsSync(DEFAULT_SETTINGS_FILE)) {
+          const settings = JSON.parse(fs.readFileSync(DEFAULT_SETTINGS_FILE, 'utf8'));
+          return res.json(settings);
+        }
+        return res.json(defaultSettings);
+      }
       // Create file with defaults
       fs.mkdirSync(path.dirname(settingsFile), { recursive: true });
       fs.writeFileSync(settingsFile, JSON.stringify(defaultSettings, null, 2));
@@ -562,10 +603,34 @@ app.get('/api/vault/info', (req, res) => {
       }
     };
     walk(attachDir);
+    const settingsFile = getSettingsFile();
+    const vaultRoot = vaultPath && String(vaultPath).trim();
+    let settingsNoteTypeCount = null;
+    let settingsNoteTypeValues = null;
+    let settingsParseError = null;
+    try {
+      if (fs.existsSync(settingsFile)) {
+        const raw = fs.readFileSync(settingsFile, 'utf8');
+        const parsed = JSON.parse(raw);
+        settingsNoteTypeCount = Array.isArray(parsed.noteTypes) ? parsed.noteTypes.length : 0;
+        settingsNoteTypeValues = Array.isArray(parsed.noteTypes)
+          ? parsed.noteTypes.map((t) => (t && t.value) || null).filter(Boolean)
+          : null;
+      }
+    } catch (e) {
+      settingsNoteTypeCount = null;
+      settingsNoteTypeValues = null;
+      settingsParseError = e.message;
+    }
     res.json({
       vaultPath: vaultPath || '',
+      vaultRootExists: vaultRoot ? fs.existsSync(vaultRoot) : null,
       attachmentsDir: attachDir,
-      settingsFile: getSettingsFile(),
+      settingsFile,
+      settingsFileExists: fs.existsSync(settingsFile),
+      settingsNoteTypeCount,
+      settingsNoteTypeValues,
+      settingsParseError,
       palettesDir: getPalettesDir(),
       isDefault: !vaultPath,
       totalFiles,

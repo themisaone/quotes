@@ -7,13 +7,17 @@ A personal note and quote management system built with Node.js/Express, PostgreS
 ## Quick Start
 
 ### Prerequisites
-- Docker (recommended), **or** Node.js 18+ and PostgreSQL 14+
+- Docker (recommended), **or** Node.js 18+ and PostgreSQL 14+ (the `Dockerfile` uses **Node 22**)
 
 ### Option A — Docker (recommended)
 
 ```bash
 # 1. Copy env template and fill in your Postgres credentials
 cp .env.example .env
+
+# If Postgres runs on the same machine as Docker (typical), set in .env:
+#   DB_HOST=host.docker.internal
+# (localhost inside the container is the container itself, not your host.)
 
 # 2. Create the database (once, in psql as superuser)
 sudo -u postgres psql
@@ -26,6 +30,8 @@ docker compose up -d
 
 # 4. Open  http://localhost:4000
 ```
+
+Details, Linux/macOS notes, **vault bind-mount** (`docker-compose.override.example.yml` → `docker-compose.override.yml` when using `vaultPath`), and image-only sharing: **`DOCKER.md`**.
 
 ### Option B — Node directly
 
@@ -41,12 +47,13 @@ npm start              # runs migrations then starts server
 
 | Variable | Description | Default |
 |---|---|---|
-| `DB_HOST` | Postgres host | `host.docker.internal` |
+| `DB_HOST` | Postgres host | `localhost` (native Node); use **`host.docker.internal`** when the app runs in Docker and Postgres is on the host |
 | `DB_PORT` | Postgres port | `5432` |
 | `DB_NAME` | Database name | `notes_db` |
 | `DB_USER` | Postgres user | `notes_user` |
 | `DB_PASSWORD` | Postgres password | — |
 | `PORT` | HTTP port | `4000` |
+| `MODE` | Startup note-type mode (`DEFAULT`, `ALL`, `QUOTES`, …) | **Docker:** defaults to **`ALL`** via Compose unless you set `MODE` in `.env`. **Native Node:** unset → `config/local.json` / UI |
 
 ---
 
@@ -128,6 +135,7 @@ quotes/
 │   └── ...
 ├── palettes/              # Saved color palettes (JSON files)
 ├── docker-compose.yml
+├── docker-compose.friend.example.yml   # image-only compose for friends (no Git/build)
 ├── Dockerfile
 └── .env.example
 ```
@@ -165,7 +173,8 @@ To share **your data**: export a JSON backup from Data Management → Export, th
 ## Further Reading
 
 - `.cursor/rules/project-context.mdc` — Cursor rule: read the docs below before substantial work
-- `DOCKER.md` — Docker setup details, Linux/Mac differences, common commands
+- `DOCKER.md` — Docker setup details, Linux/Mac, vault, Postgres, common commands
+- `DOCKER-FRIEND-WINDOWS.md` — **Short hand-off guide** for a non-developer on **Windows** (image + zip layout + `.env`)
 - `ARCHITECTURE.md` — Code patterns, module system, data flow, gotchas
 - `FEATURES.md` — All features documented with implementation notes
 - `scripts/README.md` — CLI utilities (imports, DB scripts, backup splitter)

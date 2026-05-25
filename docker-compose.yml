@@ -1,7 +1,7 @@
 services:
 
   app:
-    image: misa-quotes          # or whatever you name/push the image
+    image: misajokicdocker/misa-quotes:1.0
     build: .
     restart: unless-stopped
     ports:
@@ -13,11 +13,26 @@ services:
       DB_USER:     ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
       PORT:        4000
+      # Default matches `npm run all`. Override in `.env`, e.g. MODE=DEFAULT or MODE=QUOTES.
+      MODE:        ${MODE:-ALL}
     volumes:
-      # Settings — edit on host, restart app to pick up changes
+      # App config (local.json, modes.json, …) — not the vault; edit on host.
       - ./config:/app/config
-      # Uploaded attachments — persisted on host
+      # Default attachments root when local.json has NO vaultPath (see README).
+      # If you use a vault, real files live under <vaultPath>/attachments; this mount
+      # is then unused but kept so non-vault Docker setups still work.
       - ./attachments:/app/attachments
+      #
+      # --- Vault (when config/local.json has vaultPath) ---
+      # The path must match vaultPath EXACTLY on left and right (host:container).
+      #
+      # Option A — put it right here (uncomment ONE line, adjust path):
+      # - /home/mirjok/Dropbox/MainNoteArchiveVault:/home/mirjok/Dropbox/MainNoteArchiveVault:rw
+      #
+      # Option B — leave this file unchanged and use a merge file (gitignored):
+      #   cp docker-compose.override.example.yml docker-compose.override.yml
+      #   edit the path inside; Compose loads it automatically next to docker-compose.yml
+      #
     # Allows DB_HOST=host.docker.internal to reach Postgres on the host machine
     # Works on Linux; on macOS/Windows this resolves automatically without this entry
     extra_hosts:
