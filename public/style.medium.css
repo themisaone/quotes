@@ -455,10 +455,14 @@
     font-size: var(--m-font-xl) !important;
   }
 
-  /* Search section */
+  /* Search section — flat bottom rule (matches style.search.css) */
   .search-section {
-    padding: var(--m-pad-xl) !important;
-    margin-bottom: 1.25rem !important;
+    padding: 0 !important;
+    padding-bottom: 1.5rem !important;
+    margin-bottom: 1rem !important;
+    border-radius: 0 !important;
+    border-bottom: 2px solid var(--border) !important;
+    background: transparent !important;
   }
 
   /* ── Medium search-grid: compress so Tags|Text|Score|Clear fits in the
@@ -504,22 +508,27 @@
     padding: 0 !important;
   }
 
-  .quotes-section h2,
   .quotes-section-header {
-    background: var(--surface) !important;
-    padding: var(--m-pad-sm) var(--m-pad-xl) !important;
+    background: transparent !important;
+    padding: 0.2rem 0 1rem !important;
     margin: 0 0 1rem 0 !important;
-    border-radius: 8px !important;
+    border-radius: 0 !important;
+    border: none !important;
     box-shadow: var(--shadow) !important;
+  }
+
+  .quotes-section h2,
+  .quotes-section-header h2 {
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
   }
 
   /* "⏳ Latest (N)" — flatten line-height so the title sits at the same
      vertical centre as the action buttons in the same flex row. */
   .quotes-section-header h2 {
-    background: transparent !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    box-shadow: none !important;
     line-height: 1 !important;
     display: inline-flex !important;
     align-items: center !important;

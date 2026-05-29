@@ -87,7 +87,7 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.0rem;
   gap: 1rem;
 }
 
@@ -504,12 +504,11 @@ h2 {
 
 /* Search Section */
  .search-section {
-  background: var(--surface);
-  padding: var(--d-pad-xl);
-  border-radius: var(--bradius);
+  /* background: var(--surface); */
+  padding-bottom: 1.5rem;
   margin-bottom: 1rem;
   box-shadow: var(--shadow);
-  border: 2px solid var(--border);
+  border-bottom: 2px solid var(--border);  
 }
 
 /* ---------------------------------------------------------------

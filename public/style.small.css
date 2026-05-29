@@ -60,4 +60,20 @@
     padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
     padding-top: max(0.35rem, env(safe-area-inset-top, 0px));
   }
+
+  /* Flat search / list headers (matches style.search.css + style.cards.css) */
+  .search-section {
+    padding: 0 !important;
+    padding-bottom: 0.75rem !important;
+    border-radius: 0 !important;
+    border-bottom: 2px solid var(--border) !important;
+    background: transparent !important;
+  }
+
+  .quotes-section-header {
+    background: transparent !important;
+    padding: 0.2rem 0 0.75rem !important;
+    border-radius: 0 !important;
+    border: none !important;
+  }
 }

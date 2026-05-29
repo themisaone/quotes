@@ -330,9 +330,20 @@
     padding: 0 !important;
   }
   
-  .quotes-section h2 {
-    padding: 0.5rem 0.25rem !important;
+  .quotes-section-header {
+    background: transparent !important;
+    padding: 0.2rem 0 0.75rem !important;
     margin: 0 0 0.5rem 0 !important;
+    border-radius: 0 !important;
+    border: none !important;
+    box-shadow: var(--shadow) !important;
+  }
+
+  .quotes-section h2,
+  .quotes-section-header h2 {
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
     font-size: 1rem !important;
   }
   
@@ -392,6 +403,13 @@
     width: 100% !important;
     max-width: 300px !important;
     margin: 0.5rem auto !important;
+  }
+
+  /* Empty-text cards: keep thumbnail at natural size, not full mobile width */
+  .quote-top-section.image-only-thumb .quote-image-thumb {
+    width: auto !important;
+    max-width: 240px !important;
+    margin: 0 !important;
   }
   
   .quote-note-title {
@@ -478,11 +496,14 @@
     margin-top: 0.75rem !important;
   }
   
-  /* Compact search section */
+  /* Compact search section — flat bottom rule (matches style.search.css) */
   .search-section {
-    padding: 0.5rem !important;
+    padding: 0 !important;
+    padding-bottom: 0.75rem !important;
     margin-bottom: 0.5rem !important;
-    border-radius: 8px !important;
+    border-radius: 0 !important;
+    border-bottom: 2px solid var(--border) !important;
+    background: transparent !important;
     position: relative !important;
     max-width: 100% !important;
     overflow-x: hidden !important;
