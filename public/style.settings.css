@@ -215,9 +215,34 @@ details.settings-section-desc .settings-section-lead {
   padding: 0;
 }
 
-/* Note ID row: spans all columns so it does not sit as a 7th cell in a 3-col grid */
-.metadata-filter-noteid-row {
-  grid-column: 1 / -1;
+/* Note ID sits in cols 2–3 on the same grid row as the Text filter (col 1) */
+.metadata-filter-noteid-fields {
+  grid-column: 2 / -1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.metadata-filter-noteid-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.metadata-filter-noteid-input {
+  width: 120px;
+  max-width: 100%;
+  min-width: 0;
+  flex: 0 1 auto;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  background: var(--input-bg);
+  color: var(--text-primary);
+  box-sizing: border-box;
 }
 
 /* keep old class name as alias in case it's referenced elsewhere */

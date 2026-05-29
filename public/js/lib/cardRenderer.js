@@ -373,9 +373,12 @@ export function createQuoteCard(note, currentNoteTypeFilter, getTrainingTypes, g
     || /^(\s|<br\s*\/?>|<p[^>]*>\s*(<br\s*\/?>|&nbsp;)?\s*<\/p>)*$/i.test(note.note_text);
   const stretchEnabled = globalSettings?.stretchImagesWhenEmpty === true;
   const hasMultipleAttachments = note.attachments && note.attachments.length > 1;
-  const isImageOnly = isTextEmpty && stretchEnabled && !hasMultipleAttachments;
+  const isTegneserie = noteType === 'tegneserie';
+  const isImageOnly = isTextEmpty && stretchEnabled && !hasMultipleAttachments && isTegneserie;
+  const hasAttachment = !!(note.thumbnail || note.attachment_full || (note.attachments && note.attachments.length > 0));
+  const isCenteredThumbOnly = isTextEmpty && !hasMultipleAttachments && !isTegneserie && hasAttachment && attachmentSection;
 
-  // For image-only cards: full-width image directly (no constrained thumb wrapper)
+  // Tegneserie image-only cards: full-width image directly (no constrained thumb wrapper)
   const imageOnlySection = isImageOnly ? (() => {
     const att = note.attachments && note.attachments.length > 0 ? note.attachments[0] : null;
     const url  = att ? (att.attachment_full || att.thumbnail) : (note.attachment_full || note.thumbnail);
@@ -387,6 +390,10 @@ export function createQuoteCard(note, currentNoteTypeFilter, getTrainingTypes, g
     </div>`;
   })() : null;
 
+  const centeredThumbSection = isCenteredThumbOnly
+    ? `<div class="quote-top-section image-only-thumb">${attachmentSection}</div>`
+    : null;
+
   const expandBtnHtml = isLong
     ? `<button class="expand-btn" id="${expandBtnId}" onclick="event.stopPropagation(); toggleQuoteExpand('${note.id}')">▼ Show more</button>`
     : '';
@@ -394,6 +401,8 @@ export function createQuoteCard(note, currentNoteTypeFilter, getTrainingTypes, g
 
   const topSection = (isImageOnly && imageOnlySection)
     ? imageOnlySection
+    : (centeredThumbSection)
+    ? centeredThumbSection
     /* No whitespace between </div></div> and ${attachmentSection}: in column flex,
        whitespace-only text nodes become flex items and look like an image placeholder gap. */
     : `<div class="quote-top-section"><div class="quote-left-column">${noteScoreLine}<div class="quote-text-wrapper">${quoteBodyHtml}</div></div>${attachmentSection}</div>`;

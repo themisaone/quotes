@@ -16,14 +16,14 @@
     <link rel="stylesheet" href="style.search.css?v=20260519nosubcolor" />
     <link rel="stylesheet" href="style.buttons.css?v=20260519nosubcolor" />
     <link rel="stylesheet" href="style.modal.css?v=20260519nosubcolor" />
-    <link rel="stylesheet" href="style.cards.css?v=20260519nosubcolor" />
+    <link rel="stylesheet" href="style.cards.css?v=20260529tegnstretch" />
     <link rel="stylesheet" href="style.selection.css?v=20260519nosubcolor" />
     <link rel="stylesheet" href="style.attachments.css?v=20260519nosubcolor" />
     <link rel="stylesheet" href="style.entities.css?v=20260519nosubcolor" />
-    <link rel="stylesheet" href="style.settings.css?v=20260519nosubcolor" />
+    <link rel="stylesheet" href="style.settings.css?v=20260529noteidalign" />
     <link rel="stylesheet" href="style.dialogs.css?v=20260525pdfcols" />
     <link rel="stylesheet" href="style.views.css?v=20260519nosubcolor" />
-    <link rel="stylesheet" href="style.mobile.css?v=20260519nosubcolor" />
+    <link rel="stylesheet" href="style.mobile.css?v=20260529noteidrow" />
     <link rel="stylesheet" href="style.small.css?v=20260519nosubcolor" />
     <link rel="stylesheet" href="style.medium.css?v=20260519nosubcolor" />
     <!-- Font Awesome for dice icons -->
@@ -576,16 +576,24 @@
                     </select>
                     <span>🏷️ Title</span>
                   </div>
-       <!-- Find by ID (full-width row inside the metadata grid on small screens) -->
-       <div class="metadata-filter-noteid-row" style="margin-top: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
-        <label style="font-size: 0.85rem; color: var(--text-secondary); white-space: nowrap; display: flex; align-items: center; gap: 0.2rem;"># Note ID</label>
-        <input
-          id="searchNoteId"
-          placeholder="e.g. 1234"
-          min="1"
-          style="width: 120px; max-width: 100%; min-width: 0; flex: 1 1 auto; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; background: var(--input-bg); color: var(--text-primary); box-sizing: border-box;"
-        />
-      </div>
+                  <div class="metadata-filter-item">
+                    <input type="checkbox" id="searchHasText" />
+                    <select id="searchTextCondition">
+                      <option value="has">Have</option>
+                      <option value="not">NOT Have</option>
+                    </select>
+                    <span>📄 Text</span>
+                  </div>
+
+                  <div class="metadata-filter-noteid-fields">
+                    <label class="metadata-filter-noteid-label" for="searchNoteId"># Note ID</label>
+                    <input
+                      id="searchNoteId"
+                      class="metadata-filter-noteid-input"
+                      placeholder="e.g. 1234"
+                      min="1"
+                    />
+                  </div>
                   <!-- Row 3: attachment-related (Image and Multiple depend on Attachment = Have) -->
                   <div class="metadata-filter-item">
                     <input type="checkbox" id="searchHasImage" />
@@ -1352,7 +1360,7 @@
                   <input type="checkbox" id="stretchImagesWhenEmpty" />
                   <span>Stretch Images in Cards When Text is Empty</span>
                 </label>
-                <p class="setting-description">When a note has no text, the image fills the full card width instead of showing as a thumbnail. Applies to all note types (including Tegneserie).</p>
+                <p class="setting-description">When a Tegneserie note has no text, the image fills the full card width instead of showing as a thumbnail. Other note types always show a centered thumbnail at normal size.</p>
               </div>
               <div class="setting-item">
                 <label class="setting-label">

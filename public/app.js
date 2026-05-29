@@ -37,7 +37,7 @@ import {
 
 import {
   createQuoteCard as createQuoteCardLib
-} from './js/lib/cardRenderer.js?v=20260510cardgap';
+} from './js/lib/cardRenderer.js?v=20260529tegnstretch';
 
 import {
   setupAddModal,
@@ -100,7 +100,7 @@ import {
   setCurrentPage as setLibCurrentPage,
   setQuotesPerPage,
   getQuotesPerPage
-} from './js/lib/displayManager.js?v=20260512filterfix';
+} from './js/lib/displayManager.js?v=20260529hastext';
 
 import {
   populateTypeFilterCheckboxes as populateTypeFilterCheckboxesLib,
@@ -3831,6 +3831,7 @@ function getCurrentFilters() {
     hasImageType: getMetadataState(FILTER_IDS.HAS_IMAGE_TYPE_CHECKBOX, FILTER_IDS.HAS_IMAGE_TYPE_CONDITION),
     hasTranslationGroup: getMetadataState(FILTER_IDS.HAS_TRANSLATION_GROUP_CHECKBOX, FILTER_IDS.HAS_TRANSLATION_GROUP_CONDITION),
     hasMultipleAttachments: getMetadataState(FILTER_IDS.HAS_MULTIPLE_ATTACHMENTS_CHECKBOX, FILTER_IDS.HAS_MULTIPLE_ATTACHMENTS_CONDITION),
+    hasText: getMetadataState(FILTER_IDS.HAS_TEXT_CHECKBOX, FILTER_IDS.HAS_TEXT_CONDITION),
   };
   
   return filters;
@@ -4732,13 +4733,15 @@ function setupMetadataSearchListeners() {
   const metadataCheckboxes = [
     'searchHasAuthor', 'searchHasSource', 'searchHasNote',
     'searchHasTags', 'searchHasImage', 'searchHasImageType',
-    'searchHasTranslationGroup', 'searchHasMultipleAttachments', 'searchHasTitle'
+    'searchHasTranslationGroup', 'searchHasMultipleAttachments', 'searchHasTitle',
+    'searchHasText'
   ];
   
   const metadataSelects = [
     'searchAuthorCondition', 'searchSourceCondition', 'searchNoteCondition',
     'searchTagsCondition', 'searchImageCondition', 'searchImageTypeCondition',
-    'searchTranslationGroupCondition', 'searchMultipleAttachmentsCondition', 'searchTitleCondition'
+    'searchTranslationGroupCondition', 'searchMultipleAttachmentsCondition', 'searchTitleCondition',
+    'searchTextCondition'
   ];
   
   // Add listeners to checkboxes

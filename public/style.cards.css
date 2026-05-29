@@ -210,6 +210,23 @@
   transform: scale(1.01);
 }
 
+/* Other types with empty text: centered thumbnail at natural size (no stretch) */
+.quote-top-section.image-only-thumb {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+.quote-top-section.image-only-thumb .quote-image-thumb,
+.quote-top-section.image-only-thumb .quote-file-thumb {
+  align-self: center;
+}
+.quote-top-section.image-only-thumb .quote-image-thumb img {
+  max-width: 240px;
+  width: auto;
+  height: auto !important;
+  object-fit: contain !important;
+}
+
 .quote-main-content {
   display: flex;
   flex-direction: row;

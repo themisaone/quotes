@@ -1369,7 +1369,7 @@ function buildTagSearchCondition(searchQuery, paramCounter, params) {
 // Get total quote count
 app.get("/api/quotes/count", async (req, res) => {
   try {
-    const { quote, author, source, tags, score, types, note_type, training_types, hasAuthor, hasSource, hasNote, hasTags, hasImage, hasImageType, hasTranslationGroup, hasMultipleAttachments, hasTitle } = req.query;
+    const { quote, author, source, tags, score, types, note_type, training_types, hasAuthor, hasSource, hasNote, hasTags, hasImage, hasImageType, hasTranslationGroup, hasMultipleAttachments, hasTitle, hasText } = req.query;
     const { generic_sub_types } = req.query;
     
     // Build filtered count query (with all filters)
@@ -1570,6 +1570,12 @@ app.get("/api/quotes/count", async (req, res) => {
       query += ` AND (q.note_title IS NULL OR q.note_title = '' OR q.note_title = 'No title')`;
     }
 
+    if (hasText === 'true') {
+      query += ` AND q.note_text IS NOT NULL AND q.note_text != ''`;
+    } else if (hasText === 'false') {
+      query += ` AND (q.note_text IS NULL OR q.note_text = '')`;
+    }
+
     if (req.query.hideEncryptedNotes === 'true') {
       query += ` AND q.attachment_type IS DISTINCT FROM 'encrypted'`
              + ` AND NOT EXISTS (SELECT 1 FROM note_attachments WHERE note_id = q.id AND attachment_type = 'encrypted')`;
@@ -1665,6 +1671,7 @@ app.get("/api/quotes", async (req, res) => {
       hasTranslationGroup,
       hasMultipleAttachments,
       hasTitle,
+      hasText,
       noteId,
       limit = 20,
       offset = 0,
@@ -1821,6 +1828,12 @@ app.get("/api/quotes", async (req, res) => {
       query += ` AND q.note_title IS NOT NULL AND q.note_title != '' AND q.note_title != 'No title'`;
     } else if (hasTitle === 'false') {
       query += ` AND (q.note_title IS NULL OR q.note_title = '' OR q.note_title = 'No title')`;
+    }
+
+    if (hasText === 'true') {
+      query += ` AND q.note_text IS NOT NULL AND q.note_text != ''`;
+    } else if (hasText === 'false') {
+      query += ` AND (q.note_text IS NULL OR q.note_text = '')`;
     }
 
     if (req.query.hideEncryptedNotes === 'true') {
@@ -3314,6 +3327,12 @@ function buildFilterQuery(filters) {
     query += ` AND q.note_title IS NOT NULL AND q.note_title != '' AND q.note_title != 'No title'`;
   } else if (filters.hasTitle === 'false') {
     query += ` AND (q.note_title IS NULL OR q.note_title = '' OR q.note_title = 'No title')`;
+  }
+
+  if (filters.hasText === 'true') {
+    query += ` AND q.note_text IS NOT NULL AND q.note_text != ''`;
+  } else if (filters.hasText === 'false') {
+    query += ` AND (q.note_text IS NULL OR q.note_text = '')`;
   }
 
   if (filters.noteId && !isNaN(parseInt(filters.noteId))) {

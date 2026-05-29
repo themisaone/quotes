@@ -54,6 +54,8 @@ export const FILTER_IDS = {
   HAS_MULTIPLE_ATTACHMENTS_CONDITION: 'searchMultipleAttachmentsCondition',
   HAS_TITLE_CHECKBOX: 'searchHasTitle',
   HAS_TITLE_CONDITION: 'searchTitleCondition',
+  HAS_TEXT_CHECKBOX: 'searchHasText',
+  HAS_TEXT_CONDITION: 'searchTextCondition',
   
   // Search containers
   SEARCH_HEADER_TITLE: 'searchHeaderTitle',
