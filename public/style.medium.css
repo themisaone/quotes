@@ -748,8 +748,9 @@
     margin: 0.5em 0 !important;
   }
 
-  /* Note title: modal uses desktop card size, card gets smaller */
-  #noteTitle {
+  /* Note title: modal + list-pane use desktop card size on medium, card gets smaller */
+  #noteTitle,
+  .lp-pane-title.note-title-heading {
     font-size: var(--d-font-h2-quote) !important;
   }
   .card-note-title {

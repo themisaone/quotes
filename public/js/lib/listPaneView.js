@@ -19,6 +19,14 @@
 
 import { escapeHtml, resolveAttachmentUrl } from './utils.js';
 import { renderTrainingCalendar } from './trainingCalendar.js';
+import { buildPaneMetaSections, buildPaneScoreHtml } from './cardRenderer.js?v=20260605lpclean1';
+import {
+  ensurePaneEditorShell,
+  loadPaneNote,
+  confirmLeavePaneEditor,
+  flushPendingPaneNoteSaved,
+  resetPaneEditor,
+} from './paneEditor.js?v=20260605lpclean1';
 
 // ─────────────────────────────────────────────────────────────
 // Internal state (reset on every renderListPaneView call)
@@ -28,10 +36,8 @@ let _selectedIndex = 0;
 let _opts = {};
 let _container = null;
 
-// Per-note-type "sub-view" preference for the list-pane left column.  Only
-// Trainings currently have two sub-views (calendar / list); other note types
-// will simply ignore the value.  Persisted in localStorage so the user's
-// choice survives reloads.
+// Training sub-view (calendar / list) — toggled from page header #trainingSubModeSelect.
+// Persisted in localStorage so the choice survives reloads.
 const TRAINING_SUBMODE_KEY = 'lpTrainingSubMode';
 const VALID_SUBMODES = new Set(['calendar', 'list']);
 
@@ -52,83 +58,25 @@ export function getTrainingSubMode() {
   return VALID_SUBMODES.has(v) ? v : 'calendar';
 }
 
-function setTrainingSubMode(mode) {
+export function setTrainingSubMode(mode) {
   if (!VALID_SUBMODES.has(mode)) return;
   try { localStorage.setItem(TRAINING_SUBMODE_KEY, mode); } catch { /* ignore */ }
 }
 
 // ─────────────────────────────────────────────────────────────
-// Training Year/Month filter reparenting
+// Training Year/Month filters (filter bar only)
 // ─────────────────────────────────────────────────────────────
-// When training + list sub-mode is active we physically move the global
-// Year/Month filter containers out of the filter bar and into the list
-// header so the user has one unambiguous location to pick year/month.
-// The underlying <select> elements stay the same (their IDs and event
-// listeners are preserved across moves), so every existing code path that
-// reads #trainingYearFilter / #trainingMonthFilter keeps working.
-//
-// We remember each container's original parent + nextSibling on first move
-// so we can always return them to the same exact spot.
-let _filterOriginalYearNext  = null;  // original nextSibling for year container
-let _filterOriginalMonthNext = null;  // original nextSibling for month container
-let _filterOriginalParent    = null;  // original parent (shared between both)
-
-function captureOriginalFilterPositions() {
-  if (_filterOriginalParent) return;
-  const y = document.getElementById('trainingYearContainer');
-  const m = document.getElementById('trainingMonthContainer');
-  if (y && y.parentElement) {
-    _filterOriginalParent    = y.parentElement;
-    _filterOriginalYearNext  = y.nextSibling;
-    _filterOriginalMonthNext = m ? m.nextSibling : null;
-  }
-}
-
-/**
- * Move the training Year/Month filter containers into the given host element
- * and force them visible there.  Safe to call repeatedly — it's a no-op if
- * the containers already live in `host`.
- */
-function moveTrainingDateFiltersTo(host) {
-  if (!host) return;
-  captureOriginalFilterPositions();
-  const y = document.getElementById('trainingYearContainer');
-  const m = document.getElementById('trainingMonthContainer');
-  if (y && y.parentElement !== host) host.appendChild(y);
-  if (m && m.parentElement !== host) host.appendChild(m);
-  if (y) y.style.display = 'block';
-  if (m) m.style.display = 'block';
-}
-
-/**
- * Return the training Year/Month filter containers to their original parent
- * at their original positions.  Optionally force them hidden (used in
- * calendar sub-mode where they're redundant with the calendar's own
- * in-header dropdowns).  Safe to call repeatedly.
- */
+/** Hide or restore training date filters in the filter bar (calendar hides them). */
 export function restoreTrainingDateFiltersToBar({ hide = false } = {}) {
   const y = document.getElementById('trainingYearContainer');
   const m = document.getElementById('trainingMonthContainer');
-
-  // Only move nodes if we've captured their original home AND they're
-  // currently elsewhere.  On first render they're still in the filter bar,
-  // so there's nothing to move — just proceed to optional hide.
-  if (_filterOriginalParent) {
-    if (y && y.parentElement !== _filterOriginalParent) {
-      _filterOriginalParent.insertBefore(y, _filterOriginalYearNext);
-    }
-    if (m && m.parentElement !== _filterOriginalParent) {
-      _filterOriginalParent.insertBefore(m, _filterOriginalMonthNext);
-    }
-  }
-
   if (hide) {
     if (y) y.style.display = 'none';
     if (m) m.style.display = 'none';
+  } else {
+    if (y) y.style.removeProperty('display');
+    if (m) m.style.removeProperty('display');
   }
-  // When not hiding we leave display alone — the next updateFilterVisibility
-  // call (triggered e.g. by a note-type change) will reset it to 'block' for
-  // training views or 'none' for non-training views.
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -300,115 +248,114 @@ function buildRowHtml(note, idx, isSelected, opts) {
 // Pane rendering
 // ─────────────────────────────────────────────────────────────
 
-function renderPane(pane, note, idx) {
+function wirePaneMetaLinks(pane) {
+  pane.querySelectorAll('.author-link').forEach((link) => {
+    link.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      _opts.openAuthorModal?.(link.dataset.id, link.dataset.name);
+    };
+  });
+  pane.querySelectorAll('.source-link').forEach((link) => {
+    link.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      _opts.openSourceModal?.(
+        link.dataset.id,
+        link.dataset.name,
+        link.dataset.type || 'BOOK',
+      );
+    };
+  });
+}
+
+function updatePaneNoteDisplay(pane, note) {
+  if (!pane || !note) return;
+
+  const titleEl = pane.querySelector('#lpPaneTitle');
+  if (titleEl) titleEl.textContent = listPaneTitle(note);
+
+  const scoreEl = pane.querySelector('#lpPaneScore');
+  if (scoreEl) {
+    const scoreHtml = buildPaneScoreHtml(note);
+    scoreEl.innerHTML = scoreHtml;
+    scoreEl.hidden = !scoreHtml;
+  }
+
+  const { commentHtml, metadataHtml } = buildPaneMetaSections(
+    note,
+    _opts.currentNoteTypeFilter,
+    _opts.getTrainingTypes,
+    _opts.getQuoteTypes,
+    _opts.globalSettings,
+  );
+
+  const commentEl = pane.querySelector('#lpPaneComment');
+  if (commentEl) {
+    commentEl.innerHTML = commentHtml;
+    commentEl.hidden = !commentHtml;
+  }
+
+  const metaEl = pane.querySelector('#lpPaneMeta');
+  if (metaEl) {
+    const hasMeta = !!(metadataHtml && metadataHtml.trim());
+    metaEl.innerHTML = hasMeta
+      ? `<div class="quote-metadata-row"><div class="quote-metadata-left">${metadataHtml}</div></div>`
+      : '';
+    metaEl.hidden = !hasMeta;
+  }
+
+  wirePaneMetaLinks(pane);
+}
+
+function renderPane(pane, note) {
   if (!note) {
+    resetPaneEditor();
     pane.innerHTML = `<div class="lp-pane-empty"><span>← Select a note to view</span></div>`;
     return;
   }
 
-  const total = _notes.length;
-  const { openEditModal, createQuoteCard, currentNoteTypeFilter, getTrainingTypes, getQuoteTypes, globalSettings } = _opts;
-
-  // Navigation
-  const navHtml = `
-    <div class="lp-pane-nav">
-      <button class="lp-nav-btn" id="lpPrev" ${idx <= 0 ? 'disabled' : ''}>◀ Prev</button>
-      <span class="lp-nav-counter">${idx + 1} / ${total}</span>
-      <button class="lp-nav-btn" id="lpNext" ${idx >= total - 1 ? 'disabled' : ''}>Next ▶</button>
-    </div>`;
-
-  // Full card HTML (reuse existing renderer)
-  const cardHtml = createQuoteCard(note, currentNoteTypeFilter, getTrainingTypes, getQuoteTypes, globalSettings);
-
-  pane.innerHTML = navHtml + cardHtml;
-
-  // ── Nav button handlers ──
-  const prevBtn = pane.querySelector('#lpPrev');
-  const nextBtn = pane.querySelector('#lpNext');
-  if (prevBtn) prevBtn.addEventListener('click', () => selectNote(idx - 1));
-  if (nextBtn) nextBtn.addEventListener('click', () => selectNote(idx + 1));
-
-  // ── Click card to edit (same as card-grid behaviour) ──
-  const card = pane.querySelector('.quote-card');
-  if (card) {
-    card.addEventListener('click', e => {
-      // Let tag, author/source links, expand buttons handle themselves
-      if (e.target.closest('.tag-clickable, .author-link, .source-link, .expand-btn, .lp-pane-nav')) return;
-      openEditModal(note);
-    });
-  }
-
-  // ── Author / Source link handlers ──
-  pane.querySelectorAll('.author-link').forEach(link => {
-    link.addEventListener('click', e => {
-      e.preventDefault();
-      e.stopPropagation();
-      _opts.openAuthorModal && _opts.openAuthorModal(link.dataset.id, link.dataset.name);
-    });
-  });
-  pane.querySelectorAll('.source-link').forEach(link => {
-    link.addEventListener('click', e => {
-      e.preventDefault();
-      e.stopPropagation();
-      _opts.openSourceModal && _opts.openSourceModal(link.dataset.id, link.dataset.name, link.dataset.type || 'BOOK');
-    });
+  ensurePaneEditorShell(pane, {
+    onProperties: () => {
+      const current = _notes[_selectedIndex];
+      if (current) _opts.openPropertiesModal?.(current);
+    },
+    onSave: () => {},
   });
 
-  // ── Tag click handlers ──
-  pane.querySelectorAll('.tag-clickable').forEach(tag => {
-    tag.addEventListener('click', e => {
-      e.stopPropagation();
-      _opts.filterByTag && _opts.filterByTag(tag.textContent.trim());
-    });
-  });
-
-  // ── Expand / collapse long text ──
-  pane.querySelectorAll('.expand-btn').forEach(btn => {
-    btn.addEventListener('click', e => {
-      e.stopPropagation();
-      const noteIdStr = btn.id.replace('expand-', '');
-      const textEl = pane.querySelector(`#quote-${noteIdStr}`);
-      if (!textEl) return;
-      const expanded = textEl.dataset.expanded === 'true';
-      if (expanded) {
-        textEl.classList.add('collapsible');
-        textEl.dataset.expanded = 'false';
-        btn.innerHTML = '▼ Show more';
-      } else {
-        textEl.classList.remove('collapsible');
-        textEl.dataset.expanded = 'true';
-        btn.innerHTML = '▲ Show less';
-      }
-    });
-  });
-
-  // ── Image thumbnails ──
-  // showFullImage is a global, no extra wiring needed (the card HTML has onclick attrs).
-
-  // Notify caller so it can apply post-render logic (e.g. showLongExpanded)
-  _opts.onPaneRendered?.();
+  updatePaneNoteDisplay(pane, note);
+  loadPaneNote(note, pane);
 }
 
 // ─────────────────────────────────────────────────────────────
 // Selection logic
 // ─────────────────────────────────────────────────────────────
 
-function selectNote(idx) {
+async function selectNote(idx, { skipDirtyCheck = false } = {}) {
   if (idx < 0 || idx >= _notes.length) return;
-  _selectedIndex = idx;
+  if (idx === _selectedIndex) return;
 
-  // Update list row highlights
+  const targetIdx = idx;
+
+  if (!skipDirtyCheck) {
+    const leave = await confirmLeavePaneEditor();
+    if (leave === 'cancel') return;
+  }
+
+  _selectedIndex = targetIdx;
+
   _container.querySelectorAll('.lp-row').forEach(row => {
-    row.classList.toggle('lp-selected', parseInt(row.dataset.lpIdx) === idx);
+    row.classList.toggle('lp-selected', parseInt(row.dataset.lpIdx, 10) === targetIdx);
   });
 
-  // Scroll selected row into view within the list column
-  const selectedRow = _container.querySelector(`.lp-row[data-lp-idx="${idx}"]`);
+  const selectedRow = _container.querySelector(`.lp-row[data-lp-idx="${targetIdx}"]`);
   if (selectedRow) selectedRow.scrollIntoView({ block: 'nearest' });
 
-  // Re-render pane
   const pane = _container.querySelector('.lp-pane');
-  if (pane) renderPane(pane, _notes[idx], idx);
+  if (pane) renderPane(pane, _notes[targetIdx]);
+
+  // Refresh list row for the note we saved before leaving (deferred during switch)
+  flushPendingPaneNoteSaved();
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -428,6 +375,7 @@ export function getSelectedNoteId() {
  * opts.initialNoteId – if provided, open that note instead of the first one.
  */
 export function renderListPaneView(container, notes, opts) {
+  resetPaneEditor();
   _container = container;
   _notes = notes;
   _opts = opts;
@@ -437,51 +385,9 @@ export function renderListPaneView(container, notes, opts) {
   const restoredIdx = wantedId != null ? notes.findIndex(n => n.id == wantedId) : -1;
   _selectedIndex = restoredIdx >= 0 ? restoredIdx : 0;
 
-  // Derive a display label for the list header
-  const TYPE_META = {
-    training:   { icon: '💪', label: 'Trainings' },
-    job:        { icon: '💼', label: 'Jobs'      },
-    quote:      { icon: '💬', label: 'Quotes'    },
-    historical: { icon: '📖', label: 'Historical' },
-    lyrics:     { icon: '🎵', label: 'Lyrics'    },
-    note:       { icon: '📝', label: 'Notes'     },
-  };
-  const typeMeta = opts.currentNoteTypeFilter == null
-    ? { icon: '📋', label: 'All Notes' }
-    : (TYPE_META[opts.currentNoteTypeFilter] || { icon: '📋', label: opts.currentNoteTypeFilter });
-
-  // Training is the only note type that offers a sub-view toggle.  The toggle
-  // lives in the list header; clicking it re-invokes renderListPaneView with
-  // the same notes/opts so we keep the code path uniform.
   const isTraining = opts.currentNoteTypeFilter === 'training';
   const useTitledLayout = !isTraining;
-  const subMode    = isTraining ? getTrainingSubMode() : 'list';
-
-  const toggleHtml = isTraining ? `
-    <div class="lp-list-header-toggle" role="tablist" aria-label="List view mode">
-      <button type="button" class="lp-toggle-btn${subMode === 'calendar' ? ' active' : ''}" data-lp-submode="calendar" role="tab" aria-selected="${subMode === 'calendar'}">📅 Calendar</button>
-      <button type="button" class="lp-toggle-btn${subMode === 'list' ? ' active' : ''}" data-lp-submode="list" role="tab" aria-selected="${subMode === 'list'}">📋 List</button>
-    </div>` : '';
-
-  const countHtml = subMode === 'calendar'
-    ? '' // Calendar has its own title (month/year) — a "N notes" count would be misleading
-    : `<span class="lp-list-header-count">${notes.length} notes</span>`;
-
-  // A dedicated slot where we park the global Year/Month filter containers
-  // when training + list sub-mode is active.  Only emitted in that mode — in
-  // other modes the slot doesn't exist and the containers live in the global
-  // filter bar as usual.
-  const dateFiltersSlotHtml = (isTraining && subMode === 'list')
-    ? `<div class="lp-list-header-dates" id="lpListHeaderDates"></div>`
-    : '';
-
-  const headerHtml = `
-    <div class="lp-list-header">
-      <span class="lp-list-header-type">${typeMeta.icon} ${typeMeta.label}</span>
-      ${toggleHtml}
-      ${countHtml}
-    </div>
-    ${dateFiltersSlotHtml}`;
+  const subMode = isTraining ? getTrainingSubMode() : 'list';
 
   // ── Training + Calendar sub-mode ─────────────────────────────────────────
   if (isTraining && subMode === 'calendar') {
@@ -492,20 +398,16 @@ export function renderListPaneView(container, notes, opts) {
 
     container.innerHTML = `
       <div class="lp-layout">
-        <div class="lp-list lp-list-calendar" id="lpList">${headerHtml}</div>
+        <div class="lp-list lp-list-calendar" id="lpList"></div>
         <div class="lp-pane" id="lpPane"></div>
       </div>`;
     const list    = container.querySelector('#lpList');
     const pane    = container.querySelector('#lpPane');
-    // The calendar renders into its own host below the header.
     const calHost = document.createElement('div');
     calHost.className = 'lp-calendar-host';
     list.appendChild(calHost);
 
-    wireToggleButtons(list, notes, opts);
-
-    // Render empty pane first; the calendar will notify us once it has data.
-    renderPane(pane, null, 0);
+    renderPane(pane, null);
 
     // Read the current Year / Month filter values so the calendar opens on
     // the month the user has selected in the filter bar.  When the user has
@@ -538,7 +440,7 @@ export function renderListPaneView(container, notes, opts) {
       onSelectNote: (monthNotes, idx) => {
         _notes = monthNotes;
         _selectedIndex = idx;
-        renderPane(pane, monthNotes[idx] || null, idx);
+        renderPane(pane, monthNotes[idx] || null);
       },
       // Keep the Year/Month filter selects visually synced so switching to
       // list mode (or any re-render) continues from the month the user
@@ -564,30 +466,22 @@ export function renderListPaneView(container, notes, opts) {
   const listCls   = useTitledLayout ? 'lp-list lp-list-titled' : 'lp-list';
   container.innerHTML = `
     <div class="${layoutCls}">
-      <div class="${listCls}" id="lpList">${headerHtml}</div>
+      <div class="${listCls}" id="lpList"></div>
       <div class="lp-pane" id="lpPane"></div>
     </div>`;
 
   const list = container.querySelector('#lpList');
-  wireToggleButtons(list, notes, opts);
-
-  // For training + list sub-mode: move the now-safe filter containers into
-  // the newly-rendered list header slot.
-  if (isTraining && subMode === 'list') {
-    const slot = container.querySelector('#lpListHeaderDates');
-    if (slot) moveTrainingDateFiltersTo(slot);
-  }
 
   notes.forEach((note, idx) => {
     list.insertAdjacentHTML('beforeend', buildRowHtml(note, idx, idx === _selectedIndex, opts));
   });
 
   list.querySelectorAll('.lp-row').forEach(row => {
-    row.addEventListener('click', () => selectNote(parseInt(row.dataset.lpIdx)));
+    row.addEventListener('click', () => { selectNote(parseInt(row.dataset.lpIdx)); });
   });
 
   const pane = container.querySelector('#lpPane');
-  renderPane(pane, notes[_selectedIndex] || null, _selectedIndex);
+  renderPane(pane, notes[_selectedIndex] || null);
 
   const initRow = list.querySelector(`.lp-row[data-lp-idx="${_selectedIndex}"]`);
   if (initRow) initRow.scrollIntoView({ block: 'nearest' });
@@ -596,39 +490,10 @@ export function renderListPaneView(container, notes, opts) {
 }
 
 /**
- * Attach click handlers to the Calendar/List toggle buttons in the list
- * header.  On click we persist the new sub-mode and re-invoke
- * renderListPaneView with the cached notes/opts so the switch is instant.
- *
- * Note: we rely on the caller-supplied `opts.onSubModeChange` to trigger any
- * side-effects that need full reload (e.g. list mode wanting pagination to
- * reappear).  If the caller doesn't provide one we just re-render in place,
- * which is fine because the calendar does its own data fetching and the
- * list sub-mode is content-complete with whatever `notes` were passed in.
- */
-function wireToggleButtons(list, notes, opts) {
-  list.querySelectorAll('.lp-toggle-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const newMode = btn.dataset.lpSubmode;
-      if (!VALID_SUBMODES.has(newMode)) return;
-      if (getTrainingSubMode() === newMode) return;
-      setTrainingSubMode(newMode);
-      // Let the app reload (pagination + displayQuotes empty-state depend on
-      // the current sub-mode).  Fall back to a local re-render if no hook.
-      if (typeof opts.onSubModeChange === 'function') {
-        opts.onSubModeChange(newMode);
-      } else {
-        renderListPaneView(_container, notes, opts);
-      }
-    });
-  });
-}
-
-/**
  * Refresh just the pane content for a given note id (call after save).
  * Also updates the in-memory notes array entry.
  */
-export function refreshPaneNote(noteId, updatedNote) {
+export function refreshPaneNote(noteId, updatedNote, { updatePaneEditor = true } = {}) {
   const idx = _notes.findIndex(n => n.id == noteId);
   if (idx === -1 || !_container) return;
   _notes[idx] = updatedNote;
@@ -642,9 +507,12 @@ export function refreshPaneNote(noteId, updatedNote) {
     if (newRow) newRow.addEventListener('click', () => selectNote(parseInt(newRow.dataset.lpIdx)));
   }
 
-  // Re-render pane if this is the currently selected note
-  if (idx === _selectedIndex) {
-    const pane = _container.querySelector('.lp-pane');
-    if (pane) renderPane(pane, updatedNote, idx);
+  const pane = _container.querySelector('.lp-pane');
+  if (idx === _selectedIndex && pane) {
+    updatePaneNoteDisplay(pane, updatedNote);
+  }
+
+  if (updatePaneEditor && idx === _selectedIndex) {
+    _opts.onPaneNoteUpdated?.(updatedNote);
   }
 }

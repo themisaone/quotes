@@ -293,6 +293,16 @@
   background: #dc2626;
   box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
 }
+.confirm-btn-discard {
+  background: var(--bg-secondary, #f1f5f9);
+  color: var(--text-secondary, #475569);
+  border: 1px solid var(--border, #cbd5e1);
+}
+.confirm-btn-discard:hover {
+  background: #e2e8f0;
+  color: var(--text-primary, #1e293b);
+}
+
 .confirm-btn-ok.danger:hover {
   background: #b91c1c;
   box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);

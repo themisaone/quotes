@@ -301,6 +301,63 @@ function buildAttachmentSection(note, imageUrl, imageFullUrl) {
   return `<div class="quote-file-thumb" onclick="${onclick}"><div class="file-icon">${fileIcon}</div><div class="file-label">${fileLabel}</div></div>`;
 }
 
+const SCORE_DICE_NAMES = ['one', 'two', 'three', 'four', 'five', 'six'];
+
+function _scoreDiceIcon(score) {
+  const n = parseInt(score, 10);
+  if (!n || n < 1 || n > 6) return '';
+  return `<i class="fa-solid fa-dice-${SCORE_DICE_NAMES[n - 1]}"></i>`;
+}
+
+/** Score dice for list-pane title row (display only). */
+export function buildPaneScoreHtml(note) {
+  const score = note.score;
+  if (!score || parseInt(score, 10) <= 0) return '';
+  const icon = _scoreDiceIcon(score);
+  if (!icon) return '';
+  return `<span class="lp-pane-score quote-score-line" title="Score ${parseInt(score, 10)}">${icon}</span>`;
+}
+
+function buildPaneCommentHtml(note) {
+  if (!note.comment) return '';
+  return `<div class="quote-note-title"><span></span><span>${escapeHtml(note.comment)}</span></div>`;
+}
+
+/**
+ * Comment + metadata blocks for list-pane header (reuses card builders).
+ * @returns {{ commentHtml: string, metadataHtml: string }}
+ */
+export function buildPaneMetaSections(
+  note,
+  currentNoteTypeFilter,
+  getTrainingTypes,
+  getQuoteTypes,
+  globalSettings,
+) {
+  const commentHtml = buildPaneCommentHtml(note) || '';
+
+  const translationBadge = note.translation_group
+    ? `<span class="translation-badge" title="Group: ${escapeHtml(note.translation_group)}">G</span>`
+    : '';
+
+  const noteType = note.note_type || currentNoteTypeFilter || 'quote';
+  const noteTypeBadge = getNoteTypeBadgeHtml(noteType, true, currentNoteTypeFilter);
+
+  let metadataHtml = '';
+  switch (noteType) {
+    case 'quote':
+      metadataHtml = buildQuoteMetadata(note, noteTypeBadge, translationBadge, getQuoteTypes);
+      break;
+    case 'training':
+      metadataHtml = buildTrainingMetadata(note, noteTypeBadge, translationBadge, getTrainingTypes);
+      break;
+    default:
+      metadataHtml = buildGenericMetadata(noteTypeBadge, translationBadge);
+  }
+
+  return { commentHtml, metadataHtml };
+}
+
 /**
  * Creates HTML for a note card
  * @param {Object} quote - The quote/note object from database

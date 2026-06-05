@@ -15,17 +15,17 @@
     <link rel="stylesheet" href="style.sidemenu.css?v=20260519nosubcolor" />
     <link rel="stylesheet" href="style.search.css?v=20260529flatheaders" />
     <link rel="stylesheet" href="style.buttons.css?v=20260519nosubcolor" />
-    <link rel="stylesheet" href="style.modal.css?v=20260519nosubcolor" />
-    <link rel="stylesheet" href="style.cards.css?v=20260529flatheaders" />
+    <link rel="stylesheet" href="style.modal.css?v=20260605panealign1" />
+    <link rel="stylesheet" href="style.cards.css?v=20260605panealign1" />
     <link rel="stylesheet" href="style.selection.css?v=20260519nosubcolor" />
     <link rel="stylesheet" href="style.attachments.css?v=20260519nosubcolor" />
     <link rel="stylesheet" href="style.entities.css?v=20260519nosubcolor" />
     <link rel="stylesheet" href="style.settings.css?v=20260529noteidalign" />
-    <link rel="stylesheet" href="style.dialogs.css?v=20260525pdfcols" />
-    <link rel="stylesheet" href="style.views.css?v=20260605displayall" />
+    <link rel="stylesheet" href="style.dialogs.css?v=20260605paneedit" />
+    <link rel="stylesheet" href="style.views.css?v=20260605lpclean1" />
     <link rel="stylesheet" href="style.mobile.css?v=20260529flatheaders" />
     <link rel="stylesheet" href="style.small.css?v=20260529flatheaders" />
-    <link rel="stylesheet" href="style.medium.css?v=20260529flatheaders" />
+    <link rel="stylesheet" href="style.medium.css?v=20260605panealign1" />
     <!-- Font Awesome for dice icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <!-- Quill Editor -->
@@ -68,6 +68,7 @@
         <p class="confirm-message" id="confirmMessage"></p>
         <div class="confirm-actions">
           <button id="confirmCancelBtn" class="confirm-btn confirm-btn-cancel"></button>
+          <button id="confirmDiscardBtn" class="confirm-btn confirm-btn-discard" style="display: none;"></button>
           <button id="confirmOkBtn" class="confirm-btn confirm-btn-ok"></button>
         </div>
       </div>
@@ -299,6 +300,10 @@
                 </span>
               </h1>
               <div class="header-actions">
+                <select id="trainingSubModeSelect" class="display-mode-select" title="Training view" style="display: none;">
+                  <option value="calendar">📅 Calendar</option>
+                  <option value="list">📋 List</option>
+                </select>
                 <select id="displayModeSelect" class="display-mode-select" title="Display mode" style="display: none;">
                   <option value="cards">⊞ Cards</option>
                   <option value="list-pane">☰ List + Pane</option>
@@ -1520,7 +1525,7 @@
             </div>
 
           <div class="form-group quote-editor-group">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0;">
+            <div class="quote-editor-toolbar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0;">
               <div style="display: flex; align-items: center; gap: 0.5rem;">
                 <label for="quoteText" style="margin-bottom: 0;"><span id="quoteTextLabel">📝 Note text *</span></label>
                 <button type="button" id="toggleFullscreenEditor" class="btn-icon" title="Fullscreen Editor" style="padding: 0.25rem 0.5rem; font-size: 0.9rem;">
@@ -1566,6 +1571,7 @@
               </div>
             </div>
 
+            <div class="quote-editor-body">
             <!-- Quill editor and Attachment: row on wide screens, column on phones -->
             <div class="quote-modal-editor-split">
               <!-- Attachment (left / above on small screens) -->
@@ -1604,6 +1610,7 @@
             </div>
             <!-- Multi-attachment strip: full-width horizontal scroll below editor -->
             <div id="modalAttachmentStrip" class="modal-att-strip" style="display:none;"></div>
+            </div><!-- /.quote-editor-body -->
           </div>
 
           <div class="form-row form-row-with-separator">
@@ -2120,6 +2127,6 @@ Quote number three..."
     <!-- Quill Editor Script -->
     <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
     <script type="module" src="js/lib/confirmDialog.js"></script>
-    <script type="module" src="app.js?v=20260605displayallnotes"></script>
+    <script type="module" src="app.js?v=20260605lpclean1"></script>
   </body>
 </html>

@@ -406,15 +406,15 @@ export function setupAddModal(noteType, currentNoteTypeFilter, elements, quillEd
  * @param {Function} populateTagsForEdit - Function to populate tags
  * @returns {Object} - State object for the modal
  */
-export function setupEditModal(note, elements, quillEditor, updateFieldVisibility, updateModalLabels, populateTagsForEdit) {
+export function setupEditModal(note, elements, quillEditor, updateFieldVisibility, updateModalLabels, populateTagsForEdit, options = {}) {
+  const { skipTextEditor = false, modalTitleText = 'Edit' } = options;
   console.log('🎨 ModalRenderer - Setting up EDIT modal for:', note.note_type);
   
   const { modalTitle, quoteIdInput } = elements;
   const noteType = note.note_type || 'quote';
 
-  // Set modal title
   if (modalTitle) {
-    modalTitle.textContent = "Edit";
+    modalTitle.textContent = modalTitleText;
   }
   
   // Update field labels
@@ -430,8 +430,10 @@ export function setupEditModal(note, elements, quillEditor, updateFieldVisibilit
   // Display metadata
   displayMetadata(note, elements.metadataElement);
   
-  // Set common fields
-  setCommonFields(note, elements, quillEditor);
+  setCommonFields(note, elements, skipTextEditor ? null : quillEditor);
+  if (skipTextEditor && elements.quoteTextInput) {
+    elements.quoteTextInput.value = note.note_text || '';
+  }
   
   // Set type-specific fields
   if (hasAuthorField(noteType)) {

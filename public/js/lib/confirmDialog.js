@@ -127,6 +127,59 @@ export function showPdfExportConfirm(noteCount) {
   });
 }
 
+/**
+ * Unsaved text in list-pane — Save / Don't save / Cancel (stay).
+ * @returns {Promise<'save'|'discard'|'cancel'>}
+ */
+export function showUnsavedChangesConfirm() {
+  return new Promise((resolve) => {
+    const overlay    = document.getElementById('confirmDialog');
+    const iconEl     = document.getElementById('confirmIcon');
+    const titleEl    = document.getElementById('confirmTitle');
+    const msgEl      = document.getElementById('confirmMessage');
+    const okBtn      = document.getElementById('confirmOkBtn');
+    const cancelBtn  = document.getElementById('confirmCancelBtn');
+    const discardBtn = document.getElementById('confirmDiscardBtn');
+
+    iconEl.textContent  = '💾';
+    titleEl.textContent = 'Unsaved changes';
+    msgEl.textContent   = 'Save note text before switching to another note?';
+    okBtn.textContent   = 'Save';
+    discardBtn.textContent = "Don't save";
+    cancelBtn.textContent  = 'Cancel';
+    okBtn.classList.remove('danger');
+    discardBtn.style.display = '';
+
+    overlay.style.display = 'flex';
+    cancelBtn.focus();
+
+    function finish(result) {
+      overlay.style.display = 'none';
+      discardBtn.style.display = 'none';
+      okBtn.removeEventListener('click', onSave);
+      discardBtn.removeEventListener('click', onDiscard);
+      cancelBtn.removeEventListener('click', onCancel);
+      overlay.removeEventListener('click', onBackdrop);
+      document.removeEventListener('keydown', onKey);
+      resolve(result);
+    }
+
+    function onSave(e)     { e?.stopPropagation(); finish('save'); }
+    function onDiscard(e)  { e?.stopPropagation(); finish('discard'); }
+    function onCancel(e)   { e?.stopPropagation(); finish('cancel'); }
+    function onBackdrop(e) { if (e.target === overlay) finish('cancel'); }
+    function onKey(e) {
+      if (e.key === 'Escape') { e.preventDefault(); finish('cancel'); }
+    }
+
+    okBtn.addEventListener('click', onSave);
+    discardBtn.addEventListener('click', onDiscard);
+    cancelBtn.addEventListener('click', onCancel);
+    overlay.addEventListener('click', onBackdrop);
+    document.addEventListener('keydown', onKey);
+  });
+}
+
 // Make available globally for non-module scripts
 window.showConfirm = showConfirm;
 window.showPdfExportConfirm = showPdfExportConfirm;

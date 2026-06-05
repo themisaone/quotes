@@ -37,12 +37,12 @@ import {
 
 import {
   createQuoteCard as createQuoteCardLib
-} from './js/lib/cardRenderer.js?v=20260529tegnstretch';
+} from './js/lib/cardRenderer.js?v=20260605lpclean1';
 
 import {
   setupAddModal,
   setupEditModal
-} from './js/lib/modalRenderer.js?v=20260512entityshow';
+} from './js/lib/modalRenderer.js?v=20260605paneedit';
 
 import {
   exportToPdf as exportToPdfLib,
@@ -140,7 +140,7 @@ import {
   initializeQuillEditor,
   handleFormSubmit as handleFormSubmitLib,
   deleteQuote as deleteQuoteLib
-} from './js/lib/quoteEditor.js?v=20260411grpclr';
+} from './js/lib/quoteEditor.js?v=20260605lpclean1';
 
 import {
   initializeBulkImport,
@@ -177,9 +177,16 @@ import {
   refreshPaneNote,
   getSelectedNoteId as getLpSelectedNoteId,
   getTrainingSubMode,
+  setTrainingSubMode,
   getListPanePageSize,
   restoreTrainingDateFiltersToBar
-} from './js/lib/listPaneView.js';
+} from './js/lib/listPaneView.js?v=20260605lpclean1';
+import {
+  configurePaneEditor,
+  syncPaneTextToModalHidden,
+  applyPaneSavedNote,
+  getPaneEditorHtml,
+} from './js/lib/paneEditor.js?v=20260605lpclean1';
 // They are kept as local functions due to tight coupling with app-specific state
 
 // ── Round-1 extracted modules (May 2026 split — see lib/README.md) ────────
@@ -512,6 +519,7 @@ const lpWrapper = getElementByIdSafe("lpWrapper");   // dedicated container for 
 const quoteCount = getElementByIdSafe("quoteCount");
 const columnCountSelect = getElementByIdSafe("columnCountSelect");
 const displayModeSelect = getElementByIdSafe("displayModeSelect");
+const trainingSubModeSelect = getElementByIdSafe("trainingSubModeSelect");
 const modalTitle = getElementByIdSafe("modalTitle");
 
 // MIGRATED: Bulk import elements moved to bulkImport.js
@@ -917,6 +925,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   
   // Initialize Quill editor using library
   quillEditor = initializeQuillEditor();
+  configurePaneEditor({
+    apiUrl: API_URL,
+    // Text-only pane save: refresh list row only — do not touch editor/baseline
+    onNoteSaved: (saved) => refreshPaneNote(saved.id, saved, { updatePaneEditor: false }),
+  });
   
   // Check if we're on a tablet (769px-1100px) — still used below for other
   // tablet-specific wiring decisions.
@@ -1255,6 +1268,17 @@ function setupEventListeners() {
     });
   }
 
+  if (trainingSubModeSelect) {
+    trainingSubModeSelect.addEventListener('change', () => {
+      const mode = trainingSubModeSelect.value;
+      if (mode !== 'calendar' && mode !== 'list') return;
+      setTrainingSubMode(mode);
+      updateViewModeToggle();
+      updateSourcesFilterVisibility();
+      loadQuotes();
+    });
+  }
+
   if (columnCountSelect) {
     const COLUMN_KEY = 'quotesColumnCount';
 
@@ -1542,6 +1566,9 @@ function updateBulkButtonVisibility() {
 // Wrapper for filterManager library
 function updateSourcesFilterVisibility() {
   updateSourcesFilterVisibilityLib2(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes);
+  if (currentNoteTypeFilter === 'training' && getTrainingSubMode() === 'calendar') {
+    restoreTrainingDateFiltersToBar({ hide: true });
+  }
 }
 
 // Decide which renderer (card grid vs list-pane) to use for the current note
@@ -1598,6 +1625,12 @@ function updateViewModeToggle() {
     const showToggle = hasDisplayModeToggle(currentNoteTypeFilter);
     displayModeSelect.style.display = showToggle ? '' : 'none';
     if (showToggle) displayModeSelect.value = currentViewMode;
+  }
+
+  if (trainingSubModeSelect) {
+    const showTrainingToggle = currentNoteTypeFilter === 'training';
+    trainingSubModeSelect.style.display = showTrainingToggle ? '' : 'none';
+    if (showTrainingToggle) trainingSubModeSelect.value = getTrainingSubMode();
   }
 
   // Column count is irrelevant in list-pane layout
@@ -1752,9 +1785,13 @@ function openAddModal() {
   }, 100); // Small delay to ensure modal is fully rendered
 }
 
-function openEditModal(quote) {
-  // MIGRATED: Using library function
-  
+function openPropertiesModal(quote) {
+  openEditModal(quote, { propertiesOnly: true });
+}
+
+function openEditModal(quote, options = {}) {
+  const { propertiesOnly = false } = options;
+
   // Collect all DOM elements needed by the modal renderer
   const elements = {
     modalTitle: modalTitle,
@@ -1775,15 +1812,26 @@ function openEditModal(quote) {
     quoteIdInput: getElementByIdSafe("quoteId")
   };
   
-  // Setup modal using library
   const state = setupEditModal(
     quote,
     elements,
     quillEditor,
     updateFieldVisibility,
     updateModalLabels,
-    populateTagsForEdit
+    populateTagsForEdit,
+    propertiesOnly
+      ? { skipTextEditor: true, modalTitleText: 'Properties' }
+      : {}
   );
+
+  if (propertiesOnly) {
+    syncPaneTextToModalHidden();
+    const qt = getElementByIdSafe('quoteText');
+    if (qt) qt.value = getPaneEditorHtml() || quote.note_text || '';
+    quoteModal.classList.add('modal-properties-only');
+  } else {
+    quoteModal.classList.remove('modal-properties-only');
+  }
   
   // Update app state
   editingQuoteId = state.editingQuoteId;
@@ -1825,6 +1873,7 @@ function openEditModal(quote) {
 
 function closeQuoteModal() {
   quoteModal.style.display = "none";
+  quoteModal.classList.remove('modal-properties-only');
   quoteModal.classList.remove('has-attachment');
   document.querySelector('#quoteModal .modal-content')?.classList.remove('modal-expanded');
   quoteForm.reset();
@@ -1943,6 +1992,10 @@ async function loadTotalCount() {
 async function handleSubmit(e) {
   e.preventDefault();
 
+  if (quoteModal.classList.contains('modal-properties-only')) {
+    syncPaneTextToModalHidden();
+  }
+
   // Check if this is a training note without year/month tags
   const noteTypeSelect = getElementByIdSafe('noteType');
   const currentNoteType = noteTypeSelect?.value;
@@ -2034,7 +2087,13 @@ async function handleSubmit(e) {
         window._primaryEncAttData = null;
       }
       closeQuoteModal();
-      loadQuotes();
+      const savedId = newNote?.id || editingQuoteId;
+      if (usesListPaneLayout(currentNoteTypeFilter, currentViewMode) && savedId && newNote) {
+        refreshPaneNote(savedId, newNote);
+        applyPaneSavedNote(newNote);
+      } else {
+        loadQuotes();
+      }
       loadTotalCount();
     },
     onError: (error) => {
@@ -2127,7 +2186,7 @@ function displayQuotes(quotes) {
     // Preserve selection across reloads (e.g. after save)
     const prevSelectedId = getLpSelectedNoteId();
     renderListPaneView(lpWrapper || quotesList, quotes, {
-      openEditModal,
+      openPropertiesModal,
       openAuthorModal,
       openSourceModal,
       filterByTag,
@@ -2136,7 +2195,7 @@ function displayQuotes(quotes) {
       getQuoteTypes,
       globalSettings: currentSettings,
       initialNoteId: prevSelectedId,
-      onPaneRendered: applyPaneShowLongExpanded,
+      onPaneNoteUpdated: applyPaneSavedNote,
       // When the user toggles Calendar/List in the training list header we
       // want a full reload: list mode needs pagination to reappear, and
       // calendar mode needs it gone.  loadQuotes() flows through displayQuotes

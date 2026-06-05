@@ -138,14 +138,23 @@
   /* No internal scroll — paging controls handle navigation; page scrolls naturally */
 }
 
-/* Header bar at the top of the list column — matches .lp-pane-nav height */
+/* Shared header band height — list column header + pane Prev/Next row */
+.lp-layout-titled {
+  --lp-band-pad-top: 0.9rem;
+  --lp-band-pad-x: 0.9rem;
+  --lp-band-pad-bottom: 0.75rem;
+  align-items: start;
+}
+
 .lp-list-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.9rem 0.9rem 0.75rem 0.9rem;
+  padding: var(--lp-band-pad-top) var(--lp-band-pad-x) var(--lp-band-pad-bottom);
   border-bottom: 1px solid var(--border);
   border-radius: 12px 12px 0 0;
+  box-sizing: border-box;
+  min-height: calc(var(--lp-band-pad-top) + var(--lp-band-pad-bottom) + var(--d-btn-height));
 }
 .lp-list-header-type {
   font-size: 0.9rem;
@@ -376,25 +385,27 @@
 }
 
 /* Titled layout: left column sets height; right pane matches and scrolls inside */
-.lp-layout-titled {
-  align-items: start;
-}
 .lp-layout-titled .lp-pane {
-  overflow-y: auto;
+  overflow: hidden;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
 }
 
-/* ── Right: pane card ── */
+/* ── Right: pane (inline editor) ── */
 .lp-pane {
   background: var(--surface);
   border-radius: var(--bradius);
   box-shadow: var(--shadow);
   border: 2px solid var(--border);
   padding: 0.5rem;
-  /* Stretch to match the list column height */
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
+  overflow: hidden;
+}
+.lp-layout-titled .lp-pane-empty {
+  padding: 0.5rem;
 }
 
 .lp-pane-empty {
@@ -409,13 +420,137 @@
   opacity: 0.6;
 }
 
+.lp-pane-shell {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .lp-pane-nav {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 1rem;
-  padding-bottom: 0.75rem;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  margin: 0;
+  padding: var(--lp-band-pad-top, 0.9rem) var(--lp-band-pad-x, 0.9rem) var(--lp-band-pad-bottom, 0.75rem);
   border-bottom: 1px solid var(--border);
+  box-sizing: border-box;
+  min-height: calc(var(--lp-band-pad-top, 0.9rem) + var(--lp-band-pad-bottom, 0.75rem) + var(--d-btn-height));
+}
+.lp-pane-nav-left {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.lp-pane-info {
+  flex-shrink: 0;
+  margin-bottom: 0.65rem;
+  padding: var(--lp-band-pad-top, 0.9rem) var(--lp-band-pad-x, 0.9rem) 0.65rem;
+  border-bottom: 1px solid var(--border);
+}
+.lp-pane-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.35rem;
+}
+.lp-pane-title.note-title-heading {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+  border-bottom: none;
+  padding: 0;
+}
+.lp-pane-title-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+.lp-pane-score-slot:not([hidden]) .lp-pane-score {
+  margin: 0;
+  padding: 0 0.15rem;
+}
+.lp-pane-score-slot:not([hidden]) .quote-score-line i {
+  font-size: 1.3rem;
+}
+.lp-pane-comment:not([hidden]) {
+  margin-top: 0.25rem;
+}
+.lp-pane-comment .quote-note-title {
+  margin: 0;
+}
+.lp-pane-meta:not([hidden]) {
+  margin-top: 0.4rem;
+}
+.lp-pane-meta .quote-metadata-row {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+.lp-pane-props-btn,
+.lp-pane-save-btn {
+  height: var(--d-btn-height);
+  padding: 0 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.lp-pane-props-btn:hover:not(:disabled),
+.lp-pane-save-btn:hover:not(:disabled) {
+  background: var(--primary-color);
+  color: #fff;
+  border-color: var(--primary-color);
+}
+.lp-pane-save-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border-color: var(--border);
+}
+.lp-pane-save-btn.lp-pane-save-dirty:not(:disabled) {
+  background: var(--link-color, #1e40af);
+  color: #fff;
+  border-color: var(--link-color, #1e40af);
+  opacity: 1;
+}
+
+.lp-pane-editor-wrap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-left: var(--lp-band-pad-x, 0.9rem);
+  padding-right: var(--lp-band-pad-x, 0.9rem);
+  padding-bottom: var(--lp-band-pad-x, 0.9rem);
+}
+#lpPaneQuill {
+  flex: 1;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+}
+#lpPaneQuill .ql-container {
+  flex: 1;
+  min-height: 0;
+  font-size: var(--d-font-base);
+}
+#lpPaneQuill .ql-editor {
+  min-height: 180px;
 }
 .lp-nav-btn {
   padding: 0.3rem 0.7rem;
@@ -441,35 +576,6 @@
   color: var(--text-secondary);
 }
 
-/* Inside the pane the card is clickable to open the edit modal */
-.lp-pane .quote-card {
-  cursor: pointer;
-  box-shadow: none;
-  border: 2px solid transparent;
-  margin: 0;
-  width: 100%;
-  box-sizing: border-box;
-  flex: 1;
-  transition: border-color 0.15s, box-shadow 0.15s;
-  /* Allow text selection */
-  -webkit-user-select: text;
-  -moz-user-select: text;
-  user-select: text;
-}
-.lp-pane .quote-card:hover {
-  background: var(--surface) !important;
-  border-color: transparent !important;
-  box-shadow: none !important;
-  transform: none !important;
-}
-
-/* Pane scrolls internally — no need for inner text truncation or expand button */
-.lp-pane .quote-text.collapsible {
-  max-height: none !important;
-}
-.lp-pane .expand-btn {
-  display: none !important;
-}
 
 /* Remove border from the very last row so it doesn't bleed into the card's rounded corner */
 .lp-row:last-child {

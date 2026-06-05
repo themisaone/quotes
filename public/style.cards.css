@@ -280,7 +280,8 @@
   line-height: 1.3;
 }
 
-/* Note title — modal input styled as h1 */
+/* Note title — modal input and list-pane display (same typography) */
+.note-title-heading,
 #noteTitle {
   font-size: 1.8rem;
   font-weight: 700;

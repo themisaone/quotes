@@ -119,53 +119,29 @@ function _showImageSizeDialog() {
 /**
  * Downscale base64 image to chosen size and insert into Quill at current cursor.
  */
-async function _insertInlineImage(base64) {
+async function _insertInlineImageFor(quill, base64) {
   const maxPx = await _showImageSizeDialog();
   if (maxPx === null) return; // cancelled
   try {
     const downscaled = await downscaleImage(base64, maxPx, maxPx);
-    const range = quillEditorInstance.getSelection(true);
-    const idx = range ? range.index : quillEditorInstance.getLength();
-    quillEditorInstance.insertEmbed(idx, 'image', downscaled);
-    quillEditorInstance.setSelection(idx + 1);
+    const range = quill.getSelection(true);
+    const idx = range ? range.index : quill.getLength();
+    quill.insertEmbed(idx, 'image', downscaled);
+    quill.setSelection(idx + 1);
   } catch (err) {
     console.error('Error inserting inline image:', err);
   }
 }
 
-// ============= QUILL EDITOR INITIALIZATION =============
-
-/**
- * Initialize Quill rich text editor
- * @param {string} editorSelector - CSS selector for editor element
- * @param {string} hiddenInputId - ID of hidden input to store HTML
- * @returns {Object} Quill editor instance
- */
-export function initializeQuillEditor(editorSelector = '#quoteEditor', hiddenInputId = 'quoteText') {
-  if (!document.querySelector(editorSelector)) {
-    console.error(`Quill editor element not found: ${editorSelector}`);
-    return null;
-  }
-
-  quillEditorInstance = new Quill(editorSelector, {
-    theme: 'snow',
-    modules: {
-      toolbar: QUILL_TOOLBAR_CONFIG
-    },
-    placeholder: QUILL_PLACEHOLDER
-  });
-  
-  // Update hidden field when content changes
-  quillEditorInstance.on('text-change', function() {
-    const html = quillEditorInstance.root.innerHTML;
-    const hiddenInput = getElementByIdSafe(hiddenInputId, 'initializeQuillEditor');
-    if (hiddenInput) {
-      hiddenInput.value = html;
-    }
+function _wireQuillInstance(quill, hiddenInputId, { onTextChange } = {}) {
+  quill.on('text-change', (delta, oldDelta, source) => {
+    const html = quill.root.innerHTML;
+    const hiddenInput = getElementByIdSafe(hiddenInputId);
+    if (hiddenInput) hiddenInput.value = html;
+    onTextChange?.(source);
   });
 
-  // Custom image toolbar handler — opens file picker, shows size dialog, inserts inline
-  const toolbar = quillEditorInstance.getModule('toolbar');
+  const toolbar = quill.getModule('toolbar');
   toolbar.addHandler('image', () => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -174,30 +150,54 @@ export function initializeQuillEditor(editorSelector = '#quoteEditor', hiddenInp
       const file = input.files[0];
       if (!file) return;
       const base64 = await _readFileAsBase64(file);
-      await _insertInlineImage(base64);
+      await _insertInlineImageFor(quill, base64);
     };
     input.click();
   });
 
-  // Intercept clipboard paste — show size dialog before embedding
-  quillEditorInstance.root.addEventListener('paste', async (e) => {
+  quill.root.addEventListener('paste', async (e) => {
     const items = e.clipboardData?.items;
     if (!items) return;
     for (const item of items) {
       if (item.type.startsWith('image/')) {
         e.preventDefault();
         const base64 = await _readFileAsBase64(item.getAsFile());
-        await _insertInlineImage(base64);
+        await _insertInlineImageFor(quill, base64);
         break;
       }
     }
   });
+}
 
-  // Setup fullscreen editor toggle
+// ============= QUILL EDITOR INITIALIZATION =============
+
+/**
+ * Create a Quill editor on any selector (does not replace the modal singleton).
+ */
+export function createQuillEditor(editorSelector, hiddenInputId = 'quoteText', options = {}) {
+  if (!document.querySelector(editorSelector)) {
+    console.error(`Quill editor element not found: ${editorSelector}`);
+    return null;
+  }
+
+  const quill = new Quill(editorSelector, {
+    theme: 'snow',
+    modules: { toolbar: QUILL_TOOLBAR_CONFIG },
+    placeholder: options.placeholder || QUILL_PLACEHOLDER,
+  });
+  _wireQuillInstance(quill, hiddenInputId, options);
+  return quill;
+}
+
+/**
+ * Initialize Quill rich text editor (modal — stored as singleton)
+ */
+export function initializeQuillEditor(editorSelector = '#quoteEditor', hiddenInputId = 'quoteText') {
+  quillEditorInstance = createQuillEditor(editorSelector, hiddenInputId);
+  if (!quillEditorInstance) return null;
+
   setupFullscreenEditor();
-  
   console.log('✅ Quill editor initialized');
-  
   return quillEditorInstance;
 }
 

@@ -266,6 +266,28 @@
   margin-bottom: var(--d-pad-xl);
 }
 
+/* List-pane Properties modal: hide editor body; keep score toolbar row */
+#quoteModal.modal-properties-only .quote-editor-body {
+  display: none !important;
+}
+#quoteModal.modal-properties-only .quote-editor-toolbar > div:first-child {
+  display: none !important;
+}
+#quoteModal.modal-properties-only .quote-editor-toolbar {
+  justify-content: flex-end;
+  margin-bottom: 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+#quoteModal.modal-properties-only .form-group:has(#noteTitle) #noteTitle {
+  border-bottom: none;
+  padding-bottom: 0.15rem;
+}
+#quoteModal.modal-properties-only .form-row.form-row-with-separator {
+  border-top: none;
+  padding-top: 0.75rem;
+}
+
 .quote-editor-group {
   width: 100%;
   max-width: 100%;
