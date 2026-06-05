@@ -177,6 +177,7 @@ import {
   refreshPaneNote,
   getSelectedNoteId as getLpSelectedNoteId,
   getTrainingSubMode,
+  getListPanePageSize,
   restoreTrainingDateFiltersToBar
 } from './js/lib/listPaneView.js';
 // They are kept as local functions due to tight coupling with app-specific state
@@ -324,29 +325,41 @@ let currentNoteTypeFilter = null; // null = show all types
 // Persisted in localStorage per note type so each type remembers its preference.
 let currentViewMode = 'cards';
 
-// Note types that support list-pane view (shown the ⊞/☰ toggle button)
-const LIST_PANE_SUPPORTED_TYPES = new Set(['training']);
-// Note types that MUST use list-pane (card grid is not offered).  Typically a
-// subset of LIST_PANE_SUPPORTED_TYPES — these types get no toggle button and
-// their stored preference is ignored in favour of 'list-pane'.  Training is
-// list-pane-only because its alternative sub-views (Calendar / flat list)
-// already cover every navigation need and having a third (cards) view on top
-// makes the UX noisier without adding value.
+// Training always uses list-pane (no Cards option). All other views — including
+// All Notes — can toggle Cards vs List+Pane via the header DISPLAY_MODE control.
 const LIST_PANE_ONLY_TYPES = new Set(['training']);
 
+function isListPaneOnlyType(noteType) {
+  return LIST_PANE_ONLY_TYPES.has(noteType);
+}
+
+/** Quotes list views that participate in list-pane (includes All Notes / null). */
+function supportsListPaneView() {
+  return true;
+}
+
+function usesListPaneLayout(noteType, viewMode) {
+  if (isListPaneOnlyType(noteType)) return true;
+  return viewMode === 'list-pane';
+}
+
 function getStoredViewMode(noteType) {
-  if (LIST_PANE_ONLY_TYPES.has(noteType)) return 'list-pane';
+  if (isListPaneOnlyType(noteType)) return 'list-pane';
   try {
     return localStorage.getItem(`viewMode_${noteType || 'all'}`) || 'cards';
   } catch { return 'cards'; }
 }
 
 function saveViewMode(noteType, mode) {
-  // List-pane-only types never save — there's nothing to remember.
-  if (LIST_PANE_ONLY_TYPES.has(noteType)) return;
+  if (isListPaneOnlyType(noteType)) return;
   try {
     localStorage.setItem(`viewMode_${noteType || 'all'}`, mode);
   } catch {}
+}
+
+/** Header DISPLAY_MODE dropdown — All Notes and every type except Training. */
+function hasDisplayModeToggle(noteType) {
+  return !isListPaneOnlyType(noteType);
 }
 
 // Expose globally for historyManager
@@ -498,6 +511,7 @@ const quotesList = getElementByIdSafe("quotesList");
 const lpWrapper = getElementByIdSafe("lpWrapper");   // dedicated container for list-pane view
 const quoteCount = getElementByIdSafe("quoteCount");
 const columnCountSelect = getElementByIdSafe("columnCountSelect");
+const displayModeSelect = getElementByIdSafe("displayModeSelect");
 const modalTitle = getElementByIdSafe("modalTitle");
 
 // MIGRATED: Bulk import elements moved to bulkImport.js
@@ -1230,6 +1244,17 @@ function setupEventListeners() {
     }
   }
 
+  if (displayModeSelect) {
+    displayModeSelect.addEventListener('change', () => {
+      const mode = displayModeSelect.value;
+      if (mode !== 'cards' && mode !== 'list-pane') return;
+      currentViewMode = mode;
+      saveViewMode(currentNoteTypeFilter, mode);
+      updateViewModeToggle();
+      loadQuotes();
+    });
+  }
+
   if (columnCountSelect) {
     const COLUMN_KEY = 'quotesColumnCount';
 
@@ -1520,12 +1545,9 @@ function updateSourcesFilterVisibility() {
 }
 
 // Decide which renderer (card grid vs list-pane) to use for the current note
-// type, sync page size, and show/hide the Select button accordingly. The user-
-// facing toggle was removed since training is the only list-pane type and it
-// is locked to list-pane (LIST_PANE_ONLY_TYPES === LIST_PANE_SUPPORTED_TYPES);
-// the function is still the single source of truth for view-mode side effects.
+// type, sync page size, and show/hide the Select button accordingly.
 function updateViewModeToggle() {
-  const supported = LIST_PANE_SUPPORTED_TYPES.has(currentNoteTypeFilter);
+  const supported = supportsListPaneView(currentNoteTypeFilter);
   const selectModeBtn = getElementByIdSafe('selectModeBtn');
   const isGallery = quotesList && quotesList.classList.contains('gallery-mode');
 
@@ -1534,7 +1556,11 @@ function updateViewModeToggle() {
 
     if (!isGallery) {
       // Gallery manages its own page size — don't overwrite it
-      setQuotesPerPage(currentViewMode === 'list-pane' ? 12 : 20);
+      setQuotesPerPage(
+        currentViewMode === 'list-pane'
+          ? getListPanePageSize(currentNoteTypeFilter)
+          : 20
+      );
     }
 
     // Hide Select button in list-pane mode (bulk ops require card mode)
@@ -1566,6 +1592,18 @@ function updateViewModeToggle() {
     if (selectModeBtn) selectModeBtn.style.display = '';
     if (quotesList) quotesList.style.removeProperty('display');
     if (lpWrapper) lpWrapper.style.display = 'none';
+  }
+
+  if (displayModeSelect) {
+    const showToggle = hasDisplayModeToggle(currentNoteTypeFilter);
+    displayModeSelect.style.display = showToggle ? '' : 'none';
+    if (showToggle) displayModeSelect.value = currentViewMode;
+  }
+
+  // Column count is irrelevant in list-pane layout
+  if (columnCountSelect) {
+    const hideColumns = supported && currentViewMode === 'list-pane' && !isGallery;
+    columnCountSelect.style.display = hideColumns ? 'none' : '';
   }
 }
 
@@ -2046,10 +2084,10 @@ function applyPaneShowLongExpanded() {
 function displayQuotes(quotes) {
   // Always sync view mode from localStorage so the first render after a page
   // reload or hash-navigation is correct, regardless of call order.
-  if (LIST_PANE_SUPPORTED_TYPES.has(currentNoteTypeFilter)) {
+  if (supportsListPaneView(currentNoteTypeFilter)) {
     currentViewMode = getStoredViewMode(currentNoteTypeFilter);
     updateViewModeToggle();
-      updateBulkButtonVisibility();
+    updateBulkButtonVisibility();
   } else {
     currentViewMode = 'cards';
   }
@@ -2077,7 +2115,7 @@ function displayQuotes(quotes) {
   // Renders into #lpWrapper (a plain div, never a grid) — quotesList is hidden.
   // Skip list-pane rendering when gallery mode is active (gallery always uses card grid).
   const isGallery = quotesList && quotesList.classList.contains('gallery-mode');
-  if (!isGallery && currentViewMode === 'list-pane' && LIST_PANE_SUPPORTED_TYPES.has(currentNoteTypeFilter)) {
+  if (!isGallery && usesListPaneLayout(currentNoteTypeFilter, currentViewMode)) {
     quotesList.style.setProperty('display', 'none', 'important');
     if (lpWrapper) {
       lpWrapper.style.display = 'block';

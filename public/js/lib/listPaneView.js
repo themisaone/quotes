@@ -35,6 +35,16 @@ let _container = null;
 const TRAINING_SUBMODE_KEY = 'lpTrainingSubMode';
 const VALID_SUBMODES = new Set(['calendar', 'list']);
 
+/** List-pane page size for non-training types — will move to Settings later. */
+export const LP_LIST_PAGE_SIZE = 20;
+/** Fixed thumbnail size for titled list rows (px). */
+export const LP_TITLED_THUMB_SIZE_PX = 80;
+
+export function getListPanePageSize(noteType) {
+  if (noteType === 'training') return 12;
+  return LP_LIST_PAGE_SIZE;
+}
+
 export function getTrainingSubMode() {
   const v = (typeof localStorage !== 'undefined')
     ? localStorage.getItem(TRAINING_SUBMODE_KEY)
@@ -198,12 +208,54 @@ function getQuoteLabel(sourceType, getQuoteTypes) {
   } catch { return sourceType; }
 }
 
+function listPaneTitle(note) {
+  const t = (note.note_title || '').trim();
+  if (!t || t === 'No title') return 'No title';
+  return t;
+}
+
+function buildTitledRowHtml(note, idx, isSelected) {
+  const selCls = isSelected ? ' lp-selected' : '';
+  const title = listPaneTitle(note);
+  const preview = stripHtml(note.note_text).slice(0, 200);
+
+  const thumbSrc = note.thumbnail || (note.attachments && note.attachments[0]?.thumbnail);
+  const thumbHtml = thumbSrc
+    ? `<div class="lp-row-thumb-slot"><img class="lp-row-thumb-img" src="${resolveAttachmentUrl(thumbSrc)}" alt=""></div>`
+    : '';
+  const thumbCls = thumbSrc ? ' lp-row-titled-has-thumb' : '';
+
+  return `
+    <div class="lp-row lp-row-titled${thumbCls}${selCls}" data-lp-idx="${idx}" data-lp-id="${note.id}">
+      <div class="lp-row-main">
+        <div class="lp-row-title">${escapeHtml(title)}</div>
+        <div class="lp-row-preview lp-row-preview-multiline">${escapeHtml(preview) || '\u00a0'}</div>
+      </div>
+      ${thumbHtml}
+    </div>`;
+}
+
+/** Right pane height follows the left list column (titled list-pane layout). */
+function syncTitledPaneHeight(container) {
+  const list = container.querySelector('.lp-list-titled');
+  const pane = container.querySelector('.lp-pane');
+  if (!list || !pane) return;
+  requestAnimationFrame(() => {
+    pane.style.height = `${list.offsetHeight}px`;
+    pane.style.maxHeight = `${list.offsetHeight}px`;
+  });
+}
+
 function buildRowHtml(note, idx, isSelected, opts) {
   const { currentNoteTypeFilter, getTrainingTypes, getQuoteTypes } = opts;
   const noteType = note.note_type || currentNoteTypeFilter || 'note';
   const selCls = isSelected ? ' lp-selected' : '';
 
-  // ── Compact header info ──
+  if (currentNoteTypeFilter !== 'training') {
+    return buildTitledRowHtml(note, idx, isSelected);
+  }
+
+  // ── Training list rows ──
   let headerHtml = '';
   if (noteType === 'training') {
     const dateStr  = formatTrainingDate(note.note_date);
@@ -388,17 +440,21 @@ export function renderListPaneView(container, notes, opts) {
   // Derive a display label for the list header
   const TYPE_META = {
     training:   { icon: '💪', label: 'Trainings' },
+    job:        { icon: '💼', label: 'Jobs'      },
     quote:      { icon: '💬', label: 'Quotes'    },
     historical: { icon: '📖', label: 'Historical' },
     lyrics:     { icon: '🎵', label: 'Lyrics'    },
     note:       { icon: '📝', label: 'Notes'     },
   };
-  const typeMeta = TYPE_META[opts.currentNoteTypeFilter] || { icon: '📋', label: opts.currentNoteTypeFilter || 'Notes' };
+  const typeMeta = opts.currentNoteTypeFilter == null
+    ? { icon: '📋', label: 'All Notes' }
+    : (TYPE_META[opts.currentNoteTypeFilter] || { icon: '📋', label: opts.currentNoteTypeFilter });
 
   // Training is the only note type that offers a sub-view toggle.  The toggle
   // lives in the list header; clicking it re-invokes renderListPaneView with
   // the same notes/opts so we keep the code path uniform.
   const isTraining = opts.currentNoteTypeFilter === 'training';
+  const useTitledLayout = !isTraining;
   const subMode    = isTraining ? getTrainingSubMode() : 'list';
 
   const toggleHtml = isTraining ? `
@@ -504,9 +560,11 @@ export function renderListPaneView(container, notes, opts) {
   restoreTrainingDateFiltersToBar();
 
   // ── Flat list (default for all note types; also training + list sub-mode) ─
+  const layoutCls = useTitledLayout ? 'lp-layout lp-layout-titled' : 'lp-layout';
+  const listCls   = useTitledLayout ? 'lp-list lp-list-titled' : 'lp-list';
   container.innerHTML = `
-    <div class="lp-layout">
-      <div class="lp-list" id="lpList">${headerHtml}</div>
+    <div class="${layoutCls}">
+      <div class="${listCls}" id="lpList">${headerHtml}</div>
       <div class="lp-pane" id="lpPane"></div>
     </div>`;
 
@@ -533,6 +591,8 @@ export function renderListPaneView(container, notes, opts) {
 
   const initRow = list.querySelector(`.lp-row[data-lp-idx="${_selectedIndex}"]`);
   if (initRow) initRow.scrollIntoView({ block: 'nearest' });
+
+  if (useTitledLayout) syncTitledPaneHeight(container);
 }
 
 /**
