@@ -323,9 +323,21 @@ function buildPaneCommentHtml(note) {
   return `<div class="quote-note-title"><span></span><span>${escapeHtml(note.comment)}</span></div>`;
 }
 
+function buildClickableTagsHtml(tagsString) {
+  if (!tagsString) return '';
+  return tagsString
+    .split(',')
+    .map((tag) => {
+      const trimmedTag = tag.trim();
+      if (!trimmedTag) return '';
+      return `<span class="tag tag-clickable" onclick="event.stopPropagation(); window.filterByTag('${trimmedTag.replace(/'/g, "\\'")}')" title="Click to filter by this tag">${escapeHtml(trimmedTag)}</span>`;
+    })
+    .join('');
+}
+
 /**
  * Comment + metadata blocks for list-pane header (reuses card builders).
- * @returns {{ commentHtml: string, metadataHtml: string }}
+ * @returns {{ commentHtml: string, metadataHtml: string, tagsHtml: string }}
  */
 export function buildPaneMetaSections(
   note,
@@ -335,9 +347,10 @@ export function buildPaneMetaSections(
   globalSettings,
 ) {
   const commentHtml = buildPaneCommentHtml(note) || '';
+  const tagsHtml = buildClickableTagsHtml(note.tags);
 
   const translationBadge = note.translation_group
-    ? `<span class="translation-badge" title="Group: ${escapeHtml(note.translation_group)}">G</span>`
+    ? `<span class="translation-badge" title="Group: ${escapeHtml(note.translation_group)}" onclick="event.stopPropagation(); showTranslationGroup('${escapeHtml(note.translation_group)}')">G</span>`
     : '';
 
   const noteType = note.note_type || currentNoteTypeFilter || 'quote';
@@ -355,7 +368,7 @@ export function buildPaneMetaSections(
       metadataHtml = buildGenericMetadata(noteTypeBadge, translationBadge);
   }
 
-  return { commentHtml, metadataHtml };
+  return { commentHtml, metadataHtml, tagsHtml };
 }
 
 /**
@@ -371,16 +384,7 @@ export function createQuoteCard(note, currentNoteTypeFilter, getTrainingTypes, g
   const imageUrl = note.thumbnail ? resolveAttachmentUrl(note.thumbnail) : null;
   const imageFullUrl = note.attachment_full ? resolveAttachmentUrl(note.attachment_full) : null;
   
-  // Build tags (make them clickable)
-  const tags = note.tags
-    ? note.tags
-        .split(",")
-        .map((tag) => {
-          const trimmedTag = tag.trim();
-          return `<span class="tag tag-clickable" onclick="event.stopPropagation(); window.filterByTag('${trimmedTag.replace(/'/g, "\\'")}')" title="Click to filter by this tag">${trimmedTag}</span>`;
-        })
-        .join("")
-    : "";
+  const tags = buildClickableTagsHtml(note.tags);
 
   // Check if content is long
   const isLong = isLongContent(note.note_text);

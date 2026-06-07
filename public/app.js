@@ -37,7 +37,7 @@ import {
 
 import {
   createQuoteCard as createQuoteCardLib
-} from './js/lib/cardRenderer.js?v=20260605lpclean1';
+} from './js/lib/cardRenderer.js?v=20260605paneatt6';
 
 import {
   setupAddModal,
@@ -140,7 +140,7 @@ import {
   initializeQuillEditor,
   handleFormSubmit as handleFormSubmitLib,
   deleteQuote as deleteQuoteLib
-} from './js/lib/quoteEditor.js?v=20260605lpclean1';
+} from './js/lib/quoteEditor.js?v=20260605paneatt2';
 
 import {
   initializeBulkImport,
@@ -180,13 +180,18 @@ import {
   setTrainingSubMode,
   getListPanePageSize,
   restoreTrainingDateFiltersToBar
-} from './js/lib/listPaneView.js?v=20260605lpclean1';
+} from './js/lib/listPaneView.js?v=20260605paneatt8';
 import {
   configurePaneEditor,
   syncPaneTextToModalHidden,
   applyPaneSavedNote,
   getPaneEditorHtml,
-} from './js/lib/paneEditor.js?v=20260605lpclean1';
+  getPaneEditorNoteId,
+} from './js/lib/paneEditor.js?v=20260605paneatt7';
+import {
+  configurePaneAttachments,
+  renderPaneAttachments,
+} from './js/lib/paneAttachments.js?v=20260605paneatt7';
 // They are kept as local functions due to tight coupling with app-specific state
 
 // ── Round-1 extracted modules (May 2026 split — see lib/README.md) ────────
@@ -929,6 +934,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     apiUrl: API_URL,
     // Text-only pane save: refresh list row only — do not touch editor/baseline
     onNoteSaved: (saved) => refreshPaneNote(saved.id, saved, { updatePaneEditor: false }),
+  });
+  configurePaneAttachments({
+    showFull: (src, noteId, type) => window.showFullImage(src, noteId, type),
+    addFromFile: (file, noteId) => addPaneAttachmentFromFile(file, noteId),
+    addEncrypted: (file) => window.addEncryptedAttachment(file),
+    deleteAttachment: (noteId, att, idx) => deletePaneAttachment(noteId, att, idx),
   });
   
   // Check if we're on a tablet (769px-1100px) — still used below for other
@@ -2204,16 +2215,14 @@ function displayQuotes(quotes) {
       createQuoteCard: (note) =>
         createQuoteCardLib(note, currentNoteTypeFilter, getTrainingTypes, getQuoteTypes, currentSettings)
     });
+    updateSourcesFilterVisibility();
     return;
   }
 
   // ── Card grid view (default) ────────────────────────────────
   if (lpWrapper) lpWrapper.style.display = 'none';
   quotesList.style.removeProperty('display');
-  // Make sure the Year/Month filter containers are back in the filter bar
-  // (they may have been moved out by a previous training + list sub-mode
-  // render).  Card grid wants them visible in the bar, so don't force-hide.
-  restoreTrainingDateFiltersToBar();
+  updateSourcesFilterVisibility();
   const currentSettings = getGlobalSettings();
   
   // Use library for basic rendering (pass globalSettings for score display)
@@ -3164,11 +3173,90 @@ async function postAttachmentToNote(noteId, attData) {
   });
   if (!resp.ok) throw new Error(await resp.text());
 
-  // Refresh the strip with the updated note
   const updated = await fetch(`/api/quotes/${noteId}`).then(r => r.json());
   renderModalAttachmentStrip(updated);
-  // Reload cards to reflect changes
   loadQuotes();
+  return updated;
+}
+
+/** List-pane: add attachment and refresh pane + left list row in place. */
+async function postAttachmentToPaneNote(noteId, attData) {
+  const globalSettings = getGlobalSettings();
+  const resp = await fetch(`/api/notes/${noteId}/attachments`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      ...attData,
+      storageThresholdMB: globalSettings?.storageThresholdMB || 1,
+    }),
+  });
+  if (!resp.ok) throw new Error(await resp.text());
+
+  const updated = await fetch(`/api/quotes/${noteId}`).then(r => r.json());
+  refreshPaneNote(noteId, updated, { updatePaneEditor: false });
+  const pane = document.querySelector('.lp-pane');
+  if (pane) renderPaneAttachments(pane, updated);
+  loadQuotes();
+  return updated;
+}
+
+async function addPaneAttachmentFromFile(file, noteId) {
+  const globalSettings = getGlobalSettings();
+  const folder = currentNoteTypeFilter || 'note';
+  return new Promise((resolve) => {
+    const callbacks = {
+      onImageLoaded: async (result) => {
+        try {
+          await postAttachmentToPaneNote(noteId, {
+            thumbnail: result.thumbnail,
+            attachment_full: result.full,
+            attachment_type: result.type || 'image',
+            filename: result.filename || file.name,
+          });
+        } catch (err) {
+          alert('Could not add attachment: ' + err.message);
+        }
+        resolve();
+      },
+      onAttachmentLoaded: async (result) => {
+        try {
+          await postAttachmentToPaneNote(noteId, {
+            thumbnail: result.thumbnail || null,
+            attachment_full: result.full,
+            attachment_type: result.type || 'image',
+            filename: result.filename || file.name,
+          });
+        } catch (err) {
+          alert('Could not add attachment: ' + err.message);
+        }
+        resolve();
+      },
+    };
+    readAttachmentFileLib(file, 'quote', globalSettings, callbacks, folder);
+  });
+}
+
+async function deletePaneAttachment(noteId, att, idx) {
+  const label = att.attachment_filename || att.attachment_type || `attachment ${idx + 1}`;
+  if (!await showConfirm(`"${label}" will be removed from this note.`, { title: 'Remove attachment', danger: true })) return;
+
+  try {
+    if (att.id) {
+      const resp = await fetch(`/api/notes/${noteId}/attachments/${att.id}`, { method: 'DELETE' });
+      if (!resp.ok) throw new Error(await resp.text());
+    } else if (idx !== 0) {
+      return;
+    } else {
+      throw new Error('Cannot remove attachment — missing id.');
+    }
+    const updated = await fetch(`/api/quotes/${noteId}`).then(r => r.json());
+    refreshPaneNote(noteId, updated, { updatePaneEditor: false });
+    const pane = document.querySelector('.lp-pane');
+    if (pane) renderPaneAttachments(pane, updated);
+    loadQuotes();
+  } catch (err) {
+    alert('Could not delete attachment: ' + err.message);
+  }
 }
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -4913,7 +5001,8 @@ document.addEventListener('DOMContentLoaded', () => {
     renderModalAttachmentStrip,
     updateAttachmentPanelVisibility,
     loadQuotes,
-    getEditingQuoteId:        () => editingQuoteId,
+    getEditingQuoteId: () => editingQuoteId
+      || (usesListPaneLayout(currentNoteTypeFilter, currentViewMode) ? getPaneEditorNoteId() : null),
     getCurrentNoteTypeFilter: () => currentNoteTypeFilter,
     getQuoteImagePreviewEl:   () => quoteImagePreview,
     getPendingExtraAttachments: () => pendingExtraAttachments,

@@ -3,7 +3,7 @@
  */
 
 import { normalizeTextColors } from './utils.js';
-import { createQuillEditor } from './quoteEditor.js?v=20260605lpclean1';
+import { createQuillEditor } from './quoteEditor.js?v=20260605paneatt2';
 import { showUnsavedChangesConfirm } from './confirmDialog.js';
 
 let _apiUrl = '';
@@ -151,12 +151,17 @@ const PANE_SHELL_HTML = `
         <div class="lp-pane-title note-title-heading" id="lpPaneTitle"></div>
         <div class="lp-pane-title-actions">
           <span class="lp-pane-score-slot" id="lpPaneScore"></span>
-          <button type="button" class="lp-pane-props-btn" id="lpPropsBtn" title="Tags, attachments, and other properties (not text)">⚙ Properties</button>
+          <button type="button" class="lp-pane-attach-btn" id="lpPaneAddAttach">📎 Add attachment</button>
+          <button type="button" class="lp-pane-attach-btn" id="lpPaneEncryptAttach" title="Encrypt a file and attach it">🔒 Encrypt &amp; attach</button>
+          <button type="button" class="lp-pane-props-btn" id="lpPropsBtn" title="Tags, author, source, and other properties (not text or attachments)">⚙ Properties</button>
           <button type="button" class="lp-pane-save-btn" id="lpSaveBtn" title="Save note text" disabled>💾 Save</button>
         </div>
       </div>
-      <div class="lp-pane-comment" id="lpPaneComment"></div>
       <div class="lp-pane-meta" id="lpPaneMeta"></div>
+      <div class="lp-pane-comment" id="lpPaneComment"></div>
+    </div>
+    <div class="lp-pane-attach-section" id="lpPaneAttachSection" hidden>
+      <div class="lp-pane-attach-row" id="lpPaneAttachRow"></div>
     </div>
     <div class="lp-pane-editor-wrap">
       <div id="lpPaneQuill"></div>
@@ -183,6 +188,18 @@ export function ensurePaneEditorShell(pane, { onProperties, onSave }) {
   } else {
     _saveBtn = pane.querySelector('#lpSaveBtn');
     _ensureQuillInstance(pane);
+    _migratePaneInfoOrder(pane);
+  }
+}
+
+/** Meta row (G / author / tags) must sit above comment in list-pane shells. */
+function _migratePaneInfoOrder(pane) {
+  const info = pane.querySelector('.lp-pane-info');
+  const comment = pane.querySelector('#lpPaneComment');
+  const meta = pane.querySelector('#lpPaneMeta');
+  if (!info || !comment || !meta) return;
+  if (comment.compareDocumentPosition(meta) & Node.DOCUMENT_POSITION_FOLLOWING) {
+    info.insertBefore(meta, comment);
   }
 }
 

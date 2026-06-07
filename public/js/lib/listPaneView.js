@@ -19,14 +19,18 @@
 
 import { escapeHtml, resolveAttachmentUrl } from './utils.js';
 import { renderTrainingCalendar } from './trainingCalendar.js';
-import { buildPaneMetaSections, buildPaneScoreHtml } from './cardRenderer.js?v=20260605lpclean1';
+import { buildPaneMetaSections, buildPaneScoreHtml } from './cardRenderer.js?v=20260605paneatt6';
 import {
   ensurePaneEditorShell,
   loadPaneNote,
   confirmLeavePaneEditor,
   flushPendingPaneNoteSaved,
   resetPaneEditor,
-} from './paneEditor.js?v=20260605lpclean1';
+} from './paneEditor.js?v=20260605paneatt7';
+import {
+  renderPaneAttachments,
+  resetPaneAttachments,
+} from './paneAttachments.js?v=20260605paneatt7';
 
 // ─────────────────────────────────────────────────────────────
 // Internal state (reset on every renderListPaneView call)
@@ -66,17 +70,13 @@ export function setTrainingSubMode(mode) {
 // ─────────────────────────────────────────────────────────────
 // Training Year/Month filters (filter bar only)
 // ─────────────────────────────────────────────────────────────
-/** Hide or restore training date filters in the filter bar (calendar hides them). */
+/** Hide training Year/Month in the filter bar (e.g. training calendar sub-mode). */
 export function restoreTrainingDateFiltersToBar({ hide = false } = {}) {
+  if (!hide) return;
   const y = document.getElementById('trainingYearContainer');
   const m = document.getElementById('trainingMonthContainer');
-  if (hide) {
-    if (y) y.style.display = 'none';
-    if (m) m.style.display = 'none';
-  } else {
-    if (y) y.style.removeProperty('display');
-    if (m) m.style.removeProperty('display');
-  }
+  if (y) y.style.display = 'none';
+  if (m) m.style.display = 'none';
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -282,7 +282,7 @@ function updatePaneNoteDisplay(pane, note) {
     scoreEl.hidden = !scoreHtml;
   }
 
-  const { commentHtml, metadataHtml } = buildPaneMetaSections(
+  const { commentHtml, metadataHtml, tagsHtml } = buildPaneMetaSections(
     note,
     _opts.currentNoteTypeFilter,
     _opts.getTrainingTypes,
@@ -290,19 +290,22 @@ function updatePaneNoteDisplay(pane, note) {
     _opts.globalSettings,
   );
 
+  const metaEl = pane.querySelector('#lpPaneMeta');
+  if (metaEl) {
+    const hasMeta = !!((metadataHtml && metadataHtml.trim()) || (tagsHtml && tagsHtml.trim()));
+    metaEl.innerHTML = hasMeta
+      ? `<div class="quote-metadata-row">
+          <div class="quote-metadata-left">${metadataHtml || ''}</div>
+          ${tagsHtml ? `<div class="quote-tags-inline">${tagsHtml}</div>` : ''}
+        </div>`
+      : '';
+    metaEl.hidden = !hasMeta;
+  }
+
   const commentEl = pane.querySelector('#lpPaneComment');
   if (commentEl) {
     commentEl.innerHTML = commentHtml;
     commentEl.hidden = !commentHtml;
-  }
-
-  const metaEl = pane.querySelector('#lpPaneMeta');
-  if (metaEl) {
-    const hasMeta = !!(metadataHtml && metadataHtml.trim());
-    metaEl.innerHTML = hasMeta
-      ? `<div class="quote-metadata-row"><div class="quote-metadata-left">${metadataHtml}</div></div>`
-      : '';
-    metaEl.hidden = !hasMeta;
   }
 
   wirePaneMetaLinks(pane);
@@ -324,6 +327,7 @@ function renderPane(pane, note) {
   });
 
   updatePaneNoteDisplay(pane, note);
+  renderPaneAttachments(pane, note);
   loadPaneNote(note, pane);
 }
 
@@ -376,6 +380,7 @@ export function getSelectedNoteId() {
  */
 export function renderListPaneView(container, notes, opts) {
   resetPaneEditor();
+  resetPaneAttachments();
   _container = container;
   _notes = notes;
   _opts = opts;
@@ -452,15 +457,6 @@ export function renderListPaneView(container, notes, opts) {
     return;
   }
 
-  // IMPORTANT: before we blow away container.innerHTML we must first park the
-  // moved Year/Month filter containers back in the global filter bar.
-  // Otherwise they become orphans inside the old DOM and a subsequent
-  // getElementById('trainingYearContainer') returns null, making the next
-  // move-to-slot call a no-op (i.e. the dropdowns visually disappear).
-  // This is only needed when we're about to wipe the container, so we do it
-  // here before innerHTML assignment.
-  restoreTrainingDateFiltersToBar();
-
   // ── Flat list (default for all note types; also training + list sub-mode) ─
   const layoutCls = useTitledLayout ? 'lp-layout lp-layout-titled' : 'lp-layout';
   const listCls   = useTitledLayout ? 'lp-list lp-list-titled' : 'lp-list';
@@ -510,6 +506,7 @@ export function refreshPaneNote(noteId, updatedNote, { updatePaneEditor = true }
   const pane = _container.querySelector('.lp-pane');
   if (idx === _selectedIndex && pane) {
     updatePaneNoteDisplay(pane, updatedNote);
+    renderPaneAttachments(pane, updatedNote);
   }
 
   if (updatePaneEditor && idx === _selectedIndex) {

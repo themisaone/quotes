@@ -189,7 +189,10 @@ Two-column **list + pane** layout (alternative to the card grid). Left: compact 
 Monthly calendar for training notes in list-pane left column. Days with trainings show **icons** per distinct sub-type (from settings). Legend lists sub-types by icon + label. Fetches month data via API; `onSelectNote` opens the matching row in the pane.
 - `renderTrainingCalendar(container, opts)` — `getTrainingTypes`, `onSelectNote`, optional `initialYear` / `initialMonth` / `initialNoteId`
 
-**Import notes:** `app.js` imports `listPaneView.js` with a `?v=` suffix (cache bust). **`paneEditor.js` must use the identical `?v=` in both `app.js` and `listPaneView.js`** — mismatched suffixes load two module instances (Save button state and `configurePaneEditor` API URL diverge). `trainingCalendar.js` imports `api.js` without `?v=`; that can diverge from `api.js?v=…` used elsewhere — avoid adding a second import path for `api.js` from this chain.
+**Import notes:** `app.js` imports `listPaneView.js` with a `?v=` suffix (cache bust). **`paneEditor.js` and `paneAttachments.js` must use the identical `?v=` in `app.js` and `listPaneView.js`** — mismatched suffixes load two module instances. `trainingCalendar.js` imports `api.js` without `?v=`; that can diverge from `api.js?v=…` used elsewhere — avoid adding a second import path for `api.js` from this chain.
+
+### `paneAttachments.js`
+List-pane attachment gallery above the inline Quill editor — all files in one horizontal row (images max 512px each; primary ★ with ✕ like extras). Add / encrypt controls; wired from `app.js` via `configurePaneAttachments()`.
 
 ---
 
