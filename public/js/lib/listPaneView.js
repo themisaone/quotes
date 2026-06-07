@@ -19,7 +19,11 @@
 
 import { escapeHtml, resolveAttachmentUrl } from './utils.js';
 import { renderTrainingCalendar } from './trainingCalendar.js';
-import { buildPaneMetaSections, buildPaneScoreHtml } from './cardRenderer.js?v=20260605paneatt6';
+import {
+  buildPaneMetaSections,
+  buildPaneScoreHtml,
+  buildListPaneRowMetaHtml,
+} from './cardRenderer.js?v=20260605paneatt9';
 import {
   ensurePaneEditorShell,
   loadPaneNote,
@@ -45,13 +49,12 @@ let _container = null;
 const TRAINING_SUBMODE_KEY = 'lpTrainingSubMode';
 const VALID_SUBMODES = new Set(['calendar', 'list']);
 
-/** List-pane page size for non-training types — will move to Settings later. */
-export const LP_LIST_PAGE_SIZE = 20;
+/** List-pane page size (all types) — will move to Settings later. */
+export const LP_LIST_PAGE_SIZE = 12;
 /** Fixed thumbnail size for titled list rows (px). */
 export const LP_TITLED_THUMB_SIZE_PX = 80;
 
-export function getListPanePageSize(noteType) {
-  if (noteType === 'training') return 12;
+export function getListPanePageSize(_noteType) {
   return LP_LIST_PAGE_SIZE;
 }
 
@@ -162,10 +165,28 @@ function listPaneTitle(note) {
   return t;
 }
 
-function buildTitledRowHtml(note, idx, isSelected) {
+function buildTitledRowHtml(note, idx, isSelected, opts) {
   const selCls = isSelected ? ' lp-selected' : '';
   const title = listPaneTitle(note);
-  const preview = stripHtml(note.note_text).slice(0, 200);
+  const previewRaw = stripHtml(note.note_text);
+  const previewHtml = previewRaw
+    ? `<div class="lp-row-preview">${escapeHtml(previewRaw)}</div>`
+    : '';
+
+  const scoreHtml = buildPaneScoreHtml(note);
+  const scoreSlot = scoreHtml
+    ? `<div class="lp-row-score-slot">${scoreHtml}</div>`
+    : '';
+
+  const metaHtml = buildListPaneRowMetaHtml(
+    note,
+    opts.currentNoteTypeFilter,
+    opts.getTrainingTypes,
+    opts.getQuoteTypes,
+  );
+  const metaRow = metaHtml
+    ? `<div class="lp-row-meta">${metaHtml}</div>`
+    : '';
 
   const thumbSrc = note.thumbnail || (note.attachments && note.attachments[0]?.thumbnail);
   const thumbHtml = thumbSrc
@@ -176,8 +197,12 @@ function buildTitledRowHtml(note, idx, isSelected) {
   return `
     <div class="lp-row lp-row-titled${thumbCls}${selCls}" data-lp-idx="${idx}" data-lp-id="${note.id}">
       <div class="lp-row-main">
-        <div class="lp-row-title">${escapeHtml(title)}</div>
-        <div class="lp-row-preview lp-row-preview-multiline">${escapeHtml(preview) || '\u00a0'}</div>
+        <div class="lp-row-title-line">
+          <div class="lp-row-title">${escapeHtml(title)}</div>
+          ${scoreSlot}
+        </div>
+        ${previewHtml}
+        ${metaRow}
       </div>
       ${thumbHtml}
     </div>`;
@@ -200,7 +225,7 @@ function buildRowHtml(note, idx, isSelected, opts) {
   const selCls = isSelected ? ' lp-selected' : '';
 
   if (currentNoteTypeFilter !== 'training') {
-    return buildTitledRowHtml(note, idx, isSelected);
+    return buildTitledRowHtml(note, idx, isSelected, opts);
   }
 
   // ── Training list rows ──
@@ -248,15 +273,16 @@ function buildRowHtml(note, idx, isSelected, opts) {
 // Pane rendering
 // ─────────────────────────────────────────────────────────────
 
-function wirePaneMetaLinks(pane) {
-  pane.querySelectorAll('.author-link').forEach((link) => {
+function _wireMetaLinks(root) {
+  if (!root) return;
+  root.querySelectorAll('.author-link').forEach((link) => {
     link.onclick = (e) => {
       e.preventDefault();
       e.stopPropagation();
       _opts.openAuthorModal?.(link.dataset.id, link.dataset.name);
     };
   });
-  pane.querySelectorAll('.source-link').forEach((link) => {
+  root.querySelectorAll('.source-link').forEach((link) => {
     link.onclick = (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -267,6 +293,10 @@ function wirePaneMetaLinks(pane) {
       );
     };
   });
+}
+
+function wirePaneMetaLinks(pane) {
+  _wireMetaLinks(pane);
 }
 
 function updatePaneNoteDisplay(pane, note) {
@@ -467,6 +497,9 @@ export function renderListPaneView(container, notes, opts) {
     </div>`;
 
   const list = container.querySelector('#lpList');
+  if (useTitledLayout) {
+    list.style.setProperty('--lp-list-min-rows', String(LP_LIST_PAGE_SIZE));
+  }
 
   notes.forEach((note, idx) => {
     list.insertAdjacentHTML('beforeend', buildRowHtml(note, idx, idx === _selectedIndex, opts));
@@ -475,6 +508,7 @@ export function renderListPaneView(container, notes, opts) {
   list.querySelectorAll('.lp-row').forEach(row => {
     row.addEventListener('click', () => { selectNote(parseInt(row.dataset.lpIdx)); });
   });
+  _wireMetaLinks(list);
 
   const pane = container.querySelector('#lpPane');
   renderPane(pane, notes[_selectedIndex] || null);
@@ -500,7 +534,10 @@ export function refreshPaneNote(noteId, updatedNote, { updatePaneEditor = true }
     row.outerHTML = buildRowHtml(updatedNote, idx, idx === _selectedIndex, _opts);
     // Re-attach click handler for the new row element
     const newRow = _container.querySelector(`.lp-row[data-lp-id="${noteId}"]`);
-    if (newRow) newRow.addEventListener('click', () => selectNote(parseInt(newRow.dataset.lpIdx)));
+    if (newRow) {
+      newRow.addEventListener('click', () => selectNote(parseInt(newRow.dataset.lpIdx)));
+      _wireMetaLinks(newRow);
+    }
   }
 
   const pane = _container.querySelector('.lp-pane');

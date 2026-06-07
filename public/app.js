@@ -37,7 +37,7 @@ import {
 
 import {
   createQuoteCard as createQuoteCardLib
-} from './js/lib/cardRenderer.js?v=20260605paneatt6';
+} from './js/lib/cardRenderer.js?v=20260605paneatt9';
 
 import {
   setupAddModal,
@@ -180,7 +180,7 @@ import {
   setTrainingSubMode,
   getListPanePageSize,
   restoreTrainingDateFiltersToBar
-} from './js/lib/listPaneView.js?v=20260605paneatt8';
+} from './js/lib/listPaneView.js?v=20260605paneatt10';
 import {
   configurePaneEditor,
   syncPaneTextToModalHidden,

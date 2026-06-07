@@ -29,7 +29,7 @@
  */
 
 import { escapeHtml, resolveAttachmentUrl, normalizeTextColors } from './utils.js?v=20260318a';
-import { getNoteTypeBadgeHtml } from './noteTypes.js';
+import { getNoteTypeBadgeHtml, getNoteTypeConfig, getGenericSubTypes } from './noteTypes.js';
 
 /**
  * Get quote source icon and label (dynamic from settings)
@@ -369,6 +369,27 @@ export function buildPaneMetaSections(
   }
 
   return { commentHtml, metadataHtml, tagsHtml };
+}
+
+/** Compact author / source / type line for list-pane left-column rows. */
+export function buildListPaneRowMetaHtml(note, currentNoteTypeFilter, getTrainingTypes, getQuoteTypes) {
+  const noteType = note.note_type || currentNoteTypeFilter || 'note';
+  const config = getNoteTypeConfig(noteType);
+
+  if (config.behavior === 'quote' || note.author_name || note.source_name) {
+    return buildQuoteMetadata(note, '', '', getQuoteTypes);
+  }
+
+  const sourceType = note.source_type || '';
+  if (sourceType) {
+    const subTypes = getGenericSubTypes(noteType);
+    const found = subTypes.find((t) => t.value === sourceType);
+    const icon = found?.icon || '📝';
+    const label = found?.label || sourceType;
+    return `<div class="meta-item"><span class="type-icon-badge">${icon}</span> <span class="meta-value">${escapeHtml(label)}</span></div>`;
+  }
+
+  return '';
 }
 
 /**
