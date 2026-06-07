@@ -381,7 +381,8 @@ export function buildListPaneRowMetaHtml(note, currentNoteTypeFilter, getTrainin
   }
 
   const sourceType = note.source_type || '';
-  if (sourceType) {
+  // Match cards / pane header / training: default "Assorted" adds no useful context.
+  if (sourceType && sourceType !== 'ASSORTED') {
     const subTypes = getGenericSubTypes(noteType);
     const found = subTypes.find((t) => t.value === sourceType);
     const icon = found?.icon || '📝';

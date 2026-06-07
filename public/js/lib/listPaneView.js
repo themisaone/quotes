@@ -23,7 +23,7 @@ import {
   buildPaneMetaSections,
   buildPaneScoreHtml,
   buildListPaneRowMetaHtml,
-} from './cardRenderer.js?v=20260605paneatt9';
+} from './cardRenderer.js?v=20260605optiontabs7';
 import {
   ensurePaneEditorShell,
   loadPaneNote,
