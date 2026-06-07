@@ -20,7 +20,7 @@
     <link rel="stylesheet" href="style.selection.css?v=20260519nosubcolor" />
     <link rel="stylesheet" href="style.attachments.css?v=20260519nosubcolor" />
     <link rel="stylesheet" href="style.entities.css?v=20260519nosubcolor" />
-    <link rel="stylesheet" href="style.settings.css?v=20260605optiontabs6" />
+    <link rel="stylesheet" href="style.settings.css?v=20260605generallayout3" />
     <link rel="stylesheet" href="style.dialogs.css?v=20260605paneedit" />
     <link rel="stylesheet" href="style.views.css?v=20260605paneatt11" />
     <link rel="stylesheet" href="style.mobile.css?v=20260529flatheaders" />
@@ -1034,7 +1034,9 @@
 
             <div id="settingsTabGeneral" class="settings-tab-panel active" data-settings-panel="general" role="tabpanel" aria-labelledby="settingsTabBtnGeneral">
 
-            <div class="settings-row">
+            <div class="settings-general-top">
+            <div class="settings-general-compact-col">
+
             <div class="settings-section">
               <div class="settings-section-header">
                 <span class="settings-section-heading">🏷️ Tag Management</span>
@@ -1070,9 +1072,7 @@
               </div>
               </div>
             </div>
-            </div><!-- end settings-row: Tag Management + Meta Features -->
 
-            <div class="settings-row maintenance-settings-row">
             <div class="settings-section dedup-settings-section">
               <div class="settings-section-header">
                 <span class="settings-section-heading">👯 Duplicate inspection</span>
@@ -1101,9 +1101,7 @@
               </button>
               </div>
             </div>
-            </div>
 
-            <div class="settings-row">
             <div class="settings-section">
               <div class="settings-section-header">
                 <span class="settings-section-heading">🔒 Encryption</span>
@@ -1143,10 +1141,11 @@
               </div>
               </div>
             </div>
-            </div><!-- end settings-row: Encryption + Hidden Tag -->
 
-            <div class="settings-row">
-            <div class="settings-section settings-section-wide">
+            </div><!-- end settings-general-compact-col -->
+
+            <div class="settings-general-colors-col">
+            <div class="settings-section settings-section-colors">
               <div class="settings-section-header">
                 <span class="settings-section-heading">🎨 Color Customization</span>
                 <details class="settings-section-desc">
@@ -1293,7 +1292,8 @@
               </div>
               </div>
             </div>
-            </div><!-- end settings-row: Color Customization -->
+            </div><!-- end settings-general-colors-col -->
+            </div><!-- end settings-general-top -->
 
             <div class="settings-row">
             <div class="settings-section">
