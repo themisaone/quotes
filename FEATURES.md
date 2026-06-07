@@ -272,8 +272,8 @@ Side menu → **Data Management** (desktop):
 - Import JSON backup
 - Export as PDF
 
-**Options** page (⚙️):
-- **Duplicate inspection** and **Prune unused metadata** — same row; prune deletes authors, sources, and tags with zero linked notes (`POST /api/maintenance/prune-unused-entities`). Irreversible; confirm before running.
+**Options** page (⚙️) has two tabs: **General** (tags, maintenance, encryption, colors, display, storage) and **Note Types** (per-type cards). The active tab is remembered in `localStorage` (`settingsOptionsTab`). Each note type card shows labeled fields (icon, internal key, display label, edit-modal behavior, **Default display mode**, **Quick tag shortcuts** for that type) plus sub-types on the right. Display-mode defaults: **Cards / List + Pane** for most types, **Calendar / List** for Training (`defaultDisplayMode` in `settings.json`). Deleting a note type or sub-type, or removing a tag shortcut, prompts for confirmation.
+- **Duplicate inspection** and **Prune unused metadata** — same row on General; prune deletes authors, sources, and tags with zero linked notes (`POST /api/maintenance/prune-unused-entities`). Irreversible; confirm before running.
 - Each option card shows the **section title** and controls at all times. Long explanatory text is under a **Description** disclosure (collapsed by default) in the header row.
 
 Settings → **Storage & Performance** (Options page):

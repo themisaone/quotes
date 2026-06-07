@@ -6,6 +6,53 @@
        → style.mobile.css → style.small.css → style.medium.css
    ============================================================ */
 
+/* Options page tabs */
+.settings-tabs {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 1rem;
+  background: var(--surface);
+}
+
+.settings-tab-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 0.45rem 1.1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  line-height: 1.2;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.settings-tab-btn + .settings-tab-btn {
+  border-left: 1px solid var(--border);
+}
+
+.settings-tab-btn:hover:not(.active) {
+  background: var(--surface-hover, rgba(127, 127, 127, 0.12));
+}
+
+.settings-tab-btn.active {
+  background: var(--link-color, #4f46e5);
+  color: #fff;
+}
+
+.settings-tab-panel {
+  display: none;
+}
+
+.settings-tab-panel.active {
+  display: block;
+}
+
+.settings-row > .settings-section-wide {
+  grid-column: 1 / -1;
+}
+
 /* Settings Page */
 .settings-section {
   background: var(--surface);
@@ -54,6 +101,10 @@
   color: var(--text-primary);
   flex: 1 1 auto;
   min-width: 10rem;
+}
+
+.settings-section-header > .btn {
+  flex-shrink: 0;
 }
 
 details.settings-section-desc {
@@ -391,22 +442,22 @@ details.settings-section-desc .settings-section-lead {
   margin-left: auto;
 }
 
-/* Quote Types Management */
+/* Quote Types Management — two cards per row on wide screens */
 .quote-types-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  align-items: start;
 }
 
 .quote-type-item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  background: var(--surface);
+  display: block;
+  padding: 0.85rem;
+  background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-radius: 8px;
   transition: all 0.2s;
+  min-width: 0;
 }
 
 .quote-type-item:hover {
@@ -414,35 +465,44 @@ details.settings-section-desc .settings-section-lead {
   box-shadow: var(--shadow);
 }
 
-/* Note type rows — compact inputs, no flex stretching */
-.quote-type-item input[type="text"] {
-  flex: none;
-  padding: 0.25rem 0.4rem;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  font-size: 0.82rem;
+/* Note type + sub-type controls — same sizing as modal/forms (--d-font-base, --d-btn-height) */
+.quote-types-list input[type="text"],
+.quote-types-list select {
+  height: var(--d-btn-height);
+  box-sizing: border-box;
+  padding: 0 var(--d-pad-sm);
+  border: 1px solid var(--input-border, var(--border));
+  border-radius: var(--bradius-small, 6px);
+  font-size: var(--d-font-base);
+  font-family: inherit;
+  background-color: var(--input-bg);
+  color: var(--text-primary);
+  transition: all 0.2s;
 }
 
-.quote-type-item input[type="text"]:focus {
+.quote-types-list input[type="text"]:focus,
+.quote-types-list select:focus {
   outline: none;
   border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
-.quote-type-icon-input {
-  width: 60px;
-  text-align: center;
-  font-size: 1.2rem;
-}
-
-.quote-type-value-input {
-  width: 150px;
-  font-family: monospace;
-  font-size: 0.85rem;
+.quote-types-list select {
+  cursor: pointer;
+  appearance: none;
+  padding-right: 2rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+  background-size: 12px;
 }
 
 .quote-type-actions {
   display: flex;
   gap: 0.5rem;
+  margin-top: 0.65rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
 }
 
 .note-type-behavior-badge {
@@ -455,16 +515,97 @@ details.settings-section-desc .settings-section-lead {
   flex-shrink: 0;
 }
 
-/* Note type row with optional inline sub-types */
-.note-type-main-row {
+/* Note type card: fields (left) + sub-types (right) */
+.note-type-card-layout {
+  display: grid;
+  grid-template-columns: minmax(9.5rem, 1fr) minmax(11rem, 1.15fr);
+  gap: 0.85rem;
+  align-items: start;
+}
+
+.note-type-fields-col {
+  min-width: 0;
+}
+
+.note-type-fields-stack {
   display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.note-type-shortcuts-add {
+  display: flex;
+  gap: 0.5rem;
   align-items: center;
-  gap: 0.35rem;
-  width: 100%;
+}
+
+.note-type-shortcuts-add .shortcut-tag-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.shortcut-tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+  min-height: 1.5rem;
+}
+
+.shortcut-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: var(--tag-color);
+  color: #fff;
+  padding: 0.2rem 0.55rem;
+  border-radius: 12px;
+  font-size: var(--d-font-base);
+}
+
+.shortcut-tag-remove {
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-weight: bold;
+  padding: 0;
+  line-height: 1;
+  font-size: 1.1em;
+}
+
+.shortcut-tag-remove:hover {
+  opacity: 0.85;
+}
+
+.note-type-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+  min-width: 0;
+}
+
+.note-type-field-label {
+  font-size: var(--d-font-base);
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.note-type-subtypes-col {
+  min-width: 0;
+  border-left: 1px solid var(--border);
+  padding-left: 0.75rem;
+}
+
+.note-type-subtypes-empty {
+  font-size: var(--d-font-base);
+  color: var(--text-secondary);
+  font-style: italic;
+  padding: 0.25rem 0;
 }
 
 .note-type-row {
-  flex-direction: column;
   align-items: stretch;
 }
 
@@ -475,18 +616,22 @@ details.settings-section-desc .settings-section-lead {
   title: "Core type";
 }
 
-.note-type-icon-input  { width: 38px !important; flex-shrink: 0; text-align: center; font-size: 1rem; }
-.note-type-value-input { width: 80px !important; flex-shrink: 0; font-family: monospace; font-size: 0.8rem; }
-.note-type-label-input { width: 90px !important; flex-shrink: 0; font-size: 0.85rem; }
-
-.note-type-behavior-select {
-  font-size: 0.8rem;
-  padding: 0.2rem 0.3rem;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--input-bg);
-  flex-shrink: 0;
-  width: auto;
+.note-type-icon-input {
+  width: 3rem;
+  max-width: 100%;
+  text-align: center;
+}
+.note-type-value-input,
+.note-type-label-input,
+.note-type-behavior-select,
+.note-type-display-mode-select {
+  width: 100%;
+  max-width: 100%;
+}
+.note-type-value-input,
+.subtype-value {
+  font-family: monospace;
+  text-transform: uppercase;
 }
 .note-type-behavior-select:disabled {
   opacity: 0.55;
@@ -494,55 +639,90 @@ details.settings-section-desc .settings-section-lead {
 }
 
 .subtype-section {
-  margin: 6px 0 4px 1.5rem;
-  border-left: 2px solid var(--border);
-  padding-left: 0.75rem;
+  margin: 0;
 }
 
 .subtype-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 0.5rem;
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  margin-bottom: 4px;
+  margin-bottom: 0.35rem;
 }
+
+.subtype-header-title {
+  font-size: var(--d-font-base);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.subtype-columns-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+  padding-left: 0;
+}
+
+.subtype-columns-header > span {
+  flex: none;
+}
+
+.subtype-columns-header .subtype-col-default {
+  width: 4.5rem;
+  flex-shrink: 0;
+}
+
+.subtype-columns-header > span {
+  font-size: var(--d-font-base);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.subtype-columns-header > span:nth-child(2) { width: 3rem; }
+.subtype-columns-header > span:nth-child(3) { width: 6.5rem; }
+.subtype-columns-header > span:nth-child(4) { flex: 1; min-width: 4rem; }
+.subtype-columns-header .subtype-col-actions { width: 2rem; }
 
 .subtype-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0.35rem;
 }
 
 .subtype-item {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.5rem;
 }
 
-/* Default radio — small, with a star-like title tooltip */
 .subtype-default {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 4.5rem;
+  margin: 0;
   cursor: pointer;
   accent-color: var(--accent);
-  title: "Set as default";
 }
 
-.subtype-item input[type="text"] {
-  padding: 0.2rem 0.35rem;
-  font-size: 0.8rem;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--input-bg);
-  flex: none;
+.subtype-icon {
+  width: 3rem;
+  flex-shrink: 0;
+  text-align: center;
 }
-.subtype-icon  { width: 34px !important; flex-shrink: 0; text-align: center; }
-.subtype-value { width: 80px !important; flex-shrink: 0; font-family: monospace; font-size: 0.8rem !important; }
-.subtype-label { width: 90px !important; flex-shrink: 0; }
+.subtype-value {
+  width: 6.5rem;
+  flex-shrink: 0;
+}
+.subtype-label {
+  flex: 1;
+  min-width: 0;
+}
 
-.btn-add-subtype { font-size: 0.75rem; color: var(--accent); }
+.btn-add-subtype {
+  font-size: var(--d-font-base);
+  color: var(--accent);
+}
 
 .btn-icon-small {
   padding: 0.4rem 0.6rem;
@@ -564,6 +744,27 @@ details.settings-section-desc .settings-section-lead {
 
 .btn-delete-type:hover {
   background: #fee2e2;
+}
+
+/* Note Types tab: one card per row on medium / small viewports */
+@media (max-width: 1100px) {
+  .quote-types-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Stack fields column above sub-types inside a card on very narrow screens */
+@media (max-width: 520px) {
+  .note-type-card-layout {
+    grid-template-columns: 1fr;
+  }
+  .note-type-subtypes-col {
+    border-left: none;
+    border-top: 1px solid var(--border);
+    padding-left: 0;
+    padding-top: 0.75rem;
+    margin-top: 0.15rem;
+  }
 }
 
 /* Translation section */

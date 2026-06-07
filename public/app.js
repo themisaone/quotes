@@ -65,9 +65,10 @@ import {
   applyQuoteSizingMode,
   toggleTagOperationsPanel,
   getDisplaySetting,
+  getNoteTypeDefaultDisplayMode,
   initializeSettings as initializeSettingsLib,
   refreshSettingsForOptionsPanel
-} from './js/lib/settingsManager.js?v=20260519nosubcolor';
+} from './js/lib/settingsManager.js?v=20260605optiontabs5';
 
 import {
   openAuthorModal as openAuthorModalLib,
@@ -180,7 +181,7 @@ import {
   setTrainingSubMode,
   getListPanePageSize,
   restoreTrainingDateFiltersToBar
-} from './js/lib/listPaneView.js?v=20260605paneatt10';
+} from './js/lib/listPaneView.js?v=20260605optiontabs5';
 import {
   configurePaneEditor,
   syncPaneTextToModalHidden,
@@ -358,8 +359,13 @@ function usesListPaneLayout(noteType, viewMode) {
 function getStoredViewMode(noteType) {
   if (isListPaneOnlyType(noteType)) return 'list-pane';
   try {
-    return localStorage.getItem(`viewMode_${noteType || 'all'}`) || 'cards';
-  } catch { return 'cards'; }
+    const stored = localStorage.getItem(`viewMode_${noteType || 'all'}`);
+    if (stored === 'cards' || stored === 'list-pane') return stored;
+    if (noteType) return getNoteTypeDefaultDisplayMode(noteType);
+    return 'cards';
+  } catch {
+    return noteType ? getNoteTypeDefaultDisplayMode(noteType) : 'cards';
+  }
 }
 
 function saveViewMode(noteType, mode) {

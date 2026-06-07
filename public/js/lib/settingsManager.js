@@ -13,6 +13,7 @@ import { API_URL } from './api.js';
 import { getElementByIdSafe } from '../constants.js';
 import { showConfirm } from './confirmDialog.js';
 import { initNoteTypes } from './noteTypes.js';
+import { escapeHtml } from './utils.js';
 
 // ============= GLOBAL STATE =============
 
@@ -68,26 +69,58 @@ export async function refreshSettingsForOptionsPanel() {
     initNoteTypes(globalSettings.noteTypes);
   }
 
-  refreshShortcutNoteTypeSelect();
   return globalSettings;
 }
 
-/** Repopulate the "Quick tag shortcuts" note-type dropdown from globalSettings */
-function refreshShortcutNoteTypeSelect() {
-  const shortcutTypeSelect = getElementByIdSafe('shortcutNoteTypeSelect');
-  if (!shortcutTypeSelect || !globalSettings?.noteTypes) return;
-  const prev = shortcutTypeSelect.value;
-  shortcutTypeSelect.innerHTML = '';
-  for (const nt of globalSettings.noteTypes) {
-    const opt = document.createElement('option');
-    opt.value = nt.value;
-    opt.textContent = `${nt.icon || ''} ${nt.label}`.trim();
-    shortcutTypeSelect.appendChild(opt);
-  }
-  if (prev && globalSettings.noteTypes.some((t) => t.value === prev)) {
-    shortcutTypeSelect.value = prev;
-  }
-  shortcutTypeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+function wireNoteTypeShortcuts(row, typeValue, rebuildMenuFn) {
+  const input = row.querySelector('.shortcut-tag-input');
+  const addBtn = row.querySelector('.btn-shortcut-add');
+  const listEl = row.querySelector('.shortcut-tags-list');
+  if (!listEl || !typeValue) return;
+
+  const renderList = () => {
+    const tags = globalSettings?.highlightedTags?.[typeValue] || [];
+    listEl.innerHTML = tags.map((tag) => `
+      <span class="shortcut-tag-chip">
+        ${escapeHtml(tag)}
+        <button type="button" class="shortcut-tag-remove" data-tag="${escapeHtml(tag)}" aria-label="Remove ${escapeHtml(tag)}">&times;</button>
+      </span>`).join('');
+    listEl.querySelectorAll('.shortcut-tag-remove').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const tagName = btn.dataset.tag;
+        if (!tagName) return;
+        if (!await showConfirm(`Remove "${tagName}" from quick tag shortcuts for this note type?`, {
+          title: 'Remove tag shortcut?',
+          danger: true,
+        })) return;
+        if (!globalSettings.highlightedTags) globalSettings.highlightedTags = {};
+        globalSettings.highlightedTags[typeValue] = (globalSettings.highlightedTags[typeValue] || [])
+          .filter((v) => v !== tagName);
+        await saveSettings(globalSettings);
+        renderList();
+        if (rebuildMenuFn) rebuildMenuFn();
+      });
+    });
+  };
+
+  const doAdd = async () => {
+    const tag = input?.value?.trim();
+    if (!tag) return;
+    if (!globalSettings.highlightedTags) globalSettings.highlightedTags = {};
+    const arr = globalSettings.highlightedTags[typeValue] || [];
+    if (!arr.includes(tag)) {
+      arr.push(tag);
+      globalSettings.highlightedTags[typeValue] = arr;
+      await saveSettings(globalSettings);
+      if (rebuildMenuFn) rebuildMenuFn();
+    }
+    if (input) input.value = '';
+    renderList();
+  };
+
+  renderList();
+  addBtn?.addEventListener('click', doAdd);
+  input?.addEventListener('keydown', (e) => { if (e.key === 'Enter') doAdd(); });
 }
 
 /**
@@ -604,6 +637,24 @@ export function setupTypeManagementListeners(populateTypeDropdowns, populateType
 // ============= TYPE MANAGEMENT - NOTE TYPES =============
 
 /**
+ * Default display mode for a note type from settings (not localStorage).
+ * Training: `calendar` | `list`. Others: `cards` | `list-pane`.
+ */
+export function getNoteTypeDefaultDisplayMode(noteTypeValue) {
+  const types = globalSettings?.noteTypes;
+  const fallback = noteTypeValue === 'training' ? 'calendar' : 'cards';
+  if (!types || !noteTypeValue) return fallback;
+  const nt = types.find((t) => t.value === noteTypeValue);
+  if (!nt) return fallback;
+  const isTraining = nt.behavior === 'training' || nt.value === 'training';
+  const mode = nt.defaultDisplayMode;
+  if (isTraining) {
+    return (mode === 'list' || mode === 'calendar') ? mode : 'calendar';
+  }
+  return (mode === 'list-pane' || mode === 'cards') ? mode : 'cards';
+}
+
+/**
  * Get note types from settings
  */
 export function getNoteTypesSettings() {
@@ -633,13 +684,37 @@ export function renderNoteTypesList(rebuildMenuFn) {
 
   const behaviorLabel = (b) => ({ quote: '📖 Quote', training: '🏋️ Training', generic: '📄 Generic' }[b] || b);
 
+  const isTrainingType = (type) => type.behavior === 'training' || type.value === 'training';
+
+  const displayModeSelectHtml = (type) => {
+    const isTraining = isTrainingType(type);
+    const current = type.defaultDisplayMode || (isTraining ? 'calendar' : 'cards');
+    if (isTraining) {
+      return `<select class="note-type-display-mode-select" aria-label="Default display mode">
+        <option value="calendar" ${current === 'calendar' ? 'selected' : ''}>Calendar</option>
+        <option value="list" ${current === 'list' ? 'selected' : ''}>List</option>
+      </select>`;
+    }
+    return `<select class="note-type-display-mode-select" aria-label="Default display mode">
+      <option value="cards" ${current === 'cards' ? 'selected' : ''}>Cards</option>
+      <option value="list-pane" ${current === 'list-pane' ? 'selected' : ''}>List + Pane</option>
+    </select>`;
+  };
+
+  const normalizeDisplayModeForType = (type, mode) => {
+    if (isTrainingType(type)) {
+      return (mode === 'list' || mode === 'calendar') ? mode : 'calendar';
+    }
+    return (mode === 'list-pane' || mode === 'cards') ? mode : 'cards';
+  };
+
   const subTypeRowHtml = (sub, ntIdx, sIdx, canDelete, isDefault) => `
     <div class="subtype-item" data-nt="${ntIdx}" data-si="${sIdx}">
-      <input type="radio" class="subtype-default" name="subtype-default-${ntIdx}" title="Set as default" ${isDefault ? 'checked' : ''} />
-      <input type="text" class="subtype-icon"  value="${sub.icon}"  placeholder="📝" maxlength="2" />
-      <input type="text" class="subtype-value" value="${sub.value}" placeholder="VALUE" style="width:90px;text-transform:uppercase;" />
-      <input type="text" class="subtype-label" value="${sub.label}" placeholder="Label" />
-      ${canDelete ? `<button type="button" class="btn-icon-small btn-delete-subtype" title="Delete subtype">🗑️</button>` : ''}
+      <input type="radio" class="subtype-default" name="subtype-default-${ntIdx}" aria-label="Default sub-type" ${isDefault ? 'checked' : ''} />
+      <input type="text" class="subtype-icon"  value="${sub.icon}"  placeholder="📝" maxlength="2" aria-label="Sub-type icon" />
+      <input type="text" class="subtype-value" value="${sub.value}" placeholder="VALUE" aria-label="Sub-type internal key" />
+      <input type="text" class="subtype-label" value="${sub.label}" placeholder="Label" aria-label="Sub-type display label" />
+      ${canDelete ? `<button type="button" class="btn-icon-small btn-delete-subtype" aria-label="Delete sub-type">🗑️</button>` : ''}
     </div>`;
 
   container.innerHTML = types.map((type, index) => {
@@ -648,30 +723,68 @@ export function renderNoteTypesList(rebuildMenuFn) {
     const behaviorOpts = ['quote','training','generic'].map(b =>
       `<option value="${b}" ${(type.behavior||'generic')===b?'selected':''}>${behaviorLabel(b)}</option>`).join('');
     const subsHtml = hasSubs ? `
-      <div class="subtype-section">
-        <div class="subtype-header">
-          <span>↳ Sub-types (${subs.length})</span>
-          <button type="button" class="btn-add-subtype btn-icon-small" data-nt="${index}" title="Add sub-type">➕</button>
-        </div>
-        <div class="subtype-list" data-nt="${index}">
-          ${subs.map((s, si) => subTypeRowHtml(s, index, si, subs.length > 1, !!s.isDefault)).join('')}
-        </div>
-      </div>` : '';
+        <div class="subtype-section">
+          <div class="subtype-header">
+            <span class="subtype-header-title">Sub-types (${subs.length})</span>
+            <button type="button" class="btn-add-subtype btn-icon-small" data-nt="${index}" aria-label="Add sub-type">➕</button>
+          </div>
+          <div class="subtype-columns-header" aria-hidden="true">
+            <span class="subtype-col-default">Default</span>
+            <span>Icon</span>
+            <span>Internal key</span>
+            <span>Display label</span>
+            <span class="subtype-col-actions"></span>
+          </div>
+          <div class="subtype-list" data-nt="${index}">
+            ${subs.map((s, si) => subTypeRowHtml(s, index, si, subs.length > 1, !!s.isDefault)).join('')}
+          </div>
+        </div>` : `
+        <div class="note-type-subtypes-empty">No sub-types for this behavior.</div>`;
 
     return `
     <div class="quote-type-item note-type-row" data-index="${index}">
-      <div class="note-type-main-row">
-        <input type="text" class="note-type-icon-input"  value="${type.icon}"  placeholder="📝" maxlength="2" title="Icon" />
-        <input type="text" class="note-type-value-input" value="${type.value}" placeholder="value" title="Internal key stored in database" />
-        <input type="text" class="note-type-label-input" value="${type.label}" placeholder="Label" title="Display label" />
-        <select class="note-type-behavior-select" title="Controls which fields appear in the edit modal">
-          ${behaviorOpts}
-        </select>
-        <div class="quote-type-actions">
-          <button type="button" class="btn-icon-small btn-delete-type" title="Delete note type">🗑️</button>
+      <div class="note-type-card-layout">
+        <div class="note-type-fields-col">
+          <div class="note-type-fields-stack">
+            <div class="note-type-field">
+              <label class="note-type-field-label">Icon</label>
+              <input type="text" class="note-type-icon-input" value="${type.icon}" placeholder="📝" maxlength="2" />
+            </div>
+            <div class="note-type-field">
+              <label class="note-type-field-label">Internal key stored in database</label>
+              <input type="text" class="note-type-value-input" value="${type.value}" placeholder="value" />
+            </div>
+            <div class="note-type-field">
+              <label class="note-type-field-label">Display label</label>
+              <input type="text" class="note-type-label-input" value="${type.label}" placeholder="Label" />
+            </div>
+            <div class="note-type-field">
+              <label class="note-type-field-label">Edit modal behavior</label>
+              <select class="note-type-behavior-select">
+                ${behaviorOpts}
+              </select>
+            </div>
+            <div class="note-type-field">
+              <label class="note-type-field-label">Default display mode</label>
+              ${displayModeSelectHtml(type)}
+            </div>
+            <div class="note-type-field note-type-shortcuts">
+              <label class="note-type-field-label">Quick tag shortcuts</label>
+              <div class="note-type-shortcuts-add">
+                <input type="text" class="shortcut-tag-input" placeholder="Tag name…" autocomplete="off" />
+                <button type="button" class="btn btn-primary btn-shortcut-add">Add</button>
+              </div>
+              <div class="shortcut-tags-list"></div>
+            </div>
+          </div>
+          <div class="quote-type-actions">
+            <button type="button" class="btn-icon-small btn-delete-type" aria-label="Delete note type">🗑️ Delete type</button>
+          </div>
+        </div>
+        <div class="note-type-subtypes-col">
+          ${subsHtml}
         </div>
       </div>
-      ${subsHtml}
     </div>`;
   }).join('');
 
@@ -681,23 +794,30 @@ export function renderNoteTypesList(rebuildMenuFn) {
     const valueInput    = row.querySelector('.note-type-value-input');
     const labelInput    = row.querySelector('.note-type-label-input');
     const behaviorSel   = row.querySelector('.note-type-behavior-select');
+    const displayModeSel = row.querySelector('.note-type-display-mode-select');
     const deleteBtn     = row.querySelector('.btn-delete-type');
 
     const updateType = () => {
       const current = getNoteTypesSettings();
-      current[index] = {
+      const next = {
         ...current[index],
         icon:     iconInput.value  || '📝',
         label:    labelInput.value || 'Custom',
         value:    valueInput?.value?.trim()  || current[index].value,
         behavior: behaviorSel?.value         || current[index].behavior,
       };
+      next.defaultDisplayMode = normalizeDisplayModeForType(
+        next,
+        displayModeSel?.value || next.defaultDisplayMode,
+      );
+      current[index] = next;
       saveNoteTypesAndRefresh(current, rebuildMenuFn);
     };
     iconInput.addEventListener('change', updateType);
     labelInput.addEventListener('change', updateType);
     if (valueInput)   valueInput.addEventListener('change', updateType);
     if (behaviorSel)  behaviorSel.addEventListener('change', updateType);
+    if (displayModeSel) displayModeSel.addEventListener('change', updateType);
 
     if (deleteBtn) {
       deleteBtn.addEventListener('click', async () => {
@@ -706,7 +826,11 @@ export function renderNoteTypesList(rebuildMenuFn) {
           title: `Delete note type "${current[index].label}"?`,
           danger: true,
         })) {
+          const removed = current[index];
           current.splice(index, 1);
+          if (removed?.value && globalSettings?.highlightedTags?.[removed.value]) {
+            delete globalSettings.highlightedTags[removed.value];
+          }
           saveNoteTypesAndRefresh(current, rebuildMenuFn);
         }
       });
@@ -775,6 +899,9 @@ export function renderNoteTypesList(rebuildMenuFn) {
         saveNoteTypesAndRefresh(current, rebuildMenuFn);
       });
     }
+
+    const typeValue = getNoteTypesSettings()[index]?.value;
+    wireNoteTypeShortcuts(row, typeValue, rebuildMenuFn);
   });
 }
 
@@ -813,7 +940,13 @@ export function setupNoteTypeManagementListeners(rebuildMenuFn) {
     while (types.find(t => t.value === value)) {
       value = `${base}${n++}`;
     }
-    types.push({ icon: '📌', value, label: 'Custom Type', behavior: 'generic' });
+    types.push({
+      icon: '📌',
+      value,
+      label: 'Custom Type',
+      behavior: 'generic',
+      defaultDisplayMode: 'cards',
+    });
     saveNoteTypesAndRefresh(types, rebuildMenuFn);
   });
 }
@@ -1142,6 +1275,38 @@ export function toggleTagOperationsPanel(show) {
 
 // ============= SETTINGS INITIALIZATION =============
 
+const SETTINGS_OPTIONS_TAB_KEY = 'settingsOptionsTab';
+const VALID_SETTINGS_TABS = new Set(['general', 'note-types']);
+
+function initializeSettingsTabs() {
+  const tabBtns = document.querySelectorAll('.settings-tab-btn[data-settings-tab]');
+  const panels = document.querySelectorAll('.settings-tab-panel[data-settings-panel]');
+  if (!tabBtns.length || !panels.length) return;
+
+  const setTab = (tabId) => {
+    if (!VALID_SETTINGS_TABS.has(tabId)) tabId = 'general';
+    tabBtns.forEach((btn) => {
+      const on = btn.dataset.settingsTab === tabId;
+      btn.classList.toggle('active', on);
+      btn.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    panels.forEach((panel) => {
+      const on = panel.dataset.settingsPanel === tabId;
+      panel.classList.toggle('active', on);
+      panel.hidden = !on;
+    });
+    try { localStorage.setItem(SETTINGS_OPTIONS_TAB_KEY, tabId); } catch { /* ignore */ }
+  };
+
+  let saved = null;
+  try { saved = localStorage.getItem(SETTINGS_OPTIONS_TAB_KEY); } catch { /* ignore */ }
+  setTab(VALID_SETTINGS_TABS.has(saved) ? saved : 'general');
+
+  tabBtns.forEach((btn) => {
+    btn.addEventListener('click', () => setTab(btn.dataset.settingsTab));
+  });
+}
+
 /**
  * Initialize settings UI and event listeners
  * This is a large function that sets up all settings-related event listeners
@@ -1156,6 +1321,8 @@ export function initializeSettings(callbacks = {}) {
     rebuildNoteTypeMenu,
     renderNoteTypesList: renderNoteTypesListCb,
   } = callbacks;
+
+  initializeSettingsTabs();
 
   const enableTagOpsCheckbox = getElementByIdSafe('enableTagOperations');
   const enableQuoteMetaSearchesCheckbox = getElementByIdSafe('enableQuoteMetaSearches');
@@ -1444,66 +1611,6 @@ export function initializeSettings(callbacks = {}) {
   renderTrainingTypesList(populateTrainingTypeFilterCheckboxes);
   if (renderNoteTypesListCb) renderNoteTypesListCb();
   setupTypeManagementListeners(populateTypeDropdowns, populateTypeFilterCheckboxes, populateTrainingTypeFilterCheckboxes, rebuildNoteTypeMenu);
-
-  // ── Quick Tag Shortcuts ──────────────────────────────────────────────────
-  const shortcutTypeSelect = getElementByIdSafe('shortcutNoteTypeSelect');
-  const shortcutTagInput   = getElementByIdSafe('shortcutTagInput');
-  const shortcutAddBtn     = getElementByIdSafe('shortcutTagAddBtn');
-  const shortcutList       = getElementByIdSafe('shortcutTagsList');
-
-  function renderShortcutTags() {
-    if (!shortcutList || !shortcutTypeSelect) return;
-    const type = shortcutTypeSelect.value;
-    const tags = globalSettings?.highlightedTags?.[type] || [];
-    shortcutList.innerHTML = tags.map(tag => `
-      <span style="display:inline-flex;align-items:center;gap:0.3rem;background:var(--tag-color);color:white;padding:0.2rem 0.55rem;border-radius:12px;font-size:0.85rem;">
-        ${tag}
-        <span data-remove="${tag}" style="cursor:pointer;font-weight:bold;opacity:0.8;" title="Remove">&times;</span>
-      </span>`).join('');
-    shortcutList.querySelectorAll('[data-remove]').forEach(x => {
-      x.addEventListener('click', async () => {
-        const t = x.dataset.remove;
-        if (!globalSettings.highlightedTags) globalSettings.highlightedTags = {};
-        globalSettings.highlightedTags[type] = (globalSettings.highlightedTags[type] || []).filter(v => v !== t);
-        await saveSettings(globalSettings);
-        renderShortcutTags();
-        if (rebuildNoteTypeMenu) rebuildNoteTypeMenu();
-      });
-    });
-  }
-
-  if (shortcutTypeSelect) {
-    // Populate the note-type selector
-    const noteTypes = globalSettings?.noteTypes || [];
-    noteTypes.forEach(nt => {
-      const opt = document.createElement('option');
-      opt.value = nt.value;
-      opt.textContent = `${nt.icon || ''} ${nt.label}`;
-      shortcutTypeSelect.appendChild(opt);
-    });
-    shortcutTypeSelect.addEventListener('change', renderShortcutTags);
-    renderShortcutTags();
-  }
-
-  if (shortcutAddBtn && shortcutTagInput && shortcutTypeSelect) {
-    const doAdd = async () => {
-      const tag  = shortcutTagInput.value.trim();
-      const type = shortcutTypeSelect.value;
-      if (!tag || !type) return;
-      if (!globalSettings.highlightedTags) globalSettings.highlightedTags = {};
-      const arr = globalSettings.highlightedTags[type] || [];
-      if (!arr.includes(tag)) {
-        arr.push(tag);
-        globalSettings.highlightedTags[type] = arr;
-        await saveSettings(globalSettings);
-        if (rebuildNoteTypeMenu) rebuildNoteTypeMenu();
-      }
-      shortcutTagInput.value = '';
-      renderShortcutTags();
-    };
-    shortcutAddBtn.addEventListener('click', doAdd);
-    shortcutTagInput.addEventListener('keydown', e => { if (e.key === 'Enter') doAdd(); });
-  }
 }
 
 /**

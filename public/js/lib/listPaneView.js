@@ -35,6 +35,7 @@ import {
   renderPaneAttachments,
   resetPaneAttachments,
 } from './paneAttachments.js?v=20260605paneatt7';
+import { getNoteTypeDefaultDisplayMode } from './settingsManager.js?v=20260605optiontabs5';
 
 // ─────────────────────────────────────────────────────────────
 // Internal state (reset on every renderListPaneView call)
@@ -62,7 +63,9 @@ export function getTrainingSubMode() {
   const v = (typeof localStorage !== 'undefined')
     ? localStorage.getItem(TRAINING_SUBMODE_KEY)
     : null;
-  return VALID_SUBMODES.has(v) ? v : 'calendar';
+  if (VALID_SUBMODES.has(v)) return v;
+  const def = getNoteTypeDefaultDisplayMode('training');
+  return VALID_SUBMODES.has(def) ? def : 'calendar';
 }
 
 export function setTrainingSubMode(mode) {
