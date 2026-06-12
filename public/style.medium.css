@@ -679,6 +679,22 @@
     flex-shrink: 0 !important;
   }
 
+  body.single-type-layout .single-type-toolbar .stb-label,
+  body.single-type-layout .single-type-toolbar .stb-caret {
+    display: none;
+  }
+
+  body.single-type-layout .header-tool-btn {
+    padding: 0.25rem 0.45rem !important;
+    font-size: var(--m-font-md) !important;
+  }
+
+  body.single-type-layout header .header-actions {
+    flex-wrap: wrap !important;
+    max-width: 55%;
+    justify-content: flex-end;
+  }
+
   /* Form inputs */
   input[type="text"],
   input[type="date"],

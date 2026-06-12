@@ -26,6 +26,10 @@ Types and their labels/icons are user-configurable in Settings. The `behavior` f
 
 Left sidebar lists note types grouped by mode. Each type is a link that sets the URL hash and filters the card list.
 
+**Single-type mode** (`npm run tegneserie`, `job`, `training`, etc. — one allowed type): navigation is **Header bar** (compact toolbar) or **Side menu** (classic sidebar). Priority at startup: **CLI flag** (`-- --menu` / `-- --header`) → **last session** (browser) → **Options default** (Note Types dropdown) → header bar. Changing the Options dropdown updates both the saved default and last session. Multi-type modes always use the full sidebar.
+
+When a single-type instance is running, Options → Note Types lists **only that type** (other types are hidden; they remain in `settings.json`).
+
 - Expand arrows (▶) for types with sub-tags appear at the far right of the menu item
 - Sub-tags are shown as indented child links
 - The active view is highlighted

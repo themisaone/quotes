@@ -60,7 +60,15 @@ function applyMode(newMode) {
   return true;
 }
 
+function resolveNavLayoutOverride() {
+  const v = process.env.NAV_LAYOUT?.toLowerCase();
+  return (v === 'menu' || v === 'header') ? v : null;
+}
+
+const _navLayoutOverride = resolveNavLayoutOverride();
+
 console.log(`🎛️  Mode: ${_modeName} — types: [${_allowedTypes.join(', ')}]`);
+if (_navLayoutOverride) console.log(`🧭  Nav layout override: ${_navLayoutOverride}`);
 
 // ── Local config (vault path only — stays inside the app, never synced) ──
 const LOCAL_FILE      = path.join(__dirname, '../config/local.json');
@@ -210,7 +218,9 @@ app.get('/api/mode', (req, res) => {
   res.json({
     mode:         _modeName,
     allowedTypes: _allowedTypes,
-    allModes:     _modes
+    allModes:     _modes,
+    modeLocked:   !!process.env.MODE,
+    navLayout:    _navLayoutOverride
   });
 });
 
