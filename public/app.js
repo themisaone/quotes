@@ -68,7 +68,7 @@ import {
   getNoteTypeDefaultDisplayMode,
   initializeSettings as initializeSettingsLib,
   refreshSettingsForOptionsPanel
-} from './js/lib/settingsManager.js?v=20260612singletype4';
+} from './js/lib/settingsManager.js?v=20260613menuonly1';
 
 import {
   openAuthorModal as openAuthorModalLib,
@@ -775,66 +775,6 @@ let activeMode = { mode: 'DEFAULT', allowedTypes: null };
 // Exposed globally so filterManager / viewManager can gate training-specific UI
 window._modeAllowedTypes = null;
 
-/** Header-toolbar navigation (single-type + navigationLayout=header). */
-let _headerNavActive = false;
-let _singleTypeToolbarEl = null;
-let _singleTypeToolbarWired = false;
-let _singleTypeNavView = 'quotes';
-
-function resolveNavigationLayout(allowedTypes) {
-  if (!allowedTypes || allowedTypes.length !== 1) return 'menu';
-  const noteType = allowedTypes[0];
-
-  // 1. Startup CLI flag (--menu / --header via NAV_LAYOUT env)
-  if (activeMode.navLayout === 'menu' || activeMode.navLayout === 'header') {
-    return activeMode.navLayout;
-  }
-
-  // 2. Last session for this note type (localStorage)
-  const lastSession = getLastSessionNavLayout(noteType);
-  if (lastSession) return lastSession;
-
-  // 3. Configured default in Options → Note Types
-  const typeMeta = globalSettings?.noteTypes?.find(t => t.value === noteType);
-  const pref = typeMeta?.navigationLayout;
-  if (pref === 'menu' || pref === 'header') return pref;
-
-  return 'header';
-}
-
-const NAV_LAYOUT_SESSION_PREFIX = 'navLayoutSession_';
-
-function getLastSessionNavLayout(noteType) {
-  try {
-    const v = localStorage.getItem(`${NAV_LAYOUT_SESSION_PREFIX}${noteType}`);
-    return (v === 'menu' || v === 'header') ? v : null;
-  } catch (_) {
-    return null;
-  }
-}
-
-function setLastSessionNavLayout(noteType, layout) {
-  if (!noteType || (layout !== 'menu' && layout !== 'header')) return;
-  try {
-    localStorage.setItem(`${NAV_LAYOUT_SESSION_PREFIX}${noteType}`, layout);
-  } catch (_) {}
-}
-
-/** Effective layout for UI hints (respects CLI override). */
-function getEffectiveNavigationLayout(noteType) {
-  const allowed = activeMode?.allowedTypes;
-  if (allowed?.length === 1 && allowed[0] === noteType) {
-    return resolveNavigationLayout(allowed);
-  }
-  const typeMeta = globalSettings?.noteTypes?.find(t => t.value === noteType);
-  const pref = typeMeta?.navigationLayout;
-  if (pref === 'menu' || pref === 'header') return pref;
-  return 'header';
-}
-
-window.getEffectiveNavigationLayout = getEffectiveNavigationLayout;
-window.setLastSessionNavLayout = setLastSessionNavLayout;
-
 /** Note types visible in menu / dropdowns for the active server mode. */
 function getMenuNoteTypesForCurrentMode() {
   const allowed = activeMode?.allowedTypes || window._modeAllowedTypes;
@@ -885,6 +825,9 @@ function applyModeMenuVisibility(allowedTypes) {
   const tabRandTeg = document.getElementById('tabletRandomTegneserieBtn');
   if (tabRandTeg) tabRandTeg.style.display = hasTegneserie ? '' : 'none';
 
+  const tabRandQuote = document.getElementById('tabletRandomQuoteBtn');
+  if (tabRandQuote) tabRandQuote.style.display = hasQuotes ? '' : 'none';
+
   const elTrainingFilter = document.getElementById('trainingTypesFilterContainer');
   const elTrainingSummary = document.getElementById('trainingTypeSummary');
   if (elTrainingFilter) elTrainingFilter.style.display = hasTraining ? '' : 'none';
@@ -896,202 +839,15 @@ function applyModeMenuVisibility(allowedTypes) {
   if (elQuoteSummary) elQuoteSummary.style.display = hasQuotes ? '' : 'none';
 }
 
-function buildSingleTypeToolbar({ homeLabel, homeIcon, showRandom, hasQuotes }) {
-  const nav = document.createElement('nav');
-  nav.id = 'singleTypeToolbar';
-  nav.className = 'single-type-toolbar';
-  nav.setAttribute('aria-label', 'Quick navigation');
-  nav.innerHTML = `
-    <button type="button" class="btn btn-add header-tool-btn" data-stb-view="quotes" title="${homeLabel}">
-      <span class="stb-icon">${homeIcon}</span><span class="stb-label">${homeLabel}</span>
-    </button>
-    ${hasQuotes ? `
-    <button type="button" class="btn btn-add header-tool-btn" data-stb-view="authors" title="Authors">
-      <span class="stb-icon">✍️</span><span class="stb-label">Authors</span>
-    </button>
-    <button type="button" class="btn btn-add header-tool-btn" data-stb-view="sources" title="Sources">
-      <span class="stb-icon">📚</span><span class="stb-label">Sources</span>
-    </button>` : ''}
-    <button type="button" class="btn btn-add header-tool-btn" data-stb-view="tags" title="Tags">
-      <span class="stb-icon">🏷️</span><span class="stb-label">Tags</span>
-    </button>
-    ${showRandom ? `
-    <button type="button" class="btn btn-add header-tool-btn stb-random" title="Random">
-      <span class="stb-icon">🎲</span><span class="stb-label">Random</span>
-    </button>` : ''}
-    <div class="stb-dropdown">
-      <button type="button" class="btn btn-add header-tool-btn stb-dropdown-toggle" aria-expanded="false" title="Data management">
-        <span class="stb-icon">📦</span><span class="stb-label">Data</span><span class="stb-caret">▾</span>
-      </button>
-      <div class="stb-dropdown-menu">
-        <button type="button" class="stb-dropdown-item" data-stb-action="export-pdf">📄 Export to PDF</button>
-        <button type="button" class="stb-dropdown-item" data-stb-action="export-json">💾 Export Notes</button>
-        <button type="button" class="stb-dropdown-item" data-stb-action="import-json">📥 Import Notes</button>
-      </div>
-    </div>
-    <button type="button" class="btn btn-add header-tool-btn" data-stb-view="settings" title="Options">
-      <span class="stb-icon">⚙️</span><span class="stb-label">Options</span>
-    </button>
-  `;
-  return nav;
-}
-
-function wireSingleTypeToolbar({ hasQuotes, hasTegneserie }) {
-  if (_singleTypeToolbarWired || !_singleTypeToolbarEl) return;
-  _singleTypeToolbarWired = true;
-
-  _singleTypeToolbarEl.querySelectorAll('[data-stb-view]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const view = btn.dataset.stbView;
-      if (view) switchView(view);
-    });
-  });
-
-  const randomBtn = _singleTypeToolbarEl.querySelector('.stb-random');
-  if (randomBtn) {
-    randomBtn.addEventListener('click', () => {
-      if (hasTegneserie) showWelcomeQuote(true, 'tegneserie');
-      else if (hasQuotes) showWelcomeQuote(true);
-    });
-  }
-
-  _singleTypeToolbarEl.querySelector('[data-stb-action="export-pdf"]')
-    ?.addEventListener('click', () => {
-      document.getElementById('exportPdfMenuBtn')?.click();
-      closeSingleTypeDropdown();
-    });
-  _singleTypeToolbarEl.querySelector('[data-stb-action="export-json"]')
-    ?.addEventListener('click', () => {
-      document.getElementById('exportJsonBtn')?.click();
-      closeSingleTypeDropdown();
-    });
-  _singleTypeToolbarEl.querySelector('[data-stb-action="import-json"]')
-    ?.addEventListener('click', () => {
-      document.getElementById('importJsonBtn')?.click();
-      closeSingleTypeDropdown();
-    });
-
-  const toggle = _singleTypeToolbarEl.querySelector('.stb-dropdown-toggle');
-  const dropdown = _singleTypeToolbarEl.querySelector('.stb-dropdown');
-  toggle?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const open = dropdown.classList.toggle('open');
-    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-  });
-  document.addEventListener('click', () => closeSingleTypeDropdown());
-}
-
-function closeSingleTypeDropdown() {
-  const dropdown = _singleTypeToolbarEl?.querySelector('.stb-dropdown');
-  if (!dropdown) return;
-  dropdown.classList.remove('open');
-  dropdown.querySelector('.stb-dropdown-toggle')?.setAttribute('aria-expanded', 'false');
-}
-
-function getActiveViewHeader() {
-  const viewIds = ['quotesView', 'tagsView', 'settingsView', 'authorsView', 'sourcesView'];
-  for (const id of viewIds) {
-    const el = document.getElementById(id);
-    if (el && el.style.display !== 'none') return el.querySelector('header');
-  }
-  return document.querySelector('#quotesView header');
-}
-
-function ensureHeaderActionsSplit(header) {
-  const actions = header.querySelector('.header-actions');
-  if (!actions) return null;
-  let tools = actions.querySelector('.header-actions-tools');
-  if (!tools) {
-    tools = document.createElement('div');
-    tools.className = 'header-actions-tools';
-    while (actions.firstChild) tools.appendChild(actions.firstChild);
-    actions.appendChild(tools);
-  }
-  return { actions, tools };
-}
-
-function mountSingleTypeToolbar() {
-  if (!_singleTypeToolbarEl) return;
-  const header = getActiveViewHeader();
-  if (!header) return;
-  _singleTypeToolbarEl.remove();
-  const split = ensureHeaderActionsSplit(header);
-  if (!split) {
-    header.appendChild(_singleTypeToolbarEl);
-    return;
-  }
-  split.actions.insertBefore(_singleTypeToolbarEl, split.tools);
-  updateSingleTypeToolbarActive(_singleTypeNavView);
-}
-
-function updateSingleTypeToolbarActive(view) {
-  _singleTypeNavView = view;
-  if (!_singleTypeToolbarEl) return;
-  _singleTypeToolbarEl.querySelectorAll('[data-stb-view]').forEach(btn => {
-    const target = btn.dataset.stbView;
-    const active = (target === 'quotes' && (view === 'quotes' || view === 'menu'))
-      || target === view;
-    btn.classList.toggle('active', !!active);
-  });
-}
-
-function teardownHeaderNavToolbar() {
-  _singleTypeToolbarEl?.remove();
-  _singleTypeToolbarEl = null;
-  _singleTypeToolbarWired = false;
-  document.body.classList.remove('single-type-layout');
-}
-
-function applyNavigationLayout(isSingle, { hasQuotes, hasTegneserie, allowedTypes }) {
-  const useHeaderNav = isSingle && resolveNavigationLayout(allowedTypes) === 'header';
-
-  if (!useHeaderNav) {
-    teardownHeaderNavToolbar();
-    _headerNavActive = false;
-    return;
-  }
-
-  _headerNavActive = true;
-  document.body.classList.add('single-type-layout');
-
-  const typeMeta = globalSettings?.noteTypes?.find(t => t.value === allowedTypes[0]);
-  const homeLabel = typeMeta?.label || allowedTypes[0];
-  const homeIcon = typeMeta?.icon || '📦';
-  const showRandom = hasQuotes || hasTegneserie;
-
-  if (!_singleTypeToolbarEl) {
-    _singleTypeToolbarEl = buildSingleTypeToolbar({ homeLabel, homeIcon, showRandom, hasQuotes });
-    wireSingleTypeToolbar({ hasQuotes, hasTegneserie });
-  } else {
-    const homeBtn = _singleTypeToolbarEl.querySelector('[data-stb-view="quotes"]');
-    if (homeBtn) {
-      homeBtn.title = homeLabel;
-      homeBtn.querySelector('.stb-icon').textContent = homeIcon;
-      homeBtn.querySelector('.stb-label').textContent = homeLabel;
-    }
-    const randomBtn = _singleTypeToolbarEl.querySelector('.stb-random');
-    if (randomBtn) randomBtn.style.display = showRandom ? '' : 'none';
-  }
-
-  mountSingleTypeToolbar();
-}
-
 function reapplyModeUi({ rebuildMenu = false } = {}) {
   if (!activeMode?.allowedTypes?.length) return;
   const allowedTypes = activeMode.allowedTypes;
   initNoteTypes(getMenuNoteTypesForCurrentMode());
   if (rebuildMenu) generateNoteTypeMenu();
   applyModeMenuVisibility(allowedTypes);
-  const has = (type) => allowedTypes.includes(type);
-  applyNavigationLayout(allowedTypes.length === 1, {
-    hasQuotes: has('quote'),
-    hasTegneserie: has('tegneserie'),
-    allowedTypes,
-  });
 }
 
 window.reapplyModeUi = reapplyModeUi;
-window.reapplyNavigationLayout = reapplyModeUi;
 
 async function loadAndApplyMode() {
   try {
@@ -1140,11 +896,6 @@ async function loadAndApplyMode() {
   const isSingle = allowedTypes.length === 1;
 
   applyModeMenuVisibility(allowedTypes);
-  applyNavigationLayout(isSingle, {
-    hasQuotes: allowedTypes.includes('quote'),
-    hasTegneserie: allowedTypes.includes('tegneserie'),
-    allowedTypes,
-  });
 
   if (isSingle) {
     setTimeout(() => {
@@ -1154,18 +905,8 @@ async function loadAndApplyMode() {
   }
 
   // When mode is locked via npm run <mode>, hide the mode switcher in the sidebar
-  // (sidebar may already be hidden in single-type layout).
   const modeRow = modeSwitcher?.closest('.side-menu-mode-row');
   if (modeRow && activeMode.modeLocked) modeRow.style.display = 'none';
-
-  window._navLayoutStartupOverride = activeMode.navLayout || null;
-  if (allowedTypes.length === 1) {
-    const eff = resolveNavigationLayout(allowedTypes);
-    const src = activeMode.navLayout
-      ? 'startup flag'
-      : (getLastSessionNavLayout(allowedTypes[0]) ? 'last session' : 'Options default');
-    console.log(`🧭 Navigation layout: ${eff} (${src})`);
-  }
 }
 
 // Initialize
@@ -1295,7 +1036,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  if (_headerNavActive) mountSingleTypeToolbar();
+  if (window._modeAllowedTypes?.includes('quote')) {
+    setTimeout(() => showWelcomeQuote(), 300);
+  }
 });
 
 // Event Listeners
@@ -3746,10 +3489,6 @@ function switchView(view) {
       globalSettings
     }
   );
-  if (_headerNavActive) {
-    setTimeout(() => mountSingleTypeToolbar(), 0);
-    updateSingleTypeToolbarActive(view);
-  }
 }
 // Make global for filterByTag functionality
 window.switchView = switchView;
@@ -4735,7 +4474,18 @@ async function handleSabTagOpApply() {
 }
 
 // Welcome / random note overlay (optional randomNoteType, e.g. 'tegneserie')
+function isNoteTypeAllowedForRandom(noteType) {
+  const allowed = window._modeAllowedTypes || activeMode?.allowedTypes;
+  if (!allowed?.length) return (noteType || 'quote') === 'quote';
+  const effective = noteType || 'quote';
+  return allowed.includes(effective);
+}
+
 async function showWelcomeQuote(force = false, randomNoteType = null) {
+  const effectiveType = randomNoteType || 'quote';
+  if (!isNoteTypeAllowedForRandom(effectiveType)) {
+    return;
+  }
   try {
     // Only show automatically if not already shown in this session
     if (!force && sessionStorage.getItem('welcomeQuoteShown')) {
@@ -4825,12 +4575,8 @@ async function showWelcomeQuote(force = false, randomNoteType = null) {
 
 window.showWelcomeQuote = showWelcomeQuote;
 
-// Show welcome quote on app load
+// Random welcome overlay — menu buttons wired here; auto-show runs from main init when quote is in mode
 window.addEventListener("DOMContentLoaded", () => {
-  // Show welcome quote after a short delay to ensure smooth loading
-  setTimeout(showWelcomeQuote, 300);
-  
-  // Add event listener for Random Quote button
   const randomQuoteBtn = getElementByIdSafe("randomQuoteBtn");
   if (randomQuoteBtn) {
     randomQuoteBtn.addEventListener("click", () => showWelcomeQuote(true));

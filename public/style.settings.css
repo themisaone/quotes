@@ -680,8 +680,7 @@ details.settings-section-desc .settings-section-lead {
 .note-type-value-input,
 .note-type-label-input,
 .note-type-behavior-select,
-.note-type-display-mode-select,
-.note-type-navigation-layout-select {
+.note-type-display-mode-select {
   width: 100%;
   max-width: 100%;
 }
@@ -690,15 +689,6 @@ details.settings-section-desc .settings-section-lead {
   font-size: 0.9rem;
   color: var(--text-secondary);
   font-style: italic;
-}
-.note-type-nav-session-hint {
-  margin: 0.35rem 0 0;
-  font-size: 0.82rem;
-  color: var(--text-secondary);
-  line-height: 1.35;
-}
-.note-type-nav-session-hint code {
-  font-size: 0.78rem;
 }
 .note-type-value-input,
 .subtype-value {

@@ -24,11 +24,9 @@ Types and their labels/icons are user-configurable in Settings. The `behavior` f
 
 ## Side Menu / Navigation
 
-Left sidebar lists note types grouped by mode. Each type is a link that sets the URL hash and filters the card list.
+Left sidebar lists note types grouped by mode. Each type is a link that sets the URL hash and filters the card list. The menu can be collapsed with the ◀ toggle (desktop/medium).
 
-**Single-type mode** (`npm run tegneserie`, `job`, `training`, etc. — one allowed type): navigation is **Header bar** (compact toolbar) or **Side menu** (classic sidebar). Priority at startup: **CLI flag** (`-- --menu` / `-- --header`) → **last session** (browser) → **Options default** (Note Types dropdown) → header bar. Changing the Options dropdown updates both the saved default and last session. Multi-type modes always use the full sidebar.
-
-When a single-type instance is running, Options → Note Types lists **only that type** (other types are hidden; they remain in `settings.json`).
+When a single-type instance is running (`npm run tegneserie`, etc.), Options → Note Types lists **only that type** (others remain in `settings.json` but are hidden).
 
 - Expand arrows (▶) for types with sub-tags appear at the far right of the menu item
 - Sub-tags are shown as indented child links
@@ -58,7 +56,7 @@ Cards are displayed in a grid (1, 2, or 3 columns depending on screen width). Th
 
 **Attachment thumbnail:** Shown inline in card if present. Clicking opens the full attachment viewer or prompts for decryption if encrypted.
 
-**Welcome / random note:** On load, an overlay can show a random note (`GET /api/quotes/random`). Some deployments pass `note_type` (e.g. `tegneserie`) for type-specific random picks.
+**Welcome / random note:** On load, an overlay can show a random **quote** when the active mode includes `quote` (`default`, `all`, `npm run quotes`, etc.) — not in single-type modes like `tegneserie` or `job`. Menu **Random → Quote** and `GET /api/quotes/random` (default `note_type=quote`) follow the same rule. **Random → Tegneserie** requires `tegneserie` in the active mode.
 
 ---
 

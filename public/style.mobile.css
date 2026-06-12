@@ -320,20 +320,6 @@
     padding-top: 1rem !important;
     padding-bottom: 60px !important; /* Space for bottom horizontal menu */
   }
-
-  body.single-type-layout .main-content {
-    padding-bottom: 0.75rem !important;
-  }
-
-  body.single-type-layout .single-type-toolbar .stb-label,
-  body.single-type-layout .single-type-toolbar .stb-caret {
-    display: none;
-  }
-
-  body.single-type-layout .header-tool-btn {
-    padding: 0.25rem 0.45rem !important;
-    font-size: var(--m-font-md) !important;
-  }
   
   /* Reduce overall padding and spacing */
   body {

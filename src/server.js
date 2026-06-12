@@ -60,15 +60,7 @@ function applyMode(newMode) {
   return true;
 }
 
-function resolveNavLayoutOverride() {
-  const v = process.env.NAV_LAYOUT?.toLowerCase();
-  return (v === 'menu' || v === 'header') ? v : null;
-}
-
-const _navLayoutOverride = resolveNavLayoutOverride();
-
 console.log(`🎛️  Mode: ${_modeName} — types: [${_allowedTypes.join(', ')}]`);
-if (_navLayoutOverride) console.log(`🧭  Nav layout override: ${_navLayoutOverride}`);
 
 // ── Local config (vault path only — stays inside the app, never synced) ──
 const LOCAL_FILE      = path.join(__dirname, '../config/local.json');
@@ -219,8 +211,7 @@ app.get('/api/mode', (req, res) => {
     mode:         _modeName,
     allowedTypes: _allowedTypes,
     allModes:     _modes,
-    modeLocked:   !!process.env.MODE,
-    navLayout:    _navLayoutOverride
+    modeLocked:   !!process.env.MODE
   });
 });
 
@@ -2142,6 +2133,12 @@ app.get("/api/quotes/random", async (req, res) => {
     const raw = req.query.note_type;
     const noteType =
       typeof raw === "string" && raw.trim() !== "" ? raw.trim() : "quote";
+
+    if (!_allowedTypes.includes(noteType)) {
+      return res.status(403).json({
+        error: `Note type "${noteType}" is not available in the current mode (${_modeName})`,
+      });
+    }
 
     const result = await pool.query(
       `

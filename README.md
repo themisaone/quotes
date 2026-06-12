@@ -86,19 +86,6 @@ Each `npm run …` script sets a fixed **PORT** so you can run several instances
 | `notes` | 4006 |
 | `historical` | 4007 |
 
-**Single-type navigation:** each note type has a **Single-type navigation (default)** in Options → Note Types. At startup the effective layout is chosen in order:
-
-1. Startup flag — `npm run tegneserie -- --menu` or `-- --header`
-2. **Last session** — remembered per note type in the browser (`localStorage`)
-3. **Options default** — the dropdown value above
-4. Fallback: **Header bar**
-
-```bash
-npm run tegneserie -- --menu      # force sidebar this start
-npm run tegneserie -- --header    # force header toolbar this start
-npm run tegneserie                # last session, else Options default
-```
-
 Modes are defined in `config/modes.json`. Active mode persists in `config/local.json`.
 
 ---

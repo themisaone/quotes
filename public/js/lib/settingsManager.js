@@ -733,14 +733,6 @@ export function renderNoteTypesList(rebuildMenuFn) {
     return (mode === 'list-pane' || mode === 'cards') ? mode : 'cards';
   };
 
-  const navigationLayoutSelectHtml = (type) => {
-    const configured = type.navigationLayout === 'menu' ? 'menu' : 'header';
-    return `<select class="note-type-navigation-layout-select" aria-label="Navigation layout default">
-      <option value="header" ${configured === 'header' ? 'selected' : ''}>Header bar</option>
-      <option value="menu" ${configured === 'menu' ? 'selected' : ''}>Side menu</option>
-    </select>`;
-  };
-
   const subTypeRowHtml = (sub, ntIdx, sIdx, canDelete, isDefault) => `
     <div class="subtype-item" data-nt="${ntIdx}" data-si="${sIdx}">
       <input type="radio" class="subtype-default" name="subtype-default-${ntIdx}" aria-label="Default sub-type" ${isDefault ? 'checked' : ''} />
@@ -802,13 +794,6 @@ export function renderNoteTypesList(rebuildMenuFn) {
               <label class="note-type-field-label">Default display mode</label>
               ${displayModeSelectHtml(type)}
             </div>
-            <div class="note-type-field">
-              <label class="note-type-field-label">Single-type navigation (default)</label>
-              ${navigationLayoutSelectHtml(type)}
-              ${isSingleTypeInstance && allowed?.[0] === type.value && typeof window !== 'undefined' && window._navLayoutStartupOverride
-                ? `<p class="note-type-nav-session-hint">This session: <strong>${window._navLayoutStartupOverride === 'menu' ? 'Side menu' : 'Header bar'}</strong> (from startup <code>--${window._navLayoutStartupOverride}</code>). The dropdown above is the default when no flag or last session is set.</p>`
-                : ''}
-            </div>
             <div class="note-type-field note-type-shortcuts">
               <label class="note-type-field-label">Quick tag shortcuts</label>
               <div class="note-type-shortcuts-add">
@@ -838,7 +823,6 @@ export function renderNoteTypesList(rebuildMenuFn) {
     const labelInput    = row.querySelector('.note-type-label-input');
     const behaviorSel   = row.querySelector('.note-type-behavior-select');
     const displayModeSel = row.querySelector('.note-type-display-mode-select');
-    const navLayoutSel  = row.querySelector('.note-type-navigation-layout-select');
     const deleteBtn     = row.querySelector('.btn-delete-type');
 
     const updateType = () => {
@@ -854,9 +838,7 @@ export function renderNoteTypesList(rebuildMenuFn) {
         next,
         displayModeSel?.value || next.defaultDisplayMode,
       );
-      next.navigationLayout = navLayoutSel?.value === 'menu' ? 'menu' : 'header';
       current[index] = next;
-      window.setLastSessionNavLayout?.(next.value, next.navigationLayout);
       saveNoteTypesAndRefresh(current, rebuildMenuFn);
     };
     iconInput.addEventListener('change', updateType);
@@ -864,7 +846,6 @@ export function renderNoteTypesList(rebuildMenuFn) {
     if (valueInput)   valueInput.addEventListener('change', updateType);
     if (behaviorSel)  behaviorSel.addEventListener('change', updateType);
     if (displayModeSel) displayModeSel.addEventListener('change', updateType);
-    if (navLayoutSel) navLayoutSel.addEventListener('change', updateType);
 
     if (deleteBtn) {
       deleteBtn.addEventListener('click', async () => {

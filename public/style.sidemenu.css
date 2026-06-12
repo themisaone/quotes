@@ -313,17 +313,3 @@ header h1 {
   height: 1.2rem;
   cursor: pointer;
 }
-
-/* ── Single-type mode: no sidebar, full-width main content ─────────────── */
-body.single-type-layout .side-menu {
-  display: none !important;
-}
-
-body.single-type-layout .main-content {
-  margin-left: 0 !important;
-  width: 100% !important;
-}
-
-body.single-type-layout .btn-back-menu.tablet-only {
-  display: none !important;
-}
