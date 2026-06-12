@@ -49,7 +49,7 @@ import {
   exportToJson as exportToJsonLib,
   handleImportFile as handleImportFileLib,
   pruneUnusedEntitiesRequest,
-} from './js/lib/dataManager.js?v=20260512prune404';
+} from './js/lib/dataManager.js?v=20260605importmodal1';
 
 import {
   loadSettings,
@@ -1216,8 +1216,8 @@ function setupEventListeners() {
   const sabTagOpInput    = document.getElementById('sabTagOpInput');
   const sabTagOpApplyBtn = document.getElementById('sabTagOpApplyBtn');
   if (sabTagOpSelect) {
-    sabTagOpSelect.addEventListener('change', _updateSabTagOpPlaceholder);
-    _updateSabTagOpPlaceholder();
+    sabTagOpSelect.addEventListener('change', _updateSabTagOpControls);
+    _updateSabTagOpControls();
   }
   if (sabTagOpInput) {
     sabTagOpInput.addEventListener('keydown', (ev) => {
@@ -1578,6 +1578,7 @@ function updateBulkButtonVisibility() {
   const addBulkBtnTablet = getElementByIdSafe('addBulkBtnTablet');
   if (addBulkBtn) addBulkBtn.style.display = d;
   if (addBulkBtnTablet) addBulkBtnTablet.style.display = d;
+  _updateSabTagOpAvailability();
 }
 
 // Wrapper for filterManager library
@@ -4298,11 +4299,55 @@ const _SAB_TAGOP_PLACEHOLDERS = {
   setGroup:  'Group name…',
 };
 
-function _updateSabTagOpPlaceholder() {
-  const sel   = document.getElementById('sabTagOpSelect');
-  const input = document.getElementById('sabTagOpInput');
+function populateSabSubTypeDropdown() {
+  const select = document.getElementById('sabSubTypeSelect');
+  if (!select) return;
+
+  const noteType = currentNoteTypeFilter;
+  const subTypes = noteType && hasGenericSubTypeField(noteType)
+    ? getGenericSubTypes(noteType)
+    : [];
+  const prevValue = select.value;
+
+  select.innerHTML = '<option value="">Select sub-type…</option>';
+  subTypes.forEach((type) => {
+    const option = document.createElement('option');
+    option.value = type.value;
+    option.textContent = `${type.icon} ${type.label}`;
+    select.appendChild(option);
+  });
+
+  if (prevValue) select.value = prevValue;
+}
+
+function _updateSabTagOpAvailability() {
+  const opt = document.getElementById('sabSetSubTypeOption');
+  const sel = document.getElementById('sabTagOpSelect');
+  const show = !!currentNoteTypeFilter && hasGenericSubTypeField(currentNoteTypeFilter);
+
+  if (opt) {
+    opt.hidden = !show;
+    opt.disabled = !show;
+  }
+  if (!show && sel?.value === 'setSubType') {
+    sel.value = 'addTag';
+  }
+  if (show) populateSabSubTypeDropdown();
+  _updateSabTagOpControls();
+}
+
+function _updateSabTagOpControls() {
+  const sel       = document.getElementById('sabTagOpSelect');
+  const input     = document.getElementById('sabTagOpInput');
+  const subSelect = document.getElementById('sabSubTypeSelect');
   if (!sel || !input) return;
-  input.placeholder = _SAB_TAGOP_PLACEHOLDERS[sel.value] || '';
+
+  const isSubType = sel.value === 'setSubType';
+  input.style.display = isSubType ? 'none' : '';
+  if (subSelect) subSelect.style.display = isSubType ? '' : 'none';
+  if (!isSubType) {
+    input.placeholder = _SAB_TAGOP_PLACEHOLDERS[sel.value] || '';
+  }
 }
 
 /**
@@ -4311,17 +4356,28 @@ function _updateSabTagOpPlaceholder() {
  * count/label match whatever scope the SAB is operating on.
  */
 async function handleSabTagOpApply() {
-  const sel   = document.getElementById('sabTagOpSelect');
-  const input = document.getElementById('sabTagOpInput');
-  const btn   = document.getElementById('sabTagOpApplyBtn');
+  const sel       = document.getElementById('sabTagOpSelect');
+  const input     = document.getElementById('sabTagOpInput');
+  const subSelect = document.getElementById('sabSubTypeSelect');
+  const btn       = document.getElementById('sabTagOpApplyBtn');
   if (!sel || !input) return;
 
-  const op    = sel.value;
-  const value = (input.value || '').trim();
-  if (!value) {
-    alert('⚠️ Please enter a value.');
-    input.focus();
-    return;
+  const op = sel.value;
+  let value = '';
+  if (op === 'setSubType') {
+    value = (subSelect?.value || '').trim();
+    if (!value) {
+      alert('⚠️ Please select a sub-type.');
+      subSelect?.focus();
+      return;
+    }
+  } else {
+    value = (input.value || '').trim();
+    if (!value) {
+      alert('⚠️ Please enter a value.');
+      input.focus();
+      return;
+    }
   }
 
   if (getEffectiveSelectionCount() === 0) {
@@ -4351,6 +4407,12 @@ async function handleSabTagOpApply() {
     bodyKey     = 'groupName';
     message     = `Set group "${value}" on ${count} ${label}?`;
     confirmOpts = { icon: '🔗', title: 'Set Group', confirmLabel: 'Set Group' };
+  } else if (op === 'setSubType') {
+    const subLabel = subSelect?.selectedOptions?.[0]?.textContent?.trim() || value;
+    endpoint    = `${API_URL}/quotes/bulk-set-subtype`;
+    bodyKey     = 'subType';
+    message     = `Set sub-type to "${subLabel}" on ${count} ${label}?`;
+    confirmOpts = { icon: '🏷️', title: 'Set Sub-Type', confirmLabel: 'Set Sub-Type' };
   } else {
     console.warn('Unknown SAB tag-op:', op);
     return;
@@ -4368,7 +4430,11 @@ async function handleSabTagOpApply() {
     const result = await resp.json();
     if (!resp.ok) throw new Error(result.error || 'Operation failed');
 
-    input.value = '';
+    if (op === 'setSubType') {
+      if (subSelect) subSelect.value = '';
+    } else {
+      input.value = '';
+    }
     loadQuotes();
     alert(`✅ ${result.message || `${result.count || count} notes updated`}`);
   } catch (err) {

@@ -3457,6 +3457,59 @@ app.post("/api/quotes/bulk-set-group", async (req, res) => {
   }
 });
 
+// Bulk set generic sub-type (notes.type) on selected notes
+app.post("/api/quotes/bulk-set-subtype", async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const { filters, subType, noteIds, noteType: explicitNoteType } = req.body;
+
+    if (!subType || !String(subType).trim()) {
+      return res.status(400).json({ error: "Sub-type is required" });
+    }
+    const subTypeValue = String(subType).trim();
+
+    let quoteIds;
+    if (noteIds && Array.isArray(noteIds) && noteIds.length > 0) {
+      quoteIds = noteIds.map(id => parseInt(id, 10)).filter(Number.isFinite);
+    } else {
+      const { query, params } = buildFilterQuery(filters);
+      const quotesResult = await client.query(`SELECT q.id ${query}`, params);
+      quoteIds = quotesResult.rows.map(r => r.id);
+    }
+
+    if (quoteIds.length === 0) {
+      await client.query("ROLLBACK");
+      return res.json({ count: 0, message: "No notes match" });
+    }
+
+    let updateSql = `UPDATE notes SET type = $1 WHERE id = ANY($2::int[])`;
+    const updateParams = [subTypeValue, quoteIds];
+    if (explicitNoteType) {
+      updateSql += ` AND note_type = $3`;
+      updateParams.push(explicitNoteType);
+    }
+    const updateResult = await client.query(
+      `${updateSql} RETURNING id`,
+      updateParams
+    );
+
+    await client.query("COMMIT");
+    res.json({
+      count: updateResult.rowCount,
+      total: quoteIds.length,
+      message: `Set sub-type on ${updateResult.rowCount} notes`,
+    });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Error in bulk set-subtype:", error);
+    res.status(500).json({ error: "Failed to set sub-type" });
+  } finally {
+    client.release();
+  }
+});
+
 // Bulk untag (remove tag) operation
 app.post("/api/quotes/bulk-untag", async (req, res) => {
   const client = await pool.connect();

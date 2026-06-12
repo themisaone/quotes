@@ -165,8 +165,8 @@ function generateImportConfirmationMessage(backupData) {
  */
 function generateImportSuccessHtml(stats) {
   return `
-    <div style="background: #d1fae5; padding: 15px; border-radius: 8px; margin-top: 10px;">
-      <h4 style="margin-top: 0; color: #065f46;">✅ Import Completed!</h4>
+    <div class="import-status-panel import-status-panel--success">
+      <h4>✅ Import Completed!</h4>
       <div style="display: grid; gap: 8px;">
         <p style="margin: 0;"><strong>📚 Quotes/Notes:</strong> ${stats.quotes.created} imported, ${stats.quotes.skipped} skipped (duplicates)</p>
         <p style="margin: 0;"><strong>👤 Authors:</strong> ${stats.authors.created} imported, ${stats.authors.skipped} skipped (duplicates)</p>
@@ -174,9 +174,9 @@ function generateImportSuccessHtml(stats) {
         <p style="margin: 0;"><strong>🏷️ Tags:</strong> ${stats.tags.created} imported</p>
       </div>
       ${stats.errors.length > 0 ? `
-        <details style="margin-top: 12px; color: #991b1b;">
+        <details class="import-status-errors" style="margin-top: 12px; color: #f87171;">
           <summary style="cursor: pointer;"><strong>⚠️ ${stats.errors.length} row-level error(s)</strong> — expand for details</summary>
-          <pre style="max-height: 220px; overflow: auto; font-size: 11px; background: #fef2f2; padding: 8px; border-radius: 6px; margin-top: 8px;">${stats.errors.slice(0, 80).map(e => String(e).replace(/</g, '&lt;')).join('\n')}${stats.errors.length > 80 ? '\n… ' + (stats.errors.length - 80) + ' more' : ''}</pre>
+          <pre style="max-height: 220px; overflow: auto; font-size: 11px; background: rgba(239, 68, 68, 0.12); color: var(--text-primary); padding: 8px; border-radius: 6px; margin-top: 8px;">${stats.errors.slice(0, 80).map(e => String(e).replace(/</g, '&lt;')).join('\n')}${stats.errors.length > 80 ? '\n… ' + (stats.errors.length - 80) + ' more' : ''}</pre>
         </details>` : ""}
     </div>
   `;
@@ -187,8 +187,8 @@ function generateImportSuccessHtml(stats) {
  */
 function generateImportErrorHtml(errorMessage) {
   return `
-    <div style="background: #fee2e2; padding: 15px; border-radius: 8px; margin-top: 10px;">
-      <h4 style="margin-top: 0; color: #991b1b;">❌ Import Failed</h4>
+    <div class="import-status-panel import-status-panel--error">
+      <h4>❌ Import Failed</h4>
       <p>${errorMessage}</p>
     </div>
   `;

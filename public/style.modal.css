@@ -57,6 +57,64 @@
   min-width: 550px; /* Minimum sensible width */
 }
 
+/* Restore backup — compact width; import-behavior note wraps to ~2 lines */
+#importModal .modal-content {
+  width: min(480px, 92vw);
+}
+
+.import-behavior-note {
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--text-primary);
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+#importProgress h3 {
+  font-size: 1rem;
+  color: var(--text-primary);
+  margin: 0 0 0.5rem;
+}
+
+.import-status-panel {
+  padding: 15px;
+  border-radius: 8px;
+  margin-top: 10px;
+  color: var(--text-primary);
+}
+
+.import-status-panel--success {
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.import-status-panel--success h4 {
+  margin-top: 0;
+  color: #34d399;
+}
+
+.import-status-panel--success p,
+.import-status-panel--success strong {
+  color: var(--text-primary);
+}
+
+.import-status-panel--error {
+  background: rgba(239, 68, 68, 0.14);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.import-status-panel--error h4 {
+  margin-top: 0;
+  color: #f87171;
+}
+
+.import-status-panel--error p {
+  color: var(--text-primary);
+}
+
 /* Attachment container wrapper - horizontal layout */
 .attachment-container-wrapper {
   display: flex;

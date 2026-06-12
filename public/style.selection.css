@@ -128,6 +128,11 @@ body.selection-mode .quote-card::after {
   max-width: 100%;
 }
 
+.select-action-bar .sab-tagop-subtype {
+  min-width: 160px;
+  max-width: 220px;
+}
+
 /* All per-op action buttons (Export PDF, Duplicate, …) stay tightly grouped
    on the right regardless of how the mini-form flexes. */
 .select-action-bar .btn-sab {

@@ -216,6 +216,7 @@ Available from a bulk-select mode on the card grid:
 - **Bulk tag** — add a tag to all selected notes
 - **Bulk untag** — remove a tag from all selected notes
 - **Bulk set group** — set `translation_group` on selected notes (for linking translations)
+- **Bulk set sub-type** — set the generic sub-type (`notes.type`, e.g. Pondus instead of Assorted) on selected notes; shown in the Select-Action-Bar dropdown when the current note type has sub-types configured (Tegneserie, Assorted Notes, etc.)
 - **Bulk duplicate** — duplicate selected notes
 - **Bulk split** — for notes with 2+ attachments: keep the original with attachment at position 0 only; create one new note per extra attachment (copies text, tags, author, etc.) — `POST /api/quotes/bulk-split`
 - **Bulk delete** — delete selected notes (with confirmation)
