@@ -6,3 +6,6 @@ docker-compose.override.yml
 
 # External attachments (large files stored outside DB)
 attachments/
+
+config/running-instances.json
+config/logs/

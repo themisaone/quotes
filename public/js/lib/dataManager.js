@@ -1,6 +1,6 @@
 /**
  * Data Manager - Export and Import functionality
- * Handles PDF export, JSON backup, and data restoration
+ * Handles PDF export, JSON backup export, and JSON import
  * 
  * Architecture:
  * - Filter builders: Build URL params and filter objects
@@ -222,14 +222,14 @@ function generateFilename(prefix, extension) {
 }
 
 /**
- * Validate backup file structure
+ * Validate JSON import file structure (export / backup format)
  */
 function validateBackupData(backupData) {
   if (!backupData.data || 
       !backupData.data.authors || 
       !backupData.data.sources || 
       !backupData.data.quotes) {
-    throw new Error("Invalid backup file format");
+    throw new Error('Invalid import file format. Expected JSON with authors, sources, and notes.');
   }
 }
 
@@ -494,6 +494,8 @@ export async function pruneUnusedEntitiesRequest() {
 
 // ============= IMPORT FUNCTION =============
 
+const IMPORT_FILE_BTN_LABEL = 'Select Import File';
+
 /**
  * Send import data to server
  */
@@ -522,7 +524,7 @@ async function sendImportToServer(backupData) {
  */
 function handleImportSuccess(result, importStatus, selectFileBtn, importModal, onImportComplete) {
   importStatus.innerHTML = generateImportSuccessHtml(result.stats);
-  selectFileBtn.textContent = "Select Backup File";
+  selectFileBtn.textContent = IMPORT_FILE_BTN_LABEL;
   selectFileBtn.disabled = false;
 
   const errN = result.stats?.errors?.length || 0;
@@ -548,7 +550,7 @@ function handleImportSuccess(result, importStatus, selectFileBtn, importModal, o
     if (onImportComplete) {
       onImportComplete();
     }
-    alert("✅ Data restored successfully! Page will refresh.");
+    alert("✅ Import completed successfully! Page will refresh.");
     location.reload();
   }, IMPORT_SUCCESS_DELAY);
 }
@@ -559,7 +561,7 @@ function handleImportSuccess(result, importStatus, selectFileBtn, importModal, o
 function handleImportError(error, importStatus, selectFileBtn) {
   console.error("Error importing JSON:", error);
   importStatus.innerHTML = generateImportErrorHtml(error.message);
-  selectFileBtn.textContent = "Select Backup File";
+  selectFileBtn.textContent = IMPORT_FILE_BTN_LABEL;
   selectFileBtn.disabled = false;
 }
 
@@ -567,7 +569,7 @@ function handleImportError(error, importStatus, selectFileBtn) {
  * Reset file input and button
  */
 function resetFileInput(event, selectFileBtn) {
-  selectFileBtn.textContent = "Select Backup File";
+  selectFileBtn.textContent = IMPORT_FILE_BTN_LABEL;
   selectFileBtn.disabled = false;
   event.target.value = "";
 }
@@ -606,7 +608,7 @@ export async function handleImportFile(event, config) {
     // Show confirmation
     const message = generateImportConfirmationMessage(backupData);
     
-    if (!await showConfirm(message, { icon: '📥', title: 'Restore backup', confirmLabel: 'Restore' })) {
+    if (!await showConfirm(message, { icon: '📥', title: 'Import notes', confirmLabel: 'Import' })) {
       resetFileInput(event, selectFileBtn);
       return;
     }

@@ -32,6 +32,8 @@ _modeName       // e.g. 'DEFAULT', 'ALL', 'TRAINING'
 - `data:image/jpeg;base64,...` — embedded base64 (thumbnails only, since all full attachments moved to disk)
 - `file:note/456.secret.txt.enc` — encrypted file on disk
 
+**Multi-instance / Services UI:** `src/instanceManager.js` probes fixed ports from `config/instance-ports.json`, spawns detached `node src/server.js` children with `MODE` + `PORT` + `SKIP_MIGRATE=1`, and tracks PIDs in `config/running-instances.json`. Any running instance exposes `GET/POST /api/instances*` so the sidebar **Services** view can start/stop siblings on the same host. Disabled when `INSTANCE_MANAGER=0`. Requires `lsof` on Linux for stop when PID is unknown.
+
 ---
 
 ## Database Schema

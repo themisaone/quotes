@@ -1,21 +1,29 @@
 #!/usr/bin/env node
 'use strict';
 
-/** Start the app in a named MODE on a fixed PORT (see README port table). */
+/** Start the app in a named MODE on its configured PORT (see config/instance-ports.json). */
 const { spawnSync } = require('child_process');
+const fs = require('fs');
 const path = require('path');
 
 const args = process.argv.slice(2);
 const mode = args[0];
-const port = args[1];
 const root = path.join(__dirname, '..');
 
-if (!mode || !port) {
-  console.error('Usage: node scripts/run-mode.js MODE PORT');
+if (!mode) {
+  console.error('Usage: node scripts/run-mode.js MODE');
   process.exit(1);
 }
 
-const env = { ...process.env, MODE: mode, PORT: String(port) };
+const portsFile = path.join(root, 'config/instance-ports.json');
+const modePorts = JSON.parse(fs.readFileSync(portsFile, 'utf8'));
+const port = modePorts[mode.toUpperCase()];
+if (!port) {
+  console.error(`Unknown mode "${mode}". Check config/instance-ports.json`);
+  process.exit(1);
+}
+
+const env = { ...process.env, MODE: mode.toUpperCase(), PORT: String(port) };
 
 let result = spawnSync('node', ['migrations/run-migrations.js'], { stdio: 'inherit', cwd: root, env });
 if (result.status !== 0) process.exit(result.status ?? 1);

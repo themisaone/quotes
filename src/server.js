@@ -6,6 +6,7 @@ const multer = require("multer");
 const archiver = require("archiver");
 const pool = require("./db");
 const fileStorage = require("./fileStorage");
+const instanceManager = require("./instanceManager");
 const {
   checkTagTablesExist,
   getOrCreateTagIds,
@@ -231,6 +232,42 @@ app.put('/api/mode', (req, res) => {
   } catch (e) { console.warn('Could not persist mode:', e.message); }
   console.log(`🎛️  Mode switched to: ${_modeName} — types: [${_allowedTypes.join(', ')}]`);
   res.json({ mode: _modeName, allowedTypes: _allowedTypes });
+});
+
+// ── Instance manager (multi-service on one host) ───────────────────────────
+app.get('/api/instances', async (req, res) => {
+  try {
+    const data = await instanceManager.listInstances(PORT);
+    res.json(data);
+  } catch (e) {
+    console.error('GET /api/instances:', e);
+    res.status(500).json({ error: e.message || 'Failed to list instances' });
+  }
+});
+
+app.post('/api/instances/start', async (req, res) => {
+  try {
+    const { mode } = req.body || {};
+    const result = await instanceManager.startInstance(mode, PORT);
+    res.json(result);
+  } catch (e) {
+    console.error('POST /api/instances/start:', e);
+    res.status(e.status || 500).json({ error: e.message || 'Failed to start instance' });
+  }
+});
+
+app.post('/api/instances/stop', async (req, res) => {
+  try {
+    const port = req.body?.port;
+    const result = await instanceManager.stopInstance(port, PORT);
+    res.json(result);
+    if (result.self) {
+      setTimeout(() => process.kill(process.pid, 'SIGTERM'), 400);
+    }
+  } catch (e) {
+    console.error('POST /api/instances/stop:', e);
+    res.status(e.status || 500).json({ error: e.message || 'Failed to stop instance' });
+  }
 });
 
 // Get all settings
@@ -6005,17 +6042,20 @@ function escapeHtml(text) {
 // Start server
 async function startServer() {
   try {
-    // Run migrations on startup
-    console.log('🔄 Running database migrations...');
-    const { runMigrations } = require('../migrations/run-migrations');
-    await runMigrations();
-    console.log('✅ Migrations completed\n');
-    
-    // Start the server
+    if (process.env.SKIP_MIGRATE !== '1') {
+      console.log('🔄 Running database migrations...');
+      const { runMigrations } = require('../migrations/run-migrations');
+      await runMigrations();
+      console.log('✅ Migrations completed\n');
+    } else {
+      console.log('⏭️  Skipping migrations (SKIP_MIGRATE=1)\n');
+    }
+
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`Server is running on port ${PORT}`);
       console.log(`Local: http://localhost:${PORT}`);
       console.log(`Network: http://0.0.0.0:${PORT}`);
+      instanceManager.attachLifecycleHooks(PORT, _modeName);
     });
   } catch (error) {
     console.error('Failed to start server:', error);

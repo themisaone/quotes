@@ -57,7 +57,7 @@
   min-width: 550px; /* Minimum sensible width */
 }
 
-/* Restore backup — compact width; import-behavior note wraps to ~2 lines */
+/* Import notes modal — compact width; import-behavior note wraps to ~2 lines */
 #importModal .modal-content {
   width: min(480px, 92vw);
 }

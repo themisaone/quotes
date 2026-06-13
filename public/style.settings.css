@@ -684,6 +684,154 @@ details.settings-section-desc .settings-section-lead {
   width: 100%;
   max-width: 100%;
 }
+.services-panel {
+  margin-top: 0.5rem;
+}
+
+.services-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+  table-layout: fixed;
+}
+
+.services-table th:nth-child(1),
+.services-table td.svc-col-label {
+  width: 36%;
+}
+
+.services-table th:nth-child(2),
+.services-table td.svc-col-port {
+  width: 4.5rem;
+}
+
+.services-table th:nth-child(3),
+.services-table td.svc-col-status {
+  width: 7rem;
+}
+
+.services-table th:nth-child(4),
+.services-table td.svc-col-actions {
+  width: 12.5rem;
+}
+
+.services-table th,
+.services-table td {
+  padding: 0.55rem 0.65rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.services-table th {
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.services-row-self {
+  background: rgba(30, 64, 175, 0.06);
+}
+
+.svc-col-port {
+  font-family: monospace;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.svc-col-status {
+  white-space: nowrap;
+}
+
+.svc-col-actions {
+  padding-right: 0.35rem;
+}
+
+.svc-actions {
+  display: flex;
+  gap: 0.4rem;
+  justify-content: flex-end;
+}
+
+.svc-action-slot {
+  flex: 0 0 calc(50% - 0.2rem);
+  display: flex;
+  justify-content: flex-end;
+  min-height: 2rem;
+}
+
+.btn-svc-open,
+.btn-svc-start,
+.btn-svc-stop {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.85rem;
+  width: 100%;
+  max-width: 5.5rem;
+  text-align: center;
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+
+.btn-svc-stop {
+  margin: 0;
+}
+
+.svc-badge {
+  display: inline-block;
+  padding: 0.28rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+}
+
+.svc-badge-on {
+  background: #86efac;
+  color: #14532d;
+  border-color: #16a34a;
+}
+
+.svc-badge-off {
+  background: #d1d5db;
+  color: #1f2937;
+  border-color: #6b7280;
+}
+
+.svc-badge-self {
+  background: #60a5fa;
+  color: #1e3a8a;
+  border-color: #2563eb;
+}
+
+.svc-port-busy {
+  display: block;
+  font-size: 0.75rem;
+  color: #b45309;
+}
+
+.services-hint {
+  margin: 1rem 0 0;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.services-loading,
+.services-error {
+  color: var(--text-secondary);
+}
+
+.services-stopped-self {
+  margin: 0.5rem 0 0;
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 6px;
+}
+
 .settings-single-type-hint {
   margin: 0 0 0.75rem;
   font-size: 0.9rem;

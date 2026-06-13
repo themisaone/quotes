@@ -28,6 +28,8 @@ Left sidebar lists note types grouped by mode. Each type is a link that sets the
 
 When a single-type instance is running (`npm run tegneserie`, etc.), Options → Note Types lists **only that type** (others remain in `settings.json` but are hidden).
 
+**Services:** Sidebar → **Services** lists all configured note-type servers on this host (by port). Any running instance can start/stop others (including **This tab** — useful when there is no terminal) and open them in a new tab — useful when the app runs on a home server and you browse via Tailscale.
+
 - Expand arrows (▶) for types with sub-tags appear at the far right of the menu item
 - Sub-tags are shown as indented child links
 - The active view is highlighted
@@ -272,7 +274,7 @@ Settings → Storage → "Path to vault". When set, all attachment files and exp
 
 Side menu → **Data Management** (desktop):
 - Export JSON backup
-- Import JSON backup
+- Import notes from JSON (including Backup Data exports)
 - Export as PDF
 
 **Options** page (⚙️) has two tabs: **General** (compact sections stacked on the left — tags, meta, maintenance, encryption; **Color Customization** top-right; **Note Display Options** and **Storage & Performance** side-by-side below) and **Note Types** (per-type cards). The active tab is remembered in `localStorage` (`settingsOptionsTab`). Each note type card shows labeled fields (icon, internal key, display label, edit-modal behavior, **Default display mode**, **Quick tag shortcuts** for that type) plus sub-types on the right. Display-mode defaults: **Cards / List + Pane** for most types, **Calendar / List** for Training (`defaultDisplayMode` in `settings.json`). Deleting a note type or sub-type, or removing a tag shortcut, prompts for confirmation.

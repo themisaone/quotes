@@ -86,6 +86,16 @@ Each `npm run …` script sets a fixed **PORT** so you can run several instances
 | `notes` | 4006 |
 | `historical` | 4007 |
 
+Ports are defined in `config/instance-ports.json` (shared by `npm run …` and the **Services** UI).
+
+### Services UI (multi-instance on one host)
+
+From any running instance, open **Services** in the sidebar to see which note-type servers are up, **Start** another (e.g. Tegneserie while Job is running), **Open** in a new tab, or **Stop** any service — including the one you are viewing (**This tab**), e.g. when it has no terminal window. Works over Tailscale — start/stop runs on the server machine; links use your current hostname.
+
+Disable spawning with `INSTANCE_MANAGER=0` in `.env`. Only use on a trusted network (home / Tailscale).
+
+**Stuck instance (no terminal):** Services → **Stop** on **This tab**. If you still see an old “cannot stop from itself” message, the running Node process predates that fix — over SSH: `kill $(lsof -t -iTCP:PORT -sTCP:LISTEN)` (use the port from Services, e.g. 4003), pull latest code, start again.
+
 Modes are defined in `config/modes.json`. Active mode persists in `config/local.json`.
 
 ---

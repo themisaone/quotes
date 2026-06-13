@@ -49,7 +49,7 @@ import {
   exportToJson as exportToJsonLib,
   handleImportFile as handleImportFileLib,
   pruneUnusedEntitiesRequest,
-} from './js/lib/dataManager.js?v=20260605importmodal1';
+} from './js/lib/dataManager.js?v=20260613import1';
 
 import {
   loadSettings,
@@ -68,7 +68,12 @@ import {
   getNoteTypeDefaultDisplayMode,
   initializeSettings as initializeSettingsLib,
   refreshSettingsForOptionsPanel
-} from './js/lib/settingsManager.js?v=20260613menuonly1';
+} from './js/lib/settingsManager.js?v=20260613services1';
+
+import {
+  loadServicesPanel,
+  wireServicesRefresh
+} from './js/lib/servicesManager.js?v=20260613services5';
 
 import {
   openAuthorModal as openAuthorModalLib,
@@ -3470,6 +3475,8 @@ function switchView(view) {
       loadAuthors,
       loadSources,
       loadTags,
+      loadServices: loadServicesPanel,
+      wireServicesRefresh,
       toggleMetadataSearchSection,
       toggleTagOperationsPanel,
       renderQuoteTypesList,
