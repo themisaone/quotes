@@ -1,0 +1,11 @@
+{
+  "DEFAULT": 4000,
+  "ALL": 4000,
+  "TEGNESERIE": 4001,
+  "TRAINING": 4002,
+  "JOB": 4003,
+  "BRAIN": 4004,
+  "QUOTES": 4005,
+  "NOTES": 4006,
+  "HISTORICAL": 4007
+}
