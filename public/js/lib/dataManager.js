@@ -150,14 +150,45 @@ function generateBackupConfirmationMessage(currentNoteTypeFilter, typeLabel) {
 /**
  * Generate confirmation message for import
  */
+function getImportCounts(backupData) {
+  if (backupData?.counts) return backupData.counts;
+  const d = backupData?.data || {};
+  return {
+    quotes: Array.isArray(d.quotes) ? d.quotes.length : 0,
+    authors: Array.isArray(d.authors) ? d.authors.length : 0,
+    sources: Array.isArray(d.sources) ? d.sources.length : 0,
+    tags: Array.isArray(d.tags) ? d.tags.length : 0,
+  };
+}
+
 function generateImportConfirmationMessage(backupData) {
+  const counts = getImportCounts(backupData);
   return `About to import:\n\n` +
-         `• ${backupData.counts.quotes} quotes/notes\n` +
-         `• ${backupData.counts.authors} authors\n` +
-         `• ${backupData.counts.sources} sources\n` +
-         `• ${backupData.counts.tags} tags\n\n` +
+         `• ${counts.quotes} quotes/notes\n` +
+         `• ${counts.authors} authors\n` +
+         `• ${counts.sources} sources\n` +
+         `• ${counts.tags} tags\n\n` +
          `Duplicates will be automatically skipped.\n\n` +
          `This may take a while. Continue?`;
+}
+
+function formatImportErrorMessage(error) {
+  const msg = error?.message || String(error);
+  if (/failed to fetch|networkerror|network error|load failed/i.test(msg)) {
+    return 'Lost connection to the server during import. '
+      + 'This is not caused by the import dialog — the server stopped responding '
+      + '(crashed, was stopped via Services, or timed out on a very large file). '
+      + 'Check that the app is still running on the server, then try again.';
+  }
+  return msg;
+}
+
+function escapeHtml(text) {
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 /**
@@ -189,7 +220,7 @@ function generateImportErrorHtml(errorMessage) {
   return `
     <div class="import-status-panel import-status-panel--error">
       <h4>❌ Import Failed</h4>
-      <p>${errorMessage}</p>
+      <p>${escapeHtml(formatImportErrorMessage({ message: errorMessage }))}</p>
     </div>
   `;
 }
@@ -497,23 +528,50 @@ export async function pruneUnusedEntitiesRequest() {
 const IMPORT_FILE_BTN_LABEL = 'Select Import File';
 
 /**
+ * Clear import modal UI (call when opening the dialog)
+ */
+export function resetImportModal(config) {
+  const { importProgress, importStatus, selectFileBtn, importFileInput } = config;
+  if (importProgress) importProgress.style.display = 'none';
+  if (importStatus) importStatus.innerHTML = '';
+  if (selectFileBtn) {
+    selectFileBtn.textContent = IMPORT_FILE_BTN_LABEL;
+    selectFileBtn.disabled = false;
+  }
+  if (importFileInput) importFileInput.value = '';
+}
+
+/**
  * Send import data to server
  */
 async function sendImportToServer(backupData) {
-  const response = await fetch(`${API_URL}/import/json`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      data: backupData.data,
-    }),
-  });
+  let response;
+  try {
+    response = await fetch(`${API_URL}/import/json`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        data: backupData.data,
+      }),
+    });
+  } catch (err) {
+    throw new Error(formatImportErrorMessage(err));
+  }
 
-  const result = await response.json();
+  let result = {};
+  try {
+    result = await response.json();
+  } catch (_) {
+    if (!response.ok) {
+      throw new Error(`Server error (${response.status} ${response.statusText})`);
+    }
+    throw new Error('Invalid response from server');
+  }
 
   if (!response.ok) {
-    throw new Error(result.error || "Import failed");
+    throw new Error(result.error || result.details || `Import failed (${response.status})`);
   }
 
   return result;
@@ -623,6 +681,7 @@ export async function handleImportFile(event, config) {
     handleImportSuccess(result, importStatus, selectFileBtn, importModal, onImportComplete);
     event.target.value = "";
   } catch (error) {
+    if (importProgress) importProgress.style.display = 'block';
     handleImportError(error, importStatus, selectFileBtn);
     event.target.value = "";
   }

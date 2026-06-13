@@ -48,8 +48,9 @@ import {
   exportToPdf as exportToPdfLib,
   exportToJson as exportToJsonLib,
   handleImportFile as handleImportFileLib,
+  resetImportModal,
   pruneUnusedEntitiesRequest,
-} from './js/lib/dataManager.js?v=20260613import1';
+} from './js/lib/dataManager.js?v=20260613import2';
 
 import {
   loadSettings,
@@ -1166,6 +1167,12 @@ function setupEventListeners() {
 
   if (importJsonBtn) {
     importJsonBtn.addEventListener("click", () => {
+      resetImportModal({
+        importProgress: getElementByIdSafe("importProgress"),
+        importStatus: getElementByIdSafe("importStatus"),
+        selectFileBtn: getElementByIdSafe("selectFileBtn"),
+        importFileInput: getElementByIdSafe("importFileInput"),
+      });
       importModal.style.display = "block";
     });
   }
