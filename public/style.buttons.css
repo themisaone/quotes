@@ -138,6 +138,28 @@
   color: white;
 }
 
+/* Header action buttons — match display-mode-select height */
+.header-actions .btn-add,
+.header-actions .btn-bulk {
+  height: var(--d-btn-height);
+  padding: 0 var(--d-pad-xl);
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.header-actions .btn-add.desktop-text,
+.header-actions .btn-bulk.desktop-text {
+  display: inline-flex;
+}
+
+.header-actions .btn-add.tablet-text,
+.header-actions .btn-bulk.tablet-text {
+  display: none;
+}
+
 /* Default: hide tablet buttons, show desktop buttons */
 .tablet-text {
   display: none;

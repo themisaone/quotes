@@ -351,6 +351,11 @@
   .tablet-text {
     display: inline-block !important;
   }
+
+  .header-actions .btn-add.tablet-text,
+  .header-actions .btn-bulk.tablet-text {
+    display: inline-flex !important;
+  }
   
   .container {
     padding: 0.5rem 1rem;

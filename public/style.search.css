@@ -417,6 +417,19 @@
   font-size: var(--d-font-base);
 }
 
+.quote-counts.quote-counts--single-type .quote-count-grand-sep,
+.quote-counts.quote-counts--single-type .quote-count-grand-total,
+body.mode-single-type #quotesQuoteCounts .quote-count-grand-sep,
+body.mode-single-type #quotesQuoteCounts .quote-count-grand-total {
+  display: none;
+}
+
+.quote-count-sep {
+  color: var(--text-secondary);
+  font-weight: 500;
+  user-select: none;
+}
+
 /* Shared counter badge styles — all 10 badges use same sizing */
 .quote-counts #filteredQuotesCount,
 .quote-counts #typeQuotesCount,

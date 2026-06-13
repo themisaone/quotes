@@ -844,12 +844,21 @@ function applyModeMenuVisibility(allowedTypes) {
   if (elQuoteSummary) elQuoteSummary.style.display = hasQuotes ? '' : 'none';
 }
 
+function applyGrandTotalCounterVisibility() {
+  const allowed = window._modeAllowedTypes || activeMode?.allowedTypes;
+  const isSingle = Array.isArray(allowed) && allowed.length === 1;
+  const el = document.getElementById('quotesQuoteCounts');
+  if (el) el.classList.toggle('quote-counts--single-type', isSingle);
+  document.body.classList.toggle('mode-single-type', isSingle);
+}
+
 function reapplyModeUi({ rebuildMenu = false } = {}) {
   if (!activeMode?.allowedTypes?.length) return;
   const allowedTypes = activeMode.allowedTypes;
   initNoteTypes(getMenuNoteTypesForCurrentMode());
   if (rebuildMenu) generateNoteTypeMenu();
   applyModeMenuVisibility(allowedTypes);
+  applyGrandTotalCounterVisibility();
 }
 
 window.reapplyModeUi = reapplyModeUi;
@@ -912,6 +921,8 @@ async function loadAndApplyMode() {
   // When mode is locked via npm run <mode>, hide the mode switcher in the sidebar
   const modeRow = modeSwitcher?.closest('.side-menu-mode-row');
   if (modeRow && activeMode.modeLocked) modeRow.style.display = 'none';
+
+  applyGrandTotalCounterVisibility();
 }
 
 // Initialize
@@ -957,6 +968,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   updateSourcesFilterVisibility();
   updateViewModeToggle();
   updateBulkButtonVisibility();
+  applyGrandTotalCounterVisibility();
   
   // Show/hide metadata search section based on current filter and settings
   const metaSearchEnabled = globalSettings?.enableQuoteMetaSearches === true;
