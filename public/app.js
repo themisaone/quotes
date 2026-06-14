@@ -494,6 +494,7 @@ function updateUrlHash() {
 
 function updateActiveMenuState() {
   updateActiveMenuStateLib(currentNoteTypeFilter);
+  syncMobileNoteTypeFilterValue();
 }
 
 function updateMainTitle() {
@@ -574,6 +575,62 @@ const searchSourceSuggestions = getElementByIdSafe("searchSourceSuggestions");
 // State
 let editingQuoteId = null;
 
+/** Switch the quotes view to a note-type filter (or All Notes when null). */
+function navigateToNoteTypeFilter(noteType) {
+  currentNoteTypeFilter = noteType;
+  window.currentNoteTypeFilter = noteType;
+  currentPage = 1;
+  setLibCurrentPage(1);
+
+  updateViewModeToggle();
+  updateBulkButtonVisibility();
+  switchView('quotes');
+  saveCurrentView();
+  updateUrlHash();
+
+  document.querySelectorAll('.note-type-filter').forEach(b => {
+    b.classList.toggle('active', noteType && b.dataset.noteType === noteType);
+  });
+  document.querySelectorAll('.menu-item[data-view]').forEach(b => {
+    b.classList.toggle('active', !noteType && b.dataset.view === 'quotes');
+  });
+
+  updateAddButtonText();
+  updateMainTitle();
+  updateSourcesFilterVisibility();
+
+  const metaSearchEnabled = globalSettings?.enableQuoteMetaSearches === true;
+  toggleMetadataSearchSection((noteType === 'quote' || noteType === null) && metaSearchEnabled);
+  clearSearchFields();
+  syncMobileNoteTypeFilterValue();
+
+  loadQuotes();
+  loadTotalCount();
+}
+
+function syncMobileNoteTypeFilterValue() {
+  const sel = document.getElementById('mobileNoteTypeFilter');
+  if (!sel?.classList.contains('mobile-note-type-filter--active')) return;
+  sel.value = currentNoteTypeFilter || '';
+}
+
+function populateMobileNoteTypeFilter(types) {
+  const sel = document.getElementById('mobileNoteTypeFilter');
+  if (!sel) return;
+
+  const isMulti = types.length > 1;
+  sel.classList.toggle('mobile-note-type-filter--active', isMulti);
+  if (!isMulti) {
+    sel.innerHTML = '';
+    return;
+  }
+
+  sel.innerHTML =
+    `<option value="">📦 All Notes</option>` +
+    types.map(t => `<option value="${t.value}">${t.icon} ${t.label}</option>`).join('');
+  syncMobileNoteTypeFilterValue();
+}
+
 /**
  * Build the note-type filter buttons in the left menu from the dynamic noteTypes list.
  * Inserts <li> elements before #noteTypeSeparator.
@@ -637,34 +694,8 @@ function generateNoteTypeMenu() {
     ul.insertBefore(li, separator);
 
     btn.addEventListener('click', () => {
-      const noteType = type.value;
-      currentNoteTypeFilter = noteType;
-      window.currentNoteTypeFilter = noteType;
-      currentPage = 1;
-      setLibCurrentPage(1);
-
-      // Sync view mode BEFORE switchView, which calls loadQuotes() internally
-      updateViewModeToggle();
-      updateBulkButtonVisibility();
-
-      switchView('quotes');
-      saveCurrentView();
-      updateUrlHash();
-
-      document.querySelectorAll('.note-type-filter').forEach(b => b.classList.remove('active'));
+      navigateToNoteTypeFilter(type.value);
       btn.classList.add('active');
-      document.querySelectorAll('.menu-item[data-view]').forEach(b => b.classList.remove('active'));
-
-      updateAddButtonText();
-      updateMainTitle();
-      updateSourcesFilterVisibility();
-
-      const metaSearchEnabled = globalSettings?.enableQuoteMetaSearches === true;
-      toggleMetadataSearchSection(metaSearchEnabled);
-      clearSearchFields();
-
-      loadQuotes();
-      loadTotalCount();
     });
   });
 
@@ -766,6 +797,9 @@ function generateNoteTypeMenu() {
     // Pre-select the only type in single-type mode
     if (isSingleMode) tagTypeFilter.value = types[0].value;
   }
+
+  // Populate mobile header note-type picker (multi-type modes on small screens)
+  populateMobileNoteTypeFilter(types);
 
   // Populate the note-type selector inside the edit/add modal
   const noteTypeSelect = document.getElementById('noteType');
@@ -1090,7 +1124,15 @@ function setupEventListeners() {
   });
   
   // Note type popup item clicks are handled by generateNoteTypeMenu().
-  
+
+  const mobileNoteTypeFilter = getElementByIdSafe('mobileNoteTypeFilter');
+  if (mobileNoteTypeFilter && !mobileNoteTypeFilter.dataset.wired) {
+    mobileNoteTypeFilter.dataset.wired = '1';
+    mobileNoteTypeFilter.addEventListener('change', () => {
+      navigateToNoteTypeFilter(mobileNoteTypeFilter.value || null);
+    });
+  }
+
   // Note type change handler (removed from modal, but keep for edit mode)
   const noteTypeSelect = getElementByIdSafe("noteType");
   if (noteTypeSelect) {
@@ -3450,23 +3492,9 @@ function setupMenuNavigation() {
       
       // Reset note type filter when clicking "All Notes" (app-specific logic)
       if (view === "quotes") {
-        currentNoteTypeFilter = null;
-        window.currentNoteTypeFilter = null; // Sync with global
-        // Remove active state from all note type filters
-        document.querySelectorAll('.note-type-filter').forEach(btn => btn.classList.remove('active'));
-        // Update button text
-        updateAddButtonText();
-        
-        // Save view and update URL
-        saveCurrentView();
-        updateUrlHash();
-        
-        // Update UI
-        updateAddButtonText();
-        updateMainTitle();
-        updateSourcesFilterVisibility();
-        updateViewModeToggle();
-      updateBulkButtonVisibility();
+        navigateToNoteTypeFilter(null);
+        item.classList.add("active");
+        return;
       }
       
       // MIGRATED: Core view switching logic now in pageCoordinator.js
@@ -3542,6 +3570,7 @@ window.setNoteTypeFilter = function(noteType) {
   updateAddButtonText?.();
   updateMainTitle?.();
   updateSourcesFilterVisibility?.();
+  syncMobileNoteTypeFilterValue();
 };
 
 // Authors / Sources list pages are now in lib/entityListPage.js (initialised below).

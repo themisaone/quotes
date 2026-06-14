@@ -11,21 +11,21 @@
          See ARCHITECTURE.md "CSS File Layout".
          The same ?v= cache-buster must be on every link so reloads pick
          up changes together. -->
-    <link rel="stylesheet" href="style.css?v=20260613header4" />
-    <link rel="stylesheet" href="style.sidemenu.css?v=20260613header4" />
-    <link rel="stylesheet" href="style.search.css?v=20260613header4" />
-    <link rel="stylesheet" href="style.buttons.css?v=20260613header4" />
-    <link rel="stylesheet" href="style.modal.css?v=20260613header4" />
-    <link rel="stylesheet" href="style.cards.css?v=20260613header4" />
-    <link rel="stylesheet" href="style.selection.css?v=20260613header4" />
-    <link rel="stylesheet" href="style.attachments.css?v=20260613header4" />
-    <link rel="stylesheet" href="style.entities.css?v=20260613header4" />
-    <link rel="stylesheet" href="style.settings.css?v=20260613header4" />
-    <link rel="stylesheet" href="style.dialogs.css?v=20260613header4" />
-    <link rel="stylesheet" href="style.views.css?v=20260613header4" />
-    <link rel="stylesheet" href="style.mobile.css?v=20260613header4" />
-    <link rel="stylesheet" href="style.small.css?v=20260613header4" />
-    <link rel="stylesheet" href="style.medium.css?v=20260613header4" />
+    <link rel="stylesheet" href="style.css?v=20260613mobiletype1" />
+    <link rel="stylesheet" href="style.sidemenu.css?v=20260613mobiletype1" />
+    <link rel="stylesheet" href="style.search.css?v=20260613mobiletype1" />
+    <link rel="stylesheet" href="style.buttons.css?v=20260613mobiletype1" />
+    <link rel="stylesheet" href="style.modal.css?v=20260613mobiletype1" />
+    <link rel="stylesheet" href="style.cards.css?v=20260613mobiletype1" />
+    <link rel="stylesheet" href="style.selection.css?v=20260613mobiletype1" />
+    <link rel="stylesheet" href="style.attachments.css?v=20260613mobiletype1" />
+    <link rel="stylesheet" href="style.entities.css?v=20260613mobiletype1" />
+    <link rel="stylesheet" href="style.settings.css?v=20260613mobiletype1" />
+    <link rel="stylesheet" href="style.dialogs.css?v=20260613mobiletype1" />
+    <link rel="stylesheet" href="style.views.css?v=20260613mobiletype1" />
+    <link rel="stylesheet" href="style.mobile.css?v=20260613mobiletype1" />
+    <link rel="stylesheet" href="style.small.css?v=20260613mobiletype1" />
+    <link rel="stylesheet" href="style.medium.css?v=20260613mobiletype1" />
     <!-- Font Awesome for dice icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <!-- Quill Editor -->
@@ -313,6 +313,9 @@
                 </span>
               </h1>
               <div class="header-actions">
+                <!-- Phone portrait: pick note type when mode has more than one (populated in app.js) -->
+                <select id="mobileNoteTypeFilter" class="display-mode-select mobile-note-type-filter" title="Note type" aria-label="Note type">
+                </select>
                 <select id="trainingSubModeSelect" class="display-mode-select" title="Training view" style="display: none;">
                   <option value="calendar">📅 Calendar</option>
                   <option value="list">📋 List</option>
@@ -2148,6 +2151,6 @@ Quote number three..."
     <!-- Quill Editor Script -->
     <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
     <script type="module" src="js/lib/confirmDialog.js"></script>
-    <script type="module" src="app.js?v=20260613import2"></script>
+    <script type="module" src="app.js?v=20260613mobiletype1"></script>
   </body>
 </html>

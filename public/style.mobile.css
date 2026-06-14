@@ -8,6 +8,18 @@
 @media (max-width: 767px) {
   .column-count-select { display: none !important; }
 
+  /* Header note-type picker — multi-type modes only; hidden on desktop/tablet */
+  .mobile-note-type-filter {
+    display: none !important;
+  }
+
+  body:not(.mode-single-type) .mobile-note-type-filter.mobile-note-type-filter--active {
+    display: inline-block !important;
+    max-width: 11rem;
+    min-width: 0;
+    flex-shrink: 1;
+  }
+
   .sources-controls {
     flex-direction: column;
     align-items: stretch;
