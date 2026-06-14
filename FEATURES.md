@@ -24,7 +24,7 @@ Types and their labels/icons are user-configurable in Settings. The `behavior` f
 
 ## Side Menu / Navigation
 
-Left sidebar lists note types grouped by mode. Each type is a link that sets the URL hash and filters the card list. The menu can be collapsed with the ◀ toggle (desktop/medium). On phone-width screens (**≤767px**), when the active mode includes **more than one** note type, a **note-type dropdown** appears in the **bottom navigation bar** (left side, before Authors/Tags) and in the quotes header — hidden in single-type instances (`npm run tegneserie`, etc.). Per-type icon buttons in the bottom bar are hidden in that case (the dropdown replaces them).
+Left sidebar lists note types grouped by mode. Each type is a link that sets the URL hash and filters the card list. The menu can be collapsed with the ◀ toggle (desktop/medium). On phone-width screens (**≤767px**), the bottom bar uses **two dropdowns**: **note type** (when the mode has 2+ types) and **☰ Menu** (Authors, Sources, Tags, Services, Options, Random, Export/Import, etc.). Single-type instances hide the note-type dropdown. Sidebar icon rows are hidden on phone — the dropdowns replace them.
 
 When a single-type instance is running (`npm run tegneserie`, etc.), Options → Note Types lists **only that type** (others remain in `settings.json` but are hidden).
 

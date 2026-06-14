@@ -8,31 +8,43 @@
 @media (max-width: 767px) {
   .column-count-select { display: none !important; }
 
-  /* Header + bottom-bar note-type pickers — multi-type modes only; hidden on desktop/tablet */
-  .mobile-note-type-filter,
+  /* Phone bottom bar: note-type + Menu dropdowns (replaces icon row) */
+  .side-menu-mobile-bar,
   .bottom-note-type-filter,
-  .side-menu-note-type-row {
+  .mobile-more-menu-select,
+  .side-menu-note-type-row,
+  .side-menu-more-row {
     display: none !important;
   }
 
-  body:not(.mode-single-type) .mobile-note-type-filter.note-type-filter-dropdown--active {
-    display: inline-block !important;
-    max-width: 11rem;
+  .side-menu-mobile-bar {
+    flex: 1 1 auto;
     min-width: 0;
-    flex-shrink: 1;
-  }
-
-  body:not(.mode-single-type) .side-menu-note-type-row.note-type-row--active {
-    display: flex !important;
-    flex: 0 0 auto;
+    gap: 0.35rem;
     align-items: center;
-    padding: 0.2rem 0.35rem;
-    min-width: 7.5rem;
-    max-width: 42vw;
-    border-right: 1px solid var(--border);
   }
 
-  body:not(.mode-single-type) .bottom-note-type-filter.note-type-filter-dropdown--active {
+  body.mobile-bottom-nav .side-menu-mobile-bar {
+    display: flex !important;
+  }
+
+  body.mobile-bottom-nav .side-menu-note-type-row.note-type-row--active {
+    display: flex !important;
+    flex: 1 1 50%;
+    min-width: 0;
+    padding: 0;
+    border-right: none;
+    max-width: none;
+  }
+
+  body.mobile-bottom-nav .side-menu-more-row {
+    display: flex !important;
+    flex: 1 1 50%;
+    min-width: 0;
+  }
+
+  body.mobile-bottom-nav .bottom-note-type-filter.note-type-filter-dropdown--active,
+  body.mobile-bottom-nav .mobile-more-menu-select {
     display: block !important;
     width: 100%;
     min-width: 0;
@@ -43,17 +55,22 @@
     border: 1px solid var(--border);
     background: var(--surface);
     color: var(--text-primary);
+    box-sizing: border-box;
   }
 
-  /* Bottom bar: dropdown replaces All Notes + per-type icon buttons */
-  body:not(.mode-single-type) .note-type-filter-li,
-  body:not(.mode-single-type) #menuItemAllNotes,
-  body:not(.mode-single-type) #menuSepAllNotes,
-  body:not(.mode-single-type) #noteTypeSeparator {
-    display: none !important;
+  /* Single-type: only Menu dropdown, full width */
+  body.mobile-bottom-nav.mode-single-type .side-menu-more-row {
+    flex: 1 1 100%;
   }
 
-  .menu-list .menu-separator {
+  /* Hide sidebar icon rows on phone — dropdowns replace them */
+  body.mobile-bottom-nav .side-menu-mode-row,
+  body.mobile-bottom-nav .side-menu > .menu-list,
+  body.mobile-bottom-nav .side-menu > .menu-section-title,
+  body.mobile-bottom-nav .note-type-filter-li,
+  body.mobile-bottom-nav #menuItemAllNotes,
+  body.mobile-bottom-nav #menuSepAllNotes,
+  body.mobile-bottom-nav #noteTypeSeparator {
     display: none !important;
   }
 
@@ -122,31 +139,79 @@
     grid-template-columns: 1fr;
   }
 
-  /* On phones stack the grid into a single column and let the Clear
-     button sit on its own row at the right. */
+  /* On phones: one filter per row; label + field stay on the same line;
+     Clear is reordered to the end via order (after Author/Source etc.). */
   .search-grid {
     grid-template-columns: 1fr;
-    gap: 0.6rem 0;
+    gap: 0.45rem 0;
   }
   .search-grid #searchTagsContainer,
   .search-grid #searchTextContainer,
   .search-grid #searchScoreContainer,
   .search-grid #searchAuthorContainer,
   .search-grid #searchSourceContainer,
+  .search-grid #trainingYearContainer,
+  .search-grid #trainingMonthContainer,
   .search-grid .search-clear-item {
     grid-column: 1;
     grid-row: auto;
   }
-  .search-grid .search-clear-item { justify-self: stretch; }
+  .search-grid #searchAuthorContainer { order: 20; }
+  .search-grid #searchSourceContainer { order: 21; }
+  .search-grid #trainingYearContainer { order: 30; }
+  .search-grid #trainingMonthContainer { order: 31; }
+  .search-grid .search-clear-item {
+    order: 100;
+    justify-self: stretch;
+  }
   .search-grid .search-clear-item .search-clear-btn { width: 100%; }
 
-  .search-header-subtype {
+  .search-item {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 0.35rem;
+  }
+  .search-item.autocomplete-wrapper {
+    flex-wrap: wrap;
+  }
+  .search-item.autocomplete-wrapper .autocomplete-suggestions {
+    flex: 1 1 100%;
     width: 100%;
+  }
+  .search-item label {
+    flex: 0 0 auto;
+    min-width: 3.25rem;
+    align-self: center;
+  }
+  .search-item input[type="text"],
+  .search-item select {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+  }
+
+  .search-header-subtype {
+    width: auto;
     margin-left: 0;
+    align-self: flex-start;
   }
   .search-header-subtype .search-grid-dropdown {
-    width: 100%;
+    width: auto;
     min-width: 0;
+    flex: 0 0 auto;
+  }
+  .search-header-subtype .type-filter-dropdown-container {
+    flex: 0 0 auto;
+    width: auto;
+  }
+  .search-header-subtype .type-filter-toggle {
+    font-size: 0.72rem;
+    padding: 0.25rem 0.55rem;
+    height: auto;
+    min-height: 1.6rem;
+    min-width: 0;
+    width: auto;
   }
 
   .quote-meta {
@@ -389,7 +454,9 @@
   }
 
   .quotes-section h2,
-  .quotes-section-header h2 {
+  .quotes-section-header h2,
+  .search-header h2,
+  .search-title-row h2 {
     padding: 0 !important;
     margin: 0 !important;
     background: transparent !important;
@@ -572,6 +639,51 @@
     margin-bottom: 0 !important;
     width: 100% !important;
   }
+
+  .filter-type-summary {
+    font-size: 0.68rem !important;
+    line-height: 1.25 !important;
+  }
+
+  .tts-sep {
+    font-size: 0.62rem !important;
+  }
+
+  .search-header-subtype {
+    width: auto !important;
+    margin-left: 0 !important;
+    align-self: flex-start !important;
+  }
+
+  .search-header-subtype .search-grid-dropdown {
+    width: auto !important;
+    min-width: 0 !important;
+    flex: 0 0 auto !important;
+  }
+
+  .search-header-subtype .type-filter-dropdown-container {
+    flex: 0 0 auto !important;
+    width: auto !important;
+  }
+
+  .search-header-subtype .type-filter-toggle {
+    font-size: 0.72rem !important;
+    padding: 0.25rem 0.55rem !important;
+    height: auto !important;
+    min-height: 1.6rem !important;
+    min-width: 0 !important;
+    width: auto !important;
+    max-width: 100% !important;
+  }
+
+  .search-header-subtype .type-filter-toggle-label {
+    max-width: 16ch !important;
+    font-size: inherit !important;
+  }
+
+  .search-header-subtype .dropdown-arrow {
+    font-size: 0.55rem !important;
+  }
   
   .search-title-row {
     display: flex !important;
@@ -606,21 +718,21 @@
     justify-content: center !important;
   }
   
-  /* Search grid — single column on phones (was 1fr 1fr, which clipped
-     Text/Source and let Clear overflow). Desktop uses 4 columns in search.css. */
+  /* Search grid — single column; label+field inline; Clear last */
   .search-grid {
-    gap: 0.5rem !important;
+    gap: 0.45rem !important;
     grid-template-columns: 1fr !important;
     max-width: 100% !important;
     min-width: 0 !important;
     box-sizing: border-box !important;
   }
-  /* Reset the desktop grid-column assignments so each cell stacks in one column. */
   .search-grid #searchTagsContainer,
   .search-grid #searchTextContainer,
   .search-grid #searchScoreContainer,
   .search-grid #searchAuthorContainer,
   .search-grid #searchSourceContainer,
+  .search-grid #trainingYearContainer,
+  .search-grid #trainingMonthContainer,
   .search-grid .search-clear-item {
     grid-column: 1 !important;
     grid-row: auto !important;
@@ -628,49 +740,67 @@
     min-width: 0 !important;
     box-sizing: border-box !important;
   }
+  .search-grid #searchAuthorContainer { order: 20 !important; }
+  .search-grid #searchSourceContainer { order: 21 !important; }
+  .search-grid #trainingYearContainer { order: 30 !important; }
+  .search-grid #trainingMonthContainer { order: 31 !important; }
   .search-grid .search-clear-item {
-    grid-column: 1 / -1 !important;
+    order: 100 !important;
+    grid-column: 1 !important;
     justify-self: stretch !important;
+    justify-content: flex-end !important;
   }
   .search-grid .search-clear-item .search-clear-btn {
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
-    white-space: normal !important;
+    white-space: nowrap !important;
   }
   
   .search-item {
-    margin-bottom: 0.3rem !important;
+    margin-bottom: 0 !important;
     max-width: 100% !important;
     min-width: 0 !important;
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 0.25rem !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+    gap: 0.35rem !important;
     box-sizing: border-box !important;
+  }
+
+  .search-item.autocomplete-wrapper {
+    flex-wrap: wrap !important;
+  }
+
+  .search-item.autocomplete-wrapper .autocomplete-suggestions {
+    flex: 1 1 100% !important;
+    width: 100% !important;
   }
   
   .search-item input,
   .search-item select {
     padding: 0.5rem !important;
     font-size: 11px !important;
-    width: 100% !important;
+    flex: 1 1 auto !important;
+    width: auto !important;
     max-width: 100% !important;
     min-width: 0 !important;
     box-sizing: border-box !important;
   }
 
-  .search-item.autocomplete-wrapper,
   .search-item .autocomplete-wrapper {
-    width: 100% !important;
+    flex: 1 1 auto !important;
+    width: auto !important;
     max-width: 100% !important;
     min-width: 0 !important;
   }
   
   .search-item label {
     margin-bottom: 0 !important;
-    font-size: 0.7rem !important;
-    min-width: 0 !important;
-    align-self: flex-start !important;
+    font-size: 0.72rem !important;
+    flex: 0 0 auto !important;
+    min-width: 3.25rem !important;
+    align-self: center !important;
   }
   
   /* Make Clear Filters button span full width */

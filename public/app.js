@@ -69,7 +69,7 @@ import {
   getNoteTypeDefaultDisplayMode,
   initializeSettings as initializeSettingsLib,
   refreshSettingsForOptionsPanel
-} from './js/lib/settingsManager.js?v=20260613services1';
+} from './js/lib/settingsManager.js?v=20260614searchgrid1';
 
 import {
   loadServicesPanel,
@@ -494,7 +494,7 @@ function updateUrlHash() {
 
 function updateActiveMenuState() {
   updateActiveMenuStateLib(currentNoteTypeFilter);
-  syncMobileNoteTypeFilterValue();
+  syncNoteTypeFilterDropdowns();
 }
 
 function updateMainTitle() {
@@ -609,17 +609,9 @@ function navigateToNoteTypeFilter(noteType) {
 }
 
 function syncNoteTypeFilterDropdowns() {
-  const value = currentNoteTypeFilter || '';
-  for (const id of ['mobileNoteTypeFilter', 'bottomNoteTypeFilter']) {
-    const sel = document.getElementById(id);
-    if (!sel?.classList.contains('note-type-filter-dropdown--active')) continue;
-    sel.value = value;
-  }
-}
-
-/** @deprecated alias */
-function syncMobileNoteTypeFilterValue() {
-  syncNoteTypeFilterDropdowns();
+  const sel = document.getElementById('bottomNoteTypeFilter');
+  if (!sel?.classList.contains('note-type-filter-dropdown--active')) return;
+  sel.value = currentNoteTypeFilter || '';
 }
 
 function populateNoteTypeFilterDropdowns(types) {
@@ -632,17 +624,65 @@ function populateNoteTypeFilterDropdowns(types) {
   const row = document.getElementById('sideMenuNoteTypeRow');
   if (row) row.classList.toggle('note-type-row--active', isMulti);
 
-  for (const { id, activeClass } of [
-    { id: 'mobileNoteTypeFilter', activeClass: 'note-type-filter-dropdown--active' },
-    { id: 'bottomNoteTypeFilter', activeClass: 'note-type-filter-dropdown--active' },
-  ]) {
-    const sel = document.getElementById(id);
-    if (!sel) continue;
-    sel.classList.toggle(activeClass, isMulti);
+  const sel = document.getElementById('bottomNoteTypeFilter');
+  if (sel) {
+    sel.classList.toggle('note-type-filter-dropdown--active', isMulti);
     sel.innerHTML = isMulti ? optionsHtml : '';
   }
 
   syncNoteTypeFilterDropdowns();
+}
+
+function rebuildMobileMoreMenu(allowedTypes) {
+  const sel = document.getElementById('mobileMoreMenuSelect');
+  if (!sel) return;
+  const has = (type) => allowedTypes.includes(type);
+  const hasQuotes = has('quote');
+  const hasTegneserie = has('tegneserie');
+
+  const items = [
+    { value: 'view:authors', label: '✍️ Authors', show: hasQuotes },
+    { value: 'view:sources', label: '📚 Sources', show: hasQuotes },
+    { value: 'view:tags', label: '🏷️ Tags', show: true },
+    { value: 'action:random-quote', label: '🎲 Random Quote', show: hasQuotes },
+    { value: 'action:random-teg', label: '🎲 Random Tegneserie', show: hasTegneserie },
+    { value: 'view:services', label: '🖥️ Services', show: true },
+    { value: 'view:settings', label: '⚙️ Options', show: true },
+    { value: 'action:export-pdf', label: '📄 Export to PDF', show: true },
+    { value: 'action:export-json', label: '💾 Export Notes', show: true },
+    { value: 'action:import-json', label: '📥 Import Notes', show: true },
+  ].filter(i => i.show);
+
+  sel.innerHTML =
+    '<option value="">☰ Menu</option>' +
+    items.map(i => `<option value="${i.value}">${i.label}</option>`).join('');
+}
+
+function handleMobileMoreMenuAction(value) {
+  if (!value) return;
+  if (value.startsWith('view:')) {
+    switchView(value.slice(5));
+    return;
+  }
+  switch (value) {
+    case 'action:random-quote':
+      showWelcomeQuote(true);
+      break;
+    case 'action:random-teg':
+      showWelcomeQuote(true, 'tegneserie');
+      break;
+    case 'action:export-pdf':
+      document.getElementById('exportPdfMenuBtn')?.click();
+      break;
+    case 'action:export-json':
+      document.getElementById('exportJsonBtn')?.click();
+      break;
+    case 'action:import-json':
+      document.getElementById('importJsonBtn')?.click();
+      break;
+    default:
+      break;
+  }
 }
 
 /**
@@ -891,6 +931,8 @@ function applyModeMenuVisibility(allowedTypes) {
   const elQuoteSummary = document.getElementById('quoteSourcesSummary');
   if (elQuoteFilter) elQuoteFilter.style.display = hasQuotes ? '' : 'none';
   if (elQuoteSummary) elQuoteSummary.style.display = hasQuotes ? '' : 'none';
+
+  rebuildMobileMoreMenu(allowedTypes);
 }
 
 function applyGrandTotalCounterVisibility() {
@@ -901,6 +943,12 @@ function applyGrandTotalCounterVisibility() {
   document.body.classList.toggle('mode-single-type', isSingle);
 }
 
+/** Enable phone bottom-bar dropdown nav (see style.mobile.css). */
+function applyMobileBottomNavClass() {
+  const mobile = window.matchMedia('(max-width: 767px)').matches;
+  document.body.classList.toggle('mobile-bottom-nav', mobile);
+}
+
 function reapplyModeUi({ rebuildMenu = false } = {}) {
   if (!activeMode?.allowedTypes?.length) return;
   const allowedTypes = activeMode.allowedTypes;
@@ -908,6 +956,7 @@ function reapplyModeUi({ rebuildMenu = false } = {}) {
   if (rebuildMenu) generateNoteTypeMenu();
   applyModeMenuVisibility(allowedTypes);
   applyGrandTotalCounterVisibility();
+  applyMobileBottomNavClass();
 }
 
 window.reapplyModeUi = reapplyModeUi;
@@ -972,6 +1021,7 @@ async function loadAndApplyMode() {
   if (modeRow && activeMode.modeLocked) modeRow.style.display = 'none';
 
   applyGrandTotalCounterVisibility();
+  applyMobileBottomNavClass();
 }
 
 // Initialize
@@ -1018,6 +1068,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   updateViewModeToggle();
   updateBulkButtonVisibility();
   applyGrandTotalCounterVisibility();
+  applyMobileBottomNavClass();
+
+  window.matchMedia('(max-width: 767px)').addEventListener('change', applyMobileBottomNavClass);
   
   // Show/hide metadata search section based on current filter and settings
   const metaSearchEnabled = globalSettings?.enableQuoteMetaSearches === true;
@@ -1139,12 +1192,22 @@ function setupEventListeners() {
   
   // Note type popup item clicks are handled by generateNoteTypeMenu().
 
-  for (const id of ['mobileNoteTypeFilter', 'bottomNoteTypeFilter']) {
+  for (const id of ['bottomNoteTypeFilter']) {
     const sel = getElementByIdSafe(id);
     if (!sel || sel.dataset.wired) continue;
     sel.dataset.wired = '1';
     sel.addEventListener('change', () => {
       navigateToNoteTypeFilter(sel.value || null);
+    });
+  }
+
+  const mobileMoreMenuSelect = getElementByIdSafe('mobileMoreMenuSelect');
+  if (mobileMoreMenuSelect && !mobileMoreMenuSelect.dataset.wired) {
+    mobileMoreMenuSelect.dataset.wired = '1';
+    mobileMoreMenuSelect.addEventListener('change', () => {
+      const action = mobileMoreMenuSelect.value;
+      mobileMoreMenuSelect.value = '';
+      handleMobileMoreMenuAction(action);
     });
   }
 
@@ -3585,7 +3648,7 @@ window.setNoteTypeFilter = function(noteType) {
   updateAddButtonText?.();
   updateMainTitle?.();
   updateSourcesFilterVisibility?.();
-  syncMobileNoteTypeFilterValue();
+  syncNoteTypeFilterDropdowns();
 };
 
 // Authors / Sources list pages are now in lib/entityListPage.js (initialised below).
