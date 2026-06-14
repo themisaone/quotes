@@ -602,33 +602,47 @@ function navigateToNoteTypeFilter(noteType) {
   const metaSearchEnabled = globalSettings?.enableQuoteMetaSearches === true;
   toggleMetadataSearchSection((noteType === 'quote' || noteType === null) && metaSearchEnabled);
   clearSearchFields();
-  syncMobileNoteTypeFilterValue();
+  syncNoteTypeFilterDropdowns();
 
   loadQuotes();
   loadTotalCount();
 }
 
-function syncMobileNoteTypeFilterValue() {
-  const sel = document.getElementById('mobileNoteTypeFilter');
-  if (!sel?.classList.contains('mobile-note-type-filter--active')) return;
-  sel.value = currentNoteTypeFilter || '';
+function syncNoteTypeFilterDropdowns() {
+  const value = currentNoteTypeFilter || '';
+  for (const id of ['mobileNoteTypeFilter', 'bottomNoteTypeFilter']) {
+    const sel = document.getElementById(id);
+    if (!sel?.classList.contains('note-type-filter-dropdown--active')) continue;
+    sel.value = value;
+  }
 }
 
-function populateMobileNoteTypeFilter(types) {
-  const sel = document.getElementById('mobileNoteTypeFilter');
-  if (!sel) return;
+/** @deprecated alias */
+function syncMobileNoteTypeFilterValue() {
+  syncNoteTypeFilterDropdowns();
+}
 
+function populateNoteTypeFilterDropdowns(types) {
   const isMulti = types.length > 1;
-  sel.classList.toggle('mobile-note-type-filter--active', isMulti);
-  if (!isMulti) {
-    sel.innerHTML = '';
-    return;
+  const optionsHtml = isMulti
+    ? (`<option value="">📦 All Notes</option>` +
+      types.map(t => `<option value="${t.value}">${t.icon} ${t.label}</option>`).join(''))
+    : '';
+
+  const row = document.getElementById('sideMenuNoteTypeRow');
+  if (row) row.classList.toggle('note-type-row--active', isMulti);
+
+  for (const { id, activeClass } of [
+    { id: 'mobileNoteTypeFilter', activeClass: 'note-type-filter-dropdown--active' },
+    { id: 'bottomNoteTypeFilter', activeClass: 'note-type-filter-dropdown--active' },
+  ]) {
+    const sel = document.getElementById(id);
+    if (!sel) continue;
+    sel.classList.toggle(activeClass, isMulti);
+    sel.innerHTML = isMulti ? optionsHtml : '';
   }
 
-  sel.innerHTML =
-    `<option value="">📦 All Notes</option>` +
-    types.map(t => `<option value="${t.value}">${t.icon} ${t.label}</option>`).join('');
-  syncMobileNoteTypeFilterValue();
+  syncNoteTypeFilterDropdowns();
 }
 
 /**
@@ -798,8 +812,8 @@ function generateNoteTypeMenu() {
     if (isSingleMode) tagTypeFilter.value = types[0].value;
   }
 
-  // Populate mobile header note-type picker (multi-type modes on small screens)
-  populateMobileNoteTypeFilter(types);
+  // Populate phone note-type dropdowns (header + bottom bar) when 2+ types in mode
+  populateNoteTypeFilterDropdowns(types);
 
   // Populate the note-type selector inside the edit/add modal
   const noteTypeSelect = document.getElementById('noteType');
@@ -1125,11 +1139,12 @@ function setupEventListeners() {
   
   // Note type popup item clicks are handled by generateNoteTypeMenu().
 
-  const mobileNoteTypeFilter = getElementByIdSafe('mobileNoteTypeFilter');
-  if (mobileNoteTypeFilter && !mobileNoteTypeFilter.dataset.wired) {
-    mobileNoteTypeFilter.dataset.wired = '1';
-    mobileNoteTypeFilter.addEventListener('change', () => {
-      navigateToNoteTypeFilter(mobileNoteTypeFilter.value || null);
+  for (const id of ['mobileNoteTypeFilter', 'bottomNoteTypeFilter']) {
+    const sel = getElementByIdSafe(id);
+    if (!sel || sel.dataset.wired) continue;
+    sel.dataset.wired = '1';
+    sel.addEventListener('change', () => {
+      navigateToNoteTypeFilter(sel.value || null);
     });
   }
 
