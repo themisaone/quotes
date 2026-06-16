@@ -107,7 +107,7 @@ import {
   setCurrentPage as setLibCurrentPage,
   setQuotesPerPage,
   getQuotesPerPage
-} from './js/lib/displayManager.js?v=20260529hastext';
+} from './js/lib/displayManager.js?v=20260614searchany1';
 
 import {
   populateTypeFilterCheckboxes as populateTypeFilterCheckboxesLib,
@@ -125,7 +125,7 @@ import {
   initializeSearchHandlers,
   registerGlobalSearchFunctions,
   clearSearchFields
-} from './js/lib/searchManager.js?v=20260512filterfix';
+} from './js/lib/searchManager.js?v=20260614searchany1';
 
 import {
   initializeAutocomplete,

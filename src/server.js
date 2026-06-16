@@ -1404,10 +1404,46 @@ function buildTagSearchCondition(searchQuery, paramCounter, params) {
   return { condition: '', newParamCounter: paramCounter };
 }
 
+/**
+ * Build SQL condition for quick "search anything" (tags, text, author, source — not score)
+ * @param {string} searchQuery
+ * @param {number} paramCounter
+ * @param {Array} params
+ * @param {{ useJoins?: boolean }} options - useJoins true when authors/sources are JOINed as a, s
+ */
+function buildAnySearchCondition(searchQuery, paramCounter, params, { useJoins = true } = {}) {
+  const term = String(searchQuery || '').trim();
+  if (!term) return { condition: '', newParamCounter: paramCounter };
+
+  params.push(`%${term}%`);
+  const p = paramCounter;
+  const authorMatch = useJoins
+    ? `a.name ILIKE $${p}`
+    : `EXISTS (SELECT 1 FROM authors a WHERE a.id = q.author_id AND a.name ILIKE $${p})`;
+  const sourceMatch = useJoins
+    ? `s.name ILIKE $${p}`
+    : `EXISTS (SELECT 1 FROM sources s WHERE s.id = q.source_id AND s.name ILIKE $${p})`;
+
+  const condition = ` AND (
+    q.note_text ILIKE $${p}
+    OR q.note_title ILIKE $${p}
+    OR q.comment ILIKE $${p}
+    OR ${authorMatch}
+    OR ${sourceMatch}
+    OR EXISTS (
+      SELECT 1 FROM note_tags qt
+      JOIN tags t ON qt.tag_id = t.id
+      WHERE qt.note_id = q.id AND t.name ILIKE $${p}
+    )
+  )`;
+
+  return { condition, newParamCounter: paramCounter + 1 };
+}
+
 // Get total quote count
 app.get("/api/quotes/count", async (req, res) => {
   try {
-    const { quote, author, source, tags, score, types, note_type, training_types, hasAuthor, hasSource, hasNote, hasTags, hasImage, hasImageType, hasTranslationGroup, hasMultipleAttachments, hasTitle, hasText } = req.query;
+    const { quote, author, source, tags, score, any, types, note_type, training_types, hasAuthor, hasSource, hasNote, hasTags, hasImage, hasImageType, hasTranslationGroup, hasMultipleAttachments, hasTitle, hasText } = req.query;
     const { generic_sub_types } = req.query;
     
     // Build filtered count query (with all filters)
@@ -1435,6 +1471,12 @@ app.get("/api/quotes/count", async (req, res) => {
     // Text search with AND/OR operators
     if (quote) {
       const { condition, newParamCounter } = buildTextSearchCondition(quote, ['q.note_text', 'q.note_title'], paramCounter, params);      query += condition;
+      paramCounter = newParamCounter;
+    }
+
+    if (any) {
+      const { condition, newParamCounter } = buildAnySearchCondition(any, paramCounter, params);
+      query += condition;
       paramCounter = newParamCounter;
     }
 
@@ -1695,6 +1737,7 @@ app.get("/api/quotes", async (req, res) => {
       source,
       tags,
       score,
+      any,
       date,
       types,
       note_type,
@@ -1730,6 +1773,12 @@ app.get("/api/quotes", async (req, res) => {
     // Text search with AND/OR operators — searches note_text and comment
     if (quote) {
       const { condition, newParamCounter } = buildTextSearchCondition(quote, ['q.note_text', 'q.note_title', 'q.comment'], paramCounter, params);
+      query += condition;
+      paramCounter = newParamCounter;
+    }
+
+    if (any) {
+      const { condition, newParamCounter } = buildAnySearchCondition(any, paramCounter, params);
       query += condition;
       paramCounter = newParamCounter;
     }
@@ -3244,6 +3293,12 @@ function buildFilterQuery(filters) {
     query += ` AND (q.note_text ILIKE $${paramCounter} OR q.note_title ILIKE $${paramCounter} OR q.comment ILIKE $${paramCounter})`;
     params.push(`%${filters.search}%`);
     paramCounter++;
+  }
+
+  if (filters.any) {
+    const { condition, newParamCounter } = buildAnySearchCondition(filters.any, paramCounter, params, { useJoins: false });
+    query += condition;
+    paramCounter = newParamCounter;
   }
   
   // Tag search (AND logic; prefix ! means NOT)

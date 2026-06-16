@@ -118,22 +118,22 @@ Authors and sources are entities — each has a name, optional image, and is lin
 
 ## Search & Filtering
 
-Search panel is collapsible, shown above the card grid.
+Search panel sits above the card grid. By default only a **quick search** field is shown; click **▶** next to **🔍 Search** to expand **advanced** filters (Tags, Text, Score, Author, Source, sub-type dropdowns, metadata).
 
-**Filters:**
-- Free text (searches note text, author, source)
-- Author dropdown
-- Source dropdown (with "Sources" sub-dropdown for quote type)
-- Tags multi-select
-- Score range
-- Note date range
-- Has attachment / has multiple attachments
-- Training sub-type multi-select (shown for training filter)
-- Note type badges (shown for ALL view)
+**Quick search (`Search anything…`):** One field, no label — matches **tags**, **note text/title/comment**, **author**, and **source** (substring, case-insensitive). Does **not** search score (numeric). Advanced fields still apply when expanded (combined with AND).
+
+**Advanced filters:**
+- Tags (with `&&` / `||` operators)
+- Text (note body/title/comment)
+- Score (`5`, `5+`, `3-5`)
+- Author / Source (quote types)
+- Training year/month (training list mode)
+- Metadata have/don't-have checkboxes (when enabled in Settings)
+- Sub-type multi-select (quote sources, training types, generic sub-types)
 
 **Active filter indicator:** Any field that has a value gets a light-blue background (CSS `:not(:placeholder-shown)` and `:has()` selectors, plus JS-applied `.has-value` class for selects and checkboxes).
 
-**Clear button:** In the title row of the search panel, right-aligned.
+**Clear button:** Inside the advanced panel — clears all search fields including quick search.
 
 ---
 

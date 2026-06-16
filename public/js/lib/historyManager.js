@@ -85,6 +85,7 @@ function captureCurrentState() {
     timestamp: Date.now(),
     view: getCurrentView(),
     noteType: window.currentNoteTypeFilter || 'all',
+    searchAny: getElementValueSafe(FILTER_IDS.SEARCH_ANY),
     searchText: getElementValueSafe(FILTER_IDS.SEARCH_QUOTE),
     tagsSearch: getElementValueSafe(FILTER_IDS.SEARCH_TAGS),
     authorSearch: getElementValueSafe(FILTER_IDS.SEARCH_AUTHOR),
@@ -112,6 +113,7 @@ function statesAreEqual(state1, state2) {
   const primitiveFieldsMatch = (
     state1.view === state2.view &&
     state1.noteType === state2.noteType &&
+    state1.searchAny === state2.searchAny &&
     state1.searchText === state2.searchText &&
     state1.tagsSearch === state2.tagsSearch &&
     state1.authorSearch === state2.authorSearch &&
@@ -233,6 +235,7 @@ function restoreNoteType(state, callbacks) {
  * @param {Object} state - State to restore
  */
 function restoreSearchFields(state) {
+  setElementValueSafe(FILTER_IDS.SEARCH_ANY, state.searchAny);
   setElementValueSafe(FILTER_IDS.SEARCH_QUOTE, state.searchText);
   setElementValueSafe(FILTER_IDS.SEARCH_TAGS, state.tagsSearch);
   setElementValueSafe(FILTER_IDS.SEARCH_AUTHOR, state.authorSearch);

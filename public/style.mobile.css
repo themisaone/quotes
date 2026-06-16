@@ -455,6 +455,7 @@
 
   .quotes-section h2,
   .quotes-section-header h2,
+  .search-compact-title h2,
   .search-header h2,
   .search-title-row h2 {
     padding: 0 !important;
@@ -633,6 +634,18 @@
     gap: 0.3rem !important;
     margin-bottom: 0.5rem !important;
     padding-bottom: 0.25rem !important;
+  }
+
+  .search-compact-bar {
+    gap: 0.45rem !important;
+    margin-bottom: 0.45rem !important;
+  }
+
+  .search-any-input {
+    flex: 1 1 100% !important;
+    width: 100% !important;
+    font-size: 11px !important;
+    padding: 0.5rem !important;
   }
   
   .search-header h2 {

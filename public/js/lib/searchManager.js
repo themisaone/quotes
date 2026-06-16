@@ -33,6 +33,7 @@ const DEBOUNCE_DELAY_MS = 300;
 
 // Using constants from constants.js instead of hardcoded IDs
 const SEARCH_INPUT_IDS = [
+  FILTER_IDS.SEARCH_ANY,
   FILTER_IDS.SEARCH_QUOTE,
   FILTER_IDS.SEARCH_AUTHOR,
   FILTER_IDS.SEARCH_SOURCE,
@@ -303,6 +304,7 @@ function getInputValue(elementId) {
  */
 export function getSearchValues() {
   return {
+    any: getInputValue(FILTER_IDS.SEARCH_ANY),
     quote: getInputValue("searchQuote"),
     author: getInputValue("searchAuthor"),
     source: getInputValue("searchSource"),
@@ -356,6 +358,21 @@ export function clearSearchFields() {
   }
 }
 
+/**
+ * Toggle advanced search panel (Tags, Text, Score, …)
+ */
+function setupSearchCollapse() {
+  const toggle = getElementByIdSafe('searchExpandToggle', 'setupSearchCollapse');
+  const panel = getElementByIdSafe('searchAdvancedPanel', 'setupSearchCollapse');
+  if (!toggle || !panel) return;
+
+  toggle.addEventListener('click', () => {
+    const open = panel.classList.toggle('expanded');
+    toggle.classList.toggle('open', open);
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+}
+
 // ============= INITIALIZATION =============
 
 /**
@@ -366,6 +383,7 @@ export function initializeSearchHandlers(callbacksParam) {
   callbacks = callbacksParam;
   
   setupTextSearchInputs();
+  setupSearchCollapse();
   setupYearFilter();
   setupMonthFilter();
   

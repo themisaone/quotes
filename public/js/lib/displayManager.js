@@ -16,7 +16,7 @@
 
 import { API_URL, fetchWithRetry } from './api.js?v=20260510apiorigin';
 import { createQuoteCard } from './cardRenderer.js?v=20260605optiontabs7';
-import { getSearchValues, getTrainingFilters } from './searchManager.js?v=20260512filterfix';
+import { getSearchValues, getTrainingFilters } from './searchManager.js?v=20260614searchany1';
 import { 
   FILTER_IDS,
   CONTAINER_IDS,
@@ -90,6 +90,7 @@ function getSelectedCheckboxValues(selector) {
 function addSearchFilters(params, globalSettings) {
   const searchValues = getSearchValues();
   
+  if (searchValues.any) params.append('any', searchValues.any);
   if (searchValues.quote) params.append('quote', searchValues.quote);
   if (searchValues.author) params.append('author', searchValues.author);
   if (searchValues.source) params.append('source', searchValues.source);
