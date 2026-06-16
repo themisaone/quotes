@@ -626,6 +626,10 @@
     overflow-x: hidden !important;
     box-sizing: border-box !important;
   }
+
+  .search-section:has(.type-filter-dropdown.show) {
+    overflow: visible !important;
+  }
   
   .search-header {
     display: flex !important;

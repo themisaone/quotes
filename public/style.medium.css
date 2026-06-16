@@ -337,9 +337,9 @@
     background: #4b5563;
   }
   
-  /* Header adjustments for tablet */
+  /* Header adjustments for tablet — margin below border matches compact search row */
   header {
-    margin-bottom: 1.5rem !important;
+    margin-bottom: 0.75rem !important;
     padding-bottom: 1rem !important;
   }
   
@@ -471,10 +471,9 @@
     font-size: var(--m-font-xl) !important;
   }
 
-  /* Search section — flat bottom rule (matches style.search.css) */
+  /* Search section — flat bottom rule (matches style.search.css; no extra bottom pad) */
   .search-section {
     padding: 0 !important;
-    padding-bottom: 1.5rem !important;
     margin-bottom: 1rem !important;
     border-radius: 0 !important;
     border-bottom: 2px solid var(--border) !important;

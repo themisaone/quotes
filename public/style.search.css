@@ -171,6 +171,14 @@
   max-height: 2400px;
   opacity: 1;
   margin-bottom: 0.25rem;
+  overflow: visible;
+}
+
+/* Sub-type filter menus are position:absolute — must not clip when open */
+.search-advanced-panel.expanded .search-header,
+.search-advanced-panel.expanded .search-header-subtype,
+.search-advanced-panel.expanded .type-filter-dropdown-container {
+  overflow: visible;
 }
 
 .search-title-row {
