@@ -1479,21 +1479,67 @@ function setupEventListeners() {
   if (columnCountSelect) {
     const COLUMN_KEY = 'quotesColumnCount';
 
-    // On medium screens we have less horizontal room — keep only 2-column,
-    // 3-column, and gallery; drop 1 and 4.
-    const isMediumScreen = window.matchMedia('(min-width: 768px) and (max-width: 1100px)').matches;
-    if (isMediumScreen) {
-      const allowedInMedium = new Set(['2', '3', 'gallery']);
-      Array.from(columnCountSelect.options)
-        .filter(opt => !allowedInMedium.has(opt.value))
-        .forEach(opt => opt.remove());
+    /** Ensure all column options exist (older sessions may have .remove()'d them). */
+    function ensureColumnCountOptions() {
+      const specs = [
+        ['1', '⬜ 1'],
+        ['2', '⬜⬜ 2'],
+        ['3', '⬜⬜⬜ 3'],
+        ['4', '⬜⬜⬜⬜ 4'],
+        ['gallery', '🖼 Gallery'],
+      ];
+      for (const [value, label] of specs) {
+        if (!columnCountSelect.querySelector(`option[value="${CSS.escape(value)}"]`)) {
+          const opt = document.createElement('option');
+          opt.value = value;
+          opt.textContent = label;
+          columnCountSelect.appendChild(opt);
+        }
+      }
+      // Keep canonical order regardless of append order above
+      for (const [value] of specs) {
+        const opt = columnCountSelect.querySelector(`option[value="${CSS.escape(value)}"]`);
+        if (opt) columnCountSelect.appendChild(opt);
+      }
     }
 
-    // Sanitize the saved value against the options that actually exist now.
-    // Otherwise a stale value (e.g. '4' saved on desktop, then resized to
-    // medium where '4' is gone) makes `select.value = saved` silently fail
-    // and renders the select as blank.
-    const validValues = Array.from(columnCountSelect.options).map(o => o.value);
+    /** Medium/tablet: hide 1 & 4; desktop (>1100px): show all including 4. */
+    function syncColumnCountOptions() {
+      ensureColumnCountOptions();
+      const isMediumScreen = window.matchMedia('(min-width: 768px) and (max-width: 1100px)').matches;
+      const allowedInMedium = new Set(['2', '3', 'gallery']);
+      Array.from(columnCountSelect.options).forEach((opt) => {
+        const hide = isMediumScreen && !allowedInMedium.has(opt.value);
+        opt.hidden = hide;
+        opt.disabled = hide;
+      });
+
+      const validValues = Array.from(columnCountSelect.options)
+        .filter((o) => !o.hidden && !o.disabled)
+        .map((o) => o.value);
+
+      if (!validValues.includes(columnCountSelect.value)) {
+        const fallback = validValues.includes('2') ? '2' : validValues[0];
+        columnCountSelect.value = fallback;
+        localStorage.setItem(COLUMN_KEY, fallback);
+        if (fallback === 'gallery') {
+          document.documentElement.style.setProperty('--card-column-count', '4');
+          applyGalleryMode(true);
+        } else {
+          applyGalleryMode(false);
+          document.documentElement.style.setProperty('--card-column-count', fallback);
+        }
+      }
+    }
+
+    syncColumnCountOptions();
+    window.matchMedia('(min-width: 768px) and (max-width: 1100px)')
+      .addEventListener('change', syncColumnCountOptions);
+
+    // Sanitize saved value against options visible on this screen width.
+    const validValues = Array.from(columnCountSelect.options)
+      .filter((o) => !o.hidden && !o.disabled)
+      .map((o) => o.value);
     let saved = localStorage.getItem(COLUMN_KEY);
     if (saved && !validValues.includes(saved)) {
       saved = '2';

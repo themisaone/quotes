@@ -449,6 +449,17 @@
     padding-right: 0.75rem !important;
   }
 
+  /* Header display-mode + column-count selects — same height as action buttons */
+  .header-actions .display-mode-select,
+  .header-actions .column-count-select {
+    height: var(--m-btn-height) !important;
+    min-height: var(--m-btn-height) !important;
+    padding: 0 0.75rem !important;
+    font-size: var(--m-font-md) !important;
+    line-height: 1 !important;
+    box-sizing: border-box !important;
+  }
+
   .btn-icon {
     padding: var(--m-pad-xs);
     font-size: var(--m-font-lg);
