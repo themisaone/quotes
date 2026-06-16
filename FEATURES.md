@@ -120,7 +120,7 @@ Authors and sources are entities — each has a name, optional image, and is lin
 
 Search panel sits above the card grid. By default only a **quick search** field is shown; click **▶** next to **🔍 Search** to expand **advanced** filters (Tags, Text, Score, Author, Source, sub-type dropdowns, metadata).
 
-**Quick search (`Search anything…`):** One field, no label — matches **tags**, **note text/title/comment**, **author**, and **source** (substring, case-insensitive). Does **not** search score (numeric). Advanced fields still apply when expanded (combined with AND).
+**Quick search (All fields):** One compact row, right-aligned — matches advanced Text field width. Matches **tags**, **note text/title/comment**, **author**, and **source** (substring, case-insensitive). Supports spaced **` && `** (AND) and **` || `** (OR), same as Text/Tags. Does **not** search score.
 
 **Advanced filters:**
 - Tags (with `&&` / `||` operators)

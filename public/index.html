@@ -11,21 +11,21 @@
          See ARCHITECTURE.md "CSS File Layout".
          The same ?v= cache-buster must be on every link so reloads pick
          up changes together. -->
-    <link rel="stylesheet" href="style.css?v=20260614searchany1" />
-    <link rel="stylesheet" href="style.sidemenu.css?v=20260614searchany1" />
-    <link rel="stylesheet" href="style.search.css?v=20260614searchany1" />
-    <link rel="stylesheet" href="style.buttons.css?v=20260614searchany1" />
-    <link rel="stylesheet" href="style.modal.css?v=20260614searchany1" />
-    <link rel="stylesheet" href="style.cards.css?v=20260614searchany1" />
-    <link rel="stylesheet" href="style.selection.css?v=20260614searchany1" />
-    <link rel="stylesheet" href="style.attachments.css?v=20260614searchany1" />
-    <link rel="stylesheet" href="style.entities.css?v=20260614searchany1" />
-    <link rel="stylesheet" href="style.settings.css?v=20260614searchany1" />
-    <link rel="stylesheet" href="style.dialogs.css?v=20260614searchany1" />
-    <link rel="stylesheet" href="style.views.css?v=20260614searchany1" />
-    <link rel="stylesheet" href="style.mobile.css?v=20260614searchany1" />
-    <link rel="stylesheet" href="style.small.css?v=20260614searchany1" />
-    <link rel="stylesheet" href="style.medium.css?v=20260614searchany1" />
+    <link rel="stylesheet" href="style.css?v=20260614searchany3" />
+    <link rel="stylesheet" href="style.sidemenu.css?v=20260614searchany3" />
+    <link rel="stylesheet" href="style.search.css?v=20260614searchany3" />
+    <link rel="stylesheet" href="style.buttons.css?v=20260614searchany3" />
+    <link rel="stylesheet" href="style.modal.css?v=20260614searchany3" />
+    <link rel="stylesheet" href="style.cards.css?v=20260614searchany3" />
+    <link rel="stylesheet" href="style.selection.css?v=20260614searchany3" />
+    <link rel="stylesheet" href="style.attachments.css?v=20260614searchany3" />
+    <link rel="stylesheet" href="style.entities.css?v=20260614searchany3" />
+    <link rel="stylesheet" href="style.settings.css?v=20260614searchany3" />
+    <link rel="stylesheet" href="style.dialogs.css?v=20260614searchany3" />
+    <link rel="stylesheet" href="style.views.css?v=20260614searchany3" />
+    <link rel="stylesheet" href="style.mobile.css?v=20260614searchany3" />
+    <link rel="stylesheet" href="style.small.css?v=20260614searchany3" />
+    <link rel="stylesheet" href="style.medium.css?v=20260614searchany3" />
     <!-- Font Awesome for dice icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <!-- Quill Editor -->
@@ -360,14 +360,17 @@
                   <button type="button" id="searchExpandToggle" class="search-expand-toggle" aria-expanded="false" aria-controls="searchAdvancedPanel" title="Advanced search">▶</button>
                   <h2 id="searchHeaderTitle">🔍 Search</h2>
                 </div>
-                <input
-                  type="text"
-                  id="searchAny"
-                  class="search-any-input"
-                  placeholder="Search anything…"
-                  title="Search tags, text, author, source…"
-                  autocomplete="off"
-                />
+                <div class="search-item search-any-field">
+                  <label for="searchAny">All fields</label>
+                  <input
+                    type="text"
+                    id="searchAny"
+                    class="search-any-input"
+                    placeholder="word1 && word2 or word1 || word2…"
+                    title="Search tags, text, author, source. Use spaces around && (AND) or || (OR)."
+                    autocomplete="off"
+                  />
+                </div>
               </div>
 
               <div id="searchAdvancedPanel" class="search-advanced-panel">
@@ -2173,6 +2176,6 @@ Quote number three..."
     <!-- Quill Editor Script -->
     <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
     <script type="module" src="js/lib/confirmDialog.js"></script>
-    <script type="module" src="app.js?v=20260614searchany1"></script>
+    <script type="module" src="app.js?v=20260614searchany3"></script>
   </body>
 </html>

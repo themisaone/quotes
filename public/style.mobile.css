@@ -641,9 +641,20 @@
     margin-bottom: 0.45rem !important;
   }
 
-  .search-any-input {
+  .search-any-field {
     flex: 1 1 100% !important;
     width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    padding-left: 1.1rem !important;
+  }
+
+  .search-any-field label {
+    font-size: 0.72rem !important;
+    min-width: 3.25rem !important;
+  }
+
+  .search-any-input {
     font-size: 11px !important;
     padding: 0.5rem !important;
   }

@@ -1404,18 +1404,7 @@ function buildTagSearchCondition(searchQuery, paramCounter, params) {
   return { condition: '', newParamCounter: paramCounter };
 }
 
-/**
- * Build SQL condition for quick "search anything" (tags, text, author, source — not score)
- * @param {string} searchQuery
- * @param {number} paramCounter
- * @param {Array} params
- * @param {{ useJoins?: boolean }} options - useJoins true when authors/sources are JOINed as a, s
- */
-function buildAnySearchCondition(searchQuery, paramCounter, params, { useJoins = true } = {}) {
-  const term = String(searchQuery || '').trim();
-  if (!term) return { condition: '', newParamCounter: paramCounter };
-
-  params.push(`%${term}%`);
+function buildAnyTermMatch(paramCounter, params, { useJoins = true } = {}) {
   const p = paramCounter;
   const authorMatch = useJoins
     ? `a.name ILIKE $${p}`
@@ -1424,7 +1413,7 @@ function buildAnySearchCondition(searchQuery, paramCounter, params, { useJoins =
     ? `s.name ILIKE $${p}`
     : `EXISTS (SELECT 1 FROM sources s WHERE s.id = q.source_id AND s.name ILIKE $${p})`;
 
-  const condition = ` AND (
+  return `(
     q.note_text ILIKE $${p}
     OR q.note_title ILIKE $${p}
     OR q.comment ILIKE $${p}
@@ -1436,8 +1425,34 @@ function buildAnySearchCondition(searchQuery, paramCounter, params, { useJoins =
       WHERE qt.note_id = q.id AND t.name ILIKE $${p}
     )
   )`;
+}
 
-  return { condition, newParamCounter: paramCounter + 1 };
+/**
+ * Build SQL condition for quick "search anything" (tags, text, author, source — not score)
+ * Supports spaced && / || like Text/Tags search (see parseSearchQuery).
+ */
+function buildAnySearchCondition(searchQuery, paramCounter, params, { useJoins = true } = {}) {
+  const { operator, terms } = parseSearchQuery(searchQuery);
+
+  if (terms.length === 0) return { condition: '', newParamCounter: paramCounter };
+
+  const termConditions = terms.map((term) => {
+    params.push(`%${term}%`);
+    const match = buildAnyTermMatch(paramCounter, params, { useJoins });
+    paramCounter++;
+    return match;
+  });
+
+  let joiner = ' AND ';
+  if (operator === 'OR') joiner = ' OR ';
+  else if (operator === 'SIMPLE') {
+    return { condition: ` AND ${termConditions[0]}`, newParamCounter: paramCounter };
+  }
+
+  return {
+    condition: ` AND (${termConditions.join(joiner)})`,
+    newParamCounter: paramCounter,
+  };
 }
 
 // Get total quote count
