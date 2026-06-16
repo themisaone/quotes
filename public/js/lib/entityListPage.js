@@ -4,14 +4,12 @@
 //
 // These two pages share the same shape — a card grid with a search box,
 // a sort selector and a counter — so they live together and use the
-// same private helpers.  The card HTML uses inline `onclick` attrs that
-// call `window.openAuthorModal`, `window.openSourceModal`,
-// `window.filterByAuthor` and `window.filterBySource`; those globals
-// are wired up by app.js / authorModal.js / sourceModal.js.
+// same private helpers.  Clicks use data-* attrs + delegation (no inline
+// onclick) so names with quotes/apostrophes work reliably.
 //
 // Usage:
 //   import { initEntityListPage, loadAuthors, loadSources, displayAuthors, displaySources }
-//     from './js/lib/entityListPage.js?v=20260512cardnbtn';
+//     from './js/lib/entityListPage.js?v=20260614sourceclick';
 //
 //   initEntityListPage({
 //     escapeHtml,
@@ -27,8 +25,67 @@ let _deps = {
   showFetchError: () => {},
 };
 
+let _handlersWired = false;
+
+function wireEntityListHandlers() {
+  if (_handlersWired) return;
+  _handlersWired = true;
+
+  const authorsList = _deps.getElementByIdSafe('authorsList');
+  if (authorsList) {
+    authorsList.addEventListener('click', (e) => {
+      const filterLink = e.target.closest('.card-filter-author');
+      if (filterLink) {
+        e.preventDefault();
+        e.stopPropagation();
+        const name = filterLink.dataset.name;
+        if (name) window.filterByAuthor?.(name);
+        return;
+      }
+      const card = e.target.closest('.author-card[data-id]');
+      if (!card) return;
+      window.openAuthorModal?.(
+        Number(card.dataset.id),
+        card.dataset.name || '',
+        Number(card.dataset.count) || 0,
+      );
+    });
+  }
+
+  const sourcesList = _deps.getElementByIdSafe('sourcesList');
+  if (sourcesList) {
+    sourcesList.addEventListener('click', (e) => {
+      const authorLink = e.target.closest('.card-filter-author');
+      if (authorLink) {
+        e.preventDefault();
+        e.stopPropagation();
+        const name = authorLink.dataset.name;
+        if (name) window.filterByAuthor?.(name);
+        return;
+      }
+      const filterLink = e.target.closest('.card-filter-source');
+      if (filterLink) {
+        e.preventDefault();
+        e.stopPropagation();
+        const name = filterLink.dataset.name;
+        if (name) window.filterBySource?.(name);
+        return;
+      }
+      const card = e.target.closest('.source-card[data-id]');
+      if (!card) return;
+      window.openSourceModal?.(
+        Number(card.dataset.id),
+        card.dataset.name || '',
+        card.dataset.type || 'BOOK',
+        Number(card.dataset.count) || 0,
+      );
+    });
+  }
+}
+
 export function initEntityListPage(deps) {
   _deps = { ..._deps, ...deps };
+  wireEntityListHandlers();
 }
 
 // ── Authors ────────────────────────────────────────────────────────────────
@@ -89,14 +146,15 @@ export function displayAuthors(authors) {
   authorsList.innerHTML = authors
     .map((author) => {
       const n = parseInt(author.quote_count, 10) || 0;
+      const name = escapeHtml(author.name);
       return `
-        <div class="card author-card" onclick="openAuthorModal(${author.id}, '${escapeHtml(author.name)}', ${n})">
+        <div class="card author-card" data-id="${author.id}" data-name="${name}" data-count="${n}">
             <div class="card-image">
-                ${author.image ? `<img src="${author.image}" alt="${escapeHtml(author.name)}">` : '✍️'}
+                ${author.image ? `<img src="${author.image}" alt="${name}">` : '✍️'}
             </div>
             <div class="card-name">
-                <a href="#" onclick="event.stopPropagation(); filterByAuthor('${escapeHtml(author.name)}'); return false;" class="card-name-action">
-                    ${escapeHtml(author.name)}
+                <a href="#" class="card-name-action card-filter-author" data-name="${name}">
+                    ${name}
                 </a>
             </div>
             <div class="card-quote-count">${n} quotes</div>
@@ -194,23 +252,28 @@ export function displaySources(sources) {
         source.type === 'JOKES'    ? '😂' :
         '📖';
       const n = parseInt(source.quote_count, 10) || 0;
+      const name = escapeHtml(source.name);
+      const type = escapeHtml(source.type || 'BOOK');
+      const authorName = source.primary_author_name
+        ? escapeHtml(source.primary_author_name)
+        : '';
       return `
-        <div class="card source-card" onclick="openSourceModal(${source.id}, '${escapeHtml(source.name)}', '${source.type}', ${n})">
+        <div class="card source-card" data-id="${source.id}" data-name="${name}" data-type="${type}" data-count="${n}">
             <div class="card-image">
-                ${source.image ? `<img src="${source.image}" alt="${escapeHtml(source.name)}">` : typeIcon}
+                ${source.image ? `<img src="${source.image}" alt="${name}">` : typeIcon}
             </div>
             <div class="card-name">
-                <a href="#" onclick="event.stopPropagation(); filterBySource('${escapeHtml(source.name)}'); return false;" class="card-name-action">
-                    ${escapeHtml(source.name)}
+                <a href="#" class="card-name-action card-filter-source" data-name="${name}">
+                    ${name}
                 </a>
             </div>
             <div class="card-quote-count">${n} quotes</div>
             ${
-              source.primary_author_name
+              authorName
                 ? `
                 <div class="card-author">
-                    <a href="#" onclick="event.stopPropagation(); filterByAuthor('${escapeHtml(source.primary_author_name)}'); return false;">
-                        by ${escapeHtml(source.primary_author_name)}
+                    <a href="#" class="card-filter-author" data-name="${authorName}">
+                        by ${authorName}
                     </a>
                 </div>
             `

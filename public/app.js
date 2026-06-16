@@ -217,7 +217,7 @@ import {
   loadSources,
   displayAuthors,
   displaySources
-} from './js/lib/entityListPage.js?v=20260512cardnbtn';
+} from './js/lib/entityListPage.js?v=20260614sourceclick';
 
 // ============= CONSTANTS =============
 // Same origin as the page (correct when port is omitted, e.g. http://localhost or reverse proxy)
@@ -699,6 +699,9 @@ function generateNoteTypeMenu() {
   ul.querySelectorAll('.note-type-filter-li').forEach(li => li.remove());
 
   const types = getNoteTypes();
+  const allowed = window._modeAllowedTypes || activeMode?.allowedTypes;
+  const isSingleTypeMode = Array.isArray(allowed) && allowed.length === 1;
+
   types.forEach(type => {
     const highlightedTags = (globalSettings?.highlightedTags?.[type.value] || []);
     const hasSubTags = highlightedTags.length > 0;
@@ -713,8 +716,9 @@ function generateNoteTypeMenu() {
     btn.title = type.label;
     btn.innerHTML = `<span class="menu-icon">${type.icon}</span><span class="menu-text"> ${type.label}</span>`;
 
+    let expandBtn = null;
     if (hasSubTags) {
-      const expandBtn = document.createElement('button');
+      expandBtn = document.createElement('button');
       expandBtn.className = 'note-type-expand-btn';
       expandBtn.title = 'Toggle shortcuts';
       expandBtn.textContent = '▶';
@@ -742,6 +746,10 @@ function generateNoteTypeMenu() {
         });
         subUl.appendChild(subLi);
       });
+      if (isSingleTypeMode && type.value === allowed[0]) {
+        subUl.classList.add('expanded');
+        expandBtn?.classList.add('open');
+      }
       li.appendChild(subUl);
     }
 

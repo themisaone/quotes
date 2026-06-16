@@ -42,6 +42,16 @@ html { scrollbar-width: thin; scrollbar-color: rgba(0, 0, 0, 0.2) transparent; }
   color: white;
 }
 
+/* Phone bottom bar (note-type + Menu dropdowns) — only visible on ≤767px with
+   body.mobile-bottom-nav; see style.mobile.css */
+.side-menu-mobile-bar,
+.side-menu-note-type-row,
+.side-menu-more-row,
+.bottom-note-type-filter,
+.mobile-more-menu-select {
+  display: none;
+}
+
 .menu-list {
   list-style: none;
   padding-left: 0.5rem;

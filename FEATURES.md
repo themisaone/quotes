@@ -30,8 +30,8 @@ When a single-type instance is running (`npm run tegneserie`, etc.), Options →
 
 **Services:** Sidebar → **Services** lists all configured note-type servers on this host (by port). Any running instance can start/stop others (including **This tab** — useful when there is no terminal) and open them in a new tab — useful when the app runs on a home server and you browse via Tailscale.
 
-- Expand arrows (▶) for types with sub-tags appear at the far right of the menu item
-- Sub-tags are shown as indented child links
+- Expand arrows (▶) for types with **Quick tag shortcuts** (Options → Note Types) appear at the far right of the menu item
+- Sub-tags are shown as indented child links; in **single-type** modes (`npm run job`, etc.) the shortcut list starts **expanded** when shortcuts are configured — multi-type modes keep it collapsed until you click ▶
 - The active view is highlighted
 - URL hash encodes the current view: `#training`, `#note`, `#puzzle`, etc. Empty hash = DEFAULT view
 
