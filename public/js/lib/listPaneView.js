@@ -407,6 +407,27 @@ export function getSelectedNoteId() {
   return _notes[_selectedIndex]?.id ?? null;
 }
 
+/** After creating a note, select it on the next list-pane render (then clear). */
+let _pendingInitialNoteId = null;
+
+export function setPendingInitialNoteId(id) {
+  _pendingInitialNoteId = id != null ? id : null;
+}
+
+export function resolveInitialNoteId(fallback) {
+  const id = _pendingInitialNoteId ?? fallback;
+  _pendingInitialNoteId = null;
+  return id;
+}
+
+/** Align training Year/Month filters (and calendar month) to a note date — no reload. */
+export function alignTrainingFiltersToDate(dateString) {
+  if (!dateString) return;
+  const d = new Date(dateString);
+  if (Number.isNaN(d.getTime())) return;
+  syncFilterSelects(d.getFullYear(), d.getMonth() + 1);
+}
+
 /**
  * Render the list-pane layout into container, replacing any existing content.
  * opts.initialNoteId – if provided, open that note instead of the first one.

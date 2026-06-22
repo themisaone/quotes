@@ -183,11 +183,14 @@ import {
   renderListPaneView,
   refreshPaneNote,
   getSelectedNoteId as getLpSelectedNoteId,
+  setPendingInitialNoteId,
+  resolveInitialNoteId,
+  alignTrainingFiltersToDate,
   getTrainingSubMode,
   setTrainingSubMode,
   getListPanePageSize,
   restoreTrainingDateFiltersToBar
-} from './js/lib/listPaneView.js?v=20260605optiontabs7';
+} from './js/lib/listPaneView.js?v=20260622listrefresh1';
 import {
   configurePaneEditor,
   syncPaneTextToModalHidden,
@@ -2330,12 +2333,22 @@ async function handleSubmit(e) {
         }
         window._primaryEncAttData = null;
       }
+      const wasEdit = !!editingQuoteId;
+      const prevEditingId = editingQuoteId;
       closeQuoteModal();
-      const savedId = newNote?.id || editingQuoteId;
-      if (usesListPaneLayout(currentNoteTypeFilter, currentViewMode) && savedId && newNote) {
+      const savedId = newNote?.id || prevEditingId;
+      // List-pane: in-place refresh only works for edits (note already in _notes).
+      // New notes need a full reload so calendar/list rows pick up the create.
+      if (usesListPaneLayout(currentNoteTypeFilter, currentViewMode) && wasEdit && savedId && newNote) {
         refreshPaneNote(savedId, newNote);
         applyPaneSavedNote(newNote);
       } else {
+        if (!wasEdit && savedId) {
+          setPendingInitialNoteId(savedId);
+          if (currentNoteTypeFilter === 'training' && newNote?.note_date) {
+            alignTrainingFiltersToDate(newNote.note_date);
+          }
+        }
         loadQuotes();
       }
       loadTotalCount();
@@ -2428,7 +2441,7 @@ function displayQuotes(quotes) {
     }
     const currentSettings = getGlobalSettings();
     // Preserve selection across reloads (e.g. after save)
-    const prevSelectedId = getLpSelectedNoteId();
+    const prevSelectedId = resolveInitialNoteId(getLpSelectedNoteId());
     renderListPaneView(lpWrapper || quotesList, quotes, {
       openPropertiesModal,
       openAuthorModal,
