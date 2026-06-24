@@ -37,6 +37,7 @@ function registerQuoteRoutes(app, {
   checkTagTablesExist,
   getTagsForNote,
   getTagsForNotes,
+  tagHelpers,
   logger = console,
 }) {
   if (!app) throw new Error("Express app is required");
@@ -391,6 +392,7 @@ function registerQuoteRoutes(app, {
         tags,
         noteType: note_type,
         client,
+        helpers: tagHelpers,
       });
 
       await client.query("COMMIT");
@@ -568,6 +570,7 @@ function registerQuoteRoutes(app, {
           noteType: effectiveNoteType,
           client,
           clearWhenEmpty: true,
+          helpers: tagHelpers,
         });
       }
 

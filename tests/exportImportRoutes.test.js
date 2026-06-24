@@ -159,7 +159,10 @@ test("GET /api/export/json streams an empty filtered backup", async (t) => {
       if (sql === "SELECT * FROM authors ORDER BY id") return { rows: [{ id: 1, name: "Ada" }] };
       if (sql === "SELECT * FROM sources ORDER BY id") return { rows: [] };
       if (sql === "SELECT * FROM tags    ORDER BY id") return { rows: [] };
-      if (/SELECT COUNT\(\*\) FROM notes/.test(sql)) return { rows: [{ count: "0" }] };
+      if (/FROM authors a/.test(sql)) return { rows: [] };
+      if (/FROM sources s/.test(sql)) return { rows: [] };
+      if (/FROM tags t/.test(sql)) return { rows: [] };
+      if (/SELECT COUNT\(\*\)(?: AS count)? FROM notes/.test(sql)) return { rows: [{ count: "0" }] };
       if (/FROM notes q/.test(sql)) return { rows: [] };
       return { rows: [] };
     },
@@ -180,8 +183,10 @@ test("GET /api/export/json streams an empty filtered backup", async (t) => {
   assert.equal(res.headers["content-type"], "application/json");
   assert.match(res.headers["content-disposition"], /quotes_backup_/);
   assert.equal(parsed.noteTypeFilter, "quote");
-  assert.deepEqual(parsed.counts, { authors: 1, sources: 0, tags: 0, quotes: 0 });
-  assert.deepEqual(parsed.data.authors, [{ id: 1, name: "Ada" }]);
+  assert.deepEqual(parsed.counts, { authors: 0, sources: 0, tags: 0, quotes: 0 });
+  assert.deepEqual(parsed.data.authors, []);
+  assert.ok(Array.isArray(parsed.data.noteTypes));
+  assert.ok(parsed.data.noteTypes.some((type) => type.value === "quote"));
   assert.deepEqual(parsed.data.quotes, []);
   assert.equal(parsed.data._bigFilesCount, 0);
   assert.deepEqual(calls.find((call) => /SELECT COUNT/.test(call.sql)).params, ["quote"]);
@@ -201,7 +206,7 @@ test("GET /api/export/json tracks big files for report and info endpoints", asyn
       if (sql === "SELECT * FROM authors ORDER BY id") return { rows: [] };
       if (sql === "SELECT * FROM sources ORDER BY id") return { rows: [] };
       if (sql === "SELECT * FROM tags    ORDER BY id") return { rows: [] };
-      if (/SELECT COUNT\(\*\) FROM notes/.test(sql)) return { rows: [{ count: "1" }] };
+      if (/SELECT COUNT\(\*\)(?: AS count)? FROM notes/.test(sql)) return { rows: [{ count: "1" }] };
       if (/FROM notes q/.test(sql)) {
         return {
           rows: [{

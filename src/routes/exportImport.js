@@ -8,6 +8,7 @@ const {
   toPgDateOnlyString,
   writeExportChunk,
 } = require("../exportImportHelpers");
+const { createDefaultSettings } = require("./settings");
 
 function readExportEmbedThresholdMB({ fsImpl, getSettingsFile }) {
   try {
@@ -24,6 +25,150 @@ function readExportEmbedThresholdMB({ fsImpl, getSettingsFile }) {
     // Use default when settings are absent or unreadable.
   }
   return 1;
+}
+
+function readSettingsOrDefault({ fsImpl, getSettingsFile }) {
+  const defaults = createDefaultSettings();
+  let parsed = {};
+
+  try {
+    const settingsFile = getSettingsFile();
+    if (fsImpl.existsSync(settingsFile)) {
+      parsed = JSON.parse(fsImpl.readFileSync(settingsFile, "utf8"));
+    }
+  } catch (_) {
+    parsed = {};
+  }
+
+  const settings =
+    parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? { ...defaults, ...parsed }
+      : defaults;
+
+  if (!Array.isArray(settings.noteTypes)) {
+    settings.noteTypes = defaults.noteTypes;
+  }
+  if (defaults.colors || parsed.colors) {
+    settings.colors = { ...(defaults.colors || {}), ...(parsed.colors || {}) };
+  }
+
+  return settings;
+}
+
+function normalizeNoteTypeValue(value) {
+  const normalized = String(value || "").trim();
+  return normalized || null;
+}
+
+function labelFromNoteTypeValue(value) {
+  const label = String(value || "")
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+  return label || "Custom";
+}
+
+function normalizeImportedNoteType(definition, fallbackValue) {
+  const value = normalizeNoteTypeValue(definition?.value || fallbackValue);
+  if (!value) return null;
+
+  const behavior = ["quote", "training", "generic"].includes(definition?.behavior)
+    ? definition.behavior
+    : "generic";
+
+  return {
+    ...(definition && typeof definition === "object" ? definition : {}),
+    value,
+    label: definition?.label || labelFromNoteTypeValue(value),
+    icon: definition?.icon || "📌",
+    behavior,
+    defaultDisplayMode:
+      definition?.defaultDisplayMode || (behavior === "training" ? "calendar" : "cards"),
+  };
+}
+
+function collectReferencedNoteTypeValues(data) {
+  const values = new Set();
+  for (const note of data?.quotes || []) {
+    values.add(normalizeNoteTypeValue(note?.note_type || "quote"));
+  }
+  values.delete(null);
+  return values;
+}
+
+function collectImportedNoteTypeDefinitions(data, referencedValues) {
+  const definitions = new Map();
+  const exportedNoteTypes = Array.isArray(data?.noteTypes)
+    ? data.noteTypes
+    : Array.isArray(data?.settings?.noteTypes)
+      ? data.settings.noteTypes
+      : [];
+
+  for (const definition of exportedNoteTypes) {
+    const normalized = normalizeImportedNoteType(definition);
+    if (!normalized || !referencedValues.has(normalized.value)) continue;
+    definitions.set(normalized.value, normalized);
+  }
+
+  return definitions;
+}
+
+function getConfiguredNoteTypeValues({ fsImpl, getSettingsFile }) {
+  const settings = readSettingsOrDefault({ fsImpl, getSettingsFile });
+  return new Set(
+    settings.noteTypes.map((type) => normalizeNoteTypeValue(type?.value)).filter(Boolean),
+  );
+}
+
+function findUndefinedImportedNoteTypes({ data, fsImpl, getSettingsFile }) {
+  const referencedValues = collectReferencedNoteTypeValues(data);
+  if (referencedValues.size === 0) return [];
+
+  const configuredValues = getConfiguredNoteTypeValues({ fsImpl, getSettingsFile });
+  const importedDefinitions = collectImportedNoteTypeDefinitions(data, referencedValues);
+  const missing = [];
+
+  for (const value of referencedValues) {
+    if (!configuredValues.has(value) && !importedDefinitions.has(value)) {
+      missing.push(value);
+    }
+  }
+
+  return missing;
+}
+
+function addImportedNoteTypesToSettings({
+  data,
+  fsImpl,
+  pathImpl = path,
+  getSettingsFile,
+  logger = console,
+}) {
+  const referencedValues = collectReferencedNoteTypeValues(data);
+  if (referencedValues.size === 0) return [];
+
+  const settings = readSettingsOrDefault({ fsImpl, getSettingsFile });
+  const existingValues = new Set(
+    settings.noteTypes.map((type) => normalizeNoteTypeValue(type?.value)).filter(Boolean),
+  );
+  const definitions = collectImportedNoteTypeDefinitions(data, referencedValues);
+  const added = [];
+
+  for (const [value, definition] of definitions) {
+    if (existingValues.has(value)) continue;
+    settings.noteTypes.push(definition);
+    existingValues.add(value);
+    added.push(value);
+  }
+
+  if (added.length === 0) return [];
+
+  const settingsFile = getSettingsFile();
+  fsImpl.mkdirSync(pathImpl.dirname(settingsFile), { recursive: true });
+  fsImpl.writeFileSync(settingsFile, JSON.stringify(settings, null, 2));
+  logger.log(`[import/json] added note types to settings: ${added.join(", ")}`);
+  return added;
 }
 
 function buildBigFilesReport(bigFiles) {
@@ -115,19 +260,51 @@ function registerExportImportRoutes(app, {
       lastExportBigFilePaths.clear();
 
       const exportEmbedThresholdMB = readExportEmbedThresholdMB({ fsImpl, getSettingsFile });
+      const exportSettings = readSettingsOrDefault({ fsImpl, getSettingsFile });
+      const noteTypesForExport = Array.isArray(exportSettings.noteTypes)
+        ? exportSettings.noteTypes
+        : [];
 
       logger.log("[export/json] start", {
         note_type: note_type || "all",
         exportEmbedThresholdMB,
       });
 
-      const authorsResult = await pool.query("SELECT * FROM authors ORDER BY id");
-      const sourcesResult = await pool.query("SELECT * FROM sources ORDER BY id");
-      const tagsResult = await pool.query("SELECT * FROM tags    ORDER BY id");
+      const authorsResult = note_type
+        ? await pool.query(
+          `SELECT DISTINCT a.*
+             FROM authors a
+             JOIN notes q ON q.author_id = a.id
+            WHERE COALESCE(q.note_type, 'quote') = $1
+            ORDER BY a.id`,
+          [note_type],
+        )
+        : await pool.query("SELECT * FROM authors ORDER BY id");
+      const sourcesResult = note_type
+        ? await pool.query(
+          `SELECT DISTINCT s.*
+             FROM sources s
+             JOIN notes q ON q.source_id = s.id
+            WHERE COALESCE(q.note_type, 'quote') = $1
+            ORDER BY s.id`,
+          [note_type],
+        )
+        : await pool.query("SELECT * FROM sources ORDER BY id");
+      const tagsResult = note_type
+        ? await pool.query(
+          `SELECT DISTINCT t.*
+             FROM tags t
+             JOIN note_tags nt ON nt.tag_id = t.id
+             JOIN notes q ON q.id = nt.note_id
+            WHERE COALESCE(q.note_type, 'quote') = $1
+            ORDER BY t.id`,
+          [note_type],
+        )
+        : await pool.query("SELECT * FROM tags    ORDER BY id");
 
       const countParams = note_type ? [note_type] : [];
       const countResult = await pool.query(
-        `SELECT COUNT(*) FROM notes${note_type ? " WHERE note_type = $1" : ""}`,
+        `SELECT COUNT(*) AS count FROM notes${note_type ? " WHERE COALESCE(note_type, 'quote') = $1" : ""}`,
         countParams,
       );
       const quoteCount = parseInt(countResult.rows[0].count, 10);
@@ -146,31 +323,24 @@ function registerExportImportRoutes(app, {
       await writeExportChunk(res, `,"data":{"authors":${JSON.stringify(authorsResult.rows)}`);
       await writeExportChunk(res, `,"sources":${JSON.stringify(sourcesResult.rows)}`);
       await writeExportChunk(res, `,"tags":${JSON.stringify(tagsResult.rows)}`);
+      await writeExportChunk(res, `,"noteTypes":${JSON.stringify(noteTypesForExport)}`);
       await writeExportChunk(res, ',"quotes":[');
 
       const batchSize = 200;
       let lastId = 0;
       let first = true;
-      const noteTypeClause = note_type ? "AND q.note_type = $3" : "";
+      const noteTypeClause = note_type ? "AND COALESCE(q.note_type, 'quote') = $3" : "";
 
       while (true) {
         const params = note_type ? [lastId, batchSize, note_type] : [lastId, batchSize];
         const batch = await pool.query(
           `SELECT q.*,
                   a.name AS author_name,
-                  s.name AS source_name,
-                  COALESCE(
-                    json_agg(json_build_object('id', t.id, 'name', t.name, 'type', t.type))
-                    FILTER (WHERE t.id IS NOT NULL),
-                    '[]'::json
-                  ) AS tag_objects
+                  s.name AS source_name
            FROM notes q
            LEFT JOIN authors   a  ON a.id = q.author_id
            LEFT JOIN sources   s  ON s.id = q.source_id
-           LEFT JOIN note_tags nt ON nt.note_id = q.id
-           LEFT JOIN tags      t  ON t.id = nt.tag_id
            WHERE q.id > $1 ${noteTypeClause}
-           GROUP BY q.id, a.name, s.name
            ORDER BY q.id
            LIMIT $2`,
           params,
@@ -179,8 +349,28 @@ function registerExportImportRoutes(app, {
         if (batch.rows.length === 0) break;
 
         const noteIds = batch.rows.map((row) => row.id);
+        const tagsByNote = new Map();
         const attachmentsByNote = new Map();
         if (noteIds.length > 0) {
+          const tagsResult = await pool.query(
+            `SELECT nt.note_id, t.id, t.name, t.type
+             FROM note_tags nt
+             JOIN tags t ON t.id = nt.tag_id
+             WHERE nt.note_id = ANY($1::int[])
+             ORDER BY nt.note_id, t.name`,
+            [noteIds],
+          );
+          for (const tag of tagsResult.rows) {
+            if (!tagsByNote.has(tag.note_id)) {
+              tagsByNote.set(tag.note_id, []);
+            }
+            tagsByNote.get(tag.note_id).push({
+              id: tag.id,
+              name: tag.name,
+              type: tag.type,
+            });
+          }
+
           const attachmentsResult = await pool.query(
             `SELECT note_id, position, thumbnail, attachment_full, attachment_type, filename
              FROM note_attachments
@@ -197,6 +387,7 @@ function registerExportImportRoutes(app, {
         }
 
         for (const note of batch.rows) {
+          note.tag_objects = tagsByNote.get(note.id) || [];
           const attachmentRows = attachmentsByNote.get(note.id);
           if (attachmentRows && attachmentRows.length > 0) {
             note.attachments = attachmentRows.map((attachment) => ({
@@ -316,6 +507,16 @@ function registerExportImportRoutes(app, {
         return res.status(400).json({ error: "Invalid import data structure" });
       }
 
+      const undefinedNoteTypes = findUndefinedImportedNoteTypes({ data, fsImpl, getSettingsFile });
+      if (undefinedNoteTypes.length > 0) {
+        return res.status(400).json({
+          error: "Import references note types that are not configured",
+          noteTypes: undefinedNoteTypes,
+          details:
+            "Add these note types in Options, or import a backup that includes note type definitions.",
+        });
+      }
+
       await client.query("BEGIN");
 
       const stats = {
@@ -334,18 +535,22 @@ function registerExportImportRoutes(app, {
         await client.query("SAVEPOINT import_author");
         try {
           if (options?.replaceExisting) {
-            const result = await client.query(
+            const existing = await client.query(
+              "SELECT id FROM authors WHERE name = $1",
+              [author.name],
+            );
+            await client.query(
               `INSERT INTO authors (name, image, description) 
                VALUES ($1, $2, $3) 
                ON CONFLICT (name) DO UPDATE 
                SET image = EXCLUDED.image, description = EXCLUDED.description
-               RETURNING id, (xmax = 0) as inserted`,
+               RETURNING id`,
               [author.name, authorImage(author), authorDesc(author)],
             );
-            if (result.rows[0].inserted) {
-              stats.authors.created++;
-            } else {
+            if (existing.rows.length > 0) {
               stats.authors.updated++;
+            } else {
+              stats.authors.created++;
             }
           } else {
             const existing = await client.query(
@@ -373,18 +578,22 @@ function registerExportImportRoutes(app, {
         await client.query("SAVEPOINT import_source");
         try {
           if (options?.replaceExisting) {
-            const result = await client.query(
+            const existing = await client.query(
+              "SELECT id FROM sources WHERE name = $1",
+              [source.name],
+            );
+            await client.query(
               `INSERT INTO sources (name, type, image) 
                VALUES ($1, $2, $3) 
                ON CONFLICT (name) DO UPDATE 
                SET type = EXCLUDED.type, image = EXCLUDED.image
-               RETURNING id, (xmax = 0) as inserted`,
+               RETURNING id`,
               [source.name, source.type, sourceImage(source)],
             );
-            if (result.rows[0].inserted) {
-              stats.sources.created++;
-            } else {
+            if (existing.rows.length > 0) {
               stats.sources.updated++;
+            } else {
+              stats.sources.created++;
             }
           } else {
             const existing = await client.query(
@@ -413,18 +622,22 @@ function registerExportImportRoutes(app, {
           await client.query("SAVEPOINT import_tag");
           try {
             if (options?.replaceExisting) {
-              const result = await client.query(
+              const existing = await client.query(
+                "SELECT id FROM tags WHERE name = $1 AND type = $2",
+                [tag.name, tag.type || "quote"],
+              );
+              await client.query(
                 `INSERT INTO tags (name, type, created_at) 
                  VALUES ($1, $2, $3) 
                  ON CONFLICT (name, type) DO UPDATE 
                  SET created_at = EXCLUDED.created_at
-                 RETURNING id, (xmax = 0) as inserted`,
+                 RETURNING id`,
                 [tag.name, tag.type || "quote", tag.created_at],
               );
-              if (result.rows[0].inserted) {
-                stats.tags.created++;
-              } else {
+              if (existing.rows.length > 0) {
                 stats.tags.updated++;
+              } else {
+                stats.tags.created++;
               }
             } else {
               const existing = await client.query(
@@ -515,6 +728,12 @@ function registerExportImportRoutes(app, {
                 : String(note.score).trim() || null;
             const importNoteDate = toPgDateOnlyString(note.note_date);
             const hasId = note.id !== null && note.id !== undefined;
+            const importType = note.type ?? null;
+            const importComment = note.comment ?? null;
+            const importAttachmentType = note.attachment_type ?? null;
+            const importCreatedAt = note.created_at || new Date();
+            const importUpdatedAt = note.updated_at || new Date();
+            const importTranslationGroup = note.translation_group ?? null;
 
             if (hasId && idExists.rows.length > 0) {
               const insertResult = await client.query(
@@ -527,15 +746,15 @@ function registerExportImportRoutes(app, {
                   importNoteTitle,
                   authorId,
                   sourceId,
-                  note.type,
-                  note.comment,
+                  importType,
+                  importComment,
                   noteType,
                   importNoteDate,
                   importScore,
-                  note.attachment_type || null,
-                  note.created_at || new Date(),
-                  note.updated_at || new Date(),
-                  note.translation_group || null,
+                  importAttachmentType,
+                  importCreatedAt,
+                  importUpdatedAt,
+                  importTranslationGroup,
                 ],
               );
               quoteId = insertResult.rows[0].id;
@@ -551,15 +770,15 @@ function registerExportImportRoutes(app, {
                   importNoteTitle,
                   authorId,
                   sourceId,
-                  note.type,
-                  note.comment,
+                  importType,
+                  importComment,
                   noteType,
                   importNoteDate,
                   importScore,
-                  note.attachment_type || null,
-                  note.created_at || new Date(),
-                  note.updated_at || new Date(),
-                  note.translation_group || null,
+                  importAttachmentType,
+                  importCreatedAt,
+                  importUpdatedAt,
+                  importTranslationGroup,
                 ],
               );
             } else {
@@ -573,15 +792,15 @@ function registerExportImportRoutes(app, {
                   importNoteTitle,
                   authorId,
                   sourceId,
-                  note.type,
-                  note.comment,
+                  importType,
+                  importComment,
                   noteType,
                   importNoteDate,
                   importScore,
-                  note.attachment_type || null,
-                  note.created_at || new Date(),
-                  note.updated_at || new Date(),
-                  note.translation_group || null,
+                  importAttachmentType,
+                  importCreatedAt,
+                  importUpdatedAt,
+                  importTranslationGroup,
                 ],
               );
               quoteId = insertResult.rows[0].id;
@@ -656,7 +875,7 @@ function registerExportImportRoutes(app, {
                 const tagResult = await client.query(
                   `INSERT INTO tags (name, type) 
                    VALUES ($1, $2) 
-                   ON CONFLICT (name, type) DO UPDATE SET name = tags.name
+                   ON CONFLICT (name, type) DO UPDATE SET name = EXCLUDED.name
                    RETURNING id`,
                   [tagObj.name, tagObj.type || noteType],
                 );
@@ -691,11 +910,30 @@ function registerExportImportRoutes(app, {
       await client.query("COMMIT");
       committed = true;
 
-      res.json({
+      const noteTypesAdded = [];
+      const warnings = [];
+      try {
+        noteTypesAdded.push(...addImportedNoteTypesToSettings({
+          data,
+          fsImpl,
+          pathImpl,
+          getSettingsFile,
+          logger,
+        }));
+      } catch (settingsError) {
+        const message = `Imported notes, but could not update note types in settings: ${settingsError.message}`;
+        logger.warn(`[import/json] ${message}`);
+        warnings.push(message);
+      }
+
+      const response = {
         success: true,
         message: "Import completed",
         stats,
-      });
+      };
+      if (noteTypesAdded.length > 0) response.noteTypesAdded = noteTypesAdded;
+      if (warnings.length > 0) response.warnings = warnings;
+      res.json(response);
     } catch (error) {
       try {
         await client.query("ROLLBACK");
@@ -720,7 +958,12 @@ function registerExportImportRoutes(app, {
 }
 
 module.exports = {
+  addImportedNoteTypesToSettings,
   buildBigFilesReport,
+  collectImportedNoteTypeDefinitions,
+  collectReferencedNoteTypeValues,
+  findUndefinedImportedNoteTypes,
   readExportEmbedThresholdMB,
+  readSettingsOrDefault,
   registerExportImportRoutes,
 };

@@ -6,6 +6,7 @@ const test = require("node:test");
 
 const {
   cleanupStaleSubtypes,
+  createDefaultSettings,
   registerSettingsRoutes,
 } = require("../src/routes/settings");
 
@@ -122,6 +123,18 @@ test("GET /api/settings creates default settings when none exist", async (t) => 
   assert.equal(response.status, 200);
   assert.equal(Array.isArray(response.body.noteTypes), true);
   assert.equal(fs.existsSync(deps.defaultSettingsFile), true);
+});
+
+test("createDefaultSettings includes every built-in mode note type", () => {
+  const settingsTypes = new Set(createDefaultSettings().noteTypes.map((type) => type.value));
+  const builtInModes = JSON.parse(
+    fs.readFileSync(path.join(__dirname, "../config/modes.json"), "utf8"),
+  );
+  const modeTypes = new Set(Object.values(builtInModes).flat());
+
+  for (const type of modeTypes) {
+    assert.equal(settingsTypes.has(type), true, `${type} missing from default noteTypes`);
+  }
 });
 
 test("GET /api/settings falls back to default file when vault path is missing", async (t) => {

@@ -4,9 +4,8 @@
  * Every statement uses IF NOT EXISTS / IF EXISTS so it is safe to re-run.
  */
 
-const pool = require("../src/db");
-
 async function migrate({ client: providedClient, logger = console } = {}) {
+  const pool = providedClient ? null : require("../src/db");
   const client = providedClient || await pool.connect();
   const ownsClient = !providedClient;
 

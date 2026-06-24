@@ -195,3 +195,14 @@ test("syncNotesIdSequence is a no-op when no serial sequence exists", async () =
 
   assert.equal(calls.length, 1);
 });
+
+test("syncNotesIdSequence is a no-op for SQLite clients", async () => {
+  const client = {
+    dialect: "sqlite",
+    async query() {
+      throw new Error("query should not be called");
+    },
+  };
+
+  await syncNotesIdSequence(client);
+});

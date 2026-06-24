@@ -1,4 +1,7 @@
 {
-  "vaultPath": "/home/mirjok/Dropbox/MainNoteArchiveVault",
-  "activeMode": "TEGNESERIE"
+  "vaultPath": "/home/mirjok/Dev/OWNAI/Misa/SQLITEVault",
+  "activeMode": "ALL",
+  "sqlite": {
+    "enabled": true
+  }
 }

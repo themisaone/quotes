@@ -11,10 +11,18 @@ const silentLogger = {
 function makeRouteCollector(pool, {
   attachmentsDir = "/vault/attachments",
   exists = new Set(),
+  files = new Map(),
   fsCalls = [],
+  settingsFile = "/vault/config/settings.json",
+  modesFile = "/app/config/modes.json",
+  modesState = { ALL: ["quote", "note", "job"] },
+  localConfig = { vaultPath: "/vault" },
 } = {}) {
   const routes = new Map();
   const app = {
+    get(routePath, handler) {
+      routes.set(`GET ${routePath}`, handler);
+    },
     post(routePath, handler) {
       routes.set(`POST ${routePath}`, handler);
     },
@@ -29,7 +37,12 @@ function makeRouteCollector(pool, {
     },
     fsImpl: {
       existsSync(filePath) {
-        return exists.has(filePath);
+        return exists.has(filePath) || files.has(filePath);
+      },
+      readFileSync(filePath, encoding) {
+        assert.equal(encoding, "utf8");
+        if (files.has(filePath)) return files.get(filePath);
+        throw new Error(`missing ${filePath}`);
       },
       mkdirSync(dirPath, options) {
         fsCalls.push(["mkdirSync", dirPath, options]);
@@ -41,6 +54,14 @@ function makeRouteCollector(pool, {
         exists.delete(from);
         exists.add(to);
       },
+    },
+    getSettingsFile() {
+      return settingsFile;
+    },
+    modesFile,
+    modesState,
+    readLocalConfig() {
+      return localConfig;
     },
     logger: silentLogger,
   });
@@ -68,6 +89,64 @@ async function invoke(routes, { method = "POST", routePath, body = {} }) {
   await handler({ body }, res);
   return { status: res.statusCode, body: res.body };
 }
+
+test("GET /api/maintenance/health reports settings, mode, and DB type mismatches", async () => {
+  const settingsFile = "/vault/config/settings.json";
+  const calls = [];
+  const pool = {
+    dialect: "sqlite",
+    filename: "/vault/archive.sqlite",
+    async query(sql) {
+      calls.push(sql);
+      assert.match(sql, /COALESCE\(note_type, 'quote'\)/);
+      return {
+        rows: [
+          { note_type: "job", count: "3" },
+          { note_type: "legacy", count: "1" },
+          { note_type: "quote", count: "2" },
+        ],
+      };
+    },
+  };
+  const routes = makeRouteCollector(pool, {
+    settingsFile,
+    files: new Map([
+      [settingsFile, JSON.stringify({ noteTypes: [{ value: "quote" }] })],
+    ]),
+    modesState: { ALL: ["quote", "job"] },
+  });
+
+  const response = await invoke(routes, {
+    method: "GET",
+    routePath: "/api/maintenance/health",
+  });
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body.ok, false);
+  assert.equal(response.body.status, "error");
+  assert.equal(response.body.backend, "sqlite");
+  assert.equal(response.body.sqliteFile, "/vault/archive.sqlite");
+  assert.deepEqual(response.body.configuredTypes, {
+    settings: ["quote"],
+    modes: ["job", "quote"],
+    db: ["job", "legacy", "quote"],
+  });
+  assert.deepEqual(response.body.mismatches, {
+    modesMissingFromSettings: ["job"],
+    dbMissingFromSettings: ["job", "legacy"],
+    settingsMissingFromModes: [],
+    dbMissingFromModes: ["legacy"],
+  });
+  assert.deepEqual(
+    response.body.countsByNoteType.map((row) => [row.noteType, row.count]),
+    [["job", 3], ["legacy", 1], ["quote", 2]],
+  );
+  assert.deepEqual(
+    response.body.issues.map((issue) => issue.code),
+    ["modes_missing_from_settings", "db_missing_from_settings", "db_missing_from_modes"],
+  );
+  assert.equal(calls.length, 1);
+});
 
 test("POST /api/maintenance/prune-unused-entities deletes unused entities in one transaction", async () => {
   const calls = [];

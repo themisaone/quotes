@@ -286,13 +286,16 @@ test("POST /api/quotes/bulk-delete excludes notes and deletes attachment files",
   assert.deepEqual(client.calls.map((call) => call.sql), [
     "BEGIN",
     "SELECT id, thumbnail, attachment_full FROM notes WHERE id = ANY($1::int[])",
+    "SELECT thumbnail, attachment_full\n         FROM note_attachments\n         WHERE note_id = ANY($1::int[])",
     "DELETE FROM notes WHERE id = ANY($1)",
     "COMMIT",
   ]);
   assert.deepEqual(client.calls[2].params, [[1]]);
+  assert.deepEqual(client.calls[3].params, [[1]]);
   assert.deepEqual(events, [
     "BEGIN",
     "SELECT id, thumbnail, attachment_full FROM notes WHERE id = ANY($1::int[])",
+    "SELECT thumbnail, attachment_full\n         FROM note_attachments\n         WHERE note_id = ANY($1::int[])",
     "DELETE FROM notes WHERE id = ANY($1)",
     "COMMIT",
     "delete:thumb-1",
@@ -336,6 +339,7 @@ test("POST /api/quotes/bulk-delete does not delete files when the DB delete roll
   assert.deepEqual(client.calls.map((call) => call.sql), [
     "BEGIN",
     "SELECT id, thumbnail, attachment_full FROM notes WHERE id = ANY($1::int[])",
+    "SELECT thumbnail, attachment_full\n         FROM note_attachments\n         WHERE note_id = ANY($1::int[])",
     "DELETE FROM notes WHERE id = ANY($1)",
     "ROLLBACK",
   ]);

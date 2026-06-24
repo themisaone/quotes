@@ -16,6 +16,8 @@ One file (~350 lines) focused on startup, static serving, vault initialization, 
 
 `src/server.js` exports `{ app, startServer }` and only calls `startServer()` when run directly (`node src/server.js`). This keeps normal startup behavior unchanged while allowing tests and future tooling to import the Express app without binding a port or running migrations. New route groups should be moved into `src/routes/*` with injected dependencies, following `instances.js` and `settings.js`.
 
+DB backend selection starts in `src/db.js`. `DB_BACKEND=postgres` (default) returns the Postgres pool from `src/db/postgres.js`; `DB_BACKEND=sqlite` returns a Postgres-like SQLite pool from `src/db/sqlite.js` using `node:sqlite`. SQLite derives its DB file from `config/local.json` `vaultPath` as `<vaultPath>/archive.sqlite` only when local config also has `"sqlite": { "enabled": true }`; the guard prevents accidental SQLite files in an existing Postgres vault. Without a vault path, SQLite falls back to `./data/archive.sqlite`. Because the DB opens during startup, changing `vaultPath` while using SQLite requires a restart. SQLite creates `<archive.sqlite>.lock` and refuses a second live process against the same DB file; stale locks are replaced when the recorded PID is gone. SQLite route/query portability is being added incrementally; current covered paths include the baseline migration, DB adapter, core quote create/read/list/count/update/delete routes, tag sync/enrichment, tag browse/create/rename/delete/bulk-add/co-occurring lists, training-year filters, bulk IDs/count/tag/delete/duplicate/split, maintenance health/prune/rehome, and JSON import/export with tags and attachments.
+
 Migration startup lives in `migrations/run-migrations.js`. The runner creates `schema_migrations`, skips filenames already recorded there, and records each migration in the same transaction used by migration files that accept an injected client. `npm start`, `npm run dev`, and `npm run <mode>` start `src/server.js` directly and let `startServer()` perform one pending-migration check. Docker still waits for Postgres and runs the migration command in `docker/entrypoint.sh`, then starts the server with `SKIP_MIGRATE=1` to avoid a second check.
 
 **Key globals:**
@@ -38,13 +40,13 @@ Quote create/update attachment sync helpers live in `src/quoteAttachmentSync.js`
 
 Quote create/update/delete routes track attachment cleanup against transaction state. Create/update track newly stored `file:` refs while the transaction is open and delete those new files on rollback. Replaced or cleared old refs, and files belonging to deleted notes, are deleted only after `COMMIT`, so a later DB failure does not remove files still referenced by the database.
 
-Quote metadata helpers live in `src/quoteMetadata.js`. They own quote author/source upserts, scalar insert/update field mapping, tag sync decisions, and translation-group rename propagation. Update routes resolve an effective note type from the request or existing note row before processing attachments or tags; this prevents updates that omit `note_type` from accidentally storing new attachment/tag data under the default `quote` type.
+Quote metadata helpers live in `src/quoteMetadata.js`. They own quote author/source upserts, scalar insert/update field mapping, tag sync decisions, and translation-group rename propagation. Update routes resolve an effective note type from the request or existing note row before processing attachments or tags; this prevents updates that omit `note_type` from accidentally storing new attachment/tag data under the default `quote` type. `src/tagHelpers.js` exports a pool-bound `createTagHelpers()` factory plus default helpers, so SQLite route tests can use an isolated temporary database instead of the user's configured pool.
 
 Quote count/list/bulk search SQL builders live in `src/quoteListQuery.js`. Keep search parsing, text/tag/any-search conditions, metadata filters, mode restrictions, attachment filters, training date/tag filters, and pagination placeholder ordering there. `GET /api/quotes/count`, `GET /api/quotes`, and bulk operations intentionally build filters in different orders for compatibility, so preserve that ordering in helper tests when changing filters. Count and list queries should agree on which filters affect the result set, including comment text search, direct date, date range, and translation-group filters. `buildBulkFilterQuery()` defaults missing filters to the current active mode's allowed types, accepts both legacy `search`/`tag` and list-style `quote`/`tags` aliases, and applies hidden encrypted/tag settings, translation groups, generic sub-types, metadata filters, `date`, and `dateFrom`/`dateTo` for filtered bulk scopes.
 
 Quote response enrichment helpers live in `src/quoteResponse.js`. Use them when a route needs to resolve stored thumbnail refs, apply position-0 attachments, load tag objects, or format the legacy `tags` string. The helpers preserve the existing split between legacy responses without `tag_objects` when tag tables are absent and enriched responses with `tag_objects` when tag tables are available.
 
-JSON export/import routing lives in `src/routes/exportImport.js`. It owns `GET /api/export/json`, the big-file report/info/zip companion endpoints, and `POST /api/import/json`. Import tracks newly created attachment files per note savepoint: savepoint rollback deletes that note's new files, and whole-transaction rollback deletes files from notes whose savepoints were already released. Existing `file:` refs from backups are not treated as newly created files. JSON export/import helper behavior lives in `src/exportImportHelpers.js`: attachment export resolution (embed small `file:` refs, keep/report large refs once per path), date-only normalization for export/import, chunked response writes with backpressure handling, response end wrapping, and `notes.id` sequence alignment.
+JSON export/import routing lives in `src/routes/exportImport.js`. It owns `GET /api/export/json`, the big-file report/info/zip companion endpoints, and `POST /api/import/json`. Full JSON export includes all authors, sources, and tags; type-filtered export includes only notes of that type plus metadata referenced by those notes. Import tracks newly created attachment files per note savepoint: savepoint rollback deletes that note's new files, and whole-transaction rollback deletes files from notes whose savepoints were already released. Existing `file:` refs from backups are not treated as newly created files. JSON export/import helper behavior lives in `src/exportImportHelpers.js`: attachment export resolution (embed small `file:` refs, keep/report large refs once per path), date-only normalization for export/import, chunked response writes with backpressure handling, response end wrapping, and `notes.id` sequence alignment. Large JSON restores should use `scripts/split-json-backup.js` plus `scripts/import-json-backup-parts.js`; the importer posts normal `/api/import/json` requests sequentially so backend behavior stays identical to UI import.
 
 DB-stored attachment export routing lives in `src/routes/dbAttachmentExport.js`. It owns `POST /api/export/db-attachments`, queries base64 `attachment_full` values from `note_attachments` plus flat note rows not already covered by attachment rows, and writes them under `~/Downloads/DB-attachments/<note_type>/` without overwriting existing files.
 
@@ -56,9 +58,9 @@ Quote route registration lives in `src/routes/quotes.js`. It owns quote read rou
 
 Transaction early-return helpers live in `src/transactionResponses.js`. Use them for routes that already opened `BEGIN` and need to return a validation, not-found, or no-op response before `COMMIT`; this prevents pooled clients from being released with an open transaction.
 
-Maintenance routes live in `src/routes/maintenance.js`. `POST /api/maintenance/prune-unused-entities` deletes unreferenced authors, sources, and tags in one transaction. `POST /api/maintenance/rehome-attachments` defaults to dry-run: it joins `note_attachments` to `notes`, compares each file reference folder with the note's current canonical `note_type`, and reports movable items, missing source files, target collisions, and invalid references. Passing `{ "dryRun": false }` moves only items currently marked movable, updates `note_attachments`, updates flat `notes.thumbnail` / `notes.attachment_full` for position-0 attachments, and reports skipped or failed items. Each item uses a DB savepoint, and a failed DB update attempts to move the file back to its original path.
+Maintenance routes live in `src/routes/maintenance.js`. `GET /api/maintenance/health` compares active settings note types, mode note types, DB `notes.note_type` values, paths, backend, and counts per type. `POST /api/maintenance/prune-unused-entities` deletes unreferenced authors, sources, and tags in one transaction. `POST /api/maintenance/rehome-attachments` defaults to dry-run: it joins `note_attachments` to `notes`, compares each file reference folder with the note's current canonical `note_type`, and reports movable items, missing source files, target collisions, and invalid references. Passing `{ "dryRun": false }` moves only items currently marked movable, updates `note_attachments`, updates flat `notes.thumbnail` / `notes.attachment_full` for position-0 attachments, and reports skipped or failed items. Each item uses a DB savepoint, and a failed DB update attempts to move the file back to its original path.
 
-Options has a dedicated **Maintenance** tab for duplicate inspection, unused metadata pruning, and attachment folder scan/apply actions.
+Options has a dedicated **Maintenance** tab for vault health, duplicate inspection, unused metadata pruning, and attachment folder scan/apply actions.
 
 Vault routes live in `src/routes/vault.js`. `GET /api/vault/info` reports attachment counts, settings metadata, and palette paths. `POST /api/vault/validate` checks writability with a unique temporary test file so it does not overwrite an existing `.write-test` file. `POST /api/vault/move` copies the current attachment tree to a requested destination, reports per-file copy errors, and rejects destinations inside the source directory to avoid recursive self-copying.
 
@@ -84,13 +86,20 @@ Tag browse, create, rename, delete, and bulk-add routes live in `src/routes/tags
 
 ## Testing
 
-Run `npm test` to execute the Node-native test suite (`node --test tests/*.test.js`). Current tests avoid a live database and cover pure helpers plus import seams:
+Run `npm test` to execute the Node-native test suite (`node --test tests/*.test.js`). Most tests use pure helpers or fake pools; SQLite backend tests create temporary local database files and never use the user's configured database:
 
 - `src/fileStorage.js` path/reference/base64 behavior using temporary attachment directories
 - `src/attachmentRehome.js` attachment folder drift planning, apply behavior, and path-safety handling
 - `src/entityPayload.js` author/source image payload selection and validation
 - `src/entityQueries.js` author/source list/update SQL builders and response payloads
 - `src/exportImportHelpers.js` JSON export/import date normalization, attachment embedding/reporting, stream backpressure, and sequence sync
+- `src/db.js`, `src/db/postgres.js`, and `src/db/sqlite.js` backend selection plus SQLite query compatibility helpers
+- `tests/sqliteQuoteRoutes.test.js` core quote CRUD, tag sync/enrichment, and training-year filters against a migrated temporary SQLite file
+- `tests/sqliteTagsRoutes.test.js` tag browse/create/rename/delete/bulk-add/co-occurring routes against a migrated temporary SQLite file
+- `tests/sqliteQuoteBulkRoutes.test.js` bulk IDs/count/tag/delete/duplicate/split routes against a migrated temporary SQLite file, including extra attachment cleanup on delete and attachment/tag copy behavior
+- `tests/sqliteMaintenanceRoutes.test.js` maintenance health, prune, and attachment rehome dry-run/apply routes against a migrated temporary SQLite file and temporary attachment directory
+- `tests/sqliteExportImportRoutes.test.js` JSON export/import against a migrated temporary SQLite file, including scoped metadata for type-filtered exports, tag objects, attachments, explicit note IDs, and replace-existing metadata updates
+- `scripts/split-json-backup.js` and `scripts/import-json-backup-parts.js` large-backup split/import helper behavior, including note type preservation, part ordering, and posted payload shape
 - `migrations/run-migrations.js` pending-only migration tracking via `schema_migrations`
 - `src/routes/attachmentMigration.js` attachment disk migration behavior, including base64 migration, legacy folder consolidation, stale tmp-reference repair, sync queries, DB rollback handling, and filesystem rollback compensation
 - `src/routes/attachments.js` attachment list/create/delete/file-upload/downscale/make-primary behavior with fake pool/client objects and temporary files, including rollback cleanup and post-commit deletion ordering
@@ -99,7 +108,7 @@ Run `npm test` to execute the Node-native test suite (`node --test tests/*.test.
 - `src/routes/dedup.js` duplicate-suspect grouping, pagination bounds, enrichment, and error handling
 - `src/routes/exportImport.js` streaming JSON export, big-file companion endpoints, and JSON import behavior, including attachment cleanup for savepoint and transaction rollback
 - `src/routes/instances.js` route behavior with a stubbed instance manager
-- `src/routes/maintenance.js` unused-entity prune plus attachment rehome dry-run/apply behavior
+- `src/routes/maintenance.js` vault health, unused-entity prune, and attachment rehome dry-run/apply behavior
 - `src/routes/mode.js` mode status/switching behavior and local config preservation
 - `src/routes/palettes.js` palette list/load/save/delete behavior and path-safety validation
 - `src/routes/pdfExport.js` PDF export validation, HTML layout decisions, mocked Puppeteer rendering, and browser cleanup on render failure
@@ -115,7 +124,7 @@ Run `npm test` to execute the Node-native test suite (`node --test tests/*.test.
 - `src/quoteListQuery.js` quote count/list/bulk search parsing, SQL filter construction, and parameter ordering
 - `src/quoteMetadata.js` quote author/source upsert behavior, scalar field mapping, tag sync decisions, and translation-group propagation
 - `src/quoteResponse.js` quote image/attachment/tag response enrichment helpers
-- `src/tagHelpers.js::parseTagInput`
+- `src/tagHelpers.js` tag parsing plus pool-bound helper factory used by SQLite route coverage
 - `src/transactionResponses.js` rollback-before-response helpers for open transactions
 - `src/noteText.js::sanitizeNoteText`
 - `src/server.js` export behavior
@@ -168,7 +177,7 @@ import { getGlobalSettings } from './settingsManager.js?v=123'; // different ins
 
 ## Settings Flow
 
-Settings are stored in `config/settings.json` (server-side). The frontend loads them on startup and holds them in `globalSettings` inside `settingsManager.js`.
+Settings are stored in `<vaultPath>/config/settings.json` when `config/local.json` points at a vault; otherwise the fallback is `config/settings.json`. The frontend loads them on startup and holds them in `globalSettings` inside `settingsManager.js`.
 
 ```
 settings.json
@@ -185,6 +194,8 @@ app.js loadQuotes()
 ```
 
 **Key point:** `displayManager.js` does NOT import `settingsManager.js`. It receives `globalSettings` as a function parameter to avoid the module instance problem. Any new code in `displayManager` that needs settings must receive them through the parameter chain, not via import.
+
+**Modes vs note types:** `config/modes.json` controls which note types the server allows in each runtime mode. The sidebar and add-note menu are built from active settings `noteTypes`. If rows use a `note_type` that is allowed by mode but missing from settings, the rows exist but have no sidebar entry. JSON export includes `data.noteTypes`; JSON import adds missing types only when the backup defines them, and rejects older backups that reference undefined types before writing notes.
 
 ---
 
@@ -431,5 +442,5 @@ Gallery and list-pane are mutually exclusive (gallery always uses the card grid)
 | `public/js/lib/trainingCalendar.js` | Training calendar in list-pane left column |
 | `public/js/lib/mergeModal.js` | Note merge UI |
 | `public/js/lib/dedupSuspectsPanel.js` | Duplicate inspection (Options) |
-| `config/settings.json` | Note types, training sub-types, colors, feature flags |
+| `<vaultPath>/config/settings.json` or `config/settings.json` | Note types, sub-types, colors, feature flags |
 | `config/modes.json` | Mode → note type mappings |

@@ -37,26 +37,19 @@ const {
   getTagsForNote,
   getTagsForNotes,
 } = require("./tagHelpers");
+const {
+  LOCAL_FILE,
+  readLocalConfig,
+  writeLocalConfig,
+} = require("./localConfig");
 require("dotenv").config();
 
 const app = express();
 const PORT = process.env.PORT || 4000;
 
 // ── Local config (vault path only — stays inside the app, never synced) ──
-const LOCAL_FILE      = path.join(__dirname, '../config/local.json');
 const DEFAULT_SETTINGS_FILE = path.join(__dirname, '../config/settings.json');
 const DEFAULT_PALETTES_DIR  = path.join(__dirname, '../palettes');
-
-function readLocalConfig() {
-  try {
-    if (fs.existsSync(LOCAL_FILE)) return JSON.parse(fs.readFileSync(LOCAL_FILE, 'utf8'));
-  } catch (_) {}
-  return {};
-}
-function writeLocalConfig(obj) {
-  fs.mkdirSync(path.dirname(LOCAL_FILE), { recursive: true });
-  fs.writeFileSync(LOCAL_FILE, JSON.stringify(obj, null, 2));
-}
 
 // ── Active mode (set via MODE env var or PUT /api/mode, persisted in local.json) ──
 const MODES_FILE = path.join(__dirname, '../config/modes.json');
@@ -104,7 +97,15 @@ app.use((req, res, next) => {
 });
 
 // Maintenance routes are registered before static so POST requests are never mistaken for file fetches.
-registerMaintenanceRoutes(app, { pool, fileStorage, fsImpl: fs });
+registerMaintenanceRoutes(app, {
+  pool,
+  fileStorage,
+  fsImpl: fs,
+  getSettingsFile,
+  modesFile: MODES_FILE,
+  modesState: _modes,
+  readLocalConfig,
+});
 
 app.use(express.static(path.join(__dirname, "../public")));
 // Serve attachment files from the configured vault (dynamic — honours vaultPath setting)
@@ -127,19 +128,28 @@ function initVaultPath() {
         console.warn(
           `\n⚠️  Vault path from local.json does not exist here: ${root}\n` +
             '   Attachments and vault settings.json will not match your host until this path is visible ' +
-            '(e.g. bind-mount the same host folder to this path in Docker).\n'
+            '(e.g. bind-mount the same host folder to this path in Docker). Falling back to local attachments.\n'
         );
+        return;
       }
       fileStorage.setAttachmentsDir(root);
+      try {
+        fileStorage.ensureDirectories();
+      } catch (dirError) {
+        console.warn(
+          `\n⚠️  Vault attachments directory is not writable: ${fileStorage.getAttachmentsDir()}\n` +
+            `   ${dirError.message}\n` +
+            '   Falling back to local attachments.\n'
+        );
+        fileStorage.setAttachmentsDir("");
+      }
     }
   } catch (e) {
     console.warn('Could not read vault path from local.json:', e.message);
   }
 }
-initVaultPath();
-fileStorage.ensureDirectories();
 
-(function logStartupConfiguration() {
+function logStartupConfiguration() {
   try {
     const sf = getSettingsFile();
     const settingsExists = fs.existsSync(sf);
@@ -161,7 +171,13 @@ fileStorage.ensureDirectories();
   } catch (e) {
     console.warn('Could not log startup configuration:', e.message);
   }
-})();
+}
+
+function initializeStorage() {
+  initVaultPath();
+  fileStorage.ensureDirectories();
+  logStartupConfiguration();
+}
 
 // API to get storage configuration (returns default, actual value set by user in Settings)
 app.get('/api/config/storage', (req, res) => {
@@ -311,6 +327,8 @@ registerPdfExportRoutes(app, {
 // Start server
 async function startServer() {
   try {
+    initializeStorage();
+
     if (process.env.SKIP_MIGRATE !== '1') {
       console.log('🔄 Checking database migrations...');
       const { runMigrations } = require('../migrations/run-migrations');

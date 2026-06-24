@@ -3,6 +3,7 @@ const test = require("node:test");
 
 const {
   normalizeTagName,
+  normalizeTagType,
   parseTagQueryList,
   registerTagRoutes,
 } = require("../src/routes/tags");
@@ -56,6 +57,8 @@ async function invoke(routes, { method = "GET", routePath, params = {}, query = 
 test("tag route helpers trim names and parse comma query lists", () => {
   assert.equal(normalizeTagName(" alpha "), "alpha");
   assert.equal(normalizeTagName(42), "");
+  assert.equal(normalizeTagType(" note "), "note");
+  assert.equal(normalizeTagType(" "), "quote");
   assert.deepEqual(parseTagQueryList(" alpha, beta ,, gamma "), [
     "alpha",
     "beta",
@@ -133,7 +136,7 @@ test("POST /api/tags requires a name and trims inserts", async () => {
   assert.deepEqual(invalid.body, { error: "Tag name is required" });
   assert.equal(created.status, 201);
   assert.deepEqual(created.body, { id: 1, name: "alpha" });
-  assert.deepEqual(calls[0].params, ["alpha"]);
+  assert.deepEqual(calls[0].params, ["alpha", "quote"]);
 });
 
 test("PUT /api/tags/:id validates name before opening a transaction", async () => {
@@ -326,7 +329,7 @@ test("POST /api/tags/bulk-add rolls back and releases when source tag is missing
   assert.deepEqual(response.body, { error: 'Source tag "missing" not found' });
   assert.deepEqual(calls.map((call) => call.sql), [
     "BEGIN",
-    "SELECT id, name FROM tags WHERE LOWER(name) = LOWER($1)",
+    "SELECT id, name, type FROM tags WHERE LOWER(name) = LOWER($1)",
     "ROLLBACK",
     "RELEASE",
   ]);
@@ -338,12 +341,12 @@ test("POST /api/tags/bulk-add creates missing target tag and reports affected co
     async query(sql, params) {
       calls.push({ sql, params });
       if (sql === "BEGIN" || sql === "COMMIT") return { rows: [] };
-      if (sql.startsWith("SELECT id, name FROM tags WHERE LOWER")) {
-        if (params[0] === "source") return { rows: [{ id: 1, name: "source" }] };
+      if (sql.startsWith("SELECT id, name, type FROM tags WHERE LOWER")) {
+        if (params[0] === "source") return { rows: [{ id: 1, name: "source", type: "quote" }] };
         return { rows: [] };
       }
       if (sql.startsWith("INSERT INTO tags")) {
-        return { rows: [{ id: 2, name: params[0] }] };
+        return { rows: [{ id: 2, name: params[0], type: params[1] }] };
       }
       if (sql.includes("INSERT INTO note_tags")) {
         return { rows: [{ note_id: 10 }, { note_id: 11 }] };
@@ -377,9 +380,9 @@ test("POST /api/tags/bulk-add creates missing target tag and reports affected co
   });
   assert.deepEqual(calls.map((call) => call.sql), [
     "BEGIN",
-    "SELECT id, name FROM tags WHERE LOWER(name) = LOWER($1)",
-    "SELECT id, name FROM tags WHERE LOWER(name) = LOWER($1)",
-    "INSERT INTO tags (name) VALUES ($1) RETURNING id, name",
+    "SELECT id, name, type FROM tags WHERE LOWER(name) = LOWER($1)",
+    "SELECT id, name, type FROM tags WHERE LOWER(name) = LOWER($1) AND type = $2",
+    "INSERT INTO tags (name, type) VALUES ($1, $2) RETURNING id, name, type",
     "\n      INSERT INTO note_tags (note_id, tag_id)\n      SELECT qt.note_id, $1\n      FROM note_tags qt\n      WHERE qt.tag_id = $2\n      ON CONFLICT (note_id, tag_id) DO NOTHING\n      RETURNING note_id\n    ",
     "COMMIT",
     "RELEASE",

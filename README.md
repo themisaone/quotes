@@ -48,6 +48,7 @@ npm start              # checks pending migrations, then starts server
 
 | Variable | Description | Default |
 |---|---|---|
+| `DB_BACKEND` | Storage backend: `postgres` or experimental `sqlite` | `postgres` |
 | `DB_HOST` | Postgres host | `localhost` (native Node); use **`host.docker.internal`** when the app runs in Docker and Postgres is on the host |
 | `DB_PORT` | Postgres port | `5432` |
 | `DB_NAME` | Database name | `notes_db` |
@@ -55,6 +56,10 @@ npm start              # checks pending migrations, then starts server
 | `DB_PASSWORD` | Postgres password | — |
 | `PORT` | HTTP port | `4000` |
 | `MODE` | Startup note-type mode (`DEFAULT`, `ALL`, `QUOTES`, …) | **Docker:** defaults to **`ALL`** via Compose unless you set `MODE` in `.env`. **Native Node:** unset → `config/local.json` / UI |
+
+SQLite support is currently an incremental backend option for single-user vault installs. Postgres remains the default and fully supported backend. SQLite mode derives its DB file from `config/local.json` `vaultPath` as `<vaultPath>/archive.sqlite`, but only when local config explicitly contains `"sqlite": { "enabled": true }`; this prevents accidental SQLite files in an existing Postgres vault. If `vaultPath` is unset it uses `./data/archive.sqlite`. Restart after changing `vaultPath` while using SQLite. SQLite mode requires a Node runtime with `node:sqlite` available; local development is currently tested on Node 24. Current SQLite coverage includes the baseline migration, DB adapter, core quote create/read/list/count/update/delete routes, tag sync/enrichment, tag browse/create/rename/delete/bulk-add/co-occurring lists, training-year filters, bulk IDs/count/tag/delete/duplicate/split, maintenance health/prune/rehome, and JSON import/export with tags and attachments.
+
+SQLite creates `<archive.sqlite>.lock` while the app is running. A second app process pointed at the same SQLite file will refuse to start until the first process stops; stale locks from crashed processes are replaced when the recorded PID is no longer running. Use **Options → Maintenance → Vault health** to compare active settings, modes, DB note types, attachment root, and counts per note type.
 
 ---
 
@@ -103,17 +108,19 @@ Modes are defined in `config/modes.json`. Active mode persists in `config/local.
 
 ## Note Types
 
-Configured in `config/settings.json` under `noteTypes`. Each type has:
-- `value` — internal key (`quote`, `training`, `note`, `puzzle`, `historical`)
+Configured under `noteTypes` in the active settings file: `<vaultPath>/config/settings.json` when a vault is configured, otherwise `config/settings.json`. Each type has:
+- `value` — internal key (`quote`, `training`, `note`, `puzzle`, `historical`, `job`, etc.)
 - `icon` — emoji
 - `label` — display name
 - `behavior` — which fields to show (`quote` | `training` | `generic`)
+
+`config/modes.json` decides which note types the running service allows. The sidebar menu is built from active settings, so a type must exist in `noteTypes` to appear there.
 
 **Behavior `quote`**: shows Author, Source, Score fields  
 **Behavior `training`**: shows Date, Training Sub-type fields  
 **Behavior `generic`**: shows only the text editor
 
-Training sub-types are configured under `trainingTypes` in `settings.json`.
+Sub-types are stored inside each note type's `subTypes` array. JSON export includes note type definitions. Type-filtered JSON exports include only notes of that type plus authors, sources, and tags referenced by those notes. JSON import accepts notes whose type already exists in local settings, and it can add types that are defined in the backup; if an older backup references an undefined type, import fails before writing notes.
 
 ---
 
@@ -123,7 +130,8 @@ Training sub-types are configured under `trainingTypes` in `settings.json`.
 quotes/
 ├── src/
 │   ├── server.js          # Express server startup, static serving, and route registration (~350 lines)
-│   ├── db.js              # PostgreSQL connection pool
+│   ├── db.js              # Selects the configured DB backend
+│   ├── db/                # Backend-specific Postgres/SQLite pool adapters
 │   ├── attachmentFolders.js # Attachment folder normalization helpers
 │   ├── attachmentRehome.js # Attachment folder drift planner/apply helper
 │   ├── entityPayload.js   # Author/source image payload helpers
@@ -157,7 +165,7 @@ quotes/
 │       ├── tags.js        # Tag browse/rename/delete/bulk-add routes
 │       ├── uploads.js     # Direct upload route + Multer helpers
 │       └── vault.js       # Vault info, validation, and copy routes
-├── tests/                 # Node test-runner tests (no live DB required)
+├── tests/                 # Node test-runner tests, including temp-file SQLite coverage
 ├── public/
 │   ├── index.html         # Single-page HTML (~2000 lines)
 │   ├── app.js             # Main frontend logic (~4800 lines)
@@ -180,6 +188,7 @@ quotes/
 ├── migrations/
 │   ├── 001_schema.js      # Full schema baseline
 │   ├── 002_note_title.js  # note_title column migration
+│   ├── sqlite/            # SQLite-specific migration set
 │   └── run-migrations.js  # Pending-migration runner
 ├── config/
 │   ├── settings.json      # User settings, note types, colors (auto-created)
@@ -203,11 +212,11 @@ quotes/
 
 | Data | Location |
 |---|---|
-| Notes, tags, authors, sources | PostgreSQL |
-| Applied migration history | PostgreSQL `schema_migrations` table |
-| Thumbnails | PostgreSQL (base64 in `notes.thumbnail`) |
+| Notes, tags, authors, sources | Active DB backend: Postgres or SQLite |
+| Applied migration history | Active DB `schema_migrations` table |
+| Thumbnails | Active DB backend (base64 in `notes.thumbnail`) |
 | All other attachments | `./attachments/<type>/` on disk |
-| Settings & note type config | `config/settings.json` |
+| Settings & note type config | `<vaultPath>/config/settings.json` or `config/settings.json` |
 | Machine-local config | `config/local.json` |
 | Color palettes | `<vaultPath>/palettes/*.json` (falls back to `./palettes/` if vault path not configured) |
 
@@ -224,7 +233,16 @@ See `DOCKER.md` for full instructions. Short version:
 
 All tables are created automatically by pending migrations on first start.
 
-To share **your data**: export a JSON backup from Data Management → Export, then import on their machine. For notes with large file attachments, also copy the `attachments/` folder.
+To share **your data**: export a JSON backup from Data Management → Export, then import on their machine. Full exports carry all metadata; type-filtered exports carry only metadata used by the exported notes. For notes with large file attachments, also copy the `attachments/` folder.
+
+For very large restores, avoid the browser import path. Split the JSON backup and import the parts through the running app:
+
+```bash
+npm run split-backup -- /path/to/backup.json /path/to/parts --mb=30
+npm run import-backup-parts -- /path/to/parts --url http://localhost:4000
+```
+
+The split parts preserve note type definitions. If the export created `big_files_DATE.zip`, extract its contents into `<vaultPath>/attachments/` after import.
 
 ---
 

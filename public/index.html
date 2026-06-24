@@ -1484,6 +1484,22 @@
             <div id="settingsTabMaintenance" class="settings-tab-panel" data-settings-panel="maintenance" role="tabpanel" aria-labelledby="settingsTabBtnMaintenance" hidden>
 
             <div class="settings-row">
+            <div class="settings-section vault-health-settings-section settings-section-wide">
+              <div class="settings-section-header">
+                <span class="settings-section-heading">🩺 Vault health</span>
+                <details class="settings-section-desc">
+                  <summary class="settings-section-desc-summary" aria-label="Show section description"><span class="settings-section-desc-label">Description</span></summary>
+                  <div class="settings-section-lead">Compare active settings, runtime modes, and database note types before running maintenance actions.</div>
+                </details>
+              </div>
+              <div class="settings-section-body">
+                <button type="button" id="vaultHealthCheckBtn" class="btn btn-primary" title="Check settings, modes, and DB note-type alignment">
+                  <span class="vault-health-btn-label">🩺 Check vault health</span>
+                </button>
+                <div id="vaultHealthCheckResult" class="maintenance-result" aria-live="polite"></div>
+              </div>
+            </div>
+
             <div class="settings-section dedup-settings-section settings-section-wide">
               <div class="settings-section-header">
                 <span class="settings-section-heading">👯 Duplicate inspection</span>

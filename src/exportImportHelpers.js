@@ -106,6 +106,8 @@ function endExportResponse(res) {
  * sequence is behind manual restores or older tools.
  */
 async function syncNotesIdSequence(client) {
+  if (client?.dialect === "sqlite") return;
+
   const { rows } = await client.query(
     "SELECT pg_get_serial_sequence('notes', 'id') AS seq",
   );

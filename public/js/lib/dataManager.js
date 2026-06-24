@@ -194,7 +194,11 @@ function escapeHtml(text) {
 /**
  * Generate success HTML for import results
  */
-function generateImportSuccessHtml(stats) {
+function generateImportSuccessHtml(result) {
+  const stats = result.stats || result;
+  const noteTypesAdded = Array.isArray(result.noteTypesAdded) ? result.noteTypesAdded : [];
+  const warnings = Array.isArray(result.warnings) ? result.warnings : [];
+
   return `
     <div class="import-status-panel import-status-panel--success">
       <h4>✅ Import Completed!</h4>
@@ -203,7 +207,13 @@ function generateImportSuccessHtml(stats) {
         <p style="margin: 0;"><strong>👤 Authors:</strong> ${stats.authors.created} imported, ${stats.authors.skipped} skipped (duplicates)</p>
         <p style="margin: 0;"><strong>📖 Sources:</strong> ${stats.sources.created} imported, ${stats.sources.skipped} skipped (duplicates)</p>
         <p style="margin: 0;"><strong>🏷️ Tags:</strong> ${stats.tags.created} imported</p>
+        ${noteTypesAdded.length > 0 ? `<p style="margin: 0;"><strong>📌 Note types:</strong> ${noteTypesAdded.map(escapeHtml).join(', ')} added to settings</p>` : ""}
       </div>
+      ${warnings.length > 0 ? `
+        <details class="import-status-errors" style="margin-top: 12px; color: #f59e0b;">
+          <summary style="cursor: pointer;"><strong>⚠️ ${warnings.length} warning(s)</strong> — expand for details</summary>
+          <pre style="max-height: 160px; overflow: auto; font-size: 11px; background: rgba(245, 158, 11, 0.12); color: var(--text-primary); padding: 8px; border-radius: 6px; margin-top: 8px;">${warnings.map(w => escapeHtml(w)).join('\n')}</pre>
+        </details>` : ""}
       ${stats.errors.length > 0 ? `
         <details class="import-status-errors" style="margin-top: 12px; color: #f87171;">
           <summary style="cursor: pointer;"><strong>⚠️ ${stats.errors.length} row-level error(s)</strong> — expand for details</summary>
@@ -540,6 +550,19 @@ export async function rehomeAttachmentsRequest({ dryRun = true } = {}) {
   return data;
 }
 
+/**
+ * Read-only vault health report: compares active settings, modes, and DB note types.
+ */
+export async function vaultHealthCheckRequest() {
+  const url = `${API_URL}/maintenance/health`;
+  const response = await fetch(url);
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error || `Vault health check failed (${response.status})`);
+  }
+  return data;
+}
+
 // ============= IMPORT FUNCTION =============
 
 const IMPORT_FILE_BTN_LABEL = 'Select Import File';
@@ -598,7 +621,7 @@ async function sendImportToServer(backupData) {
  * Handle successful import
  */
 function handleImportSuccess(result, importStatus, selectFileBtn, importModal, onImportComplete) {
-  importStatus.innerHTML = generateImportSuccessHtml(result.stats);
+  importStatus.innerHTML = generateImportSuccessHtml(result);
   selectFileBtn.textContent = IMPORT_FILE_BTN_LABEL;
   selectFileBtn.disabled = false;
 

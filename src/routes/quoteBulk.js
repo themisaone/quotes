@@ -50,6 +50,11 @@ function deletePendingAttachments({ fileStorage, refs, logger, label }) {
   }
 }
 
+function addAttachmentRefs(refs, row) {
+  if (row.thumbnail) refs.add(row.thumbnail);
+  if (row.attachment_full) refs.add(row.attachment_full);
+}
+
 function registerQuoteBulkRoutes(app, {
   pool,
   fileStorage,
@@ -586,7 +591,7 @@ function registerQuoteBulkRoutes(app, {
   // Bulk delete operation.
   app.post("/api/quotes/bulk-delete", async (req, res) => {
     const client = await pool.connect();
-    const pendingDeletes = [];
+    const pendingDeletes = new Set();
     try {
       await client.query("BEGIN");
 
@@ -620,8 +625,17 @@ function registerQuoteBulkRoutes(app, {
 
       const quoteIds = notesResult.rows.map((row) => row.id);
       for (const note of notesResult.rows) {
-        if (note.thumbnail) pendingDeletes.push(note.thumbnail);
-        if (note.attachment_full) pendingDeletes.push(note.attachment_full);
+        addAttachmentRefs(pendingDeletes, note);
+      }
+
+      const attachmentResult = await client.query(
+        `SELECT thumbnail, attachment_full
+         FROM note_attachments
+         WHERE note_id = ANY($1::int[])`,
+        [quoteIds]
+      );
+      for (const attachment of attachmentResult.rows) {
+        addAttachmentRefs(pendingDeletes, attachment);
       }
 
       const deleteResult = await client.query(

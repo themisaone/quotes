@@ -11,6 +11,11 @@ function parseTagQueryList(value) {
     .filter(Boolean);
 }
 
+function normalizeTagType(value, fallback = "quote") {
+  const normalized = normalizeTagName(value);
+  return normalized || fallback;
+}
+
 function registerTagRoutes(app, { pool, logger = console }) {
   if (!app) throw new Error("Express app is required");
   if (!pool) throw new Error("pool is required");
@@ -110,17 +115,18 @@ function registerTagRoutes(app, { pool, logger = console }) {
   app.post("/api/tags", async (req, res) => {
     try {
       const name = normalizeTagName(req.body && req.body.name);
+      const type = normalizeTagType(req.body && req.body.type);
 
       if (!name) {
         return res.status(400).json({ error: "Tag name is required" });
       }
 
       const result = await pool.query(
-        `INSERT INTO tags (name) 
-       VALUES ($1) 
-       ON CONFLICT (name) DO UPDATE SET name = tags.name
+        `INSERT INTO tags (name, type)
+       VALUES ($1, $2)
+       ON CONFLICT (name, type) DO UPDATE SET name = EXCLUDED.name
        RETURNING *`,
-        [name]
+        [name, type]
       );
 
       res.status(201).json(result.rows[0]);
@@ -260,7 +266,7 @@ function registerTagRoutes(app, { pool, logger = console }) {
       await client.query("BEGIN");
 
       let sourceTag = await client.query(
-        "SELECT id, name FROM tags WHERE LOWER(name) = LOWER($1)",
+        "SELECT id, name, type FROM tags WHERE LOWER(name) = LOWER($1)",
         [sourceTagName]
       );
 
@@ -274,14 +280,14 @@ function registerTagRoutes(app, { pool, logger = console }) {
       sourceTag = sourceTag.rows[0];
 
       let targetTag = await client.query(
-        "SELECT id, name FROM tags WHERE LOWER(name) = LOWER($1)",
-        [targetTagName]
+        "SELECT id, name, type FROM tags WHERE LOWER(name) = LOWER($1) AND type = $2",
+        [targetTagName, sourceTag.type]
       );
 
       if (targetTag.rows.length === 0) {
         const newTag = await client.query(
-          "INSERT INTO tags (name) VALUES ($1) RETURNING id, name",
-          [targetTagName]
+          "INSERT INTO tags (name, type) VALUES ($1, $2) RETURNING id, name, type",
+          [targetTagName, sourceTag.type]
         );
         targetTag = newTag.rows[0];
       } else {
@@ -323,6 +329,7 @@ function registerTagRoutes(app, { pool, logger = console }) {
 
 module.exports = {
   normalizeTagName,
+  normalizeTagType,
   parseTagQueryList,
   registerTagRoutes,
 };

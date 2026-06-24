@@ -204,14 +204,25 @@ Any attachment can be encrypted. Encryption is entirely client-side (browser).
 
 **Data Management → Export**
 
-Two files are generated:
-1. **`backup_DATE.json`** — all notes with attachments ≤ size threshold embedded as base64. Notes with attachments above threshold get a `file:` reference instead.
+Up to three files are generated:
+1. **`backup_DATE.json`** — all exported notes with attachments ≤ size threshold embedded as base64. Notes with attachments above threshold get a `file:` reference instead.
 2. **`big_files_DATE.txt`** — list of all note IDs + file paths that were too large to embed.
 3. **`big_files_DATE.zip`** — zip of all those large files, named `<noteId>.<filename>`.
+
+Full JSON exports include all authors, sources, and tags. Type-filtered exports include only notes of that type plus authors, sources, and tags referenced by those notes, so importing a Job-only backup does not create unrelated Quote metadata.
 
 The size threshold is set in Settings → "Large attachment threshold (MB)". Default 2MB. Files above the threshold are excluded from the JSON but listed + zipped separately.
 
 Import: POST the JSON to `/api/import/json`. Notes are created/updated; thumbnails and base64 attachments are written to disk. Big files must be re-imported manually (copy to `attachments/` folder and update the `file:` references).
+
+For very large JSON backups, use the CLI flow instead of the browser:
+
+```bash
+npm run split-backup -- /path/to/backup.json /path/to/parts --mb=30
+npm run import-backup-parts -- /path/to/parts --url http://localhost:4000
+```
+
+The importer posts each part sequentially to the running app, so duplicate detection, note type validation, and attachment cleanup use the same code path as normal import. If a `big_files_DATE.zip` was created, extract it under `<vaultPath>/attachments/` after the JSON parts are imported.
 
 ---
 

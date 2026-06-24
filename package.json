@@ -9,6 +9,7 @@
     "dev": "PORT=4000 nodemon src/server.js",
     "migrate": "node migrations/run-migrations.js",
     "split-backup": "node scripts/split-json-backup.js",
+    "import-backup-parts": "node scripts/import-json-backup-parts.js",
     "default": "node scripts/run-mode.js DEFAULT",
     "all": "node scripts/run-mode.js ALL",
     "quotes": "node scripts/run-mode.js QUOTES",

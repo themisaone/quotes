@@ -3,9 +3,8 @@
  * Safe to re-run — uses ADD COLUMN IF NOT EXISTS.
  */
 
-const pool = require("../src/db");
-
 async function migrate({ client: providedClient, logger = console } = {}) {
+  const pool = providedClient ? null : require("../src/db");
   const client = providedClient || await pool.connect();
   const ownsClient = !providedClient;
 

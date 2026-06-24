@@ -51,7 +51,8 @@ import {
   resetImportModal,
   pruneUnusedEntitiesRequest,
   rehomeAttachmentsRequest,
-} from './js/lib/dataManager.js?v=20260623maintenance1';
+  vaultHealthCheckRequest,
+} from './js/lib/dataManager.js?v=20260624health1';
 
 import {
   loadSettings,
@@ -1327,6 +1328,75 @@ function setupEventListeners() {
 
   if (importFileInput) {
     importFileInput.addEventListener("change", handleImportFile);
+  }
+
+  const vaultHealthCheckBtn = getElementByIdSafe("vaultHealthCheckBtn");
+  const vaultHealthCheckResult = getElementByIdSafe("vaultHealthCheckResult");
+
+  const formatHealthList = (values) => {
+    if (!Array.isArray(values) || values.length === 0) return "none";
+    return values.map(escapeHtml).join(", ");
+  };
+
+  const renderVaultHealthReport = (report) => {
+    if (!vaultHealthCheckResult || !report) return;
+    const statusLabel = report.status === "ok"
+      ? "OK"
+      : report.status === "warning"
+        ? "Warnings"
+        : "Errors";
+    const counts = Array.isArray(report.countsByNoteType) && report.countsByNoteType.length
+      ? report.countsByNoteType
+          .map((row) => `${escapeHtml(row.noteType)}: ${Number(row.count || 0)}`)
+          .join(", ")
+      : "no notes";
+    const issueLines = Array.isArray(report.issues) && report.issues.length
+      ? report.issues.map((issue) => `• ${escapeHtml(issue.message || issue.code || "Issue")}`)
+      : ["No settings/mode/database note-type mismatches found."];
+    const mismatch = report.mismatches || {};
+
+    vaultHealthCheckResult.innerHTML = [
+      `<strong>Status:</strong> ${escapeHtml(statusLabel)}`,
+      `<strong>Backend:</strong> ${escapeHtml(report.backend || "unknown")}${report.sqliteFile ? ` (${escapeHtml(report.sqliteFile)})` : ""}`,
+      `<strong>Vault:</strong> ${escapeHtml(report.vaultPath || "(default)")}`,
+      `<strong>Settings:</strong> ${escapeHtml(report.settingsFile || "(unknown)")}`,
+      `<strong>Attachments:</strong> ${escapeHtml(report.attachmentsDir || "(unknown)")}`,
+      `<strong>DB note counts:</strong> ${counts}`,
+      "",
+      `<strong>Mode types missing from settings:</strong> ${formatHealthList(mismatch.modesMissingFromSettings)}`,
+      `<strong>DB types missing from settings:</strong> ${formatHealthList(mismatch.dbMissingFromSettings)}`,
+      `<strong>Settings types missing from modes:</strong> ${formatHealthList(mismatch.settingsMissingFromModes)}`,
+      `<strong>DB types missing from modes:</strong> ${formatHealthList(mismatch.dbMissingFromModes)}`,
+      "",
+      `<strong>Issues</strong>`,
+      ...issueLines,
+    ].join("<br>");
+    vaultHealthCheckResult.classList.add("is-visible");
+  };
+
+  if (vaultHealthCheckBtn) {
+    vaultHealthCheckBtn.addEventListener("click", async () => {
+      const labelEl =
+        vaultHealthCheckBtn.querySelector(".vault-health-btn-label") || vaultHealthCheckBtn;
+      const prevLabel = labelEl.textContent;
+      vaultHealthCheckBtn.disabled = true;
+      labelEl.textContent = "⏳ Checking…";
+      try {
+        const report = await vaultHealthCheckRequest();
+        renderVaultHealthReport(report);
+      } catch (err) {
+        console.error(err);
+        if (vaultHealthCheckResult) {
+          vaultHealthCheckResult.innerHTML = escapeHtml(err.message || "Vault health check failed");
+          vaultHealthCheckResult.classList.add("is-visible");
+        } else {
+          alert(err.message || "Vault health check failed");
+        }
+      } finally {
+        vaultHealthCheckBtn.disabled = false;
+        labelEl.textContent = prevLabel;
+      }
+    });
   }
 
   const pruneUnusedEntitiesBtn = getElementByIdSafe("pruneUnusedEntitiesBtn");

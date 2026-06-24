@@ -14,6 +14,12 @@ require("dotenv").config();
 
 const migrationsDir = __dirname;
 
+function getDefaultMigrationsPath(pool) {
+  return pool?.dialect === "sqlite"
+    ? path.join(migrationsDir, "sqlite")
+    : migrationsDir;
+}
+
 function listMigrationFiles({ migrationsPath = migrationsDir, fsImpl = fs } = {}) {
   return fsImpl
     .readdirSync(migrationsPath)
@@ -25,7 +31,7 @@ async function ensureMigrationsTable(client) {
   await client.query(`
     CREATE TABLE IF NOT EXISTS schema_migrations (
       filename   TEXT PRIMARY KEY,
-      applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      applied_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
   `);
 }
@@ -60,7 +66,7 @@ async function runMigrationFile(file, { client, migrationsPath, logger = console
 
 async function runMigrations({
   pool,
-  migrationsPath = migrationsDir,
+  migrationsPath = null,
   fsImpl = fs,
   logger = console,
   quietWhenNoPending = false,
@@ -69,14 +75,15 @@ async function runMigrations({
     logger.log("🔄 Starting migration runner...\n");
   }
 
-  const files = listMigrationFiles({ migrationsPath, fsImpl });
+  const migrationPool = pool || require("../src/db");
+  const resolvedMigrationsPath = migrationsPath || getDefaultMigrationsPath(migrationPool);
+  const files = listMigrationFiles({ migrationsPath: resolvedMigrationsPath, fsImpl });
 
   if (files.length === 0) {
     if (!quietWhenNoPending) logger.log("No migrations found.");
     return { files: [], pending: [], ran: [] };
   }
 
-  const migrationPool = pool || require("../src/db");
   const client = await migrationPool.connect();
   let applied;
   try {
@@ -109,7 +116,11 @@ async function runMigrations({
     const migrationClient = await migrationPool.connect();
     try {
       await migrationClient.query("BEGIN");
-      await runMigrationFile(file, { client: migrationClient, migrationsPath, logger });
+      await runMigrationFile(file, {
+        client: migrationClient,
+        migrationsPath: resolvedMigrationsPath,
+        logger,
+      });
       await recordMigration(migrationClient, file);
       await migrationClient.query("COMMIT");
       ran.push(file);
@@ -143,6 +154,7 @@ if (require.main === module) {
 module.exports = {
   ensureMigrationsTable,
   getAppliedMigrations,
+  getDefaultMigrationsPath,
   listMigrationFiles,
   recordMigration,
   runMigrationFile,

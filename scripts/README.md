@@ -4,6 +4,8 @@ Run **database** scripts from the **repository root** so `.env` and `require('..
 
 | Script | Purpose | How to run | Dependencies |
 |--------|---------|------------|--------------|
+| `split-json-backup.js` | Split a large NoteArchive JSON backup into importable parts while preserving authors, sources, tags, and note type definitions. | `npm run split-backup -- <backup.json> <parts-dir> --mb=30` | `stream-json` |
+| `import-json-backup-parts.js` | Import split JSON backup parts through a running app instance, sequentially posting to `/api/import/json`. | `npm run import-backup-parts -- <parts-dir> --url http://localhost:4000` (`--dry-run`, `--from=N`, `--to=N`) | Node 18+ `fetch` |
 | `find-similar-attachment-images.js` | Perceptual hash (dHash): pass a **folder** of candidate images; vault is fully re-hashed every run (no disk cache), then each candidate is checked against that index. Each line is tagged **`[likely]`** vs **`[potential]`** by Hamming band (upper third of `0..max-dist` is potential unless `--likely-max` overrides). Prints **note id** per match via Postgres `file:…` paths (`note_attachments` + `notes`), with a filename fallback. | `node scripts/find-similar-attachment-images.js <candidate-dir> [--likely-max 6] [--database-url …] [--no-db]` | `sharp`, `pg`, `dotenv` |
 | `parse-enex.js` | Evernote `.enex` → import JSON. | See file header + `ENEX-IMPORT.md` | `sharp` |
 | `import-dir.js` | Folder of files → import JSON (one note per file). | See file header | `sharp` |
