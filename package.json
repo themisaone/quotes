@@ -5,8 +5,8 @@
   "main": "src/server.js",
   "scripts": {
     "test": "node --test tests/*.test.js",
-    "start": "npm run migrate && PORT=4000 node src/server.js",
-    "dev": "npm run migrate && PORT=4000 nodemon src/server.js",
+    "start": "PORT=4000 node src/server.js",
+    "dev": "PORT=4000 nodemon src/server.js",
     "migrate": "node migrations/run-migrations.js",
     "split-backup": "node scripts/split-json-backup.js",
     "default": "node scripts/run-mode.js DEFAULT",

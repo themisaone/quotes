@@ -16,9 +16,9 @@ This Node.js/Express app uses PostgreSQL and a vanilla JavaScript single-page fr
 
 - `npm install` installs Node dependencies.
 - `npm test`: run the Node-native test suite.
-- `npm run migrate`: apply database migrations.
-- `npm start`: run migrations, then start port `4000`.
-- `npm run dev`: run migrations, then start `nodemon`.
+- `npm run migrate`: apply pending database migrations.
+- `npm start`: check pending migrations, then start port `4000`.
+- `npm run dev`: check pending migrations, then start `nodemon`.
 - `npm run all`, `npm run quotes`, `npm run notes`, `npm run training`: start fixed note-type modes.
 - `docker compose up -d`: start the Docker deployment.
 

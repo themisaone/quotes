@@ -26,7 +26,6 @@ function setAttachmentsDir(vaultRoot) {
   } else {
     _attachmentsDir = DEFAULT_ATTACHMENTS_DIR;
   }
-  console.log(`📁 Vault attachments dir: ${_attachmentsDir}`);
 }
 
 /**
@@ -41,7 +40,6 @@ function setAttachmentsDirAbsolute(attachmentsRoot) {
   } else {
     _attachmentsDir = DEFAULT_ATTACHMENTS_DIR;
   }
-  console.log(`📁 Attachments dir (absolute): ${_attachmentsDir}`);
 }
 
 // MIME type mappings (centralized to avoid duplication)

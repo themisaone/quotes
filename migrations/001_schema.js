@@ -6,10 +6,12 @@
 
 const pool = require("../src/db");
 
-async function migrate() {
-  const client = await pool.connect();
+async function migrate({ client: providedClient, logger = console } = {}) {
+  const client = providedClient || await pool.connect();
+  const ownsClient = !providedClient;
+
   try {
-    await client.query("BEGIN");
+    if (ownsClient) await client.query("BEGIN");
 
     // ── authors ────────────────────────────────────────────────────────────
     await client.query(`
@@ -110,13 +112,13 @@ async function migrate() {
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_note_attachments_note_id ON note_attachments(note_id, position)`);
 
-    await client.query("COMMIT");
-    console.log("✅ Schema up to date");
+    if (ownsClient) await client.query("COMMIT");
+    logger.log("✅ Schema up to date");
   } catch (err) {
-    await client.query("ROLLBACK");
+    if (ownsClient) await client.query("ROLLBACK");
     throw err;
   } finally {
-    client.release();
+    if (ownsClient) client.release();
   }
 }
 

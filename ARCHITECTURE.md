@@ -16,6 +16,8 @@ One file (~350 lines) focused on startup, static serving, vault initialization, 
 
 `src/server.js` exports `{ app, startServer }` and only calls `startServer()` when run directly (`node src/server.js`). This keeps normal startup behavior unchanged while allowing tests and future tooling to import the Express app without binding a port or running migrations. New route groups should be moved into `src/routes/*` with injected dependencies, following `instances.js` and `settings.js`.
 
+Migration startup lives in `migrations/run-migrations.js`. The runner creates `schema_migrations`, skips filenames already recorded there, and records each migration in the same transaction used by migration files that accept an injected client. `npm start`, `npm run dev`, and `npm run <mode>` start `src/server.js` directly and let `startServer()` perform one pending-migration check. Docker still waits for Postgres and runs the migration command in `docker/entrypoint.sh`, then starts the server with `SKIP_MIGRATE=1` to avoid a second check.
+
 **Key globals:**
 ```js
 _allowedTypes   // array of note_type strings currently visible (set by active mode)
@@ -89,6 +91,7 @@ Run `npm test` to execute the Node-native test suite (`node --test tests/*.test.
 - `src/entityPayload.js` author/source image payload selection and validation
 - `src/entityQueries.js` author/source list/update SQL builders and response payloads
 - `src/exportImportHelpers.js` JSON export/import date normalization, attachment embedding/reporting, stream backpressure, and sequence sync
+- `migrations/run-migrations.js` pending-only migration tracking via `schema_migrations`
 - `src/routes/attachmentMigration.js` attachment disk migration behavior, including base64 migration, legacy folder consolidation, stale tmp-reference repair, sync queries, DB rollback handling, and filesystem rollback compensation
 - `src/routes/attachments.js` attachment list/create/delete/file-upload/downscale/make-primary behavior with fake pool/client objects and temporary files, including rollback cleanup and post-commit deletion ordering
 - `src/routes/authors.js` author list/get/create/update/delete behavior with fake pool/client objects

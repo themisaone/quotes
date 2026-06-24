@@ -5,23 +5,25 @@
 
 const pool = require("../src/db");
 
-async function migrate() {
-  const client = await pool.connect();
+async function migrate({ client: providedClient, logger = console } = {}) {
+  const client = providedClient || await pool.connect();
+  const ownsClient = !providedClient;
+
   try {
-    await client.query("BEGIN");
+    if (ownsClient) await client.query("BEGIN");
 
     await client.query(`
       ALTER TABLE notes
         ADD COLUMN IF NOT EXISTS note_title TEXT DEFAULT NULL
     `);
 
-    await client.query("COMMIT");
-    console.log("✅ note_title column added to notes table");
+    if (ownsClient) await client.query("COMMIT");
+    logger.log("✅ note_title column ensured on notes table");
   } catch (err) {
-    await client.query("ROLLBACK");
+    if (ownsClient) await client.query("ROLLBACK");
     throw err;
   } finally {
-    client.release();
+    if (ownsClient) client.release();
   }
 }
 

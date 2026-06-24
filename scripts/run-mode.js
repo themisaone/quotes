@@ -25,8 +25,5 @@ if (!port) {
 
 const env = { ...process.env, MODE: mode.toUpperCase(), PORT: String(port) };
 
-let result = spawnSync('node', ['migrations/run-migrations.js'], { stdio: 'inherit', cwd: root, env });
-if (result.status !== 0) process.exit(result.status ?? 1);
-
-result = spawnSync('node', ['src/server.js'], { stdio: 'inherit', cwd: root, env });
+const result = spawnSync('node', ['src/server.js'], { stdio: 'inherit', cwd: root, env });
 process.exit(result.status ?? 0);

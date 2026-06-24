@@ -39,7 +39,7 @@ Details, Linux/macOS notes, **vault bind-mount** (`docker-compose.override.examp
 npm install
 cp .env.example .env   # fill in DB credentials
 npm test                # optional: run lightweight automated checks
-npm start              # runs migrations then starts server
+npm start              # checks pending migrations, then starts server
 ```
 
 ---
@@ -178,8 +178,9 @@ quotes/
 │   ├── style.medium.css        # @media (768–1100px) overrides
 │   └── js/lib/            # Frontend ES modules (see ARCHITECTURE.md)
 ├── migrations/
-│   ├── 001_schema.js      # Full schema (safe to re-run)
-│   └── run-migrations.js  # Migration runner
+│   ├── 001_schema.js      # Full schema baseline
+│   ├── 002_note_title.js  # note_title column migration
+│   └── run-migrations.js  # Pending-migration runner
 ├── config/
 │   ├── settings.json      # User settings, note types, colors (auto-created)
 │   ├── local.json         # Vault path + active mode (machine-local)
@@ -203,6 +204,7 @@ quotes/
 | Data | Location |
 |---|---|
 | Notes, tags, authors, sources | PostgreSQL |
+| Applied migration history | PostgreSQL `schema_migrations` table |
 | Thumbnails | PostgreSQL (base64 in `notes.thumbnail`) |
 | All other attachments | `./attachments/<type>/` on disk |
 | Settings & note type config | `config/settings.json` |
@@ -220,7 +222,7 @@ See `DOCKER.md` for full instructions. Short version:
 3. `cp .env.example .env` and fill in their DB credentials
 4. `docker compose up -d`
 
-All tables are created automatically by migrations on first start.
+All tables are created automatically by pending migrations on first start.
 
 To share **your data**: export a JSON backup from Data Management → Export, then import on their machine. For notes with large file attachments, also copy the `attachments/` folder.
 

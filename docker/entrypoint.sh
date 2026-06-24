@@ -14,4 +14,5 @@ echo "🔄 Running migrations..."
 node migrations/run-migrations.js
 
 echo "🚀 Starting server..."
+export SKIP_MIGRATE=1
 exec node src/server.js

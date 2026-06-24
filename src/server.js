@@ -77,8 +77,6 @@ function applyMode(newMode) {
   return true;
 }
 
-console.log(`🎛️  Mode: ${_modeName} — types: [${_allowedTypes.join(', ')}]`);
-
 // Derive vault-relative paths
 function getSettingsFile() {
   const { vaultPath } = readLocalConfig();
@@ -141,23 +139,27 @@ function initVaultPath() {
 initVaultPath();
 fileStorage.ensureDirectories();
 
-(function logResolvedSettingsPath() {
+(function logStartupConfiguration() {
   try {
     const sf = getSettingsFile();
-    const exists = fs.existsSync(sf);
+    const settingsExists = fs.existsSync(sf);
     let nTypes = 0;
-    if (exists) {
+    if (settingsExists) {
       const parsed = JSON.parse(fs.readFileSync(sf, 'utf8'));
       nTypes = Array.isArray(parsed.noteTypes) ? parsed.noteTypes.length : 0;
     }
     const { vaultPath } = readLocalConfig();
     const vr = vaultPath && String(vaultPath).trim();
+    const storageLabel = vr
+      ? `vault ${fs.existsSync(vr) ? "ok" : "missing"}: ${vr}`
+      : `default attachments: ${fileStorage.getAttachmentsDir()}`;
+
+    console.log(`🎛️  Mode ${_modeName}: ${_allowedTypes.join(', ')}`);
     console.log(
-      `📄 Settings: ${sf} (exists: ${exists}, noteTypes: ${nTypes})` +
-        (vr ? ` | vault: ${vr} (exists: ${fs.existsSync(vr)})` : '')
+      `📦 Storage: ${storageLabel}; settings ${settingsExists ? "ok" : "missing"} (${nTypes} note types)`
     );
   } catch (e) {
-    console.warn('Could not log settings path:', e.message);
+    console.warn('Could not log startup configuration:', e.message);
   }
 })();
 
@@ -310,10 +312,9 @@ registerPdfExportRoutes(app, {
 async function startServer() {
   try {
     if (process.env.SKIP_MIGRATE !== '1') {
-      console.log('🔄 Running database migrations...');
+      console.log('🔄 Checking database migrations...');
       const { runMigrations } = require('../migrations/run-migrations');
-      await runMigrations();
-      console.log('✅ Migrations completed\n');
+      await runMigrations({ quietWhenNoPending: true });
     } else {
       console.log('⏭️  Skipping migrations (SKIP_MIGRATE=1)\n');
     }
