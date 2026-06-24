@@ -2,6 +2,17 @@
 
 ---
 
+## Next Session Backlog
+
+Recommended next items after the backend helper extraction work:
+
+1. **Review the remaining `src/server.js` surface.** It should now mostly be startup, static file serving, vault initialization, and route registration. Confirm no business-heavy route logic remains inline.
+2. **Do a final stability pass.** Look for any remaining filesystem side effects that happen before a durable DB commit, plus any route groups missing focused tests.
+
+Recently completed: quote and bulk transaction early-return paths now roll back through `src/transactionResponses.js`; quote read/create/update/delete/translation/merge routes now live in `src/routes/quotes.js`, including a guard that rejects attempts to merge a note into itself. Quote create/update now tracks newly stored attachment files and removes them on rollback; old replaced/cleared files and files from single-note delete are deleted only after commit. Bulk filter SQL now lives in `src/quoteListQuery.js` as `buildBulkFilterQuery()`, defaults missing filters safely, accepts both legacy `search`/`tag` and list-style `quote`/`tags` aliases, and applies hidden encrypted/tag filters, translation groups, generic sub-types, metadata, date, and date-range filters for filtered bulk scopes. `GET /api/quotes/count` now matches list behavior for comment text search, direct date, date range, and translation-group filters. Bulk endpoints now live in `src/routes/quoteBulk.js` with fake pool/client route tests, including duplicate and split attachment-copy success paths. Duplicate/split rollback paths now delete newly copied files, split deletes original extra files only after commit, and bulk-delete deletes files only after the DB delete commits. Quote response enrichment now lives in `src/quoteResponse.js`; duplicate-suspect routing now lives in `src/routes/dedup.js` and reuses the same enrichment helper. Attachment disk migration now lives in `src/routes/attachmentMigration.js` with tests for base64 migration, legacy folder consolidation, stale tmp-reference repair, sync queries, and rollback handling. DB-stored attachment export now lives in `src/routes/dbAttachmentExport.js` with tests for row selection, output path creation, skipped rows, write failures, and query failures. JSON export/import routing now lives in `src/routes/exportImport.js`; helper behavior lives in `src/exportImportHelpers.js` with route and helper tests. PDF export routing now lives in `src/routes/pdfExport.js`, including mocked route tests for validation, layout generation, PDF response headers, and Puppeteer cleanup on render failure.
+
+---
+
 ## Note Types
 
 Notes are typed. Type determines which fields appear in the editor modal and how the card looks.
@@ -225,6 +236,8 @@ Available from a bulk-select mode on the card grid:
 - **Bulk split** — for notes with 2+ attachments: keep the original with attachment at position 0 only; create one new note per extra attachment (copies text, tags, author, etc.) — `POST /api/quotes/bulk-split`
 - **Bulk delete** — delete selected notes (with confirmation)
 
+Filtered bulk scopes use the current visible filters, including quick search, text/tag aliases, author/source search, note type/sub-type filters, metadata filters, hidden encrypted/tag settings, translation groups, and date/date-range filters. Explicit selected IDs bypass the filter SQL.
+
 ---
 
 ## Note Merge
@@ -284,7 +297,7 @@ Side menu → **Data Management** (desktop):
 Settings → **Storage & Performance** (Options page):
 - Migrate attachments to disk (one-time tool, should no longer be needed)
 
-**Vault tools (Options → Storage & Performance):** validate path, show disk usage (`GET /api/vault/info`), and optionally move attachment tree to a new vault folder (`POST /api/vault/move`).
+**Vault tools (Options → Storage & Performance):** validate path, show disk usage (`GET /api/vault/info`), and optionally move attachment tree to a new vault folder (`POST /api/vault/move`). Validation creates a unique temporary probe file and removes it after the write check. Move refuses destinations inside the current attachment directory to avoid recursive self-copying.
 
 ---
 

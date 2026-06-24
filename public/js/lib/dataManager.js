@@ -523,6 +523,23 @@ export async function pruneUnusedEntitiesRequest() {
   return data;
 }
 
+/**
+ * Inspect or apply attachment file moves so paths match each note's current type.
+ */
+export async function rehomeAttachmentsRequest({ dryRun = true } = {}) {
+  const url = `${API_URL}/maintenance/rehome-attachments`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ dryRun }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error || `Attachment folder maintenance failed (${response.status})`);
+  }
+  return data;
+}
+
 // ============= IMPORT FUNCTION =============
 
 const IMPORT_FILE_BTN_LABEL = 'Select Import File';

@@ -38,6 +38,7 @@ Details, Linux/macOS notes, **vault bind-mount** (`docker-compose.override.examp
 ```bash
 npm install
 cp .env.example .env   # fill in DB credentials
+npm test                # optional: run lightweight automated checks
 npm start              # runs migrations then starts server
 ```
 
@@ -121,10 +122,42 @@ Training sub-types are configured under `trainingTypes` in `settings.json`.
 ```
 quotes/
 ├── src/
-│   ├── server.js          # Express server + all API routes (~5600 lines)
+│   ├── server.js          # Express server startup, static serving, and route registration (~350 lines)
 │   ├── db.js              # PostgreSQL connection pool
+│   ├── attachmentFolders.js # Attachment folder normalization helpers
+│   ├── attachmentRehome.js # Attachment folder drift planner/apply helper
+│   ├── entityPayload.js   # Author/source image payload helpers
+│   ├── entityQueries.js   # Author/source query and response helpers
+│   ├── exportImportHelpers.js # JSON export/import helper behavior
 │   ├── fileStorage.js     # Disk attachment helpers
-│   └── tagHelpers.js      # Tag DB helpers
+│   ├── modeConfig.js      # Startup mode resolution helpers
+│   ├── noteText.js        # Note text cleanup helpers
+│   ├── quoteAttachmentSync.js # Quote create/update attachment sync helpers
+│   ├── quoteListQuery.js  # Quote count/list/bulk filter SQL builders
+│   ├── quoteMetadata.js   # Quote author/source/tag/scalar update helpers
+│   ├── quoteResponse.js   # Quote attachment/tag response enrichment helpers
+│   ├── tagHelpers.js      # Tag DB helpers
+│   ├── transactionResponses.js # Transaction rollback response helpers
+│   └── routes/
+│       ├── attachmentMigration.js # Attachment disk migration route
+│       ├── attachments.js # Note attachment CRUD/upload/primary routes
+│       ├── authors.js     # Author entity API routes
+│       ├── dbAttachmentExport.js # DB-stored attachment export route
+│       ├── dedup.js       # Duplicate inspection routes
+│       ├── exportImport.js # JSON export/import routes
+│       ├── instances.js   # Multi-instance Services API routes
+│       ├── maintenance.js # Maintenance inspection/apply routes
+│       ├── mode.js        # Mode status/switching routes
+│       ├── palettes.js    # Saved color palette routes
+│       ├── pdfExport.js   # PDF export routes and HTML rendering helpers
+│       ├── quoteBulk.js   # Quote bulk selection/action routes
+│       ├── quotes.js      # Quote read/create/update/delete/translation/merge routes
+│       ├── settings.js    # Settings load/save routes
+│       ├── sources.js     # Source entity API routes
+│       ├── tags.js        # Tag browse/rename/delete/bulk-add routes
+│       ├── uploads.js     # Direct upload route + Multer helpers
+│       └── vault.js       # Vault info, validation, and copy routes
+├── tests/                 # Node test-runner tests (no live DB required)
 ├── public/
 │   ├── index.html         # Single-page HTML (~2000 lines)
 │   ├── app.js             # Main frontend logic (~4800 lines)

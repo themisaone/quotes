@@ -236,7 +236,7 @@ function parseFileSource(src) {
     };
   }
   
-  // Parse: "file:quotes/123.jpg:image/jpeg" -> "/attachments/quotes/123.jpg"
+  // Parse: "file:quote/123.jpg:image/jpeg" -> "/attachments/quote/123.jpg"
   const parts = src.split(':');
   const filePath = parts[1];
   const mimeType = parts[2] || 'image/jpeg';

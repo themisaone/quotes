@@ -12,13 +12,57 @@ Single-user personal note app. Node.js/Express backend with a PostgreSQL databas
 
 ## Backend (`src/server.js`)
 
-One large file (~5600 lines) containing all Express routes. Split into logical sections by comments.
+One file (~350 lines) focused on startup, static serving, vault initialization, and route registration.
+
+`src/server.js` exports `{ app, startServer }` and only calls `startServer()` when run directly (`node src/server.js`). This keeps normal startup behavior unchanged while allowing tests and future tooling to import the Express app without binding a port or running migrations. New route groups should be moved into `src/routes/*` with injected dependencies, following `instances.js` and `settings.js`.
 
 **Key globals:**
 ```js
 _allowedTypes   // array of note_type strings currently visible (set by active mode)
 _modeName       // e.g. 'DEFAULT', 'ALL', 'TRAINING'
 ```
+
+Mode startup logic lives in `src/modeConfig.js`. Runtime mode routes live in `src/routes/mode.js`. Startup priority is `MODE` environment variable, then `config/local.json` `activeMode`, then `DEFAULT`. Keep mode parsing/fallback logic in helpers so it remains unit-testable. Runtime mode changes preserve other `config/local.json` fields, including `vaultPath`.
+
+Settings load/save routes live in `src/routes/settings.js`. They read from the vault-aware settings path, sync `config/modes.json` when note types change, and preserve `config/local.json` values such as `activeMode` when updating `vaultPath`.
+
+Saved color palette routes live in `src/routes/palettes.js`. Palette files are stored in `getPalettesDir()` as `<name>.json`; backend validation rejects names containing path separators so requests cannot escape the palette directory.
+
+Direct upload routing lives in `src/routes/uploads.js`. It owns the shared Multer disk-storage middleware used by `POST /api/upload-attachment` and `src/routes/attachments.js`. WAV uploads are optionally transcoded through `ffmpeg` to PCM WAV; if transcode fails, the original file is kept and any partial PCM file is removed.
+
+Note attachment CRUD, encrypted file upload, downscale-thumbnail, and make-primary routes live in `src/routes/attachments.js`. Shared attachment response helpers also live there so quote responses and attachment endpoints use the same position-0 rule: the first `note_attachments` row mirrors `notes.thumbnail`, `notes.attachment_full`, and `notes.attachment_type`. Missing note/attachment and make-primary early-return paths roll back open transactions before returning. Encrypted upload routes validate the storage folder, sanitize the original filename, and remove a moved stable file if the DB insert fails. Downscale-thumbnail validates the existing attachment path before overwriting the file. New upload folder hints are canonicalized by `src/attachmentFolders.js`, so legacy view names like `quotes`, `notes`, and `puzzles` are stored as `quote`, `note`, and `puzzle`.
+
+Quote create/update attachment sync helpers live in `src/quoteAttachmentSync.js`. Keep the request-value-to-storage-value decisions there: create finalizes and processes thumbnail/full attachments, update emits only fields that were provided, clear operations keep the legacy flat-column value while syncing `note_attachments` to `null`, and position-0 update/insert SQL is built in one place.
+
+Quote create/update/delete routes track attachment cleanup against transaction state. Create/update track newly stored `file:` refs while the transaction is open and delete those new files on rollback. Replaced or cleared old refs, and files belonging to deleted notes, are deleted only after `COMMIT`, so a later DB failure does not remove files still referenced by the database.
+
+Quote metadata helpers live in `src/quoteMetadata.js`. They own quote author/source upserts, scalar insert/update field mapping, tag sync decisions, and translation-group rename propagation. Update routes resolve an effective note type from the request or existing note row before processing attachments or tags; this prevents updates that omit `note_type` from accidentally storing new attachment/tag data under the default `quote` type.
+
+Quote count/list/bulk search SQL builders live in `src/quoteListQuery.js`. Keep search parsing, text/tag/any-search conditions, metadata filters, mode restrictions, attachment filters, training date/tag filters, and pagination placeholder ordering there. `GET /api/quotes/count`, `GET /api/quotes`, and bulk operations intentionally build filters in different orders for compatibility, so preserve that ordering in helper tests when changing filters. Count and list queries should agree on which filters affect the result set, including comment text search, direct date, date range, and translation-group filters. `buildBulkFilterQuery()` defaults missing filters to the current active mode's allowed types, accepts both legacy `search`/`tag` and list-style `quote`/`tags` aliases, and applies hidden encrypted/tag settings, translation groups, generic sub-types, metadata filters, `date`, and `dateFrom`/`dateTo` for filtered bulk scopes.
+
+Quote response enrichment helpers live in `src/quoteResponse.js`. Use them when a route needs to resolve stored thumbnail refs, apply position-0 attachments, load tag objects, or format the legacy `tags` string. The helpers preserve the existing split between legacy responses without `tag_objects` when tag tables are absent and enriched responses with `tag_objects` when tag tables are available.
+
+JSON export/import routing lives in `src/routes/exportImport.js`. It owns `GET /api/export/json`, the big-file report/info/zip companion endpoints, and `POST /api/import/json`. JSON export/import helper behavior lives in `src/exportImportHelpers.js`: attachment export resolution (embed small `file:` refs, keep/report large refs once per path), date-only normalization for export/import, chunked response writes with backpressure handling, response end wrapping, and `notes.id` sequence alignment.
+
+DB-stored attachment export routing lives in `src/routes/dbAttachmentExport.js`. It owns `POST /api/export/db-attachments`, queries base64 `attachment_full` values from `note_attachments` plus flat note rows not already covered by attachment rows, and writes them under `~/Downloads/DB-attachments/<note_type>/` without overwriting existing files.
+
+Attachment disk migration routing lives in `src/routes/attachmentMigration.js`. It owns `POST /api/migrate/attachments-to-disk`, consolidates legacy plural attachment folders, migrates base64 `attachment_full` values to disk, repairs stale `tmp_` file references, and synchronizes flat `notes.attachment_full` with position-0 `note_attachments` rows.
+
+PDF export routing lives in `src/routes/pdfExport.js`. It owns `POST /api/export/pdf`, quote-only author/source grouping, mixed-note flat layout, PDF HTML generation, attachment thumbnail pre-resolution, and Puppeteer PDF rendering. The route closes the Puppeteer browser in a `finally` block so render failures do not leak browser processes.
+
+Quote route registration lives in `src/routes/quotes.js`. It owns quote read routes, translations, `POST /api/quotes`, `PUT /api/quotes/:id`, `DELETE /api/quotes/:id`, and `POST /api/notes/merge`, with dependencies injected from `src/server.js` for file storage, the current mode's allowed types/name, attachment enrichment, and tag enrichment. Bulk quote route registration lives in `src/routes/quoteBulk.js`; it owns `POST /api/quotes/ids`, `POST /api/quotes/bulk-count`, tag/group/sub-type operations, duplicate, split, and delete. Duplicate inspection routing lives in `src/routes/dedup.js`; it owns `GET /api/dedup/suspects`, keeps the sync-db fingerprint SQL isolated, and reuses `quoteResponse` enrichment dependencies. Keep future quote endpoint moves incremental so route ordering stays correct for fixed paths like `/api/quotes/random` before `/api/quotes/:id`.
+
+Transaction early-return helpers live in `src/transactionResponses.js`. Use them for routes that already opened `BEGIN` and need to return a validation, not-found, or no-op response before `COMMIT`; this prevents pooled clients from being released with an open transaction.
+
+Maintenance routes live in `src/routes/maintenance.js`. `POST /api/maintenance/prune-unused-entities` deletes unreferenced authors, sources, and tags in one transaction. `POST /api/maintenance/rehome-attachments` defaults to dry-run: it joins `note_attachments` to `notes`, compares each file reference folder with the note's current canonical `note_type`, and reports movable items, missing source files, target collisions, and invalid references. Passing `{ "dryRun": false }` moves only items currently marked movable, updates `note_attachments`, updates flat `notes.thumbnail` / `notes.attachment_full` for position-0 attachments, and reports skipped or failed items. Each item uses a DB savepoint, and a failed DB update attempts to move the file back to its original path.
+
+Options has a dedicated **Maintenance** tab for duplicate inspection, unused metadata pruning, and attachment folder scan/apply actions.
+
+Vault routes live in `src/routes/vault.js`. `GET /api/vault/info` reports attachment counts, settings metadata, and palette paths. `POST /api/vault/validate` checks writability with a unique temporary test file so it does not overwrite an existing `.write-test` file. `POST /api/vault/move` copies the current attachment tree to a requested destination, reports per-file copy errors, and rejects destinations inside the source directory to avoid recursive self-copying.
+
+Author and source route registration lives in `src/routes/authors.js` and `src/routes/sources.js`. Shared helper logic lives in `src/entityPayload.js` and `src/entityQueries.js`. Image payload helpers preserve `image: null` as an explicit clear operation, fall back to the legacy `thumbnail` field, and validate image payloads before author/source update routes open a DB transaction. Query/response helpers keep list SQL, dynamic update SQL, merge responses, and delete messages testable. Author/source 404 paths roll back open transactions before returning. Author/source updates with no updatable fields return `400` instead of issuing invalid SQL.
+
+Tag browse, create, rename, delete, and bulk-add routes live in `src/routes/tags.js`. Route-level validation trims tag names before DB work, avoids opening transactions for invalid rename/bulk-add requests, and rolls back missing-tag/source-tag paths before returning. Tag delete now only performs the delete transaction; the previous unused remaining-tag query loop had no side effects and was removed.
 
 **Request flow for note listing:**
 1. `GET /api/quotes` — receives filter query params
@@ -32,7 +76,48 @@ _modeName       // e.g. 'DEFAULT', 'ALL', 'TRAINING'
 - `data:image/jpeg;base64,...` — embedded base64 (thumbnails only, since all full attachments moved to disk)
 - `file:note/456.secret.txt.enc` — encrypted file on disk
 
-**Multi-instance / Services UI:** `src/instanceManager.js` probes fixed ports from `config/instance-ports.json`, spawns detached `node src/server.js` children with `MODE` + `PORT` + `SKIP_MIGRATE=1`, and tracks PIDs in `config/running-instances.json`. Any running instance exposes `GET/POST /api/instances*` so the sidebar **Services** view can start/stop siblings on the same host. Disabled when `INSTANCE_MANAGER=0`. Requires `lsof` on Linux for stop when PID is unknown.
+**Multi-instance / Services UI:** `src/instanceManager.js` probes fixed ports from `config/instance-ports.json`, spawns detached `node src/server.js` children with `MODE` + `PORT` + `SKIP_MIGRATE=1`, and tracks PIDs in `config/running-instances.json`. `src/routes/instances.js` registers `GET/POST /api/instances*` routes so the sidebar **Services** view can start/stop siblings on the same host. Disabled when `INSTANCE_MANAGER=0`. Requires `lsof` on Linux for stop when PID is unknown.
+
+---
+
+## Testing
+
+Run `npm test` to execute the Node-native test suite (`node --test tests/*.test.js`). Current tests avoid a live database and cover pure helpers plus import seams:
+
+- `src/fileStorage.js` path/reference/base64 behavior using temporary attachment directories
+- `src/attachmentRehome.js` attachment folder drift planning, apply behavior, and path-safety handling
+- `src/entityPayload.js` author/source image payload selection and validation
+- `src/entityQueries.js` author/source list/update SQL builders and response payloads
+- `src/exportImportHelpers.js` JSON export/import date normalization, attachment embedding/reporting, stream backpressure, and sequence sync
+- `src/routes/attachmentMigration.js` attachment disk migration behavior, including base64 migration, legacy folder consolidation, stale tmp-reference repair, sync queries, and rollback handling
+- `src/routes/attachments.js` attachment list/create/delete/file-upload/downscale/make-primary behavior with fake pool/client objects and temporary files
+- `src/routes/authors.js` author list/get/create/update/delete behavior with fake pool/client objects
+- `src/routes/dbAttachmentExport.js` DB-stored attachment export route selection, output path construction, skip handling, and query failures
+- `src/routes/dedup.js` duplicate-suspect grouping, pagination bounds, enrichment, and error handling
+- `src/routes/exportImport.js` streaming JSON export, big-file companion endpoints, and JSON import behavior
+- `src/routes/instances.js` route behavior with a stubbed instance manager
+- `src/routes/maintenance.js` unused-entity prune plus attachment rehome dry-run/apply behavior
+- `src/routes/mode.js` mode status/switching behavior and local config preservation
+- `src/routes/palettes.js` palette list/load/save/delete behavior and path-safety validation
+- `src/routes/pdfExport.js` PDF export validation, HTML layout decisions, mocked Puppeteer rendering, and browser cleanup on render failure
+- `src/routes/quoteBulk.js` quote bulk ID/count/tag/group/sub-type/duplicate/split/delete behavior with fake pool/client objects, including attachment copy/delete cleanup around transaction commit and rollback
+- `src/routes/quotes.js` quote read/create/update/delete/translation/merge behavior with fake pool/client and enrichment dependencies, including attachment cleanup around rollback and commit
+- `src/routes/settings.js` settings file, vault-path, mode-sync, and stale sub-type behavior
+- `src/routes/sources.js` source list/get/create/update/delete behavior with fake pool/client objects
+- `src/routes/tags.js` tag browse/create/rename/delete/bulk-add behavior and transaction early-return paths
+- `src/routes/uploads.js` direct upload response formatting, MIME fallback, route registration, and WAV transcode fallback behavior
+- `src/routes/vault.js` vault info summaries, directory stats, validation, and attachment-tree copy behavior
+- `src/modeConfig.js` startup mode resolution and fallback behavior
+- `src/quoteAttachmentSync.js` quote create/update attachment storage decisions, newly stored file-ref tracking, and position-0 sync SQL builders
+- `src/quoteListQuery.js` quote count/list/bulk search parsing, SQL filter construction, and parameter ordering
+- `src/quoteMetadata.js` quote author/source upsert behavior, scalar field mapping, tag sync decisions, and translation-group propagation
+- `src/quoteResponse.js` quote image/attachment/tag response enrichment helpers
+- `src/tagHelpers.js::parseTagInput`
+- `src/transactionResponses.js` rollback-before-response helpers for open transactions
+- `src/noteText.js::sanitizeNoteText`
+- `src/server.js` export behavior
+
+Prefer this pattern for new low-level coverage: extract pure helpers from `src/server.js`, test them under `tests/`, then wire them back into routes. Future API integration tests can import `app` from `src/server.js` and listen on an ephemeral port, but should use an explicit test database instead of the user's configured database.
 
 ---
 
@@ -103,6 +188,8 @@ app.js loadQuotes()
 ## Attachment Architecture
 
 All full-size attachments are stored on disk under `attachments/<note_type>/`. Only thumbnails stay in the database as base64.
+
+The DB `file:` reference is the source of truth for an attachment's path. Changing a note from one `note_type` to another does **not** move existing files between vault folders; those attachments keep resolving from their stored paths. This is functionally safe but can leave older files organized under a previous type folder until an explicit migration/rehome action is run.
 
 **File naming convention:**
 - Normal: `<noteId>.<originalFilename>` (e.g. `5236.photo.jpg`)
@@ -201,7 +288,7 @@ The note editing modal relies on several module-level variables in `app.js`:
 
 ## Server-Side Filtering
 
-The `/api/quotes` and `/api/quotes/count` endpoints accept these filter params that are applied as SQL WHERE clauses:
+The `/api/quotes` listing endpoint, `/api/quotes/count`, and filtered bulk endpoints (`/api/quotes/ids`, bulk count/actions without explicit IDs) accept these filter params as SQL WHERE clauses.
 
 | Param | Effect |
 |---|---|
@@ -210,10 +297,15 @@ The `/api/quotes` and `/api/quotes/count` endpoints accept these filter params t
 | `hasImage=true/false` | Filter by attachment presence |
 | `hasImageType=true/false` | Filter by image-type attachment |
 | `hasMultipleAttachments=true/false` | Filter by attachment count |
-| `quote`, `author`, `source`, `tags`, `score` | Text search |
+| `hasTranslationGroup=true/false`, `hasTitle=true/false`, `hasText=true/false` | Filter by metadata presence |
+| `any`, `quote`, `author`, `source`, `tags`, `score` | Text/search filters; bulk also accepts legacy `search` and `tag` aliases |
 | `note_type` | Filter by note type |
 | `types` | Filter by quote sub-types |
 | `training_types` | Filter by training sub-types |
+| `generic_sub_types` | Filter by configured generic note sub-types stored in `notes.type` |
+| `year`, `month` | Training tag filters (month requires year) |
+| `date`, `dateFrom`, `dateTo` | Direct `notes.note_date` filters |
+| `translation_group` | Exact translation-group filter |
 
 ---
 
@@ -278,7 +370,37 @@ Gallery and list-pane are mutually exclusive (gallery always uses the card grid)
 
 | File | What to edit |
 |---|---|
-| `src/server.js` | API routes, DB queries, file handling |
+| `src/server.js` | Express startup, static serving, vault initialization, and route registration |
+| `src/attachmentFolders.js` | Canonical attachment folder mapping and validation |
+| `src/attachmentRehome.js` | Attachment folder drift planner and apply helper |
+| `src/entityPayload.js` | Author/source image payload selection and validation |
+| `src/entityQueries.js` | Author/source SQL builders and response helpers |
+| `src/exportImportHelpers.js` | JSON export/import helper behavior |
+| `src/routes/attachmentMigration.js` | Attachment disk migration route registration |
+| `src/routes/attachments.js` | Note attachment CRUD, encrypted upload, and primary-selection routes |
+| `src/routes/authors.js` | Author entity API route registration |
+| `src/routes/dbAttachmentExport.js` | DB-stored attachment export route registration |
+| `src/routes/dedup.js` | Duplicate inspection route registration |
+| `src/routes/exportImport.js` | JSON export/import route registration |
+| `src/routes/instances.js` | Multi-instance Services API route registration |
+| `src/routes/maintenance.js` | Maintenance prune, dry-run, and apply route registration |
+| `src/routes/mode.js` | Runtime mode status and switching routes |
+| `src/routes/palettes.js` | Saved color palette file routes |
+| `src/routes/pdfExport.js` | PDF export route registration and rendering helpers |
+| `src/routes/quoteBulk.js` | Quote bulk selection/action route registration |
+| `src/routes/quotes.js` | Quote read/create/update/delete/translation/merge route registration |
+| `src/routes/settings.js` | Settings load/save route registration and mode sync |
+| `src/routes/sources.js` | Source entity API route registration |
+| `src/routes/tags.js` | Tag browse, rename/delete, and bulk-add route registration |
+| `src/routes/uploads.js` | Direct upload route, Multer storage, WAV transcode helpers |
+| `src/routes/vault.js` | Vault info, path validation, and attachment-tree copy routes |
+| `src/modeConfig.js` | Startup mode loading, normalization, and fallback logic |
+| `src/noteText.js` | Note text cleanup and Evernote artifact stripping |
+| `src/quoteListQuery.js` | Quote count/list/bulk query builders and search condition helpers |
+| `src/quoteMetadata.js` | Quote create/update metadata helpers and effective note-type resolution |
+| `src/quoteResponse.js` | Quote attachment/tag response enrichment helpers |
+| `src/transactionResponses.js` | Rollback response helpers for transaction early returns |
+| `tests/*.test.js` | Node-native automated tests |
 | `public/app.js` | Modal logic, card click handlers, main event wiring |
 | `public/js/lib/cardRenderer.js` | Card HTML generation |
 | `public/js/lib/modalRenderer.js` | Modal field population |

@@ -150,7 +150,7 @@ function shouldStoreExternally(base64String, maxSizeMB = DEFAULT_MAX_SIZE_MB) {
 /**
  * Save file to filesystem
  * @param {string} base64String - Base64 encoded file data
- * @param {string} type - 'quotes', 'authors', 'sources', 'training', 'notes', 'puzzles'
+ * @param {string} type - storage folder, usually the note_type (`quote`, `note`, `training`, etc.)
  * @param {number} id - ID of the entity
  * @param {string} suffix - Optional suffix (e.g., '_full' for full-size images)
  * @returns {string} Relative path to the saved file
@@ -180,7 +180,7 @@ function saveToFilesystem(base64String, type, id, suffix = "") {
 
 /**
  * Read file from filesystem
- * @param {string} relativePath - Relative path (e.g., 'quotes/123_full.jpg')
+ * @param {string} relativePath - Relative path (e.g., 'quote/123_full.jpg')
  * @returns {string} Base64 encoded string with data URL prefix
  */
 function readFromFilesystem(relativePath) {
@@ -203,7 +203,7 @@ function readFromFilesystem(relativePath) {
 
 /**
  * Delete file from filesystem
- * @param {string} relativePath - Relative path (e.g., 'quotes/123_full.jpg')
+ * @param {string} relativePath - Relative path (e.g., 'quote/123_full.jpg')
  */
 function deleteFromFilesystem(relativePath) {
   if (!relativePath) return;
@@ -224,7 +224,7 @@ function isFilePath(value) {
 
 /**
  * Parse file path reference
- * @param {string} value - Format: "file:quotes/123.jpg:image/jpeg"
+ * @param {string} value - Format: "file:quote/123.jpg:image/jpeg"
  * @returns {object} { path, mimeType }
  */
 function parseFilePath(value) {
@@ -239,9 +239,9 @@ function parseFilePath(value) {
 
 /**
  * Create file path reference
- * @param {string} relativePath - e.g., "quotes/123.jpg"
+ * @param {string} relativePath - e.g., "quote/123.jpg"
  * @param {string} mimeType - e.g., "image/jpeg"
- * @returns {string} Format: "file:quotes/123.jpg:image/jpeg"
+ * @returns {string} Format: "file:quote/123.jpg:image/jpeg"
  */
 function createFileReference(relativePath, mimeType) {
   return `file:${relativePath}:${mimeType}`;

@@ -144,6 +144,8 @@ Export and import workflows.
 - `exportToJson(config)` — triggers JSON backup download (+ big_files_DATE.txt + zip)
 - `exportToPdf(config)` — triggers PDF export via Puppeteer
 - `handleImportFile(event, config)` — handles JSON backup import with validation UI
+- `pruneUnusedEntitiesRequest()` — Options → Maintenance metadata prune request
+- `rehomeAttachmentsRequest({ dryRun })` — Options → Maintenance attachment folder scan/apply request
 
 ---
 

@@ -50,7 +50,8 @@ import {
   handleImportFile as handleImportFileLib,
   resetImportModal,
   pruneUnusedEntitiesRequest,
-} from './js/lib/dataManager.js?v=20260613import2';
+  rehomeAttachmentsRequest,
+} from './js/lib/dataManager.js?v=20260623maintenance1';
 
 import {
   loadSettings,
@@ -136,11 +137,9 @@ import {
   FILTER_IDS,
   BUTTON_IDS,
   CONTAINER_IDS,
-  CSS_CLASSES,
   getElementByIdSafe,
   getElementValue,
-  getCheckboxState,
-  getCheckedValues
+  getCheckboxState
 } from './js/constants.js';
 
 import {
@@ -1368,6 +1367,108 @@ function setupEventListeners() {
         alert(err.message || "Prune failed");
       } finally {
         pruneUnusedEntitiesBtn.disabled = false;
+        labelEl.textContent = prevLabel;
+      }
+    });
+  }
+
+  const rehomeAttachmentsScanBtn = getElementByIdSafe("rehomeAttachmentsScanBtn");
+  const rehomeAttachmentsApplyBtn = getElementByIdSafe("rehomeAttachmentsApplyBtn");
+  const rehomeAttachmentsResult = getElementByIdSafe("rehomeAttachmentsResult");
+  let lastRehomeAttachmentsPlan = null;
+
+  const setRehomeResult = (plan) => {
+    if (!rehomeAttachmentsResult || !plan) return;
+    const applied = plan.applied;
+    const lines = [
+      `<strong>${plan.driftCount || 0}</strong> folder mismatch${plan.driftCount === 1 ? '' : 'es'} found`,
+      `Movable: ${plan.movableCount || 0}`,
+      `Missing source files: ${plan.missingSourceCount || 0}`,
+      `Target collisions: ${plan.collisionCount || 0}`,
+      `Invalid references: ${plan.invalidReferenceCount || 0}`,
+    ];
+
+    if (!plan.driftCount && !plan.invalidReferenceCount) {
+      lines.push('', 'Attachment folders already match current note types.');
+    }
+
+    if (applied) {
+      lines.push(
+        '',
+        `<strong>Applied</strong>`,
+        `Moved: ${applied.movedCount || 0}`,
+        `Skipped: ${applied.skippedCount || 0}`,
+        `Failed: ${applied.failedCount || 0}`,
+      );
+    }
+
+    rehomeAttachmentsResult.innerHTML = lines.join('<br>');
+    rehomeAttachmentsResult.classList.add('is-visible');
+  };
+
+  if (rehomeAttachmentsScanBtn) {
+    rehomeAttachmentsScanBtn.addEventListener("click", async () => {
+      const labelEl =
+        rehomeAttachmentsScanBtn.querySelector(".rehome-scan-btn-label") || rehomeAttachmentsScanBtn;
+      const prevLabel = labelEl.textContent;
+      rehomeAttachmentsScanBtn.disabled = true;
+      if (rehomeAttachmentsApplyBtn) rehomeAttachmentsApplyBtn.disabled = true;
+      labelEl.textContent = "⏳ Scanning…";
+      try {
+        const plan = await rehomeAttachmentsRequest({ dryRun: true });
+        lastRehomeAttachmentsPlan = plan;
+        setRehomeResult(plan);
+        if (rehomeAttachmentsApplyBtn) {
+          rehomeAttachmentsApplyBtn.disabled = !(plan.movableCount > 0);
+        }
+      } catch (err) {
+        console.error(err);
+        alert(err.message || "Attachment folder scan failed");
+      } finally {
+        rehomeAttachmentsScanBtn.disabled = false;
+        labelEl.textContent = prevLabel;
+      }
+    });
+  }
+
+  if (rehomeAttachmentsApplyBtn) {
+    rehomeAttachmentsApplyBtn.addEventListener("click", async () => {
+      const movableCount = lastRehomeAttachmentsPlan?.movableCount || 0;
+      if (!movableCount) {
+        alert("Scan attachment folders first.");
+        return;
+      }
+
+      if (
+        !(await showConfirm(
+          `Move ${movableCount} attachment file${movableCount === 1 ? '' : 's'} into folders matching current note type?\n\nItems with missing files, path problems, or target collisions will be skipped.`,
+          {
+            icon: "📁",
+            title: "Apply attachment folder changes",
+            confirmLabel: "Apply",
+            danger: true,
+          },
+        ))
+      ) {
+        return;
+      }
+
+      const labelEl =
+        rehomeAttachmentsApplyBtn.querySelector(".rehome-apply-btn-label") || rehomeAttachmentsApplyBtn;
+      const prevLabel = labelEl.textContent;
+      rehomeAttachmentsApplyBtn.disabled = true;
+      if (rehomeAttachmentsScanBtn) rehomeAttachmentsScanBtn.disabled = true;
+      labelEl.textContent = "⏳ Applying…";
+      try {
+        const result = await rehomeAttachmentsRequest({ dryRun: false });
+        lastRehomeAttachmentsPlan = null;
+        setRehomeResult(result);
+        await loadQuotes();
+      } catch (err) {
+        console.error(err);
+        alert(err.message || "Attachment folder maintenance failed");
+      } finally {
+        if (rehomeAttachmentsScanBtn) rehomeAttachmentsScanBtn.disabled = false;
         labelEl.textContent = prevLabel;
       }
     });
@@ -4222,6 +4323,33 @@ function getCurrentFilters() {
     const element = document.getElementById(id);
     return element?.value || '';
   };
+
+  const getCheckedDatasetValues = (selector) => Array.from(document.querySelectorAll(selector))
+    .filter((checkbox) => checkbox.checked && checkbox.dataset.type)
+    .map((checkbox) => checkbox.dataset.type);
+
+  const getQuoteTypeFilter = () => {
+    const quoteTypes = getQuoteTypes();
+    const selected = currentNoteTypeFilter === 'quote'
+      ? getCheckedDatasetValues('.type-filter-options input[type="checkbox"]')
+      : currentNoteTypeFilter === null
+        ? getCheckedDatasetValues('.training-type-filter-options input[id^="filterQuote"]')
+        : [];
+    return selected.length > 0 && selected.length < quoteTypes.length ? selected.join(',') : '';
+  };
+
+  const getTrainingTypeFilter = () => {
+    if (currentNoteTypeFilter !== 'training' && currentNoteTypeFilter !== null) return '';
+    const selector = currentNoteTypeFilter === null
+      ? '.training-type-filter-options input[id^="filterTraining"]'
+      : '.training-type-filter-options input[type="checkbox"]';
+    return getCheckedDatasetValues(selector).join(',');
+  };
+
+  const getGenericSubTypeFilter = () => {
+    if (!currentNoteTypeFilter || !hasGenericSubTypeField(currentNoteTypeFilter)) return '';
+    return getCheckedDatasetValues('.generic-subtype-filter-options input[type="checkbox"]').join(',');
+  };
   
   // Helper to get metadata checkbox state (checkbox + condition)
   // Returns 'true' if checked and condition is 'has', 'false' if checked and condition is 'not'
@@ -4231,18 +4359,29 @@ function getCurrentFilters() {
     if (!checkbox || !checkbox.checked) return '';
     return condition?.value === 'not' ? 'false' : 'true';
   };
+
+  const settings = globalSettings || getGlobalSettings();
+  const quoteSearch = getOptionalValue(FILTER_IDS.SEARCH_QUOTE);
+  const tagSearch = getOptionalValue(FILTER_IDS.SEARCH_TAGS);
   
   const filters = {
     note_type: currentNoteTypeFilter,
     author_id: getOptionalValue(FILTER_IDS.AUTHOR_FILTER), // Only exists in quotes view
     source_id: getOptionalValue(FILTER_IDS.SOURCE_FILTER), // Only exists in quotes view
-    search: getElementValue(FILTER_IDS.SEARCH_QUOTE),
-    tag: getElementValue(FILTER_IDS.SEARCH_TAGS),
-    types: getCheckedValues(CSS_CLASSES.TYPE_CHECKBOX).join(','),
-    training_types: getCheckedValues(CSS_CLASSES.TRAINING_TYPE_CHECKBOX).join(','),
+    any: getOptionalValue(FILTER_IDS.SEARCH_ANY),
+    search: quoteSearch,
+    quote: quoteSearch,
+    author: getOptionalValue(FILTER_IDS.SEARCH_AUTHOR),
+    source: getOptionalValue(FILTER_IDS.SEARCH_SOURCE),
+    tag: tagSearch,
+    tags: tagSearch,
+    types: getQuoteTypeFilter(),
+    training_types: getTrainingTypeFilter(),
+    generic_sub_types: getGenericSubTypeFilter(),
     year: getOptionalValue(FILTER_IDS.YEAR_FILTER), // Only exists in training view
     month: getOptionalValue(FILTER_IDS.MONTH_FILTER), // Only exists in training view
-    score: getElementValue(FILTER_IDS.SEARCH_SCORE),
+    score: getOptionalValue(FILTER_IDS.SEARCH_SCORE),
+    noteId: getOptionalValue(FILTER_IDS.SEARCH_NOTE_ID),
     hasAuthor: getMetadataState(FILTER_IDS.HAS_AUTHOR_CHECKBOX, FILTER_IDS.HAS_AUTHOR_CONDITION),
     hasSource: getMetadataState(FILTER_IDS.HAS_SOURCE_CHECKBOX, FILTER_IDS.HAS_SOURCE_CONDITION),
     hasNote: getMetadataState(FILTER_IDS.HAS_NOTE_CHECKBOX, FILTER_IDS.HAS_NOTE_CONDITION),
@@ -4251,8 +4390,16 @@ function getCurrentFilters() {
     hasImageType: getMetadataState(FILTER_IDS.HAS_IMAGE_TYPE_CHECKBOX, FILTER_IDS.HAS_IMAGE_TYPE_CONDITION),
     hasTranslationGroup: getMetadataState(FILTER_IDS.HAS_TRANSLATION_GROUP_CHECKBOX, FILTER_IDS.HAS_TRANSLATION_GROUP_CONDITION),
     hasMultipleAttachments: getMetadataState(FILTER_IDS.HAS_MULTIPLE_ATTACHMENTS_CHECKBOX, FILTER_IDS.HAS_MULTIPLE_ATTACHMENTS_CONDITION),
+    hasTitle: getMetadataState(FILTER_IDS.HAS_TITLE_CHECKBOX, FILTER_IDS.HAS_TITLE_CONDITION),
     hasText: getMetadataState(FILTER_IDS.HAS_TEXT_CHECKBOX, FILTER_IDS.HAS_TEXT_CONDITION),
   };
+
+  if (settings?.hideEncryptedNotes) {
+    filters.hideEncryptedNotes = 'true';
+  }
+  if (settings?.hideNotesWithTag && settings?.hideTagName) {
+    filters.hideTag = settings.hideTagName.trim();
+  }
   
   return filters;
 }

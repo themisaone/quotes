@@ -24,11 +24,11 @@ export function resolveAttachmentUrl(attachment) {
     return attachment;
   }
   
-  // If it's a file reference (e.g., "file:quotes/360_full.png:image/png")
+  // If it's a file reference (e.g., "file:quote/360_full.png:image/png")
   if (attachment.startsWith('file:')) {
     const parts = attachment.split(':');
     if (parts.length >= 2) {
-      const path = parts[1]; // e.g., "quotes/360_full.png"
+      const path = parts[1]; // e.g., "quote/360_full.png"
       return `/attachments/${path}`;
     }
   }

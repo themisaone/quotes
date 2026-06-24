@@ -1092,6 +1092,7 @@
 
             <nav class="settings-tabs" role="tablist" aria-label="Options sections">
               <button type="button" class="settings-tab-btn active" data-settings-tab="general" role="tab" aria-selected="true" id="settingsTabBtnGeneral">General</button>
+              <button type="button" class="settings-tab-btn" data-settings-tab="maintenance" role="tab" aria-selected="false" id="settingsTabBtnMaintenance">Maintenance</button>
               <button type="button" class="settings-tab-btn" data-settings-tab="note-types" role="tab" aria-selected="false" id="settingsTabBtnNoteTypes">Note Types</button>
             </nav>
 
@@ -1133,35 +1134,6 @@
                   <span>Note Meta Searches</span>
                 </label>
               </div>
-              </div>
-            </div>
-
-            <div class="settings-section dedup-settings-section">
-              <div class="settings-section-header">
-                <span class="settings-section-heading">👯 Duplicate inspection</span>
-                <details class="settings-section-desc">
-                  <summary class="settings-section-desc-summary" aria-label="Show section description"><span class="settings-section-desc-label">Description</span></summary>
-                  <div class="settings-section-lead">Find groups of notes with the same text, title, type, dates, and author/source — then fix titles or merge.</div>
-                </details>
-              </div>
-              <div class="settings-section-body">
-              <button type="button" id="dedupSuspectsScanBtn" class="btn btn-primary">Scan for duplicate groups</button>
-              <div id="dedupSuspectsRoot" class="dedup-suspects-root"></div>
-              </div>
-            </div>
-
-            <div class="settings-section prune-settings-section">
-              <div class="settings-section-header">
-                <span class="settings-section-heading">🧹 Prune unused metadata</span>
-                <details class="settings-section-desc">
-                  <summary class="settings-section-desc-summary" aria-label="Show section description"><span class="settings-section-desc-label">Description</span></summary>
-                  <div class="settings-section-lead">Delete authors, sources, and tags that are not linked to any note. This cannot be undone.</div>
-                </details>
-              </div>
-              <div class="settings-section-body">
-              <button type="button" id="pruneUnusedEntitiesBtn" class="btn btn-primary" title="Delete authors, sources, and tags that have zero notes">
-                <span class="prune-btn-label">🧹 Prune unused authors, sources &amp; tags</span>
-              </button>
               </div>
             </div>
 
@@ -1508,6 +1480,62 @@
             </div><!-- end settings-row: Note Display Options + Storage & Performance -->
 
             </div><!-- end settingsTabGeneral -->
+
+            <div id="settingsTabMaintenance" class="settings-tab-panel" data-settings-panel="maintenance" role="tabpanel" aria-labelledby="settingsTabBtnMaintenance" hidden>
+
+            <div class="settings-row">
+            <div class="settings-section dedup-settings-section settings-section-wide">
+              <div class="settings-section-header">
+                <span class="settings-section-heading">👯 Duplicate inspection</span>
+                <details class="settings-section-desc">
+                  <summary class="settings-section-desc-summary" aria-label="Show section description"><span class="settings-section-desc-label">Description</span></summary>
+                  <div class="settings-section-lead">Find groups of notes with the same text, title, type, dates, and author/source — then fix titles or merge.</div>
+                </details>
+              </div>
+              <div class="settings-section-body">
+                <button type="button" id="dedupSuspectsScanBtn" class="btn btn-primary">Scan for duplicate groups</button>
+                <div id="dedupSuspectsRoot" class="dedup-suspects-root"></div>
+              </div>
+            </div>
+
+            <div class="settings-section prune-settings-section">
+              <div class="settings-section-header">
+                <span class="settings-section-heading">🧹 Prune unused metadata</span>
+                <details class="settings-section-desc">
+                  <summary class="settings-section-desc-summary" aria-label="Show section description"><span class="settings-section-desc-label">Description</span></summary>
+                  <div class="settings-section-lead">Delete authors, sources, and tags that are not linked to any note. This cannot be undone.</div>
+                </details>
+              </div>
+              <div class="settings-section-body">
+                <button type="button" id="pruneUnusedEntitiesBtn" class="btn btn-primary" title="Delete authors, sources, and tags that have zero notes">
+                  <span class="prune-btn-label">🧹 Prune unused authors, sources &amp; tags</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="settings-section attachment-rehome-settings-section">
+              <div class="settings-section-header">
+                <span class="settings-section-heading">📁 Attachment folders</span>
+                <details class="settings-section-desc">
+                  <summary class="settings-section-desc-summary" aria-label="Show section description"><span class="settings-section-desc-label">Description</span></summary>
+                  <div class="settings-section-lead">Find attachment files whose vault folder no longer matches the note type, then move only safe items.</div>
+                </details>
+              </div>
+              <div class="settings-section-body">
+                <div class="maintenance-actions">
+                  <button type="button" id="rehomeAttachmentsScanBtn" class="btn btn-primary" title="Inspect attachment folders without moving files">
+                    <span class="rehome-scan-btn-label">📁 Scan attachment folders</span>
+                  </button>
+                  <button type="button" id="rehomeAttachmentsApplyBtn" class="btn btn-secondary" title="Move only attachments reported as safe to move" disabled>
+                    <span class="rehome-apply-btn-label">Apply movable changes</span>
+                  </button>
+                </div>
+                <div id="rehomeAttachmentsResult" class="maintenance-result" aria-live="polite"></div>
+              </div>
+            </div>
+            </div>
+
+            </div><!-- end settingsTabMaintenance -->
 
             <div id="settingsTabNoteTypes" class="settings-tab-panel" data-settings-panel="note-types" role="tabpanel" aria-labelledby="settingsTabBtnNoteTypes" hidden>
 
