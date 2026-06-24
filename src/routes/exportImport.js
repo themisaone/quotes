@@ -49,6 +49,26 @@ function buildBigFilesReport(bigFiles) {
   };
 }
 
+function isFileReference(value) {
+  return typeof value === "string" && value.startsWith("file:");
+}
+
+function trackNewFileRef(refs, ref, originalValue = null) {
+  if (isFileReference(ref) && ref !== originalValue) refs.add(ref);
+}
+
+function deleteAttachmentRefs(refs, { fileStorage, logger, label }) {
+  if (typeof fileStorage.deleteAttachment !== "function") return;
+
+  for (const ref of refs) {
+    try {
+      fileStorage.deleteAttachment(ref);
+    } catch (error) {
+      logger.error(`${label} attachment cleanup failed:`, error);
+    }
+  }
+}
+
 function registerExportImportRoutes(app, {
   pool,
   fileStorage,
@@ -286,6 +306,8 @@ function registerExportImportRoutes(app, {
 
   app.post("/api/import/json", async (req, res) => {
     const client = await pool.connect();
+    const importedAttachmentRefs = new Set();
+    let committed = false;
 
     try {
       const { data, options } = req.body;
@@ -431,6 +453,7 @@ function registerExportImportRoutes(app, {
       await syncNotesIdSequence(client);
 
       for (const note of data.quotes) {
+        const noteAttachmentRefs = new Set();
         await client.query("SAVEPOINT import_note");
         try {
           let authorId = null;
@@ -591,6 +614,7 @@ function registerExportImportRoutes(app, {
                 storageThresholdMB,
                 false,
               );
+              trackNewFileRef(noteAttachmentRefs, processedThumb, attachment.thumbnail);
               const processedFull = fileStorage.processForStorage(
                 attachment.attachment_full,
                 storageFolder,
@@ -599,6 +623,7 @@ function registerExportImportRoutes(app, {
                 storageThresholdMB,
                 true,
               );
+              trackNewFileRef(noteAttachmentRefs, processedFull, attachment.attachment_full);
 
               await client.query(
                 `INSERT INTO note_attachments (note_id, position, thumbnail, attachment_full, attachment_type, storage_type, filename)
@@ -649,8 +674,14 @@ function registerExportImportRoutes(app, {
             stats.quotes.created++;
           }
           await client.query("RELEASE SAVEPOINT import_note");
+          for (const ref of noteAttachmentRefs) importedAttachmentRefs.add(ref);
         } catch (error) {
           await client.query("ROLLBACK TO SAVEPOINT import_note");
+          deleteAttachmentRefs(noteAttachmentRefs, {
+            fileStorage,
+            logger,
+            label: "import-note rollback",
+          });
           const preview = (note.note_text && note.note_text.substring(0, 50)) || "";
           stats.errors.push(`Note "${preview}...": ${error.message}`);
         }
@@ -658,6 +689,7 @@ function registerExportImportRoutes(app, {
 
       await syncNotesIdSequence(client);
       await client.query("COMMIT");
+      committed = true;
 
       res.json({
         success: true,
@@ -665,7 +697,18 @@ function registerExportImportRoutes(app, {
         stats,
       });
     } catch (error) {
-      await client.query("ROLLBACK");
+      try {
+        await client.query("ROLLBACK");
+      } catch (rollbackError) {
+        logger.error("Import rollback failed:", rollbackError);
+      }
+      if (!committed) {
+        deleteAttachmentRefs(importedAttachmentRefs, {
+          fileStorage,
+          logger,
+          label: "import rollback",
+        });
+      }
       logger.error("Error importing data:", error);
       res
         .status(500)

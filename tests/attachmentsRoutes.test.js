@@ -385,6 +385,71 @@ test("POST /api/notes/:id/attachments rolls back when note is missing", async ()
   ]);
 });
 
+test("POST /api/notes/:id/attachments removes newly stored files when the DB insert fails", async () => {
+  const calls = [];
+  const fileStorage = makeFileStorage({
+    finalizeUploadedFile(value) {
+      this.calls.push(["finalizeUploadedFile", value]);
+      return value;
+    },
+    processForStorage(value, folder, id, suffix, threshold, forceExternal) {
+      this.calls.push(["processForStorage", value, folder, id, suffix, threshold, forceExternal]);
+      if (!value) return value;
+      return `file:${folder}/${id}${forceExternal ? "-full" : "-thumb"}.bin:application/octet-stream`;
+    },
+  });
+  const client = {
+    async query(sql, params) {
+      calls.push({ sql, params });
+      if (sql === "BEGIN" || sql === "ROLLBACK") return { rows: [] };
+      if (/SELECT note_type FROM notes/.test(sql)) {
+        return { rows: [{ note_type: "quote" }] };
+      }
+      if (/COALESCE\(MAX\(position\), -1\)/.test(sql)) {
+        return { rows: [{ next_pos: 0 }] };
+      }
+      if (/INSERT INTO note_attachments/.test(sql)) {
+        throw new Error("insert failed");
+      }
+      return { rows: [] };
+    },
+    release() {
+      calls.push({ sql: "RELEASE" });
+    },
+  };
+  const pool = {
+    async connect() {
+      return client;
+    },
+  };
+  const routes = makeRouteCollector(pool, { fileStorage });
+
+  const response = await invoke(routes, {
+    method: "POST",
+    routePath: "/api/notes/:id/attachments",
+    params: { id: "7" },
+    body: {
+      thumbnail: "data:image/png;base64,thumb",
+      attachment_full: "data:application/pdf;base64,full",
+    },
+  });
+
+  assert.equal(response.status, 500);
+  assert.deepEqual(response.body, { error: "insert failed" });
+  assert.deepEqual(calls.map((call) => call.sql), [
+    "BEGIN",
+    "SELECT note_type FROM notes WHERE id = $1",
+    "SELECT COALESCE(MAX(position), -1) + 1 AS next_pos FROM note_attachments WHERE note_id = $1",
+    "INSERT INTO note_attachments (note_id, position, thumbnail, attachment_full, attachment_type, storage_type, filename)\n       VALUES ($1, $2, $3, $4, $5, 'base64', $6) RETURNING *",
+    "ROLLBACK",
+    "RELEASE",
+  ]);
+  assert.deepEqual(fileStorage.calls.filter((call) => call[0] === "deleteAttachment"), [
+    ["deleteAttachment", "file:quote/7_a0-thumb.bin:application/octet-stream"],
+    ["deleteAttachment", "file:quote/7_a0-full.bin:application/octet-stream"],
+  ]);
+});
+
 test("DELETE /api/notes/:noteId/attachments/:attachId rolls back missing attachments", async () => {
   const calls = [];
   const client = {
@@ -422,7 +487,12 @@ test("DELETE /api/notes/:noteId/attachments/:attachId rolls back missing attachm
 
 test("DELETE /api/notes/:noteId/attachments/:attachId clears flat fields after deleting last attachment", async () => {
   const calls = [];
-  const fileStorage = makeFileStorage();
+  const fileStorage = makeFileStorage({
+    deleteAttachment(value) {
+      assert.equal(calls.at(-1).sql, "COMMIT");
+      this.calls.push(["deleteAttachment", value]);
+    },
+  });
   const client = {
     async query(sql, params) {
       calls.push({ sql, params });
@@ -470,6 +540,58 @@ test("DELETE /api/notes/:noteId/attachments/:attachId clears flat fields after d
     ),
     true
   );
+});
+
+test("DELETE /api/notes/:noteId/attachments/:attachId keeps files when the DB delete fails", async () => {
+  const calls = [];
+  const fileStorage = makeFileStorage();
+  const client = {
+    async query(sql, params) {
+      calls.push({ sql, params });
+      if (sql === "BEGIN" || sql === "ROLLBACK") return { rows: [] };
+      if (/SELECT \* FROM note_attachments WHERE id/.test(sql)) {
+        return {
+          rows: [
+            {
+              id: 4,
+              thumbnail: "file:note/thumb.jpg:image/jpeg",
+              attachment_full: "file:note/full.pdf:application/pdf",
+            },
+          ],
+        };
+      }
+      if (/DELETE FROM note_attachments/.test(sql)) {
+        throw new Error("delete failed");
+      }
+      return { rows: [] };
+    },
+    release() {
+      calls.push({ sql: "RELEASE" });
+    },
+  };
+  const pool = {
+    async connect() {
+      return client;
+    },
+  };
+  const routes = makeRouteCollector(pool, { fileStorage });
+
+  const response = await invoke(routes, {
+    method: "DELETE",
+    routePath: "/api/notes/:noteId/attachments/:attachId",
+    params: { noteId: "7", attachId: "4" },
+  });
+
+  assert.equal(response.status, 500);
+  assert.deepEqual(response.body, { error: "delete failed" });
+  assert.deepEqual(fileStorage.calls.filter((call) => call[0] === "deleteAttachment"), []);
+  assert.deepEqual(calls.map((call) => call.sql), [
+    "BEGIN",
+    "SELECT * FROM note_attachments WHERE id = $1 AND note_id = $2",
+    "DELETE FROM note_attachments WHERE id = $1",
+    "ROLLBACK",
+    "RELEASE",
+  ]);
 });
 
 test("POST /api/notes/:id/attachments/file returns 400 before connecting when no file is uploaded", async () => {

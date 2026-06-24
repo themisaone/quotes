@@ -75,6 +75,24 @@ async function rollbackQuietly(client) {
   await client.query("ROLLBACK").catch(() => {});
 }
 
+function isFileReference(value) {
+  return typeof value === "string" && value.startsWith("file:");
+}
+
+function trackNewFileRef(refs, ref, originalValue = null) {
+  if (isFileReference(ref) && ref !== originalValue) refs.add(ref);
+}
+
+function deleteAttachmentRefs(refs, { fileStorage, logger, label }) {
+  for (const ref of refs) {
+    try {
+      fileStorage.deleteAttachment(ref);
+    } catch (error) {
+      logger.error(`${label} attachment cleanup failed:`, error);
+    }
+  }
+}
+
 function registerAttachmentRoutes(app, {
   pool,
   fileStorage,
@@ -144,6 +162,9 @@ function registerAttachmentRoutes(app, {
   // POST /api/notes/:id/attachments - add an attachment to a note
   app.post("/api/notes/:id/attachments", async (req, res) => {
     const client = await pool.connect();
+    const newAttachmentRefs = new Set();
+    let committed = false;
+
     try {
       await client.query("BEGIN");
       const { id } = req.params;
@@ -170,7 +191,9 @@ function registerAttachmentRoutes(app, {
 
       const storageId = `${id}_a${position}`;
       const renamedThumb = fileStorage.finalizeUploadedFile(thumbnail, storageId, "");
+      trackNewFileRef(newAttachmentRefs, renamedThumb, thumbnail);
       const renamedFull = fileStorage.finalizeUploadedFile(attachment_full, storageId, "");
+      trackNewFileRef(newAttachmentRefs, renamedFull, attachment_full);
       const processedThumb = fileStorage.processForStorage(
         renamedThumb,
         folder,
@@ -179,6 +202,7 @@ function registerAttachmentRoutes(app, {
         storageThresholdMB,
         false
       );
+      trackNewFileRef(newAttachmentRefs, processedThumb, renamedThumb);
       const processedFull = fileStorage.processForStorage(
         renamedFull,
         folder,
@@ -187,6 +211,7 @@ function registerAttachmentRoutes(app, {
         storageThresholdMB,
         true
       );
+      trackNewFileRef(newAttachmentRefs, processedFull, renamedFull);
 
       const ins = await client.query(
         `INSERT INTO note_attachments (note_id, position, thumbnail, attachment_full, attachment_type, storage_type, filename)
@@ -202,9 +227,17 @@ function registerAttachmentRoutes(app, {
       }
 
       await client.query("COMMIT");
+      committed = true;
       res.status(201).json(helpers.resolveAttachment(ins.rows[0]));
     } catch (err) {
-      await rollbackQuietly(client);
+      if (!committed) {
+        await rollbackQuietly(client);
+        deleteAttachmentRefs(newAttachmentRefs, {
+          fileStorage,
+          logger,
+          label: "attachment-create rollback",
+        });
+      }
       res.status(500).json({ error: err.message });
     } finally {
       client.release();
@@ -214,6 +247,9 @@ function registerAttachmentRoutes(app, {
   // DELETE /api/notes/:noteId/attachments/:attachId - remove one attachment
   app.delete("/api/notes/:noteId/attachments/:attachId", async (req, res) => {
     const client = await pool.connect();
+    const pendingAttachmentDeletes = new Set();
+    let committed = false;
+
     try {
       await client.query("BEGIN");
       const { noteId, attachId } = req.params;
@@ -228,8 +264,8 @@ function registerAttachmentRoutes(app, {
       }
 
       const att = attRow.rows[0];
-      if (att.thumbnail) fileStorage.deleteAttachment(att.thumbnail);
-      if (att.attachment_full) fileStorage.deleteAttachment(att.attachment_full);
+      if (att.thumbnail) pendingAttachmentDeletes.add(att.thumbnail);
+      if (att.attachment_full) pendingAttachmentDeletes.add(att.attachment_full);
 
       await client.query(`DELETE FROM note_attachments WHERE id = $1`, [attachId]);
 
@@ -259,9 +295,15 @@ function registerAttachmentRoutes(app, {
       }
 
       await client.query("COMMIT");
+      committed = true;
+      deleteAttachmentRefs(pendingAttachmentDeletes, {
+        fileStorage,
+        logger,
+        label: "attachment-delete post-commit",
+      });
       res.json({ ok: true });
     } catch (err) {
-      await rollbackQuietly(client);
+      if (!committed) await rollbackQuietly(client);
       res.status(500).json({ error: err.message });
     } finally {
       client.release();

@@ -3,11 +3,50 @@ const path = require("path");
 
 const FOLDER_RENAMES = { quotes: "quote", notes: "note", puzzles: "puzzle" };
 
+function isFileReference(value) {
+  return typeof value === "string" && value.startsWith("file:");
+}
+
+function trackCreatedFileRef(filesystemJournal, ref, originalValue = null) {
+  if (isFileReference(ref) && ref !== originalValue) {
+    filesystemJournal.push({ type: "created-ref", ref });
+  }
+}
+
+function trackRename(filesystemJournal, from, to) {
+  filesystemJournal.push({ type: "rename", from, to });
+}
+
+function rollbackFilesystemJournal(filesystemJournal, {
+  fileStorage,
+  fsImpl = fs,
+  logger = console,
+}) {
+  for (const entry of [...filesystemJournal].reverse()) {
+    try {
+      if (entry.type === "created-ref") {
+        if (typeof fileStorage.deleteAttachment === "function") {
+          fileStorage.deleteAttachment(entry.ref);
+        }
+      } else if (
+        entry.type === "rename" &&
+        fsImpl.existsSync(entry.to) &&
+        !fsImpl.existsSync(entry.from)
+      ) {
+        fsImpl.renameSync(entry.to, entry.from);
+      }
+    } catch (error) {
+      logger.error("Migration filesystem rollback failed:", error);
+    }
+  }
+}
+
 async function consolidateLegacyAttachmentFolders({
   client,
   fileStorage,
   fsImpl = fs,
   pathImpl = path,
+  filesystemJournal = [],
 }) {
   let consolidated = 0;
 
@@ -38,6 +77,7 @@ async function consolidateLegacyAttachmentFolders({
       const newFileFull = pathImpl.join(fileStorage.getAttachmentsDir(), newRelPath);
       if (fsImpl.existsSync(oldFileFull) && !fsImpl.existsSync(newFileFull)) {
         fsImpl.renameSync(oldFileFull, newFileFull);
+        trackRename(filesystemJournal, oldFileFull, newFileFull);
       }
       const table = naRefs.rows.includes(row) ? "note_attachments" : "notes";
       await client.query(`UPDATE ${table} SET attachment_full = $1 WHERE id = $2`, [newRef, row.id]);
@@ -48,7 +88,7 @@ async function consolidateLegacyAttachmentFolders({
   return consolidated;
 }
 
-async function migrateNoteAttachmentRows({ client, fileStorage }) {
+async function migrateNoteAttachmentRows({ client, fileStorage, filesystemJournal = [] }) {
   const naRows = await client.query(`
       SELECT na.id, na.note_id, na.position, na.attachment_full, na.attachment_type,
              n.note_type
@@ -73,6 +113,7 @@ async function migrateNoteAttachmentRows({ client, fileStorage }) {
     const folder = row.note_type || "note";
     const fileId = row.position === 0 ? `${row.note_id}` : `${row.note_id}_a${row.position}`;
     const newRef = fileStorage.processForStorage(raw, folder, fileId, "", 0, true);
+    trackCreatedFileRef(filesystemJournal, newRef, raw);
     if (!newRef || !fileStorage.isFilePath(newRef)) {
       skipped++;
       continue;
@@ -88,7 +129,7 @@ async function migrateNoteAttachmentRows({ client, fileStorage }) {
   return { migrated, skipped };
 }
 
-async function migrateFlatNoteRows({ client, fileStorage }) {
+async function migrateFlatNoteRows({ client, fileStorage, filesystemJournal = [] }) {
   const flatRows = await client.query(`
       SELECT n.id, n.note_type, n.attachment_full
       FROM notes n
@@ -113,6 +154,7 @@ async function migrateFlatNoteRows({ client, fileStorage }) {
 
     const folder = row.note_type || "note";
     const newRef = fileStorage.processForStorage(raw, folder, `${row.id}`, "", 0, true);
+    trackCreatedFileRef(filesystemJournal, newRef, raw);
     if (!newRef || !fileStorage.isFilePath(newRef)) {
       skipped++;
       continue;
@@ -133,6 +175,7 @@ async function fixTmpAttachmentRefs({
   fileStorage,
   fsImpl = fs,
   pathImpl = path,
+  filesystemJournal = [],
 }) {
   const tmpRefRows = await client.query(`
       SELECT 'na' AS tbl, na.id AS row_id, na.note_id, na.position,
@@ -164,8 +207,10 @@ async function fixTmpAttachmentRefs({
 
     let newRef = null;
     if (fsImpl.existsSync(oldFull)) {
-      if (fsImpl.existsSync(newFull)) fsImpl.unlinkSync(newFull);
-      fsImpl.renameSync(oldFull, newFull);
+      if (!fsImpl.existsSync(newFull)) {
+        fsImpl.renameSync(oldFull, newFull);
+        trackRename(filesystemJournal, oldFull, newFull);
+      }
       newRef = fileStorage.createFileReference(newRelPath, mimeType);
       fixed++;
     } else if (
@@ -223,21 +268,32 @@ async function runAttachmentDiskMigration({
   fileStorage,
   fsImpl = fs,
   pathImpl = path,
+  filesystemJournal = [],
 }) {
   const consolidated = await consolidateLegacyAttachmentFolders({
     client,
     fileStorage,
     fsImpl,
     pathImpl,
+    filesystemJournal,
   });
 
-  const noteAttachmentResult = await migrateNoteAttachmentRows({ client, fileStorage });
-  const flatResult = await migrateFlatNoteRows({ client, fileStorage });
+  const noteAttachmentResult = await migrateNoteAttachmentRows({
+    client,
+    fileStorage,
+    filesystemJournal,
+  });
+  const flatResult = await migrateFlatNoteRows({
+    client,
+    fileStorage,
+    filesystemJournal,
+  });
   const tmpResult = await fixTmpAttachmentRefs({
     client,
     fileStorage,
     fsImpl,
     pathImpl,
+    filesystemJournal,
   });
   await syncFlatAndPrimaryAttachmentRefs(client);
 
@@ -263,6 +319,7 @@ function registerAttachmentMigrationRoutes(app, {
 
   app.post("/api/migrate/attachments-to-disk", async (req, res) => {
     const client = await pool.connect();
+    const filesystemJournal = [];
 
     try {
       await client.query("BEGIN");
@@ -271,11 +328,21 @@ function registerAttachmentMigrationRoutes(app, {
         fileStorage,
         fsImpl,
         pathImpl,
+        filesystemJournal,
       });
       await client.query("COMMIT");
       res.json({ ok: true, ...stats });
     } catch (err) {
-      await client.query("ROLLBACK");
+      try {
+        await client.query("ROLLBACK");
+      } catch (rollbackError) {
+        logger.error("Migration DB rollback failed:", rollbackError);
+      }
+      rollbackFilesystemJournal(filesystemJournal, {
+        fileStorage,
+        fsImpl,
+        logger,
+      });
       logger.error("Migration error:", err);
       res.status(500).json({ error: err.message });
     } finally {
@@ -291,6 +358,7 @@ module.exports = {
   migrateFlatNoteRows,
   migrateNoteAttachmentRows,
   registerAttachmentMigrationRoutes,
+  rollbackFilesystemJournal,
   runAttachmentDiskMigration,
   syncFlatAndPrimaryAttachmentRefs,
 };

@@ -95,6 +95,9 @@ function makeFileStorage(root, calls = []) {
       if (String(value).includes("unstorable")) return null;
       return `file:${folder}/${id}.bin:application/octet-stream`;
     },
+    deleteAttachment(value) {
+      calls.push(["deleteAttachment", value]);
+    },
   };
 }
 
@@ -286,6 +289,90 @@ test("fixTmpAttachmentRefs repairs, reuses, and clears stale tmp references", as
     call.params[0] === null &&
     call.params[1] === 3
   )));
+});
+
+test("POST /api/migrate/attachments-to-disk moves legacy files back when the DB update fails", async (t) => {
+  const root = withTempDir(t);
+  fs.mkdirSync(path.join(root, "quotes"), { recursive: true });
+  fs.writeFileSync(path.join(root, "quotes", "5.pdf"), "pdf");
+  const client = makeClient((sql, params) => {
+    if (sql === "BEGIN" || sql === "ROLLBACK") return { rows: [], rowCount: 0 };
+    if (/SELECT id, attachment_full FROM note_attachments/.test(sql) && params[0] === "file:quotes/%") {
+      return { rows: [{ id: 10, attachment_full: "file:quotes/5.pdf:application/pdf" }] };
+    }
+    if (/SELECT id, attachment_full FROM notes/.test(sql) && params[0] === "file:quotes/%") {
+      return { rows: [] };
+    }
+    if (/UPDATE note_attachments SET attachment_full/.test(sql)) {
+      throw new Error("update failed");
+    }
+    return { rows: [], rowCount: 0 };
+  });
+  const routes = makeRouteCollector({
+    pool: {
+      async connect() {
+        return client;
+      },
+    },
+    fileStorage: makeFileStorage(root),
+  });
+
+  const res = await invoke(routes);
+
+  assert.equal(res.statusCode, 500);
+  assert.deepEqual(res.body, { error: "update failed" });
+  assert.equal(fs.existsSync(path.join(root, "quotes", "5.pdf")), true);
+  assert.equal(fs.existsSync(path.join(root, "quote", "5.pdf")), false);
+  assert.ok(client.calls.some((call) => call.sql === "ROLLBACK"));
+  assert.equal(client.released, true);
+});
+
+test("POST /api/migrate/attachments-to-disk deletes newly written files when row migration fails", async () => {
+  const storageCalls = [];
+  const client = makeClient((sql) => {
+    if (sql === "BEGIN" || sql === "ROLLBACK") return { rows: [], rowCount: 0 };
+    if (/SELECT na\.id, na\.note_id/.test(sql)) {
+      return {
+        rows: [{
+          id: 10,
+          note_id: 7,
+          position: 0,
+          attachment_full: "data:image/png;base64,aaa",
+          note_type: "quote",
+        }],
+      };
+    }
+    if (/UPDATE note_attachments SET attachment_full/.test(sql)) {
+      throw new Error("update failed");
+    }
+    return { rows: [], rowCount: 0 };
+  });
+  const routes = makeRouteCollector({
+    pool: {
+      async connect() {
+        return client;
+      },
+    },
+    fileStorage: makeFileStorage("/tmp/attachments", storageCalls),
+    fsImpl: {
+      existsSync() {
+        return false;
+      },
+      mkdirSync() {},
+      renameSync() {},
+      unlinkSync() {},
+    },
+  });
+
+  const res = await invoke(routes);
+
+  assert.equal(res.statusCode, 500);
+  assert.deepEqual(res.body, { error: "update failed" });
+  assert.deepEqual(storageCalls.filter((call) => call[0] === "deleteAttachment"), [
+    ["deleteAttachment", "file:quote/7.bin:application/octet-stream"],
+  ]);
+  assert.ok(client.calls.some((call) => call.sql === "ROLLBACK"));
+  assert.equal(client.released, true);
 });
 
 test("POST /api/migrate/attachments-to-disk rolls back on migration errors", async () => {

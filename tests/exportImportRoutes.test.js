@@ -117,6 +117,9 @@ function makeFileStorage(attachmentsDir, calls = []) {
       calls.push(["processForStorage", value, type, id, suffix, threshold, forceExternal]);
       return value ? `stored:${type}:${id}:${suffix}:${value}` : null;
     },
+    deleteAttachment(value) {
+      calls.push(["deleteAttachment", value]);
+    },
   };
 }
 
@@ -349,6 +352,181 @@ test("POST /api/import/json imports an empty backup successfully", async (t) => 
     "SELECT pg_get_serial_sequence('notes', 'id') AS seq",
     "SELECT setval($1::regclass, COALESCE((SELECT MAX(id) FROM notes), 1), true)",
     "COMMIT",
+  ]);
+  assert.equal(client.released, true);
+});
+
+test("POST /api/import/json removes files created for a rolled-back note savepoint", async (t) => {
+  const dir = withTempDir(t);
+  const storageCalls = [];
+  const fileStorage = makeFileStorage(dir, storageCalls);
+  fileStorage.processForStorage = function processForStorage(value, type, id, suffix, threshold, forceExternal) {
+    storageCalls.push(["processForStorage", value, type, id, suffix, threshold, forceExternal]);
+    if (!value) return null;
+    return `file:${type}/${id}${suffix || ""}${forceExternal ? "-full" : "-thumb"}.bin:application/octet-stream`;
+  };
+
+  const calls = [];
+  const client = {
+    released: false,
+    async query(sql, params = []) {
+      calls.push({ sql, params });
+      if (sql === "BEGIN" || sql === "COMMIT" || sql === "SAVEPOINT import_note" || sql === "ROLLBACK TO SAVEPOINT import_note") {
+        return { rows: [], rowCount: 0 };
+      }
+      if (/pg_get_serial_sequence/.test(sql)) {
+        return { rows: [{ seq: "public.notes_id_seq" }] };
+      }
+      if (/SELECT setval/.test(sql)) {
+        return { rows: [], rowCount: 1 };
+      }
+      if (/SELECT id FROM notes\s+WHERE id = \$1\s+AND note_text/.test(sql)) {
+        return { rows: [] };
+      }
+      if (sql === "SELECT id FROM notes WHERE id = $1") {
+        return { rows: [] };
+      }
+      if (/INSERT INTO notes \(id, note_text/.test(sql)) {
+        return { rows: [], rowCount: 1 };
+      }
+      if (/INSERT INTO note_attachments/.test(sql)) {
+        throw new Error("attachment insert failed");
+      }
+      return { rows: [], rowCount: 0 };
+    },
+    release() {
+      this.released = true;
+    },
+  };
+  const routes = makeRouteCollector({
+    pool: {
+      async connect() {
+        return client;
+      },
+    },
+    fileStorage,
+    getSettingsFile: () => path.join(dir, "settings.json"),
+  });
+
+  const res = await invoke(routes, {
+    method: "POST",
+    routePath: "/api/import/json",
+    body: {
+      data: {
+        authors: [],
+        sources: [],
+        tags: [],
+        quotes: [{
+          id: 7,
+          note_text: "bad attachment",
+          note_type: "quote",
+          thumbnail: "data:image/png;base64,thumb",
+          attachment_full: "data:application/pdf;base64,full",
+          attachment_type: "pdf",
+        }],
+      },
+      options: {},
+    },
+  });
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.success, true);
+  assert.equal(res.body.stats.quotes.created, 0);
+  assert.match(res.body.stats.errors[0], /attachment insert failed/);
+  assert.deepEqual(storageCalls.filter((call) => call[0] === "deleteAttachment"), [
+    ["deleteAttachment", "file:quote/7-thumb.bin:application/octet-stream"],
+    ["deleteAttachment", "file:quote/7-full.bin:application/octet-stream"],
+  ]);
+  assert.ok(calls.some((call) => call.sql === "ROLLBACK TO SAVEPOINT import_note"));
+  assert.ok(calls.some((call) => call.sql === "COMMIT"));
+  assert.equal(client.released, true);
+});
+
+test("POST /api/import/json removes imported files when the whole transaction rolls back", async (t) => {
+  const dir = withTempDir(t);
+  const storageCalls = [];
+  const fileStorage = makeFileStorage(dir, storageCalls);
+  fileStorage.processForStorage = function processForStorage(value, type, id, suffix, threshold, forceExternal) {
+    storageCalls.push(["processForStorage", value, type, id, suffix, threshold, forceExternal]);
+    if (!value) return null;
+    return `file:${type}/${id}${suffix || ""}${forceExternal ? "-full" : "-thumb"}.bin:application/octet-stream`;
+  };
+
+  const calls = [];
+  const client = {
+    released: false,
+    async query(sql, params = []) {
+      calls.push({ sql, params });
+      if (sql === "BEGIN" || sql === "SAVEPOINT import_note" || sql === "RELEASE SAVEPOINT import_note" || sql === "ROLLBACK") {
+        return { rows: [], rowCount: 0 };
+      }
+      if (sql === "COMMIT") {
+        throw new Error("commit failed");
+      }
+      if (/pg_get_serial_sequence/.test(sql)) {
+        return { rows: [{ seq: "public.notes_id_seq" }] };
+      }
+      if (/SELECT setval/.test(sql)) {
+        return { rows: [], rowCount: 1 };
+      }
+      if (/SELECT id FROM notes\s+WHERE id = \$1\s+AND note_text/.test(sql)) {
+        return { rows: [] };
+      }
+      if (sql === "SELECT id FROM notes WHERE id = $1") {
+        return { rows: [] };
+      }
+      if (/INSERT INTO notes \(id, note_text/.test(sql)) {
+        return { rows: [], rowCount: 1 };
+      }
+      if (/INSERT INTO note_attachments/.test(sql)) {
+        return { rows: [], rowCount: 1 };
+      }
+      if (/UPDATE notes SET thumbnail/.test(sql)) {
+        return { rows: [], rowCount: 1 };
+      }
+      return { rows: [], rowCount: 0 };
+    },
+    release() {
+      this.released = true;
+    },
+  };
+  const routes = makeRouteCollector({
+    pool: {
+      async connect() {
+        return client;
+      },
+    },
+    fileStorage,
+    getSettingsFile: () => path.join(dir, "settings.json"),
+  });
+
+  const res = await invoke(routes, {
+    method: "POST",
+    routePath: "/api/import/json",
+    body: {
+      data: {
+        authors: [],
+        sources: [],
+        tags: [],
+        quotes: [{
+          id: 8,
+          note_text: "good until commit",
+          note_type: "quote",
+          thumbnail: "data:image/png;base64,thumb",
+          attachment_full: "data:application/pdf;base64,full",
+          attachment_type: "pdf",
+        }],
+      },
+      options: {},
+    },
+  });
+
+  assert.equal(res.statusCode, 500);
+  assert.deepEqual(res.body, { error: "Failed to import data", details: "commit failed" });
+  assert.ok(calls.some((call) => call.sql === "ROLLBACK"));
+  assert.deepEqual(storageCalls.filter((call) => call[0] === "deleteAttachment"), [
+    ["deleteAttachment", "file:quote/8-thumb.bin:application/octet-stream"],
+    ["deleteAttachment", "file:quote/8-full.bin:application/octet-stream"],
   ]);
   assert.equal(client.released, true);
 });
