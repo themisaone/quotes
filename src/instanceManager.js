@@ -11,6 +11,12 @@ const REGISTRY_FILE = path.join(ROOT, 'config/running-instances.json');
 const LOG_DIR = path.join(ROOT, 'config/logs');
 const SERVER_SCRIPT = path.join(__dirname, 'server.js');
 
+const DEFAULT_MODE_PORTS = {
+  ALL: 4000,
+  QUOTES: 4001,
+  NOTES: 4002,
+};
+
 const MODE_LABELS = {
   DEFAULT: 'Default (quote, note, historical)',
   ALL: 'All types',
@@ -28,7 +34,12 @@ function isManagerEnabled() {
 }
 
 function loadModePorts() {
-  return JSON.parse(fs.readFileSync(PORTS_FILE, 'utf8'));
+  try {
+    if (fs.existsSync(PORTS_FILE)) {
+      return JSON.parse(fs.readFileSync(PORTS_FILE, 'utf8'));
+    }
+  } catch (_) {}
+  return DEFAULT_MODE_PORTS;
 }
 
 function readRegistry() {

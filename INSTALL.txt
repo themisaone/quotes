@@ -1,37 +1,75 @@
-0) Check that you have Node.js instaled.
-   # Check the version 
-   node --version 
-   # needs v18+, update if needed
+Installation guide
+==================
 
-1) Fullfill the installation of depenendecies
+Recommended single-user install: SQLite
+---------------------------------------
+
+For a simple local installation, use the SQLite package flow:
+
+   INSTALL-SQLITE.txt
+
+That installer creates local runtime files, a local SQLite database, and a
+standard quote/note vault profile from:
+
+   inst/sqlite-standard/
+
+Git is not required for end users when you distribute a package created with:
+
+   npm run package-sqlite
+
+Developer / server install: Postgres
+------------------------------------
+
+Postgres remains useful for a server install or development environment where a
+real database service is preferred.
+
+1) Install dependencies
+
    npm install
 
-2) Check if postgres is already installed
-   sudo -u postgres psql
-   if you see the prompt proceed to 4
+2) Install and start Postgres
 
-3) Install postgress and start service 
    sudo apt update
    sudo apt install postgresql postgresql-contrib -y
-   # start service
    sudo systemctl start postgresql
    sudo systemctl enable postgresql
 
-4) Create user and database
+3) Create database and user
+
    sudo -u postgres psql
-   # in prompt
-   CREATE USER <notes_user> WITH PASSWORD '<notes_user's_password>';
-   CREATE DATABASE notes_db OWNER <notes_user>;
-   # exit 
+
+   CREATE USER notes_user WITH PASSWORD 'change_me_please';
+   CREATE DATABASE notes_db OWNER notes_user;
    \q
 
-5) Prepare .env file
+4) Create .env
+
    cp .env.example .env
-   edit .env with your DB_USER, DB_PASSWORD and DB_NAME
-   NOTE! Never commit .env to version control — it contains your database password.
 
-6) The installation is done - proceed with running the script config.sh  
-   (This is the one that will be created)
+   Then set:
 
+   DB_BACKEND=postgres
+   DB_HOST=localhost
+   DB_PORT=5432
+   DB_NAME=notes_db
+   DB_USER=notes_user
+   DB_PASSWORD=<your password>
+   PORT=4000
 
+5) Configure config/local.json
 
+   Use a vault path for attachments, settings, and palettes:
+
+   {
+     "vaultPath": "/home/you/Documents/NoteArchiveVault",
+     "activeMode": "ALL"
+   }
+
+6) Run migrations and start
+
+   npm run migrate
+   npm start
+
+Open:
+
+   http://localhost:4000

@@ -1,0 +1,138 @@
+SQLite single-user install
+==========================
+
+Use this path for a simple local install where one person runs one local
+Note Archive service on one computer.
+
+0) Install Node.js
+
+   node --version
+
+   Use a Node version that includes node:sqlite. Local SQLite development is
+   currently tested on Node 24.
+
+1) Unpack the app
+
+   tar -xzf note-archive-sqlite-YYYYMMDD-HHMM.tar.gz
+   cd note-archive-sqlite
+
+   On Windows PowerShell:
+
+   tar -xzf .\note-archive-sqlite-YYYYMMDD-HHMM.tar.gz
+   cd .\note-archive-sqlite
+
+2) Install dependencies
+
+   npm install
+
+3) Run the SQLite setup
+
+   npm run setup-sqlite -- --vault ~/Documents/NoteArchiveVault
+
+   On Windows PowerShell:
+
+   npm run setup-sqlite -- --vault "$env:USERPROFILE\Documents\NoteArchiveVault" --db "$env:USERPROFILE\Documents\NoteArchiveData"
+
+   This creates:
+
+   - .env with DB_BACKEND=sqlite
+   - config/local.json with SQLite enabled
+   - ~/Documents/NoteArchiveVault for attachments, palettes, and settings
+   - ~/NoteArchiveData/archive.sqlite for the SQLite database
+   - standard quote/note settings from inst/sqlite-standard/
+   - standard ALL, QUOTES, and NOTES modes/ports
+   - the SQLite schema via migrations
+
+   To choose where archive.sqlite is stored:
+
+   npm run setup-sqlite -- --vault ~/Documents/NoteArchiveVault --db ~/NoteArchiveData
+
+   To use an explicit database filename:
+
+   npm run setup-sqlite -- --vault ~/Documents/NoteArchiveVault --db ~/NoteArchiveData/aunt-notes.sqlite
+
+4) Start the app
+
+   npm start
+
+   On Windows PowerShell the same command is used:
+
+   npm start
+
+5) Open the browser
+
+   http://localhost:4000
+
+Notes
+-----
+
+Git is not required for this install. A release tarball can be created by the
+developer with:
+
+   npm run package-sqlite
+
+The normal tarball includes the standard SQLite install profile from
+inst/sqlite-standard/. That profile contains the matched set of files copied
+into the right runtime locations during setup:
+
+   inst/sqlite-standard/vault/config/settings.json
+   inst/sqlite-standard/vault/palettes/
+   inst/sqlite-standard/config/modes.json
+   inst/sqlite-standard/config/instance-ports.json
+
+The packaged package.json is also trimmed to the standard mode scripts:
+
+   npm run all
+   npm run quotes
+   npm run notes
+
+To include your current note-type settings and palettes in the tarball:
+
+   npm run package-sqlite -- --seed-vault /path/to/YourVault
+
+To also include attachment files:
+
+   npm run package-sqlite -- --seed-vault /path/to/YourVault --include-attachments
+
+The tarball is written to dist/ and intentionally excludes .env, local config,
+SQLite databases, node_modules, and Git metadata. Attachments are included only
+when --include-attachments is used.
+
+When a tarball contains seed-vault/, setup automatically copies:
+
+   seed-vault/config/settings.json -> <aunt-vault>/config/settings.json
+   seed-vault/palettes/            -> <aunt-vault>/palettes/
+   seed-vault/attachments/         -> <aunt-vault>/attachments/  (only if bundled)
+
+Keep the live SQLite database out of Dropbox, OneDrive, Google Drive, and other
+sync folders. The vault folder may be synced if wanted, but the SQLite DB file
+should stay on normal local storage.
+
+Windows notes
+-------------
+
+Install Node.js 24 first. After unpacking the tarball, run all commands from
+PowerShell inside the unpacked note-archive-sqlite directory. The app runs as a
+local web server and opens in the browser at http://localhost:4000.
+
+Do not put the SQLite database file under OneDrive or Dropbox. A good Windows
+layout is:
+
+   Vault: C:\Users\<name>\Documents\NoteArchiveVault
+   DB:    C:\Users\<name>\Documents\NoteArchiveData\archive.sqlite
+
+The setup command above creates those folders when they do not exist.
+
+If setup has already been run and you want to overwrite generated config files,
+add --force:
+
+   npm run setup-sqlite -- --vault ~/Documents/NoteArchiveVault --force
+
+If setup says dependencies are missing, or migration fails with
+"Cannot find module 'dotenv'", run:
+
+   npm install
+
+Then, if .env and config/local.json were already written, continue with:
+
+   npm run migrate

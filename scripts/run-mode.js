@@ -9,6 +9,11 @@ const path = require('path');
 const args = process.argv.slice(2);
 const mode = args[0];
 const root = path.join(__dirname, '..');
+const DEFAULT_MODE_PORTS = {
+  ALL: 4000,
+  QUOTES: 4001,
+  NOTES: 4002,
+};
 
 if (!mode) {
   console.error('Usage: node scripts/run-mode.js MODE');
@@ -16,10 +21,17 @@ if (!mode) {
 }
 
 const portsFile = path.join(root, 'config/instance-ports.json');
-const modePorts = JSON.parse(fs.readFileSync(portsFile, 'utf8'));
+let modePorts = DEFAULT_MODE_PORTS;
+try {
+  if (fs.existsSync(portsFile)) {
+    modePorts = JSON.parse(fs.readFileSync(portsFile, 'utf8'));
+  }
+} catch (error) {
+  console.warn(`Could not read ${portsFile}; using default ports. ${error.message}`);
+}
 const port = modePorts[mode.toUpperCase()];
 if (!port) {
-  console.error(`Unknown mode "${mode}". Check config/instance-ports.json`);
+  console.error(`Unknown mode "${mode}". Check config/instance-ports.json or DEFAULT_MODE_PORTS in scripts/run-mode.js`);
   process.exit(1);
 }
 
