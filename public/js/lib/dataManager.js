@@ -563,6 +563,19 @@ export async function vaultHealthCheckRequest() {
   return data;
 }
 
+/**
+ * Lightweight runtime info for always-visible UI badges.
+ */
+export async function runtimeInfoRequest() {
+  const url = `${API_URL}/maintenance/runtime-info`;
+  const response = await fetch(url);
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error || `Runtime info check failed (${response.status})`);
+  }
+  return data;
+}
+
 // ============= IMPORT FUNCTION =============
 
 const IMPORT_FILE_BTN_LABEL = 'Select Import File';

@@ -8,6 +8,7 @@
     "start": "PORT=4000 node src/server.js",
     "dev": "PORT=4000 nodemon src/server.js",
     "migrate": "node migrations/run-migrations.js",
+    "use-backend": "node scripts/use-backend-config.js",
     "split-backup": "node scripts/split-json-backup.js",
     "import-backup-parts": "node scripts/import-json-backup-parts.js",
     "default": "node scripts/run-mode.js DEFAULT",

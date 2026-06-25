@@ -20,7 +20,19 @@ function resolveSqlitePath({
   localConfig = readLocalConfig(),
   cwd = process.cwd(),
 } = {}) {
+  const sqlitePath = localConfig?.sqlite?.path && String(localConfig.sqlite.path).trim();
   const vaultPath = localConfig?.vaultPath && String(localConfig.vaultPath).trim();
+
+  if (sqlitePath) {
+    if (localConfig?.sqlite?.enabled !== true) {
+      throw new Error(
+        "DB_BACKEND=sqlite refuses to use config/local.json sqlite.path unless localConfig.sqlite.enabled is true"
+      );
+    }
+    return path.isAbsolute(sqlitePath)
+      ? sqlitePath
+      : path.resolve(cwd, sqlitePath);
+  }
 
   if (vaultPath) {
     if (localConfig?.sqlite?.enabled !== true) {

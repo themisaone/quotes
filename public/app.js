@@ -52,7 +52,8 @@ import {
   pruneUnusedEntitiesRequest,
   rehomeAttachmentsRequest,
   vaultHealthCheckRequest,
-} from './js/lib/dataManager.js?v=20260624health1';
+  runtimeInfoRequest,
+} from './js/lib/dataManager.js?v=20260625runtime1';
 
 import {
   loadSettings,
@@ -238,6 +239,48 @@ window.showFetchError = function showFetchError(message) {
   banner.style.display = 'flex';
   clearTimeout(_fetchErrorTimer);
   _fetchErrorTimer = setTimeout(() => { banner.style.display = 'none'; }, 12000);
+}
+
+const BASE_DOCUMENT_TITLE = document.title || 'Note Archive';
+
+function backendDisplayName(value) {
+  const backend = String(value || '').trim().toLowerCase();
+  if (backend === 'sqlite') return 'SQLite';
+  if (backend === 'postgres') return 'Postgres';
+  return 'Unknown';
+}
+
+function renderBackendIndicator(info) {
+  const indicator = document.getElementById('backendIndicator');
+  const backend = String(info?.backend || '').trim().toLowerCase();
+  const label = backendDisplayName(backend);
+  const titleParts = [`Database backend: ${label}`];
+
+  if (backend === 'sqlite' && info?.sqliteFile) {
+    titleParts.push(`SQLite file: ${info.sqliteFile}`);
+  }
+  if (info?.vaultPath) {
+    titleParts.push(`Vault: ${info.vaultPath}`);
+  }
+
+  if (indicator) {
+    indicator.textContent = `DB: ${label}`;
+    indicator.dataset.backend = backend || 'unknown';
+    indicator.title = titleParts.join('\n');
+  }
+
+  if (backend === 'sqlite' || backend === 'postgres') {
+    document.title = `${BASE_DOCUMENT_TITLE} [${label}]`;
+  }
+}
+
+function loadBackendIndicator() {
+  runtimeInfoRequest()
+    .then(renderBackendIndicator)
+    .catch((error) => {
+      console.warn('runtime info:', error);
+      renderBackendIndicator({ backend: 'unknown' });
+    });
 }
 
 
@@ -1051,6 +1094,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Generate note type menu items dynamically
   generateNoteTypeMenu();
+  loadBackendIndicator();
 
   // Initialize quote types in dropdowns
   populateTypeDropdowns();

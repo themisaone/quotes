@@ -148,6 +148,43 @@ test("GET /api/maintenance/health reports settings, mode, and DB type mismatches
   assert.equal(calls.length, 1);
 });
 
+test("GET /api/maintenance/runtime-info reports backend without health queries", async () => {
+  const calls = [];
+  const pool = {
+    dialect: "sqlite",
+    filename: "/local/archive.sqlite",
+    async query(sql) {
+      calls.push(sql);
+      return { rows: [], rowCount: 0 };
+    },
+  };
+  const routes = makeRouteCollector(pool, {
+    localConfig: {
+      vaultPath: "/vault",
+      activeMode: "ALL",
+      sqlite: {
+        enabled: true,
+        path: "/local/archive.sqlite",
+      },
+    },
+  });
+
+  const response = await invoke(routes, {
+    method: "GET",
+    routePath: "/api/maintenance/runtime-info",
+  });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(response.body, {
+    ok: true,
+    backend: "sqlite",
+    sqliteFile: "/local/archive.sqlite",
+    vaultPath: "/vault",
+    activeMode: "ALL",
+  });
+  assert.deepEqual(calls, []);
+});
+
 test("POST /api/maintenance/prune-unused-entities deletes unused entities in one transaction", async () => {
   const calls = [];
   const client = {

@@ -234,6 +234,17 @@ function registerMaintenanceRoutes(app, {
   if (!fileStorage) throw new Error("fileStorage is required");
   if (!fsImpl) throw new Error("fsImpl is required");
 
+  app.get("/api/maintenance/runtime-info", (req, res) => {
+    const localConfig = readLocalConfig?.() || {};
+    res.json({
+      ok: true,
+      backend: pool.dialect || "postgres",
+      sqliteFile: pool.filename || null,
+      vaultPath: localConfig.vaultPath || null,
+      activeMode: localConfig.activeMode || null,
+    });
+  });
+
   app.get("/api/maintenance/health", async (req, res) => {
     try {
       const report = await buildVaultHealthReport({

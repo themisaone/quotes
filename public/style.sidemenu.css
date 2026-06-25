@@ -132,13 +132,43 @@ html { scrollbar-width: thin; scrollbar-color: rgba(0, 0, 0, 0.2) transparent; }
   gap: 0.5rem;
   padding: 0 0.1rem;
 }
+.side-menu-brand {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.15rem;
+}
 .side-menu-header .side-menu-title {
   margin: 0;
-  flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.backend-indicator {
+  align-self: flex-start;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 0.05rem 0.4rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.66rem;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: 0;
+}
+.backend-indicator[data-backend="sqlite"] {
+  border-color: rgba(125, 211, 252, 0.32);
+  color: rgba(224, 242, 254, 0.9);
+}
+.backend-indicator[data-backend="postgres"] {
+  border-color: rgba(167, 243, 208, 0.3);
+  color: rgba(220, 252, 231, 0.9);
 }
 
 /* Sidebar collapse toggle — plain triangle, no circle / no border. */
@@ -177,6 +207,7 @@ html { scrollbar-width: thin; scrollbar-color: rgba(0, 0, 0, 0.2) transparent; }
   justify-content: center;
   margin-bottom: 0.4rem;
 }
+.side-menu.menu-collapsed .side-menu-brand,
 .side-menu.menu-collapsed .side-menu-title,
 .side-menu.menu-collapsed .side-menu-mode-row,
 .side-menu.menu-collapsed .menu-section-title,

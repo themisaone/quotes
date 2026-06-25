@@ -1,7 +1,8 @@
 {
-  "vaultPath": "/home/mirjok/Dev/OWNAI/Misa/SQLITEVault",
+  "vaultPath": "/home/mirjok/Dropbox/MainNoteArchiveVault",
   "activeMode": "ALL",
   "sqlite": {
-    "enabled": true
+    "enabled": true,
+    "path": "/home/mirjok/Dev/OWNAI/Misa/SQLITEDB/archive.sqlite"
   }
 }

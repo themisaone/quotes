@@ -53,6 +53,30 @@ test("DB backend helpers default to Postgres and resolve SQLite paths", () => {
     "/tmp/misa-vault/archive.sqlite",
   );
   assert.equal(
+    resolveSqlitePath({
+      localConfig: {
+        vaultPath: "/tmp/misa-vault",
+        sqlite: {
+          enabled: true,
+          path: "/tmp/misa-db/archive.sqlite",
+        },
+      },
+    }),
+    "/tmp/misa-db/archive.sqlite",
+  );
+  assert.equal(
+    resolveSqlitePath({
+      localConfig: {
+        sqlite: {
+          enabled: true,
+          path: "local-data/archive.sqlite",
+        },
+      },
+      cwd: "/tmp/misa-app",
+    }),
+    "/tmp/misa-app/local-data/archive.sqlite",
+  );
+  assert.equal(
     resolveSqlitePath({ localConfig: {}, cwd: "/tmp/misa-app" }),
     "/tmp/misa-app/data/archive.sqlite",
   );
@@ -61,6 +85,10 @@ test("DB backend helpers default to Postgres and resolve SQLite paths", () => {
 test("SQLite vault path requires explicit local config opt-in", () => {
   assert.throws(
     () => resolveSqlitePath({ localConfig: { vaultPath: "/tmp/real-vault" } }),
+    /sqlite\.enabled is true/,
+  );
+  assert.throws(
+    () => resolveSqlitePath({ localConfig: { sqlite: { path: "/tmp/archive.sqlite" } } }),
     /sqlite\.enabled is true/,
   );
 });

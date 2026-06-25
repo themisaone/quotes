@@ -1,5 +1,7 @@
 node_modules/
 .env
+.env.sqlite
+.env.postgres
 docker-compose.override.yml
 *.log
 .DS_Store
@@ -7,5 +9,7 @@ docker-compose.override.yml
 # External attachments (large files stored outside DB)
 attachments/
 
+config/local.sqlite.json
+config/local.postgres.json
 config/running-instances.json
 config/logs/
