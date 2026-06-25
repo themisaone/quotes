@@ -513,13 +513,14 @@ export async function exportToJson(config) {
 }
 
 /**
- * Remove authors, sources, and tags that have no linked notes (server-side bulk delete).
+ * Inspect or remove authors, sources, and tags that have no linked notes.
  */
-export async function pruneUnusedEntitiesRequest() {
+export async function pruneUnusedEntitiesRequest({ dryRun = true } = {}) {
   const url = `${API_URL}/maintenance/prune-unused-entities`;
   const response = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ dryRun }),
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {

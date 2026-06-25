@@ -162,16 +162,51 @@ test("SQLite maintenance prune removes unused authors, sources, and tags", async
     [note.rows[0].id, usedTag.rows[0].id],
   );
 
+  const dryRunResponse = await invoke(routes, {
+    routePath: "/api/maintenance/prune-unused-entities",
+  });
+
+  assert.equal(dryRunResponse.status, 200);
+  assert.deepEqual(dryRunResponse.body, {
+    ok: true,
+    dryRun: true,
+    authors: [{ id: unusedAuthor.rows[0].id, name: "unused author" }],
+    sources: [{ id: unusedSource.rows[0].id, name: "unused source" }],
+    tags: [{ id: unusedTag.rows[0].id, name: "unused tag", type: "quote" }],
+    total: 3,
+    authorsRemoved: 0,
+    sourcesRemoved: 0,
+    tagsRemoved: 0,
+    authorsWouldRemove: 1,
+    sourcesWouldRemove: 1,
+    tagsWouldRemove: 1,
+  });
+
+  const authorsAfterDryRun = await pool.query("SELECT id FROM authors ORDER BY id");
+  assert.deepEqual(
+    authorsAfterDryRun.rows.map((row) => row.id),
+    [usedAuthor.rows[0].id, unusedAuthor.rows[0].id],
+  );
+
   const response = await invoke(routes, {
     routePath: "/api/maintenance/prune-unused-entities",
+    body: { dryRun: false },
   });
 
   assert.equal(response.status, 200);
   assert.deepEqual(response.body, {
     ok: true,
+    dryRun: false,
+    authors: [{ id: unusedAuthor.rows[0].id, name: "unused author" }],
+    sources: [{ id: unusedSource.rows[0].id, name: "unused source" }],
+    tags: [{ id: unusedTag.rows[0].id, name: "unused tag", type: "quote" }],
+    total: 3,
     authorsRemoved: 1,
     sourcesRemoved: 1,
     tagsRemoved: 1,
+    authorsWouldRemove: 0,
+    sourcesWouldRemove: 0,
+    tagsWouldRemove: 0,
   });
 
   const remainingAuthors = await pool.query("SELECT id FROM authors ORDER BY id");

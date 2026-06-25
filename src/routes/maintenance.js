@@ -173,43 +173,59 @@ async function buildVaultHealthReport({
   };
 }
 
-function getPruneUnusedEntityQueries(pool) {
-  if (isSqlitePool(pool)) {
-    return {
-      authors: `
-      DELETE FROM authors
-      WHERE NOT EXISTS (SELECT 1 FROM notes n WHERE n.author_id = authors.id)
-      RETURNING id
-    `,
-      sources: `
-      DELETE FROM sources
-      WHERE NOT EXISTS (SELECT 1 FROM notes n WHERE n.source_id = sources.id)
-      RETURNING id
-    `,
-      tags: `
-      DELETE FROM tags
-      WHERE NOT EXISTS (SELECT 1 FROM note_tags nt WHERE nt.tag_id = tags.id)
-      RETURNING id
-    `,
-    };
-  }
-
+function getPruneUnusedEntityQueries() {
   return {
-    authors: `
-      DELETE FROM authors a
-      WHERE NOT EXISTS (SELECT 1 FROM notes n WHERE n.author_id = a.id)
-      RETURNING id
-    `,
-    sources: `
-      DELETE FROM sources s
-      WHERE NOT EXISTS (SELECT 1 FROM notes n WHERE n.source_id = s.id)
-      RETURNING id
-    `,
-    tags: `
-      DELETE FROM tags t
-      WHERE NOT EXISTS (SELECT 1 FROM note_tags nt WHERE nt.tag_id = t.id)
-      RETURNING id
-    `,
+    authors: {
+      select: `
+        SELECT a.id, a.name
+        FROM authors a
+        WHERE NOT EXISTS (SELECT 1 FROM notes n WHERE n.author_id = a.id)
+        ORDER BY lower(a.name), a.id
+      `,
+      delete: `
+        DELETE FROM authors
+        WHERE id IN (
+          SELECT a.id
+          FROM authors a
+          WHERE NOT EXISTS (SELECT 1 FROM notes n WHERE n.author_id = a.id)
+        )
+        RETURNING id, name
+      `,
+    },
+    sources: {
+      select: `
+        SELECT s.id, s.name
+        FROM sources s
+        WHERE NOT EXISTS (SELECT 1 FROM notes n WHERE n.source_id = s.id)
+        ORDER BY lower(s.name), s.id
+      `,
+      delete: `
+        DELETE FROM sources
+        WHERE id IN (
+          SELECT s.id
+          FROM sources s
+          WHERE NOT EXISTS (SELECT 1 FROM notes n WHERE n.source_id = s.id)
+        )
+        RETURNING id, name
+      `,
+    },
+    tags: {
+      select: `
+        SELECT t.id, t.name, t.type
+        FROM tags t
+        WHERE NOT EXISTS (SELECT 1 FROM note_tags nt WHERE nt.tag_id = t.id)
+        ORDER BY lower(t.name), t.type, t.id
+      `,
+      delete: `
+        DELETE FROM tags
+        WHERE id IN (
+          SELECT t.id
+          FROM tags t
+          WHERE NOT EXISTS (SELECT 1 FROM note_tags nt WHERE nt.tag_id = t.id)
+        )
+        RETURNING id, name, type
+      `,
+    },
   };
 }
 
@@ -217,6 +233,42 @@ function getAttachmentRehomeSelectForUpdate(pool) {
   return isSqlitePool(pool)
     ? ATTACHMENT_REHOME_SELECT_SQL
     : `${ATTACHMENT_REHOME_SELECT_SQL} FOR UPDATE OF na`;
+}
+
+function normalizePruneEntityRows(rows, { includeType = false } = {}) {
+  return (rows || [])
+    .map((row) => ({
+      id: row.id,
+      name: row.name || "",
+      ...(includeType ? { type: row.type || null } : {}),
+    }))
+    .sort((left, right) => {
+      const byName = String(left.name).localeCompare(String(right.name), undefined, { sensitivity: "base" });
+      if (byName !== 0) return byName;
+      if (includeType) {
+        const byType = String(left.type || "").localeCompare(String(right.type || ""), undefined, { sensitivity: "base" });
+        if (byType !== 0) return byType;
+      }
+      return Number(left.id || 0) - Number(right.id || 0);
+    });
+}
+
+function buildPruneUnusedEntitiesResponse({ dryRun, authors, sources, tags }) {
+  const total = authors.length + sources.length + tags.length;
+  return {
+    ok: true,
+    dryRun,
+    authors,
+    sources,
+    tags,
+    total,
+    authorsRemoved: dryRun ? 0 : authors.length,
+    sourcesRemoved: dryRun ? 0 : sources.length,
+    tagsRemoved: dryRun ? 0 : tags.length,
+    authorsWouldRemove: dryRun ? authors.length : 0,
+    sourcesWouldRemove: dryRun ? sources.length : 0,
+    tagsWouldRemove: dryRun ? tags.length : 0,
+  };
 }
 
 function registerMaintenanceRoutes(app, {
@@ -264,28 +316,48 @@ function registerMaintenanceRoutes(app, {
   });
 
   app.post("/api/maintenance/prune-unused-entities", async (req, res) => {
-    const client = await pool.connect();
+    const dryRun = req.body?.dryRun !== false;
+    const pruneQueries = getPruneUnusedEntityQueries();
+
     try {
-      await client.query("BEGIN");
-      const pruneQueries = getPruneUnusedEntityQueries(pool);
+      if (dryRun) {
+        const [authorsResult, sourcesResult, tagsResult] = await Promise.all([
+          pool.query(pruneQueries.authors.select),
+          pool.query(pruneQueries.sources.select),
+          pool.query(pruneQueries.tags.select),
+        ]);
 
-      const authorsResult = await client.query(pruneQueries.authors);
-      const sourcesResult = await client.query(pruneQueries.sources);
-      const tagsResult = await client.query(pruneQueries.tags);
+        return res.json(buildPruneUnusedEntitiesResponse({
+          dryRun: true,
+          authors: normalizePruneEntityRows(authorsResult.rows),
+          sources: normalizePruneEntityRows(sourcesResult.rows),
+          tags: normalizePruneEntityRows(tagsResult.rows, { includeType: true }),
+        }));
+      }
 
-      await client.query("COMMIT");
-      res.json({
-        ok: true,
-        authorsRemoved: authorsResult.rowCount,
-        sourcesRemoved: sourcesResult.rowCount,
-        tagsRemoved: tagsResult.rowCount,
-      });
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        const authorsResult = await client.query(pruneQueries.authors.delete);
+        const sourcesResult = await client.query(pruneQueries.sources.delete);
+        const tagsResult = await client.query(pruneQueries.tags.delete);
+
+        await client.query("COMMIT");
+        return res.json(buildPruneUnusedEntitiesResponse({
+          dryRun: false,
+          authors: normalizePruneEntityRows(authorsResult.rows),
+          sources: normalizePruneEntityRows(sourcesResult.rows),
+          tags: normalizePruneEntityRows(tagsResult.rows, { includeType: true }),
+        }));
+      } catch (error) {
+        await client.query("ROLLBACK").catch(() => {});
+        throw error;
+      } finally {
+        client.release();
+      }
     } catch (error) {
-      await client.query("ROLLBACK").catch(() => {});
       logger.error("prune-unused-entities:", error);
       res.status(500).json({ error: error.message || "Prune failed" });
-    } finally {
-      client.release();
     }
   });
 

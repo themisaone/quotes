@@ -53,7 +53,7 @@ import {
   rehomeAttachmentsRequest,
   vaultHealthCheckRequest,
   runtimeInfoRequest,
-} from './js/lib/dataManager.js?v=20260625runtime1';
+} from './js/lib/dataManager.js?v=20260625prune1';
 
 import {
   loadSettings,
@@ -1444,43 +1444,113 @@ function setupEventListeners() {
   }
 
   const pruneUnusedEntitiesBtn = getElementByIdSafe("pruneUnusedEntitiesBtn");
+  const pruneUnusedEntitiesApplyBtn = getElementByIdSafe("pruneUnusedEntitiesApplyBtn");
+  const pruneUnusedEntitiesResult = getElementByIdSafe("pruneUnusedEntitiesResult");
+  let lastPruneUnusedEntitiesPlan = null;
+
+  const getPruneItemTotal = (plan) =>
+    (plan?.authors?.length || 0) + (plan?.sources?.length || 0) + (plan?.tags?.length || 0);
+
+  const formatPruneEntity = (item) =>
+    escapeHtml(item?.name || `#${item?.id || "unknown"}`);
+
+  const formatPruneTag = (item) => {
+    const name = item?.name || `#${item?.id || "unknown"}`;
+    return escapeHtml(item?.type ? `${name} [${item.type}]` : name);
+  };
+
+  const formatPruneList = (label, items, formatter = formatPruneEntity) => {
+    const count = items?.length || 0;
+    if (!count) return `<strong>${label}</strong> (0): none`;
+    return `<strong>${label}</strong> (${count}): ${items.map(formatter).join(", ")}`;
+  };
+
+  const setPruneResult = (plan) => {
+    if (!pruneUnusedEntitiesResult || !plan) return;
+    const total = getPruneItemTotal(plan);
+    const actionText = plan.dryRun === false ? "removed" : "would be removed";
+    const lines = [
+      `<strong>${total}</strong> unused metadata item${total === 1 ? "" : "s"} ${actionText}`,
+      formatPruneList("Authors", plan.authors),
+      formatPruneList("Sources", plan.sources),
+      formatPruneList("Tags", plan.tags, formatPruneTag),
+    ];
+
+    if (!total) {
+      lines.push("", "No unused authors, sources, or tags found.");
+    }
+
+    pruneUnusedEntitiesResult.innerHTML = lines.join("<br>");
+    pruneUnusedEntitiesResult.classList.add("is-visible");
+  };
+
   if (pruneUnusedEntitiesBtn) {
     pruneUnusedEntitiesBtn.addEventListener("click", async () => {
+      const labelEl =
+        pruneUnusedEntitiesBtn.querySelector(".prune-btn-label") || pruneUnusedEntitiesBtn;
+      const prevLabel = labelEl.textContent;
+      pruneUnusedEntitiesBtn.disabled = true;
+      if (pruneUnusedEntitiesApplyBtn) pruneUnusedEntitiesApplyBtn.disabled = true;
+      labelEl.textContent = "⏳ Scanning…";
+      try {
+        const plan = await pruneUnusedEntitiesRequest({ dryRun: true });
+        lastPruneUnusedEntitiesPlan = plan;
+        setPruneResult(plan);
+        if (pruneUnusedEntitiesApplyBtn) {
+          pruneUnusedEntitiesApplyBtn.disabled = !(getPruneItemTotal(plan) > 0);
+        }
+      } catch (err) {
+        console.error(err);
+        alert(err.message || "Prune scan failed");
+      } finally {
+        pruneUnusedEntitiesBtn.disabled = false;
+        labelEl.textContent = prevLabel;
+      }
+    });
+  }
+
+  if (pruneUnusedEntitiesApplyBtn) {
+    pruneUnusedEntitiesApplyBtn.addEventListener("click", async () => {
+      const total = getPruneItemTotal(lastPruneUnusedEntitiesPlan);
+      if (!total) {
+        alert("Scan unused metadata first.");
+        return;
+      }
+
+      const authorCount = lastPruneUnusedEntitiesPlan.authors?.length || 0;
+      const sourceCount = lastPruneUnusedEntitiesPlan.sources?.length || 0;
+      const tagCount = lastPruneUnusedEntitiesPlan.tags?.length || 0;
       if (
         !(await showConfirm(
-          "Remove every author, source, and tag that is not linked to any note?\n\nThis cannot be undone.",
+          `Delete ${total} unused metadata item${total === 1 ? "" : "s"}?\n\nAuthors: ${authorCount}\nSources: ${sourceCount}\nTags: ${tagCount}\n\nThis cannot be undone.`,
           {
             icon: "🧹",
-            title: "Prune unused metadata",
-            confirmLabel: "Prune",
+            title: "Apply metadata prune",
+            confirmLabel: "Apply prune",
             danger: true,
           },
         ))
       ) {
         return;
       }
+
       const labelEl =
-        pruneUnusedEntitiesBtn.querySelector(".prune-btn-label") || pruneUnusedEntitiesBtn;
+        pruneUnusedEntitiesApplyBtn.querySelector(".prune-apply-btn-label") || pruneUnusedEntitiesApplyBtn;
       const prevLabel = labelEl.textContent;
-      pruneUnusedEntitiesBtn.disabled = true;
-      labelEl.textContent = "⏳ Pruning…";
+      pruneUnusedEntitiesApplyBtn.disabled = true;
+      if (pruneUnusedEntitiesBtn) pruneUnusedEntitiesBtn.disabled = true;
+      labelEl.textContent = "⏳ Applying…";
       try {
-        const r = await pruneUnusedEntitiesRequest();
-        const lines = [
-          `Authors removed: ${r.authorsRemoved}`,
-          `Sources removed: ${r.sourcesRemoved}`,
-          `Tags removed: ${r.tagsRemoved}`,
-        ];
-        if (!r.authorsRemoved && !r.sourcesRemoved && !r.tagsRemoved) {
-          lines.push("", "Nothing to remove — all entries are in use.");
-        }
-        alert(lines.join("\n"));
+        const result = await pruneUnusedEntitiesRequest({ dryRun: false });
+        lastPruneUnusedEntitiesPlan = null;
+        setPruneResult(result);
         await Promise.all([loadAuthors(), loadSources(), loadTags()]);
       } catch (err) {
         console.error(err);
         alert(err.message || "Prune failed");
       } finally {
-        pruneUnusedEntitiesBtn.disabled = false;
+        if (pruneUnusedEntitiesBtn) pruneUnusedEntitiesBtn.disabled = false;
+        pruneUnusedEntitiesApplyBtn.disabled = !(getPruneItemTotal(lastPruneUnusedEntitiesPlan) > 0);
         labelEl.textContent = prevLabel;
       }
     });
@@ -1490,6 +1560,29 @@ function setupEventListeners() {
   const rehomeAttachmentsApplyBtn = getElementByIdSafe("rehomeAttachmentsApplyBtn");
   const rehomeAttachmentsResult = getElementByIdSafe("rehomeAttachmentsResult");
   let lastRehomeAttachmentsPlan = null;
+
+  const getRehomeStatusLabel = (status) => ({
+    movable: "Movable",
+    missing_source: "Missing source file",
+    target_exists: "Target already exists",
+    invalid_reference: "Invalid file reference",
+  }[status] || status || "Unknown");
+
+  const formatRehomeItem = (item) => {
+    const notePart = item.noteId ? `note #${item.noteId}` : "unknown note";
+    const attachmentPart = item.attachmentId
+      ? `DB attachment record #${item.attachmentId}`
+      : "unknown DB attachment record";
+    const columnPart = item.column ? `, DB field: ${item.column}` : "";
+    const noteTypePart = item.noteType ? `, note type: ${item.noteType}` : "";
+    const currentPath = item.currentPath || item.currentRef || "(empty)";
+    const targetPath = item.targetPath || item.targetFolder || "";
+    const pathPart = targetPath
+      ? `DB current path: <code>${escapeHtml(currentPath)}</code><br>Expected path: <code>${escapeHtml(targetPath)}</code>`
+      : `DB current path: <code>${escapeHtml(currentPath)}</code>`;
+
+    return `${escapeHtml(getRehomeStatusLabel(item.status))}: ${escapeHtml(notePart)}, ${escapeHtml(attachmentPart)}${escapeHtml(columnPart)}${escapeHtml(noteTypePart)}<br>${pathPart}`;
+  };
 
   const setRehomeResult = (plan) => {
     if (!rehomeAttachmentsResult || !plan) return;
@@ -1504,6 +1597,22 @@ function setupEventListeners() {
 
     if (!plan.driftCount && !plan.invalidReferenceCount) {
       lines.push('', 'Attachment folders already match current note types.');
+    }
+
+    if (Array.isArray(plan.items) && plan.items.length > 0) {
+      const groupedItems = [
+        ["Movable", plan.items.filter((item) => item.status === "movable")],
+        ["Missing source files", plan.items.filter((item) => item.status === "missing_source")],
+        ["Target collisions", plan.items.filter((item) => item.status === "target_exists")],
+        ["Invalid references", plan.items.filter((item) => item.status === "invalid_reference")],
+      ].filter(([, items]) => items.length > 0);
+
+      for (const [label, items] of groupedItems) {
+        lines.push('', `<strong>${label}</strong>`);
+        for (const item of items) {
+          lines.push(formatRehomeItem(item));
+        }
+      }
     }
 
     if (applied) {

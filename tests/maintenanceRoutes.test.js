@@ -185,14 +185,69 @@ test("GET /api/maintenance/runtime-info reports backend without health queries",
   assert.deepEqual(calls, []);
 });
 
+test("POST /api/maintenance/prune-unused-entities dry-runs unused entity details", async () => {
+  const calls = [];
+  const pool = {
+    async query(sql) {
+      calls.push(sql);
+      if (/SELECT a\.id, a\.name/.test(sql)) {
+        return { rows: [{ id: 1, name: "Unused Author" }], rowCount: 1 };
+      }
+      if (/SELECT s\.id, s\.name/.test(sql)) {
+        return { rows: [{ id: 2, name: "Unused Source" }], rowCount: 1 };
+      }
+      if (/SELECT t\.id, t\.name, t\.type/.test(sql)) {
+        return { rows: [{ id: 3, name: "Unused Tag", type: "quote" }], rowCount: 1 };
+      }
+      return { rows: [], rowCount: 0 };
+    },
+    async connect() {
+      throw new Error("dry run should not open a transaction");
+    },
+  };
+  const routes = makeRouteCollector(pool);
+
+  const response = await invoke(routes, {
+    routePath: "/api/maintenance/prune-unused-entities",
+  });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(response.body, {
+    ok: true,
+    dryRun: true,
+    authors: [{ id: 1, name: "Unused Author" }],
+    sources: [{ id: 2, name: "Unused Source" }],
+    tags: [{ id: 3, name: "Unused Tag", type: "quote" }],
+    total: 3,
+    authorsRemoved: 0,
+    sourcesRemoved: 0,
+    tagsRemoved: 0,
+    authorsWouldRemove: 1,
+    sourcesWouldRemove: 1,
+    tagsWouldRemove: 1,
+  });
+  assert.equal(calls.length, 3);
+  assert.match(calls[0], /SELECT a\.id, a\.name/);
+  assert.match(calls[1], /SELECT s\.id, s\.name/);
+  assert.match(calls[2], /SELECT t\.id, t\.name, t\.type/);
+});
+
 test("POST /api/maintenance/prune-unused-entities deletes unused entities in one transaction", async () => {
   const calls = [];
   const client = {
     async query(sql) {
       calls.push(sql);
       if (sql === "BEGIN" || sql === "COMMIT") return { rows: [], rowCount: 0 };
-      if (/DELETE FROM authors/.test(sql)) return { rows: [{ id: 1 }], rowCount: 1 };
-      if (/DELETE FROM sources/.test(sql)) return { rows: [{ id: 2 }, { id: 3 }], rowCount: 2 };
+      if (/DELETE FROM authors/.test(sql)) return { rows: [{ id: 1, name: "Unused Author" }], rowCount: 1 };
+      if (/DELETE FROM sources/.test(sql)) {
+        return {
+          rows: [
+            { id: 3, name: "Zed Source" },
+            { id: 2, name: "Alpha Source" },
+          ],
+          rowCount: 2,
+        };
+      }
       if (/DELETE FROM tags/.test(sql)) return { rows: [], rowCount: 0 };
       return { rows: [], rowCount: 0 };
     },
@@ -209,23 +264,36 @@ test("POST /api/maintenance/prune-unused-entities deletes unused entities in one
 
   const response = await invoke(routes, {
     routePath: "/api/maintenance/prune-unused-entities",
+    body: { dryRun: false },
   });
 
   assert.equal(response.status, 200);
   assert.deepEqual(response.body, {
     ok: true,
+    dryRun: false,
+    authors: [{ id: 1, name: "Unused Author" }],
+    sources: [
+      { id: 2, name: "Alpha Source" },
+      { id: 3, name: "Zed Source" },
+    ],
+    tags: [],
+    total: 3,
     authorsRemoved: 1,
     sourcesRemoved: 2,
     tagsRemoved: 0,
+    authorsWouldRemove: 0,
+    sourcesWouldRemove: 0,
+    tagsWouldRemove: 0,
   });
-  assert.deepEqual(calls, [
-    "BEGIN",
-    "\n      DELETE FROM authors a\n      WHERE NOT EXISTS (SELECT 1 FROM notes n WHERE n.author_id = a.id)\n      RETURNING id\n    ",
-    "\n      DELETE FROM sources s\n      WHERE NOT EXISTS (SELECT 1 FROM notes n WHERE n.source_id = s.id)\n      RETURNING id\n    ",
-    "\n      DELETE FROM tags t\n      WHERE NOT EXISTS (SELECT 1 FROM note_tags nt WHERE nt.tag_id = t.id)\n      RETURNING id\n    ",
-    "COMMIT",
-    "RELEASE",
-  ]);
+  assert.equal(calls[0], "BEGIN");
+  assert.match(calls[1], /DELETE FROM authors/);
+  assert.match(calls[1], /RETURNING id, name/);
+  assert.match(calls[2], /DELETE FROM sources/);
+  assert.match(calls[2], /RETURNING id, name/);
+  assert.match(calls[3], /DELETE FROM tags/);
+  assert.match(calls[3], /RETURNING id, name, type/);
+  assert.equal(calls[4], "COMMIT");
+  assert.equal(calls[5], "RELEASE");
 });
 
 test("POST /api/maintenance/prune-unused-entities rolls back on failure", async () => {
@@ -250,17 +318,16 @@ test("POST /api/maintenance/prune-unused-entities rolls back on failure", async 
 
   const response = await invoke(routes, {
     routePath: "/api/maintenance/prune-unused-entities",
+    body: { dryRun: false },
   });
 
   assert.equal(response.status, 500);
   assert.deepEqual(response.body, { error: "source delete failed" });
-  assert.deepEqual(calls, [
-    "BEGIN",
-    "\n      DELETE FROM authors a\n      WHERE NOT EXISTS (SELECT 1 FROM notes n WHERE n.author_id = a.id)\n      RETURNING id\n    ",
-    "\n      DELETE FROM sources s\n      WHERE NOT EXISTS (SELECT 1 FROM notes n WHERE n.source_id = s.id)\n      RETURNING id\n    ",
-    "ROLLBACK",
-    "RELEASE",
-  ]);
+  assert.equal(calls[0], "BEGIN");
+  assert.match(calls[1], /DELETE FROM authors/);
+  assert.match(calls[2], /DELETE FROM sources/);
+  assert.equal(calls[3], "ROLLBACK");
+  assert.equal(calls[4], "RELEASE");
 });
 
 test("POST /api/maintenance/rehome-attachments returns a dry-run drift plan", async () => {

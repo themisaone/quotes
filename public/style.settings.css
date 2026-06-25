@@ -1109,6 +1109,10 @@ details.settings-section-desc .settings-section-lead {
   color: var(--text-primary);
 }
 
+.maintenance-result code {
+  overflow-wrap: anywhere;
+}
+
 .dedup-group {
   margin-bottom: 2rem;
   padding-bottom: 1.5rem;

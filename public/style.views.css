@@ -672,7 +672,6 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: 0 var(--lp-band-pad-x, 0.9rem) var(--lp-band-pad-x, 0.9rem);
 }
 #lpPaneQuill {
   flex: 1 1 auto;
