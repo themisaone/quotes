@@ -160,11 +160,6 @@ import {
 } from './js/lib/translationGroups.js';
 
 import {
-  pushState,
-  initializeBackButton
-} from './js/lib/historyManager.js';
-
-import {
   showFullImage as showFullImageLib,
   showPDFViewer,
   showVideoPlayer,
@@ -432,11 +427,8 @@ function hasDisplayModeToggle(noteType) {
   return !isListPaneOnlyType(noteType);
 }
 
-// Expose globally for historyManager
 window.currentNoteTypeFilter = currentNoteTypeFilter;
 window.currentPage = currentPage;
-window.currentPage = currentPage;
-window.currentNoteTypeFilter = currentNoteTypeFilter;
 
 // Ensure currentPage stays in sync with library
 function syncCurrentPage(newPage) {
@@ -1193,23 +1185,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   loadQuotes();
   loadTotalCount();
   
-  // Initialize back button for history navigation
-  initializeBackButton({
-    switchView,
-    loadQuotes,
-    loadAuthors,
-    loadSources,
-    loadTags,
-    setNoteTypeFilter: (noteType) => {
-      currentNoteTypeFilter = noteType;
-      window.currentNoteTypeFilter = noteType;
-    },
-    setCurrentPage: (page) => {
-      currentPage = page;
-      setLibCurrentPage(page);
-    }
-  });
-
   if (window._modeAllowedTypes?.includes('quote')) {
     setTimeout(() => showWelcomeQuote(), 300);
   }
@@ -2552,8 +2527,6 @@ async function loadQuotes() {
   // Update pagination controls after loading quotes
   updatePaginationControls();
   
-  // Push current state to history (AFTER successful load)
-  pushState();
 }
 
 // Load total count

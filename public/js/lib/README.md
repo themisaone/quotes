@@ -164,11 +164,6 @@ Handles the bulk import CSV/JSON from the side panel.
 
 ---
 
-### `historyManager.js`
-Browser history navigation for back/forward between views.
-
----
-
 ### `confirmDialog.js`
 Reusable confirmation dialog component.
 
@@ -287,7 +282,7 @@ Renders the Authors and Sources list pages — same shape, shared private helper
 - `initEntityListPage({ escapeHtml, getApiUrl, getElementByIdSafe, showFetchError })`
 - `loadAuthors()` — fetch + filter + sort + display, also updates the `#totalAuthorsCount` / `#filteredAuthorsCount` counters.
 - `loadSources()` — same as above but adds the BOOK / MOVIE-TV / POETRY / LYRICS / JOKES / ASSORTED type filter (`ASSORTED` is always shown).
-- `displayAuthors(authors)`, `displaySources(sources)` — direct render entry points (used by `pageCoordinator.js` and `historyManager.js`).
+- `displayAuthors(authors)`, `displaySources(sources)` — direct render entry points (used by `pageCoordinator.js`).
 
 The card HTML uses inline `onclick` calls to `window.openAuthorModal` / `window.openSourceModal` / `window.filterByAuthor` / `window.filterBySource` — those globals are wired up by `app.js`, `authorModal.js`, `sourceModal.js`, and `searchManager.js` respectively.
 
