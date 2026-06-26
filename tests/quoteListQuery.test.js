@@ -90,14 +90,13 @@ test("buildQuoteCountQuery preserves count filter order and params", () => {
   );
 
   assert.match(result.query, /SELECT COUNT\(\*\) as count/);
-  assert.match(result.query, /q\.note_type = ANY\(\$1\)/);
-  assert.match(result.query, /\(q\.note_text ILIKE \$2 OR q\.note_title ILIKE \$2 OR q\.comment ILIKE \$2\)/);
-  assert.match(result.query, /q\.score >= \$14 AND q\.score <= \$15/);
+  assert.doesNotMatch(result.query, /q\.note_type = ANY/);
+  assert.match(result.query, /\(q\.note_text ILIKE \$1 OR q\.note_title ILIKE \$1 OR q\.comment ILIKE \$1\)/);
+  assert.match(result.query, /q\.score >= \$13 AND q\.score <= \$14/);
   assert.match(result.query, /q\.attachment_type IS DISTINCT FROM 'encrypted'/);
-  assert.match(result.query, /LOWER\(t\.name\) = LOWER\(\$16\)/);
-  assert.match(result.query, /q\.id = \$17/);
+  assert.match(result.query, /LOWER\(t\.name\) = LOWER\(\$15\)/);
+  assert.match(result.query, /q\.id = \$16/);
   assert.deepEqual(result.params, [
-    ["quote", "note"],
     "%alpha%",
     "%beta%",
     "%global%",
@@ -130,15 +129,14 @@ test("buildQuoteCountQuery includes list-only date and translation filters", () 
     ["quote", "note"]
   );
 
-  assert.match(result.query, /q\.note_type = ANY\(\$1\)/);
-  assert.match(result.query, /\(q\.note_text ILIKE \$2 OR q\.note_title ILIKE \$2 OR q\.comment ILIKE \$2\)/);
-  assert.match(result.query, /q\.note_date = \$3/);
-  assert.match(result.query, /q\.note_date >= \$4/);
-  assert.match(result.query, /q\.note_date <= \$5/);
-  assert.match(result.query, /q\.translation_group = \$6/);
-  assert.match(result.query, /q\.id = \$7/);
+  assert.doesNotMatch(result.query, /q\.note_type = ANY/);
+  assert.match(result.query, /\(q\.note_text ILIKE \$1 OR q\.note_title ILIKE \$1 OR q\.comment ILIKE \$1\)/);
+  assert.match(result.query, /q\.note_date = \$2/);
+  assert.match(result.query, /q\.note_date >= \$3/);
+  assert.match(result.query, /q\.note_date <= \$4/);
+  assert.match(result.query, /q\.translation_group = \$5/);
+  assert.match(result.query, /q\.id = \$6/);
   assert.deepEqual(result.params, [
-    ["quote", "note"],
     "%side note%",
     "2026-06-24",
     "2026-06-01",
@@ -305,23 +303,22 @@ test("buildBulkFilterQuery supports list-style aliases and hidden filters", () =
     ["quote", "note"]
   );
 
-  assert.match(result.query, /q\.note_type = ANY\(\$1\)/);
-  assert.match(result.query, /q\.note_text ILIKE \$2/);
-  assert.match(result.query, /authors a WHERE a\.id = q\.author_id AND a\.name ILIKE \$3/);
-  assert.match(result.query, /sources s WHERE s\.id = q\.source_id AND s\.name ILIKE \$4/);
-  assert.match(result.query, /t\.name ILIKE \$5/);
-  assert.match(result.query, /q\.note_date = \$6/);
-  assert.match(result.query, /q\.type = ANY\(\$7\)/);
-  assert.match(result.query, /q\.note_date >= \$8/);
-  assert.match(result.query, /q\.note_date <= \$9/);
+  assert.doesNotMatch(result.query, /q\.note_type = ANY/);
+  assert.match(result.query, /q\.note_text ILIKE \$1/);
+  assert.match(result.query, /authors a WHERE a\.id = q\.author_id AND a\.name ILIKE \$2/);
+  assert.match(result.query, /sources s WHERE s\.id = q\.source_id AND s\.name ILIKE \$3/);
+  assert.match(result.query, /t\.name ILIKE \$4/);
+  assert.match(result.query, /q\.note_date = \$5/);
+  assert.match(result.query, /q\.type = ANY\(\$6\)/);
+  assert.match(result.query, /q\.note_date >= \$7/);
+  assert.match(result.query, /q\.note_date <= \$8/);
   assert.match(result.query, /q\.translation_group IS NOT NULL AND q\.translation_group != ''/);
   assert.match(result.query, /SELECT COUNT\(\*\) FROM note_attachments WHERE note_id = q\.id\) <= 1/);
   assert.match(result.query, /q\.attachment_type IS DISTINCT FROM 'encrypted'/);
-  assert.match(result.query, /LOWER\(t\.name\) = LOWER\(\$10\)/);
-  assert.match(result.query, /q\.translation_group = \$11/);
-  assert.match(result.query, /q\.id = \$12/);
+  assert.match(result.query, /LOWER\(t\.name\) = LOWER\(\$9\)/);
+  assert.match(result.query, /q\.translation_group = \$10/);
+  assert.match(result.query, /q\.id = \$11/);
   assert.deepEqual(result.params, [
-    ["quote", "note"],
     "%focus%",
     "%Ada%",
     "%Notebook%",

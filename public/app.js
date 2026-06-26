@@ -1398,6 +1398,20 @@ function setupEventListeners() {
       ? report.issues.map((issue) => `• ${escapeHtml(issue.message || issue.code || "Issue")}`)
       : ["No settings/mode/database note-type mismatches found."];
     const mismatch = report.mismatches || {};
+    const visibility = report.noteTypeVisibility || {};
+    const notVisibleTypes = Array.isArray(visibility.notVisibleTypes) && visibility.notVisibleTypes.length
+      ? visibility.notVisibleTypes
+          .map((row) => `${escapeHtml(row.noteType)}: ${Number(row.count || 0)}`)
+          .join(", ")
+      : "none";
+    const notVisibleSamples = Array.isArray(visibility.sampleNotes) && visibility.sampleNotes.length
+      ? visibility.sampleNotes
+          .map((row) => {
+            const title = row.title ? ` ${row.title}` : "";
+            return `#${escapeHtml(String(row.id))}${escapeHtml(title)} (${escapeHtml(row.noteType || "unknown")})`;
+          })
+          .join(", ")
+      : "none";
 
     vaultHealthCheckResult.innerHTML = [
       `<strong>Status:</strong> ${escapeHtml(statusLabel)}`,
@@ -1405,7 +1419,11 @@ function setupEventListeners() {
       `<strong>Vault:</strong> ${escapeHtml(report.vaultPath || "(default)")}`,
       `<strong>Settings:</strong> ${escapeHtml(report.settingsFile || "(unknown)")}`,
       `<strong>Attachments:</strong> ${escapeHtml(report.attachmentsDir || "(unknown)")}`,
+      `<strong>Active mode:</strong> ${escapeHtml(report.activeMode || "(unknown)")}`,
+      `<strong>Active mode types:</strong> ${formatHealthList(report.activeModeTypes)}`,
       `<strong>DB note counts:</strong> ${counts}`,
+      `<strong>DB note types not visible in current mode:</strong> ${notVisibleTypes}`,
+      `<strong>Sample not-visible note IDs:</strong> ${notVisibleSamples}`,
       "",
       `<strong>Mode types missing from settings:</strong> ${formatHealthList(mismatch.modesMissingFromSettings)}`,
       `<strong>DB types missing from settings:</strong> ${formatHealthList(mismatch.dbMissingFromSettings)}`,

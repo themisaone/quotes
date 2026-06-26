@@ -196,9 +196,15 @@ function appendParamCondition(state, condition, value) {
   state.paramCounter++;
 }
 
+function hasExactNoteIdFilter(filters) {
+  return Boolean(filters?.noteId && !isNaN(parseInt(filters.noteId)));
+}
+
 function appendNoteTypeFilter(state, filters, allowedTypes) {
   if (filters.note_type) {
     appendParamCondition(state, " AND q.note_type = ?", filters.note_type);
+  } else if (hasExactNoteIdFilter(filters)) {
+    return;
   } else {
     appendParamCondition(state, " AND q.note_type = ANY(?)", allowedTypes);
   }

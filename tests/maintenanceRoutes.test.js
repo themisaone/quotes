@@ -96,11 +96,22 @@ test("GET /api/maintenance/health reports settings, mode, and DB type mismatches
   const pool = {
     dialect: "sqlite",
     filename: "/vault/archive.sqlite",
-    async query(sql) {
+    async query(sql, params = []) {
       calls.push(sql);
-      assert.match(sql, /COALESCE\(note_type, 'quote'\)/);
+      if (/SELECT id, note_title, note_type/.test(sql)) {
+        assert.deepEqual(params, ["job", "quote"]);
+        return {
+          rows: [
+            { id: 10, note_title: "Blank Type", note_type: "" },
+            { id: 11, note_title: "Legacy Type", note_type: "legacy" },
+          ],
+        };
+      }
+
+      assert.match(sql, /SELECT note_type, COUNT\(\*\) AS count/);
       return {
         rows: [
+          { note_type: "", count: "2" },
           { note_type: "job", count: "3" },
           { note_type: "legacy", count: "1" },
           { note_type: "quote", count: "2" },
@@ -114,6 +125,7 @@ test("GET /api/maintenance/health reports settings, mode, and DB type mismatches
       [settingsFile, JSON.stringify({ noteTypes: [{ value: "quote" }] })],
     ]),
     modesState: { ALL: ["quote", "job"] },
+    localConfig: { vaultPath: "/vault", activeMode: "ALL" },
   });
 
   const response = await invoke(routes, {
@@ -131,6 +143,8 @@ test("GET /api/maintenance/health reports settings, mode, and DB type mismatches
     modes: ["job", "quote"],
     db: ["job", "legacy", "quote"],
   });
+  assert.equal(response.body.activeMode, "ALL");
+  assert.deepEqual(response.body.activeModeTypes, ["job", "quote"]);
   assert.deepEqual(response.body.mismatches, {
     modesMissingFromSettings: ["job"],
     dbMissingFromSettings: ["job", "legacy"],
@@ -139,13 +153,29 @@ test("GET /api/maintenance/health reports settings, mode, and DB type mismatches
   });
   assert.deepEqual(
     response.body.countsByNoteType.map((row) => [row.noteType, row.count]),
-    [["job", 3], ["legacy", 1], ["quote", 2]],
+    [["<blank>", 2], ["job", 3], ["legacy", 1], ["quote", 2]],
   );
+  assert.deepEqual(response.body.noteTypeVisibility, {
+    notVisibleCount: 3,
+    notVisibleTypes: [
+      { noteType: "<blank>", rawNoteType: "", count: 2, reason: "blank" },
+      { noteType: "legacy", rawNoteType: "legacy", count: 1, reason: "not_in_active_mode" },
+    ],
+    sampleNotes: [
+      { id: 10, title: "Blank Type", noteType: "<blank>", rawNoteType: "" },
+      { id: 11, title: "Legacy Type", noteType: "legacy", rawNoteType: "legacy" },
+    ],
+  });
   assert.deepEqual(
     response.body.issues.map((issue) => issue.code),
-    ["modes_missing_from_settings", "db_missing_from_settings", "db_missing_from_modes"],
+    [
+      "modes_missing_from_settings",
+      "db_missing_from_settings",
+      "db_missing_from_modes",
+      "db_note_types_not_visible",
+    ],
   );
-  assert.equal(calls.length, 1);
+  assert.equal(calls.length, 2);
 });
 
 test("GET /api/maintenance/runtime-info reports backend without health queries", async () => {

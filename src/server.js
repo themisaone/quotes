@@ -105,6 +105,8 @@ registerMaintenanceRoutes(app, {
   modesFile: MODES_FILE,
   modesState: _modes,
   readLocalConfig,
+  getModeName: () => _modeName,
+  getAllowedTypes: () => _allowedTypes,
 });
 
 app.use(express.static(path.join(__dirname, "../public")));

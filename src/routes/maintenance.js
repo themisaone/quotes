@@ -56,9 +56,80 @@ function collectModeTypes(modes) {
   );
 }
 
+function normalizeDbNoteType(value) {
+  if (value === null || value === undefined) {
+    return {
+      raw: null,
+      noteType: "<NULL>",
+      isBlank: true,
+    };
+  }
+
+  const raw = String(value);
+  if (raw.trim() === "") {
+    return {
+      raw,
+      noteType: "<blank>",
+      isBlank: true,
+    };
+  }
+
+  return {
+    raw,
+    noteType: raw,
+    isBlank: false,
+  };
+}
+
 function diffValues(source, target) {
   const targetSet = new Set(target);
   return source.filter((value) => !targetSet.has(value));
+}
+
+function resolveActiveModeTypes({
+  modes,
+  localConfig,
+  getModeName,
+  getAllowedTypes,
+} = {}) {
+  const activeMode = typeof getModeName === "function"
+    ? getModeName()
+    : localConfig?.activeMode || null;
+  const allowedTypes = typeof getAllowedTypes === "function"
+    ? getAllowedTypes()
+    : activeMode && modes && typeof modes === "object"
+      ? modes[activeMode]
+      : null;
+
+  return {
+    activeMode,
+    allowedTypes: uniqueSorted(Array.isArray(allowedTypes) ? allowedTypes : []),
+  };
+}
+
+function buildInvalidNoteTypeSampleQuery(allowedTypes) {
+  const params = [];
+  const conditions = [
+    "note_type IS NULL",
+    "TRIM(note_type) = ''",
+  ];
+
+  if (Array.isArray(allowedTypes) && allowedTypes.length > 0) {
+    const placeholders = allowedTypes.map((_, index) => `$${index + 1}`).join(", ");
+    conditions.push(`note_type NOT IN (${placeholders})`);
+    params.push(...allowedTypes);
+  }
+
+  return {
+    query: `
+      SELECT id, note_title, note_type
+      FROM notes
+      WHERE ${conditions.map((condition) => `(${condition})`).join(" OR ")}
+      ORDER BY id
+      LIMIT 25
+    `,
+    params,
+  };
 }
 
 async function buildVaultHealthReport({
@@ -69,7 +140,10 @@ async function buildVaultHealthReport({
   modesFile,
   modesState,
   readLocalConfig,
+  getModeName,
+  getAllowedTypes,
 } = {}) {
+  const localConfig = readLocalConfig?.() || {};
   const settingsFile = getSettingsFile?.() || null;
   const settingsJson = readJsonFile(fsImpl, settingsFile);
   const settingsTypes = collectSettingsTypes(settingsJson.data);
@@ -79,17 +153,56 @@ async function buildVaultHealthReport({
     : readJsonFile(fsImpl, modesFile);
   const modeTypes = collectModeTypes(modesJson.data);
 
+  const activeModeInfo = resolveActiveModeTypes({
+    modes: modesJson.data,
+    localConfig,
+    getModeName,
+    getAllowedTypes,
+  });
+
   const countsResult = await pool.query(
-    `SELECT COALESCE(note_type, 'quote') AS note_type, COUNT(*) AS count
+    `SELECT note_type, COUNT(*) AS count
        FROM notes
-      GROUP BY COALESCE(note_type, 'quote')
+      GROUP BY note_type
       ORDER BY note_type`
   );
-  const countsByNoteType = countsResult.rows.map((row) => ({
-    noteType: row.note_type || "quote",
-    count: Number(row.count || 0),
-  }));
-  const dbTypes = uniqueSorted(countsByNoteType.map((row) => row.noteType));
+  const countsByNoteType = countsResult.rows.map((row) => {
+    const normalized = normalizeDbNoteType(row.note_type);
+    return {
+      noteType: normalized.noteType,
+      rawNoteType: normalized.raw,
+      count: Number(row.count || 0),
+      isBlank: normalized.isBlank,
+    };
+  });
+  const dbTypes = uniqueSorted(
+    countsByNoteType
+      .filter((row) => !row.isBlank)
+      .map((row) => row.rawNoteType)
+  );
+
+  const activeAllowedSet = new Set(activeModeInfo.allowedTypes);
+  const notVisibleTypes = countsByNoteType
+    .filter((row) => row.isBlank || (activeAllowedSet.size > 0 && !activeAllowedSet.has(row.rawNoteType)))
+    .map((row) => ({
+      noteType: row.noteType,
+      rawNoteType: row.rawNoteType,
+      count: row.count,
+      reason: row.isBlank ? "blank" : "not_in_active_mode",
+    }));
+  const notVisibleCount = notVisibleTypes.reduce((sum, row) => sum + row.count, 0);
+  let notVisibleSamples = [];
+
+  if (notVisibleCount > 0) {
+    const sampleQuery = buildInvalidNoteTypeSampleQuery(activeModeInfo.allowedTypes);
+    const sampleResult = await pool.query(sampleQuery.query, sampleQuery.params);
+    notVisibleSamples = sampleResult.rows.map((row) => ({
+      id: row.id,
+      title: row.note_title || null,
+      noteType: normalizeDbNoteType(row.note_type).noteType,
+      rawNoteType: row.note_type ?? null,
+    }));
+  }
 
   const mismatches = {
     modesMissingFromSettings: diffValues(modeTypes, settingsTypes),
@@ -141,13 +254,23 @@ async function buildVaultHealthReport({
       message: `Database note types missing from modes: ${mismatches.dbMissingFromModes.join(", ")}`,
     });
   }
+  if (notVisibleCount > 0) {
+    const typeSummary = notVisibleTypes
+      .map((row) => `${row.noteType} (${row.count})`)
+      .join(", ");
+    const sampleIds = notVisibleSamples.map((row) => `#${row.id}`).join(", ");
+    issues.push({
+      severity: "error",
+      code: "db_note_types_not_visible",
+      message: `Database contains ${notVisibleCount} note(s) not visible in active mode ${activeModeInfo.activeMode || "(unknown)"}: ${typeSummary}${sampleIds ? `. Sample IDs: ${sampleIds}` : ""}`,
+    });
+  }
 
   const status = issues.some((issue) => issue.severity === "error")
     ? "error"
     : issues.length > 0
       ? "warning"
       : "ok";
-  const localConfig = readLocalConfig?.() || {};
 
   return {
     ok: status === "ok",
@@ -167,7 +290,14 @@ async function buildVaultHealthReport({
       modes: modeTypes,
       db: dbTypes,
     },
+    activeMode: activeModeInfo.activeMode,
+    activeModeTypes: activeModeInfo.allowedTypes,
     countsByNoteType,
+    noteTypeVisibility: {
+      notVisibleCount,
+      notVisibleTypes,
+      sampleNotes: notVisibleSamples,
+    },
     mismatches,
     issues,
   };
@@ -279,6 +409,8 @@ function registerMaintenanceRoutes(app, {
   modesFile,
   modesState,
   readLocalConfig,
+  getModeName,
+  getAllowedTypes,
   logger = console,
 }) {
   if (!app) throw new Error("Express app is required");
@@ -307,6 +439,8 @@ function registerMaintenanceRoutes(app, {
         modesFile,
         modesState,
         readLocalConfig,
+        getModeName,
+        getAllowedTypes,
       });
       res.json(report);
     } catch (error) {

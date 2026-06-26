@@ -46,7 +46,7 @@ function makeRouteCollector({ pool, attachmentsDir, settingsFile, modesState }) 
     fsImpl: fs,
     getSettingsFile: () => settingsFile,
     modesState,
-    readLocalConfig: () => ({ vaultPath: path.dirname(attachmentsDir) }),
+    readLocalConfig: () => ({ vaultPath: path.dirname(attachmentsDir), activeMode: "ALL" }),
     logger: silentLogger,
   });
   return routes;
@@ -123,6 +123,41 @@ test("SQLite maintenance health reports aligned note types", async (t) => {
   assert.deepEqual(
     response.body.countsByNoteType.map((row) => [row.noteType, row.count]),
     [["job", 1], ["quote", 1]],
+  );
+});
+
+test("SQLite maintenance health reports blank note types not visible in active mode", async (t) => {
+  const { pool, routes } = await makeSqliteMaintenanceRoutes(t);
+
+  await pool.query(
+    "INSERT INTO notes (note_text, note_title, note_type) VALUES ($1, $2, $3)",
+    ["visible quote", "Visible", "quote"],
+  );
+  const blankNote = await pool.query(
+    "INSERT INTO notes (note_text, note_title, note_type) VALUES ($1, $2, $3) RETURNING id",
+    ["blank type", "Blank Type", ""],
+  );
+
+  const response = await invoke(routes, {
+    method: "GET",
+    routePath: "/api/maintenance/health",
+  });
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body.ok, false);
+  assert.equal(response.body.status, "error");
+  assert.deepEqual(
+    response.body.countsByNoteType.map((row) => [row.noteType, row.count]),
+    [["<blank>", 1], ["quote", 1]],
+  );
+  assert.deepEqual(response.body.noteTypeVisibility.notVisibleTypes, [
+    { noteType: "<blank>", rawNoteType: "", count: 1, reason: "blank" },
+  ]);
+  assert.deepEqual(response.body.noteTypeVisibility.sampleNotes, [
+    { id: blankNote.rows[0].id, title: "Blank Type", noteType: "<blank>", rawNoteType: "" },
+  ]);
+  assert.ok(
+    response.body.issues.some((issue) => issue.code === "db_note_types_not_visible"),
   );
 });
 
