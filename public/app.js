@@ -578,6 +578,126 @@ const displayModeSelect = getElementByIdSafe("displayModeSelect");
 const trainingSubModeSelect = getElementByIdSafe("trainingSubModeSelect");
 const modalTitle = getElementByIdSafe("modalTitle");
 
+const compactSelectFacades = new WeakMap();
+const compactSelectFacadeList = new Set();
+let compactSelectGlobalHandlersReady = false;
+
+function closeCompactSelectFacades(exceptWrapper = null) {
+  compactSelectFacadeList.forEach(({ wrapper, button }) => {
+    if (wrapper === exceptWrapper) return;
+    wrapper.classList.remove('open');
+    button.setAttribute('aria-expanded', 'false');
+  });
+}
+
+function syncCompactSelectFacade(select) {
+  const facade = compactSelectFacades.get(select);
+  if (!facade) return;
+
+  const { wrapper, button, label, menu } = facade;
+  const isHidden = select.hidden || select.style.display === 'none';
+  wrapper.style.display = isHidden ? 'none' : '';
+  wrapper.classList.toggle('gallery-active', select.classList.contains('gallery-active'));
+  button.disabled = select.disabled;
+
+  const selectedOption = select.selectedOptions?.[0] || select.options?.[select.selectedIndex] || null;
+  label.textContent = selectedOption?.textContent?.trim() || '';
+
+  menu.innerHTML = '';
+  Array.from(select.options)
+    .filter((option) => !option.hidden && !option.disabled)
+    .forEach((option) => {
+      const optionBtn = document.createElement('button');
+      optionBtn.type = 'button';
+      optionBtn.className = 'compact-select-option';
+      optionBtn.dataset.value = option.value;
+      optionBtn.setAttribute('role', 'option');
+      optionBtn.setAttribute('aria-selected', option.value === select.value ? 'true' : 'false');
+      optionBtn.classList.toggle('selected', option.value === select.value);
+      optionBtn.textContent = option.textContent;
+      optionBtn.addEventListener('click', () => {
+        if (select.value !== option.value) {
+          select.value = option.value;
+          select.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        syncCompactSelectFacade(select);
+        closeCompactSelectFacades();
+      });
+      menu.appendChild(optionBtn);
+    });
+}
+
+function initCompactSelectFacade(select) {
+  if (!select || compactSelectFacades.has(select)) return;
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'compact-select';
+  wrapper.dataset.selectId = select.id || '';
+  select.parentNode.insertBefore(wrapper, select);
+  wrapper.appendChild(select);
+  select.classList.add('compact-select-native');
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'compact-select-button';
+  button.setAttribute('aria-haspopup', 'listbox');
+  button.setAttribute('aria-expanded', 'false');
+  button.title = select.title || select.getAttribute('aria-label') || '';
+
+  const label = document.createElement('span');
+  label.className = 'compact-select-label';
+  const arrow = document.createElement('span');
+  arrow.className = 'compact-select-arrow';
+  arrow.setAttribute('aria-hidden', 'true');
+  arrow.textContent = '▼';
+  button.append(label, arrow);
+
+  const menu = document.createElement('div');
+  menu.className = 'compact-select-menu';
+  menu.setAttribute('role', 'listbox');
+
+  wrapper.append(button, menu);
+
+  const facade = { wrapper, button, label, menu };
+  compactSelectFacades.set(select, facade);
+  compactSelectFacadeList.add(facade);
+
+  button.addEventListener('click', (event) => {
+    event.stopPropagation();
+    syncCompactSelectFacade(select);
+    const willOpen = !wrapper.classList.contains('open');
+    closeCompactSelectFacades(wrapper);
+    wrapper.classList.toggle('open', willOpen);
+    button.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+  });
+
+  select.addEventListener('change', () => syncCompactSelectFacade(select));
+
+  const observer = new MutationObserver(() => syncCompactSelectFacade(select));
+  observer.observe(select, {
+    attributes: true,
+    attributeFilter: ['class', 'disabled', 'hidden', 'style'],
+    childList: true,
+    subtree: true,
+  });
+
+  if (!compactSelectGlobalHandlersReady) {
+    document.addEventListener('click', (event) => {
+      if (!event.target.closest('.compact-select')) closeCompactSelectFacades();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') closeCompactSelectFacades();
+    });
+    compactSelectGlobalHandlersReady = true;
+  }
+
+  syncCompactSelectFacade(select);
+}
+
+function initCompactToolbarSelects() {
+  [displayModeSelect, trainingSubModeSelect, columnCountSelect].forEach(initCompactSelectFacade);
+}
+
 // MIGRATED: Bulk import elements moved to bulkImport.js
 // Preview elements removed - no longer needed
 
@@ -1876,6 +1996,7 @@ function setupEventListeners() {
           document.documentElement.style.setProperty('--card-column-count', fallback);
         }
       }
+      syncCompactSelectFacade(columnCountSelect);
     }
 
     syncColumnCountOptions();
@@ -1922,6 +2043,8 @@ function setupEventListeners() {
       }
     });
   }
+
+  initCompactToolbarSelects();
 
   // Selection bar buttons
   const clearSelectionBtn = getElementByIdSafe("clearSelectionBtn");
@@ -2220,6 +2343,8 @@ function updateViewModeToggle() {
     const hideColumns = supported && currentViewMode === 'list-pane' && !isGallery;
     columnCountSelect.style.display = hideColumns ? 'none' : '';
   }
+
+  [displayModeSelect, trainingSubModeSelect, columnCountSelect].forEach(syncCompactSelectFacade);
 }
 
 // Wrapper with app-specific additions

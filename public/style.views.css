@@ -28,14 +28,130 @@
   transition: border-color 0.2s, background 0.2s;
 }
 
+.compact-select {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  min-width: 3.5rem;
+  line-height: 1;
+}
+
+.compact-select-native {
+  position: absolute !important;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.compact-select-button {
+  width: 100%;
+  height: var(--d-btn-height);
+  padding: 0 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--primary-color);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+  box-sizing: border-box;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.compact-select-button:hover {
+  border-color: var(--primary-color);
+}
+
+.compact-select-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.compact-select-arrow {
+  font-size: 0.68rem;
+  line-height: 1;
+  transition: transform 0.16s ease;
+}
+
+.compact-select.open .compact-select-arrow {
+  transform: rotate(180deg);
+}
+
+.compact-select-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  width: 100%;
+  z-index: 1200;
+  padding: 0.2rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  box-sizing: border-box;
+}
+
+.compact-select.open .compact-select-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.compact-select-option {
+  width: 100%;
+  min-height: 1.75rem;
+  padding: 0.3rem 0.45rem;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.85rem;
+  line-height: 1.15;
+  text-align: center;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.compact-select-option:hover,
+.compact-select-option.selected {
+  background: var(--card-hover-bg);
+}
+
+.compact-select.gallery-active .compact-select-button {
+  background: var(--total-counter-color);
+  color: white;
+  border-color: var(--total-counter-color);
+}
+
 @media (min-width: 768px) {
   .header-actions .display-mode-select,
+  .header-actions .compact-select,
   .header-actions .btn-add,
   .quotes-section-actions .btn-select-mode,
   .quotes-section-actions .column-count-select,
+  .quotes-section-actions .compact-select,
   .search-header-subtype .type-filter-toggle {
     min-width: 6.35rem;
     box-sizing: border-box;
+  }
+}
+
+@media (max-width: 767px) {
+  .compact-select[data-select-id="columnCountSelect"] {
+    display: none !important;
   }
 }
 
@@ -61,15 +177,24 @@
 }
 
 /* ── Gallery / Thumbnail mode ─────────────────────────────────────── */
-.quotes-list.gallery-mode {
-  display: flex !important;
-  flex-wrap: wrap !important;
+.quotes-list.gallery-mode,
+.quotes-list.natural-sizing.gallery-mode {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)) !important;
   gap: 0.4rem !important;
+  justify-content: start !important;
+  justify-items: start !important;
   align-items: flex-start !important;
+  column-count: auto !important;
+  column-gap: 0 !important;
 }
-.quotes-list.gallery-mode .quote-card {
-  width: 130px !important;
-  height: 130px !important;
+.quotes-list.gallery-mode .quote-card,
+.quotes-list.natural-sizing.gallery-mode .quote-card {
+  display: block !important;
+  width: 100% !important;
+  max-width: 140px !important;
+  height: auto !important;
+  aspect-ratio: 1 / 1 !important;
   min-height: 0 !important;
   padding: 0 !important;
   margin: 0 !important;
@@ -77,7 +202,7 @@
   border-radius: 6px !important;
   position: relative !important;
   cursor: pointer !important;
-  flex-shrink: 0 !important;
+  break-inside: auto !important;
 }
 /* Hide everything except the primary image/file thumb */
 .quotes-list.gallery-mode .quote-card > *:not(.gallery-thumb-wrap) {

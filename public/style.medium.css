@@ -458,13 +458,36 @@
 
   /* Header display-mode + column-count selects — same height as action buttons */
   .header-actions .display-mode-select,
-  .header-actions .column-count-select {
+  .header-actions .column-count-select,
+  .header-actions .compact-select-button,
+  .quotes-section-actions .compact-select-button,
+  .quotes-section-actions .column-count-select {
     height: var(--m-btn-height) !important;
     min-height: var(--m-btn-height) !important;
-    padding: 0 0.75rem !important;
+    padding: 0 0.65rem !important;
     font-size: var(--m-font-md) !important;
-    line-height: 1 !important;
+    line-height: normal !important;
+    text-align: center !important;
+    text-align-last: center !important;
     box-sizing: border-box !important;
+  }
+
+  .header-actions .display-mode-select option,
+  .header-actions .column-count-select option,
+  .quotes-section-actions .column-count-select option {
+    font-size: var(--m-font-md) !important;
+    line-height: 1.2 !important;
+  }
+
+  .compact-select-menu {
+    padding: 0.15rem !important;
+  }
+
+  .compact-select-option {
+    min-height: 1.55rem !important;
+    padding: 0.22rem 0.35rem !important;
+    font-size: var(--m-font-md) !important;
+    line-height: 1.15 !important;
   }
 
   .btn-icon {
@@ -505,7 +528,21 @@
   .search-item input[type="text"],
   .search-item select {
     font-size: var(--m-font-base) !important;
+    height: var(--m-btn-height) !important;
+    min-height: var(--m-btn-height) !important;
+    padding: 0 0.55rem !important;
+    line-height: normal !important;
     min-width: 0 !important;
+  }
+  .search-any-input {
+    height: var(--m-btn-height) !important;
+    min-height: var(--m-btn-height) !important;
+    padding: 0 0.55rem !important;
+    font-size: var(--m-font-base) !important;
+    line-height: normal !important;
+  }
+  .search-expand-toggle {
+    height: var(--m-btn-height) !important;
   }
   .search-grid .search-clear-item .search-clear-btn {
     padding: 0 0.7rem !important;
@@ -575,6 +612,30 @@
 
   .quotes-list.natural-sizing .quote-card {
     margin-bottom: var(--m-card-gap) !important;
+  }
+
+  .quotes-list.gallery-mode,
+  .quotes-list.natural-sizing.gallery-mode {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)) !important;
+    justify-content: start !important;
+    justify-items: start !important;
+    align-items: flex-start !important;
+    column-count: auto !important;
+    column-gap: 0 !important;
+    gap: 0.4rem !important;
+  }
+
+  .quotes-list.gallery-mode .quote-card,
+  .quotes-list.natural-sizing.gallery-mode .quote-card {
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 1 / 1 !important;
+    max-width: 140px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    break-inside: auto !important;
   }
 
   .quote-card {
@@ -727,6 +788,25 @@
   select {
     padding: 0.4rem 0.55rem !important;
     font-size: var(--m-font-base) !important;
+  }
+
+  #displayModeSelect,
+  #trainingSubModeSelect,
+  #columnCountSelect {
+    height: var(--m-btn-height) !important;
+    min-height: var(--m-btn-height) !important;
+    padding: 0 0.65rem !important;
+    font-size: var(--m-font-md) !important;
+    line-height: normal !important;
+    text-align: center !important;
+    text-align-last: center !important;
+  }
+
+  #displayModeSelect option,
+  #trainingSubModeSelect option,
+  #columnCountSelect option {
+    font-size: var(--m-font-md) !important;
+    line-height: 1.2 !important;
   }
 
   /* Modal content */
