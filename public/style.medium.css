@@ -133,12 +133,19 @@
     font-size: var(--m-font-sm) !important;
     padding: var(--m-pad-xs) var(--m-pad-sm) !important;
   }
+  .note-type-filter-li.has-subtags > .note-type-row > .menu-item {
+    padding-right: 2.45rem !important;
+  }
   .menu-section-title {
     font-size: var(--m-font-xs) !important;
   }
   .menu-sub-item {
-    font-size: var(--m-font-xs) !important;
-    padding: 0.24rem 0.4rem 0.24rem 1.6rem !important;
+    font-size: var(--m-font-sm) !important;
+    padding: var(--m-pad-xs) var(--m-pad-sm) var(--m-pad-xs) calc(var(--m-pad-sm) + 0.75rem) !important;
+  }
+  .note-type-expand-btn {
+    width: 2.35rem !important;
+    font-size: 0.75rem !important;
   }
 
   /* Main content uses side-menu width */

@@ -1299,7 +1299,7 @@ export function toggleTagOperationsPanel(show) {
 // ============= SETTINGS INITIALIZATION =============
 
 const SETTINGS_OPTIONS_TAB_KEY = 'settingsOptionsTab';
-const VALID_SETTINGS_TABS = new Set(['general', 'maintenance', 'note-types']);
+const VALID_SETTINGS_TABS = new Set(['general', 'data-management', 'services', 'maintenance', 'note-types']);
 
 function initializeSettingsTabs() {
   const tabBtns = document.querySelectorAll('.settings-tab-btn[data-settings-tab]');

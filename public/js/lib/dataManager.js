@@ -81,7 +81,7 @@ function buildFilterParams(searchFields, currentNoteTypeFilter, selectedTypes, s
  * @param {string} currentNoteTypeFilter - Current note type filter
  * @returns {Object}
  */
-function buildFiltersObject(currentNoteTypeFilter) {
+function buildFiltersObject(currentNoteTypeFilter, { includeSearch = true } = {}) {
   const filters = {};
   
   if (currentNoteTypeFilter) {
@@ -89,6 +89,8 @@ function buildFiltersObject(currentNoteTypeFilter) {
     filters.noteType = typeLabel;
     filters.noteTypeValue = currentNoteTypeFilter;
   }
+
+  if (!includeSearch) return filters;
 
   const s = getSearchValues();
   if (s.quote)  filters.quote  = s.quote;
@@ -135,8 +137,7 @@ function resetButton(button, originalText) {
 function generateBackupConfirmationMessage(currentNoteTypeFilter, typeLabel) {
   if (currentNoteTypeFilter) {
     return `Create backup of ${typeLabel}?\n\n` +
-           `This will export ALL ${typeLabel.toLowerCase()} (ignoring current search filters).\n\n` +
-           `To export only filtered results, use "Export to PDF" instead.`;
+           `This will export ALL ${typeLabel.toLowerCase()} (ignoring current search filters).`;
   }
   
   return `Create backup of All Notes?\n\n` +
@@ -280,9 +281,20 @@ function validateBackupData(backupData) {
  * Fetch quotes for export
  */
 async function fetchQuotesForExport(params) {
-  params.append("limit", String(EXPORT_LIMIT));
+  if (!params.has("limit")) {
+    params.append("limit", String(EXPORT_LIMIT));
+  }
   const response = await fetch(`${API_URL}/quotes?${params.toString()}`);
   return await response.json();
+}
+
+function buildScopeExportParams(currentNoteTypeFilter, limit = EXPORT_LIMIT) {
+  const params = new URLSearchParams();
+  if (currentNoteTypeFilter) {
+    params.append("note_type", currentNoteTypeFilter);
+  }
+  params.append("limit", String(limit));
+  return params;
 }
 
 /**
@@ -335,6 +347,8 @@ async function generatePdf(quotes, filters, pdfColumns = 1) {
  *     provided, the filter-based fetch is skipped and only these notes are
  *     exported (used when the user has an active selection).
  * @param {number} [config.pdfColumns=1] - PDF layout: 1 or 2 columns.
+ * @param {boolean} [config.ignoreCurrentFilters=false] - Export only by note
+ *     type scope; ignore search, metadata, subtype, and pagination filters.
  */
 export async function exportToPdf(config) {
   const {
@@ -344,11 +358,13 @@ export async function exportToPdf(config) {
     getTrainingTypes,
     notes: preFetchedNotes,
     pdfColumns = 1,
+    ignoreCurrentFilters = false,
   } = config;
+  let originalText = null;
 
   try {
     const typeLabel = getTypeLabel(currentNoteTypeFilter);
-    const originalText = exportBtn ? setButtonLoading(exportBtn, "⏳ Generating PDF...") : null;
+    originalText = exportBtn ? setButtonLoading(exportBtn, "⏳ Generating PDF...") : null;
 
     let allQuotes;
     if (Array.isArray(preFetchedNotes)) {
@@ -358,11 +374,13 @@ export async function exportToPdf(config) {
     } else {
       // Default path: export everything matching the current view's filters
       // (search text, type, training year/month, metadata filters, etc.)
-      const params = buildExportParams(
-        currentNoteTypeFilter,
-        getQuoteTypes,
-        getTrainingTypes
-      );
+      const params = ignoreCurrentFilters
+        ? buildScopeExportParams(currentNoteTypeFilter)
+        : buildExportParams(
+          currentNoteTypeFilter,
+          getQuoteTypes,
+          getTrainingTypes
+        );
       allQuotes = await fetchQuotesForExport(params);
     }
 
@@ -375,7 +393,9 @@ export async function exportToPdf(config) {
     }
 
     // Generate and download PDF
-    const filters = buildFiltersObject(currentNoteTypeFilter);
+    const filters = buildFiltersObject(currentNoteTypeFilter, {
+      includeSearch: !ignoreCurrentFilters,
+    });
     const pdfBlob = await generatePdf(allQuotes, filters, pdfColumns);
     
     const filePrefix = getPdfFilenamePrefix(currentNoteTypeFilter, allQuotes);
@@ -387,8 +407,11 @@ export async function exportToPdf(config) {
     console.error("Error exporting PDF:", error);
     alert("Failed to export PDF. Please try again.");
     if (exportBtn) {
-      exportBtn.textContent = "📄 Export to PDF";
-      exportBtn.disabled = false;
+      if (originalText !== null) {
+        resetButton(exportBtn, originalText);
+      } else {
+        exportBtn.disabled = false;
+      }
     }
   }
 }
@@ -454,6 +477,7 @@ function triggerBigFilesZipDownload(date) {
  */
 export async function exportToJson(config) {
   const { currentNoteTypeFilter, exportBtn } = config;
+  let originalText = null;
 
   try {
     const typeLabel = getTypeLabel(currentNoteTypeFilter);
@@ -464,7 +488,7 @@ export async function exportToJson(config) {
       return;
     }
 
-    const originalText = setButtonLoading(exportBtn, "⏳ Exporting...");
+    originalText = exportBtn ? setButtonLoading(exportBtn, "⏳ Exporting...") : null;
 
     // Fetch and download backup JSON
     const blob = await fetchJsonBackup(currentNoteTypeFilter);
@@ -473,7 +497,7 @@ export async function exportToJson(config) {
     const filename = generateFilename(`${filePrefix}_backup`, 'json');
     downloadBlob(blob, filename);
 
-    resetButton(exportBtn, originalText);
+    if (exportBtn) resetButton(exportBtn, originalText);
 
     // Check if there are big files that weren't embedded
     const info = await fetchBigFilesInfo();
@@ -507,8 +531,13 @@ export async function exportToJson(config) {
   } catch (error) {
     console.error("Error exporting JSON:", error);
     alert("Failed to create backup. Please try again.");
-    exportBtn.textContent = "💾 Backup Data";
-    exportBtn.disabled = false;
+    if (exportBtn) {
+      if (originalText !== null) {
+        resetButton(exportBtn, originalText);
+      } else {
+        exportBtn.disabled = false;
+      }
+    }
   }
 }
 

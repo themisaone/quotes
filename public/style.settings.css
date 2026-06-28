@@ -9,6 +9,7 @@
 /* Options page tabs */
 .settings-tabs {
   display: inline-flex;
+  flex-wrap: wrap;
   border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
@@ -1087,6 +1088,41 @@ details.settings-section-desc .settings-section-lead {
   flex-wrap: wrap;
   gap: 0.65rem;
   align-items: center;
+}
+
+.data-management-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: flex-end;
+}
+
+.data-management-scope {
+  display: flex;
+  flex: 1 1 220px;
+  max-width: 340px;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.data-management-scope select {
+  min-height: 2.35rem;
+  width: 100%;
+}
+
+@media (max-width: 767px) {
+  .data-management-actions {
+    align-items: stretch;
+  }
+
+  .data-management-scope,
+  .data-management-actions .btn {
+    flex: 1 1 100%;
+    max-width: none;
+  }
 }
 
 .maintenance-result {

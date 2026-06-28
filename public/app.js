@@ -53,7 +53,7 @@ import {
   rehomeAttachmentsRequest,
   vaultHealthCheckRequest,
   runtimeInfoRequest,
-} from './js/lib/dataManager.js?v=20260625prune1';
+} from './js/lib/dataManager.js?v=20260626datamgmt1';
 
 import {
   loadSettings,
@@ -72,7 +72,7 @@ import {
   getNoteTypeDefaultDisplayMode,
   initializeSettings as initializeSettingsLib,
   refreshSettingsForOptionsPanel
-} from './js/lib/settingsManager.js?v=20260614searchgrid1';
+} from './js/lib/settingsManager.js?v=20260626optiontabs1';
 
 import {
   loadServicesPanel,
@@ -172,7 +172,7 @@ import {
   setupMenuNavigation as setupMenuNavigationLib,
   handleHashChange,
   initializeHashChangeListener
-} from './js/lib/pageCoordinator.js';
+} from './js/lib/pageCoordinator.js?v=20260626optiontabs1';
 import { showConfirm, showPdfExportConfirm } from './js/lib/confirmDialog.js';
 import { encryptFileBuffer, decryptFileBuffer } from './js/lib/cryptoUtils.js';
 import {
@@ -671,6 +671,31 @@ function populateNoteTypeFilterDropdowns(types) {
   syncNoteTypeFilterDropdowns();
 }
 
+function populateDataExportScopeSelect() {
+  const select = document.getElementById('dataExportScopeSelect');
+  if (!select) return;
+
+  const previous = select.value;
+  const types = getNoteTypes();
+  select.replaceChildren();
+
+  const allOption = document.createElement('option');
+  allOption.value = '';
+  allOption.textContent = 'All Notes';
+  select.appendChild(allOption);
+
+  types.forEach((type) => {
+    const option = document.createElement('option');
+    option.value = type.value;
+    option.textContent = `${type.icon ? `${type.icon} ` : ''}${type.label || type.value}`;
+    select.appendChild(option);
+  });
+
+  if (Array.from(select.options).some((option) => option.value === previous)) {
+    select.value = previous;
+  }
+}
+
 function rebuildMobileMoreMenu(allowedTypes) {
   const sel = document.getElementById('mobileMoreMenuSelect');
   if (!sel) return;
@@ -684,11 +709,7 @@ function rebuildMobileMoreMenu(allowedTypes) {
     { value: 'view:tags', label: '🏷️ Tags', show: true },
     { value: 'action:random-quote', label: '🎲 Random Quote', show: hasQuotes },
     { value: 'action:random-teg', label: '🎲 Random Tegneserie', show: hasTegneserie },
-    { value: 'view:services', label: '🖥️ Services', show: true },
     { value: 'view:settings', label: '⚙️ Options', show: true },
-    { value: 'action:export-pdf', label: '📄 Export to PDF', show: true },
-    { value: 'action:export-json', label: '💾 Export Notes', show: true },
-    { value: 'action:import-json', label: '📥 Import Notes', show: true },
   ].filter(i => i.show);
 
   sel.innerHTML =
@@ -708,15 +729,6 @@ function handleMobileMoreMenuAction(value) {
       break;
     case 'action:random-teg':
       showWelcomeQuote(true, 'tegneserie');
-      break;
-    case 'action:export-pdf':
-      document.getElementById('exportPdfMenuBtn')?.click();
-      break;
-    case 'action:export-json':
-      document.getElementById('exportJsonBtn')?.click();
-      break;
-    case 'action:import-json':
-      document.getElementById('importJsonBtn')?.click();
       break;
     default:
       break;
@@ -746,6 +758,10 @@ function generateNoteTypeMenu() {
 
     const li = document.createElement('li');
     li.className = 'note-type-filter-li';
+    if (hasSubTags) li.classList.add('has-subtags');
+
+    const row = document.createElement('div');
+    row.className = 'note-type-row';
 
     // Button row: type button + optional expand arrow
     const btn = document.createElement('button');
@@ -758,17 +774,21 @@ function generateNoteTypeMenu() {
     if (hasSubTags) {
       expandBtn = document.createElement('button');
       expandBtn.className = 'note-type-expand-btn';
+      expandBtn.type = 'button';
       expandBtn.title = 'Toggle shortcuts';
-      expandBtn.textContent = '▶';
+      expandBtn.setAttribute('aria-label', `Toggle ${type.label} shortcuts`);
+      expandBtn.setAttribute('aria-expanded', 'false');
       expandBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         const subList = li.querySelector('.menu-sub-list');
         const isOpen = subList.classList.toggle('expanded');
         expandBtn.classList.toggle('open', isOpen);
+        expandBtn.setAttribute('aria-expanded', String(isOpen));
       });
-      btn.appendChild(expandBtn);
     }
-    li.appendChild(btn);
+    row.appendChild(btn);
+    if (expandBtn) row.appendChild(expandBtn);
+    li.appendChild(row);
 
     // Sub-list of highlighted tags
     if (hasSubTags) {
@@ -787,6 +807,7 @@ function generateNoteTypeMenu() {
       if (isSingleTypeMode && type.value === allowed[0]) {
         subUl.classList.add('expanded');
         expandBtn?.classList.add('open');
+        expandBtn?.setAttribute('aria-expanded', 'true');
       }
       li.appendChild(subUl);
     }
@@ -900,6 +921,7 @@ function generateNoteTypeMenu() {
 
   // Populate phone note-type dropdowns (header + bottom bar) when 2+ types in mode
   populateNoteTypeFilterDropdowns(types);
+  populateDataExportScopeSelect();
 
   // Populate the note-type selector inside the edit/add modal
   const noteTypeSelect = document.getElementById('noteType');
@@ -1301,10 +1323,14 @@ function setupEventListeners() {
   // Export PDF button - REMOVED: Moved to bulk operations modal
   // If you need export PDF, use the "Bulk Operations" button instead
 
-  // Export JSON button
-  const exportJsonBtn = getElementByIdSafe("exportJsonBtn");
-  if (exportJsonBtn) {
-    exportJsonBtn.addEventListener("click", exportToJson);
+  const dataExportJsonBtn = getElementByIdSafe("dataExportJsonBtn");
+  if (dataExportJsonBtn) {
+    dataExportJsonBtn.addEventListener("click", exportDataManagementJson);
+  }
+
+  const dataExportPdfBtn = getElementByIdSafe("dataExportPdfBtn");
+  if (dataExportPdfBtn) {
+    dataExportPdfBtn.addEventListener("click", exportDataManagementPdf);
   }
 
   // Import JSON button
@@ -1909,14 +1935,6 @@ function setupEventListeners() {
   const selectAllPageBtn = getElementByIdSafe("selectAllPageBtn");
   if (selectAllPageBtn) {
     selectAllPageBtn.addEventListener("click", selectAllOnPage);
-  }
-
-  // ── Export-to-PDF menu item ──────────────────────────────────────────────
-  // Exports selected notes when selection mode is active; otherwise the full
-  // filtered set. Same entry point as the Select-Action-Bar export button.
-  const exportPdfMenuBtn = getElementByIdSafe("exportPdfMenuBtn");
-  if (exportPdfMenuBtn) {
-    exportPdfMenuBtn.addEventListener("click", () => exportToPdf());
   }
 
   if (refreshAuthorsBtn) {
@@ -3982,8 +4000,6 @@ function switchView(view) {
       loadAuthors,
       loadSources,
       loadTags,
-      loadServices: loadServicesPanel,
-      wireServicesRefresh,
       toggleMetadataSearchSection,
       toggleTagOperationsPanel,
       renderQuoteTypesList,
@@ -3992,6 +4008,9 @@ function switchView(view) {
       prepareSettingsView: async () => {
         await refreshSettingsForOptionsPanel();
         globalSettings = getGlobalSettings();
+        populateDataExportScopeSelect();
+        wireServicesRefresh();
+        await loadServicesPanel();
       },
       setupTypeManagementListeners,
       rebuildNoteTypeMenu: generateNoteTypeMenu,
@@ -4255,6 +4274,59 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ============= EXPORT TO PDF =============
 
+function getDataManagementExportScope() {
+  const select = getElementByIdSafe('dataExportScopeSelect', 'getDataManagementExportScope');
+  return select?.value || null;
+}
+
+async function fetchDataManagementExportCount(scope) {
+  const params = new URLSearchParams();
+  if (scope) params.set('note_type', scope);
+
+  const query = params.toString();
+  const response = await fetch(`${API_URL}/quotes/count${query ? `?${query}` : ''}`);
+  if (!response.ok) {
+    throw new Error(`Failed to load export count (${response.status})`);
+  }
+
+  const data = await response.json();
+  const count = scope
+    ? Number(data.typeTotal ?? data.count ?? 0)
+    : Number(data.grandTotal ?? data.count ?? 0);
+  return Number.isFinite(count) ? count : 0;
+}
+
+async function exportDataManagementPdf() {
+  const exportBtn = getElementByIdSafe('dataExportPdfBtn', 'exportDataManagementPdf');
+  const scope = getDataManagementExportScope();
+  let count;
+
+  try {
+    count = await fetchDataManagementExportCount(scope);
+  } catch (error) {
+    console.error('Export PDF count error:', error);
+    alert('❌ Could not count notes for export: ' + error.message);
+    return;
+  }
+
+  if (count === 0) {
+    alert('⚠️ No notes to export.');
+    return;
+  }
+
+  const exportChoice = await showPdfExportConfirm(count);
+  if (!exportChoice.ok) return;
+
+  await exportToPdfLib({
+    currentNoteTypeFilter: scope,
+    exportBtn,
+    getQuoteTypes,
+    getTrainingTypes,
+    pdfColumns: exportChoice.columns,
+    ignoreCurrentFilters: true,
+  });
+}
+
 async function exportToPdf(options = {}) {
   const exportBtn = options.exportBtn || getElementByIdSafe('exportPdfBtn', 'exportToPdf');
   const selectionCount = getEffectiveSelectionCount();
@@ -4308,10 +4380,10 @@ async function exportToPdf(options = {}) {
 
 // ============= JSON EXPORT/IMPORT =============
 
-async function exportToJson() {
+async function exportDataManagementJson() {
   await exportToJsonLib({
-    currentNoteTypeFilter,
-    exportBtn: getElementByIdSafe("exportJsonBtn"),
+    currentNoteTypeFilter: getDataManagementExportScope(),
+    exportBtn: getElementByIdSafe("dataExportJsonBtn"),
   });
 }
 

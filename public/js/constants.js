@@ -144,9 +144,7 @@ export const BUTTON_IDS = {
   // Main action buttons
   ADD_QUOTE_BTN: 'addQuoteBtn',
   EXPORT_PDF_BTN: 'exportPdfBtn',
-  EXPORT_JSON_BTN: 'exportJsonBtn',
   IMPORT_JSON_BTN: 'importJsonBtn',
-  EXPORT_PDF_MENU_BTN: 'exportPdfMenuBtn',
   SETTINGS_BTN: 'settingsBtn',
   
   // Refresh buttons

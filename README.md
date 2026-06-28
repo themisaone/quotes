@@ -98,11 +98,11 @@ Ports are defined in `config/instance-ports.json` (shared by `npm run …` and t
 
 ### Services UI (multi-instance on one host)
 
-From any running instance, open **Services** in the sidebar to see which note-type servers are up, **Start** another (e.g. Tegneserie while Job is running), **Open** in a new tab, or **Stop** any service — including the one you are viewing (**This tab**), e.g. when it has no terminal window. Works over Tailscale — start/stop runs on the server machine; links use your current hostname.
+From any running instance, open **Options → Services** to see which note-type servers are up, **Start** another (e.g. Tegneserie while Job is running), **Open** in a new tab, or **Stop** any service — including the one you are viewing (**This tab**), e.g. when it has no terminal window. Works over Tailscale — start/stop runs on the server machine; links use your current hostname.
 
 Disable spawning with `INSTANCE_MANAGER=0` in `.env`. Only use on a trusted network (home / Tailscale).
 
-**Stuck instance (no terminal):** Services → **Stop** on **This tab**. If you still see an old “cannot stop from itself” message, the running Node process predates that fix — over SSH: `kill $(lsof -t -iTCP:PORT -sTCP:LISTEN)` (use the port from Services, e.g. 4003), pull latest code, start again.
+**Stuck instance (no terminal):** Options → Services → **Stop** on **This tab**. If you still see an old “cannot stop from itself” message, the running Node process predates that fix — over SSH: `kill $(lsof -t -iTCP:PORT -sTCP:LISTEN)` (use the port from Services, e.g. 4003), pull latest code, start again.
 
 Modes are defined in `config/modes.json`. Active mode persists in `config/local.json`.
 
@@ -235,7 +235,7 @@ See `DOCKER.md` for full instructions. Short version:
 
 All tables are created automatically by pending migrations on first start.
 
-To share **your data**: export a JSON backup from Data Management → Export, then import on their machine. Full exports carry all metadata; type-filtered exports carry only metadata used by the exported notes. For notes with large file attachments, also copy the `attachments/` folder.
+To share **your data**: export a JSON backup from **Options → Data Management**, then import on their machine. Full exports carry all metadata; type-filtered exports carry only metadata used by the exported notes. For notes with large file attachments, also copy the `attachments/` folder.
 
 For very large restores, avoid the browser import path. Split the JSON backup and import the parts through the running app:
 

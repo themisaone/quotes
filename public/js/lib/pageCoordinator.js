@@ -27,7 +27,6 @@ const VIEW_IDS = {
   AUTHORS: 'authorsView',
   SOURCES: 'sourcesView',
   TAGS: 'tagsView',
-  SERVICES: 'servicesView',
   SETTINGS: 'settingsView'
 };
 
@@ -38,7 +37,6 @@ const VIEWS = {
   AUTHORS: 'authors',
   SOURCES: 'sources',
   TAGS: 'tags',
-  SERVICES: 'services',
   SETTINGS: 'settings'
 };
 
@@ -87,9 +85,6 @@ export function switchView(view, callbacks, state) {
       break;
     case VIEWS.TAGS:
       showTagsView(callbacks, state);
-      break;
-    case VIEWS.SERVICES:
-      showServicesView(callbacks);
       break;
     case VIEWS.SETTINGS:
       showSettingsView(callbacks);
@@ -177,7 +172,6 @@ function hideAllViews() {
     VIEW_IDS.AUTHORS,
     VIEW_IDS.SOURCES,
     VIEW_IDS.TAGS,
-    VIEW_IDS.SERVICES,
     VIEW_IDS.SETTINGS
   ];
   
@@ -242,16 +236,6 @@ function showTagsView(callbacks, state) {
   // Check if Tag Operations should be shown
   const tagOpsEnabled = state.globalSettings?.enableTagOperations !== false;
   callbacks.toggleTagOperationsPanel(tagOpsEnabled);
-}
-
-/**
- * Show services / instance manager view
- * @param {Object} callbacks - Callbacks
- */
-function showServicesView(callbacks) {
-  showView(VIEW_IDS.SERVICES);
-  if (callbacks.loadServices) callbacks.loadServices();
-  if (callbacks.wireServicesRefresh) callbacks.wireServicesRefresh();
 }
 
 /**
