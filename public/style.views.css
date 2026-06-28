@@ -149,12 +149,6 @@
   }
 }
 
-@media (max-width: 767px) {
-  .compact-select[data-select-id="columnCountSelect"] {
-    display: none !important;
-  }
-}
-
 .display-mode-select:hover,
 .column-count-select:hover {
   border-color: var(--primary-color);

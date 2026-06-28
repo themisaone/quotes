@@ -39,6 +39,10 @@
   box-shadow: none;
 }
 
+.results-title-short {
+  display: none;
+}
+
 .quotes-section-actions {
   display: flex;
   align-items: center;

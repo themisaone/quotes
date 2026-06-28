@@ -698,6 +698,140 @@ function initCompactToolbarSelects() {
   [displayModeSelect, trainingSubModeSelect, columnCountSelect].forEach(initCompactSelectFacade);
 }
 
+const mobileBottomSelectFacades = new WeakMap();
+const mobileBottomSelectFacadeList = new Set();
+let mobileBottomSelectGlobalHandlersReady = false;
+
+function closeMobileBottomSelectFacades(exceptWrapper = null) {
+  mobileBottomSelectFacadeList.forEach(({ wrapper, button }) => {
+    if (wrapper === exceptWrapper) return;
+    wrapper.classList.remove('open');
+    button.setAttribute('aria-expanded', 'false');
+  });
+}
+
+function isMobileBottomSelectActive(select) {
+  if (!select) return false;
+  if (select.id === 'bottomNoteTypeFilter') {
+    return select.classList.contains('note-type-filter-dropdown--active') && select.options.length > 0;
+  }
+  return select.id === 'mobileMoreMenuSelect';
+}
+
+function getMobileBottomSelectOptions(select) {
+  return Array.from(select.options || [])
+    .filter((option) => !option.hidden && !option.disabled)
+    .filter((option) => !(select.id === 'mobileMoreMenuSelect' && option.value === ''));
+}
+
+function syncMobileBottomSelectFacade(select) {
+  const facade = mobileBottomSelectFacades.get(select);
+  if (!facade) return;
+
+  const { wrapper, button, label, menu } = facade;
+  const active = isMobileBottomSelectActive(select);
+  wrapper.classList.toggle('mobile-select--active', active);
+  wrapper.style.display = active ? '' : 'none';
+  button.disabled = select.disabled || !active;
+
+  const selectedOption = select.selectedOptions?.[0] || select.options?.[select.selectedIndex] || null;
+  label.textContent = selectedOption?.textContent?.trim() || select.title || 'Select';
+
+  menu.replaceChildren();
+  getMobileBottomSelectOptions(select).forEach((option) => {
+    const optionBtn = document.createElement('button');
+    optionBtn.type = 'button';
+    optionBtn.className = 'mobile-select-option';
+    optionBtn.dataset.value = option.value;
+    optionBtn.setAttribute('role', 'option');
+    optionBtn.setAttribute('aria-selected', option.value === select.value ? 'true' : 'false');
+    optionBtn.classList.toggle('selected', option.value === select.value);
+    optionBtn.textContent = option.textContent.trim();
+    optionBtn.addEventListener('click', () => {
+      if (select.value !== option.value) {
+        select.value = option.value;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      syncMobileBottomSelectFacade(select);
+      closeMobileBottomSelectFacades();
+    });
+    menu.appendChild(optionBtn);
+  });
+}
+
+function initMobileBottomSelectFacade(select) {
+  if (!select || mobileBottomSelectFacades.has(select)) return;
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'mobile-select';
+  wrapper.dataset.selectId = select.id || '';
+  select.parentNode.insertBefore(wrapper, select);
+  wrapper.appendChild(select);
+  select.classList.add('mobile-select-native');
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'mobile-select-button';
+  button.setAttribute('aria-haspopup', 'listbox');
+  button.setAttribute('aria-expanded', 'false');
+  button.title = select.title || select.getAttribute('aria-label') || '';
+
+  const label = document.createElement('span');
+  label.className = 'mobile-select-label';
+  const arrow = document.createElement('span');
+  arrow.className = 'mobile-select-arrow';
+  arrow.setAttribute('aria-hidden', 'true');
+  arrow.textContent = '▲';
+  button.append(label, arrow);
+
+  const menu = document.createElement('div');
+  menu.className = 'mobile-select-menu';
+  menu.setAttribute('role', 'listbox');
+
+  wrapper.append(button, menu);
+
+  const facade = { wrapper, button, label, menu };
+  mobileBottomSelectFacades.set(select, facade);
+  mobileBottomSelectFacadeList.add(facade);
+
+  button.addEventListener('click', (event) => {
+    event.stopPropagation();
+    syncMobileBottomSelectFacade(select);
+    const willOpen = !wrapper.classList.contains('open');
+    closeMobileBottomSelectFacades(wrapper);
+    wrapper.classList.toggle('open', willOpen);
+    button.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+  });
+
+  select.addEventListener('change', () => syncMobileBottomSelectFacade(select));
+
+  const observer = new MutationObserver(() => syncMobileBottomSelectFacade(select));
+  observer.observe(select, {
+    attributes: true,
+    attributeFilter: ['class', 'disabled', 'hidden', 'style'],
+    childList: true,
+    subtree: true,
+  });
+
+  if (!mobileBottomSelectGlobalHandlersReady) {
+    document.addEventListener('click', (event) => {
+      if (!event.target.closest('.mobile-select')) closeMobileBottomSelectFacades();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') closeMobileBottomSelectFacades();
+    });
+    mobileBottomSelectGlobalHandlersReady = true;
+  }
+
+  syncMobileBottomSelectFacade(select);
+}
+
+function initMobileBottomSelectFacades() {
+  ['bottomNoteTypeFilter', 'mobileMoreMenuSelect']
+    .map((id) => document.getElementById(id))
+    .forEach(initMobileBottomSelectFacade);
+}
+
 // MIGRATED: Bulk import elements moved to bulkImport.js
 // Preview elements removed - no longer needed
 
@@ -770,6 +904,7 @@ function syncNoteTypeFilterDropdowns() {
   const sel = document.getElementById('bottomNoteTypeFilter');
   if (!sel?.classList.contains('note-type-filter-dropdown--active')) return;
   sel.value = currentNoteTypeFilter || '';
+  syncMobileBottomSelectFacade(sel);
 }
 
 function populateNoteTypeFilterDropdowns(types) {
@@ -786,6 +921,7 @@ function populateNoteTypeFilterDropdowns(types) {
   if (sel) {
     sel.classList.toggle('note-type-filter-dropdown--active', isMulti);
     sel.innerHTML = isMulti ? optionsHtml : '';
+    syncMobileBottomSelectFacade(sel);
   }
 
   syncNoteTypeFilterDropdowns();
@@ -835,6 +971,7 @@ function rebuildMobileMoreMenu(allowedTypes) {
   sel.innerHTML =
     '<option value="">☰ Menu</option>' +
     items.map(i => `<option value="${i.value}">${i.label}</option>`).join('');
+  syncMobileBottomSelectFacade(sel);
 }
 
 function handleMobileMoreMenuAction(value) {
@@ -1379,6 +1516,7 @@ function setupEventListeners() {
     mobileMoreMenuSelect.addEventListener('change', () => {
       const action = mobileMoreMenuSelect.value;
       mobileMoreMenuSelect.value = '';
+      syncMobileBottomSelectFacade(mobileMoreMenuSelect);
       handleMobileMoreMenuAction(action);
     });
   }
@@ -1969,13 +2107,41 @@ function setupEventListeners() {
       }
     }
 
-    /** Medium/tablet: hide 1 & 4; desktop (>1100px): show all including 4. */
+    function setColumnCountOptionLabels(isSmallScreen) {
+      const labels = isSmallScreen
+        ? new Map([
+            ['1', '⬜ 1'],
+            ['2', '▦ Cards'],
+            ['3', '⬜⬜⬜ 3'],
+            ['4', '⬜⬜⬜⬜ 4'],
+            ['gallery', '🖼 Gallery'],
+          ])
+        : new Map([
+            ['1', '⬜ 1'],
+            ['2', '⬜⬜ 2'],
+            ['3', '⬜⬜⬜ 3'],
+            ['4', '⬜⬜⬜⬜ 4'],
+            ['gallery', '🖼 Gallery'],
+          ]);
+
+      for (const [value, label] of labels) {
+        const opt = columnCountSelect.querySelector(`option[value="${CSS.escape(value)}"]`);
+        if (opt && opt.textContent !== label) opt.textContent = label;
+      }
+    }
+
+    /** Phone: Cards/Gallery; medium/tablet: 2/3/Gallery; desktop: full set. */
     function syncColumnCountOptions() {
       ensureColumnCountOptions();
+      const isSmallScreen = window.matchMedia('(max-width: 767px)').matches;
       const isMediumScreen = window.matchMedia('(min-width: 768px) and (max-width: 1100px)').matches;
+      const allowedInSmall = new Set(['2', 'gallery']);
       const allowedInMedium = new Set(['2', '3', 'gallery']);
+      setColumnCountOptionLabels(isSmallScreen);
       Array.from(columnCountSelect.options).forEach((opt) => {
-        const hide = isMediumScreen && !allowedInMedium.has(opt.value);
+        const hide =
+          (isSmallScreen && !allowedInSmall.has(opt.value)) ||
+          (isMediumScreen && !allowedInMedium.has(opt.value));
         opt.hidden = hide;
         opt.disabled = hide;
       });
@@ -2000,8 +2166,8 @@ function setupEventListeners() {
     }
 
     syncColumnCountOptions();
-    window.matchMedia('(min-width: 768px) and (max-width: 1100px)')
-      .addEventListener('change', syncColumnCountOptions);
+    window.matchMedia('(max-width: 767px)').addEventListener('change', syncColumnCountOptions);
+    window.matchMedia('(min-width: 768px) and (max-width: 1100px)').addEventListener('change', syncColumnCountOptions);
 
     // Sanitize saved value against options visible on this screen width.
     const validValues = Array.from(columnCountSelect.options)
@@ -2045,6 +2211,7 @@ function setupEventListeners() {
   }
 
   initCompactToolbarSelects();
+  initMobileBottomSelectFacades();
 
   // Selection bar buttons
   const clearSelectionBtn = getElementByIdSafe("clearSelectionBtn");
