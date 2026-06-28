@@ -909,4 +909,73 @@
   .side-menu:not(.menu-collapsed) .menu-text-desktop {
     display: inline !important;
   }
+
+  .side-menu.menu-collapsed {
+    --collapsed-menu-item-size: 36px;
+    width: 48px !important;
+    padding: 0.5rem 0.2rem !important;
+    align-items: stretch !important;
+    scrollbar-width: none !important;
+  }
+
+  .side-menu.menu-collapsed::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+  }
+
+  .side-menu.menu-collapsed .menu-list {
+    padding-left: 0 !important;
+    width: 100% !important;
+  }
+
+  .side-menu.menu-collapsed .menu-list li {
+    display: flex !important;
+    justify-content: center !important;
+    width: 100% !important;
+  }
+
+  .side-menu.menu-collapsed .menu-separator {
+    width: 26px !important;
+    margin: 0.45rem auto !important;
+    flex: 0 0 auto !important;
+  }
+
+  .side-menu.menu-collapsed .note-type-filter-li.has-subtags > .note-type-row {
+    display: flex !important;
+    justify-content: center !important;
+    width: 100% !important;
+  }
+
+  .side-menu.menu-collapsed .menu-item {
+    width: var(--collapsed-menu-item-size) !important;
+    min-height: var(--collapsed-menu-item-size) !important;
+    height: var(--collapsed-menu-item-size) !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 0 !important;
+    line-height: 1 !important;
+  }
+
+  .side-menu.menu-collapsed .note-type-filter-li.has-subtags > .note-type-row > .menu-item {
+    padding: 0 !important;
+    padding-right: 0 !important;
+    width: var(--collapsed-menu-item-size) !important;
+    min-height: var(--collapsed-menu-item-size) !important;
+    height: var(--collapsed-menu-item-size) !important;
+  }
+
+  .side-menu.menu-collapsed .menu-icon {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex: 0 0 2rem !important;
+    width: 2rem !important;
+    height: 2rem !important;
+    font-size: 1.15rem !important;
+    line-height: 1 !important;
+    margin: 0 !important;
+    text-align: center !important;
+  }
 }
