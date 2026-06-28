@@ -641,8 +641,28 @@
   .type-filter-toggle {
     font-size: var(--m-font-md) !important;
     gap: 0.5rem;
-    padding: 0.5rem var(--m-pad-base);
+    padding: 0 var(--m-pad-base);
+    line-height: 1 !important;
     min-width: 160px;
+  }
+  .search-compact-bar {
+    flex-wrap: nowrap !important;
+    gap: 0.45rem !important;
+  }
+  .search-any-field {
+    flex: 1 1 auto !important;
+    margin-left: 0 !important;
+  }
+  .search-header-subtype {
+    flex: 0 0 auto !important;
+    margin-left: 0 !important;
+  }
+  .search-header-subtype .type-filter-toggle {
+    min-width: 6.2rem !important;
+    max-width: 12.5rem !important;
+  }
+  .search-header-subtype .type-filter-toggle-label {
+    max-width: 13ch !important;
   }
   .dropdown-arrow {
     font-size: 0.6rem !important;

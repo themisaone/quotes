@@ -110,7 +110,7 @@ import {
   setCurrentPage as setLibCurrentPage,
   setQuotesPerPage,
   getQuotesPerPage
-} from './js/lib/displayManager.js?v=20260614searchany1';
+} from './js/lib/displayManager.js?v=20260628searchscope1';
 
 import {
   populateTypeFilterCheckboxes as populateTypeFilterCheckboxesLib,
@@ -120,7 +120,7 @@ import {
   clearFilters as clearFiltersLib,
   updateSourcesFilterVisibility as updateSourcesFilterVisibilityLib2,
   initializeFilterHandlers
-} from './js/lib/filterManager.js?v=20260317f';
+} from './js/lib/filterManager.js?v=20260628searchscope1';
 
 import {
   filterByAuthor as filterByAuthorLib,
@@ -4618,18 +4618,13 @@ function getCurrentFilters() {
     const quoteTypes = getQuoteTypes();
     const selected = currentNoteTypeFilter === 'quote'
       ? getCheckedDatasetValues('.type-filter-options input[type="checkbox"]')
-      : currentNoteTypeFilter === null
-        ? getCheckedDatasetValues('.training-type-filter-options input[id^="filterQuote"]')
-        : [];
+      : [];
     return selected.length > 0 && selected.length < quoteTypes.length ? selected.join(',') : '';
   };
 
   const getTrainingTypeFilter = () => {
-    if (currentNoteTypeFilter !== 'training' && currentNoteTypeFilter !== null) return '';
-    const selector = currentNoteTypeFilter === null
-      ? '.training-type-filter-options input[id^="filterTraining"]'
-      : '.training-type-filter-options input[type="checkbox"]';
-    return getCheckedDatasetValues(selector).join(',');
+    if (currentNoteTypeFilter !== 'training') return '';
+    return getCheckedDatasetValues('.training-type-filter-options input[type="checkbox"]').join(',');
   };
 
   const getGenericSubTypeFilter = () => {

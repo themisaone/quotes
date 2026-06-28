@@ -166,6 +166,16 @@
   }
   .search-grid .search-clear-item .search-clear-btn { width: 100%; }
 
+  .search-compact-bar {
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+
+  .search-any-field {
+    flex: 1 1 14rem;
+    margin-left: 0;
+  }
+
   .search-item {
     flex-direction: row;
     align-items: center;
@@ -192,18 +202,19 @@
   }
 
   .search-header-subtype {
-    width: auto;
+    flex: 1 1 100%;
+    width: 100%;
     margin-left: 0;
-    align-self: flex-start;
+    align-self: stretch;
   }
   .search-header-subtype .search-grid-dropdown {
-    width: auto;
+    width: 100%;
     min-width: 0;
-    flex: 0 0 auto;
+    flex: 1 1 auto;
   }
   .search-header-subtype .type-filter-dropdown-container {
-    flex: 0 0 auto;
-    width: auto;
+    flex: 1 1 auto;
+    width: 100%;
   }
   .search-header-subtype .type-filter-toggle {
     font-size: 0.72rem;
@@ -211,7 +222,7 @@
     height: auto;
     min-height: 1.6rem;
     min-width: 0;
-    width: auto;
+    width: 100%;
   }
 
   .quote-meta {
@@ -662,6 +673,16 @@
     font-size: 11px !important;
     padding: 0.5rem !important;
   }
+
+  .search-compact-bar {
+    flex-wrap: wrap !important;
+    gap: 0.45rem !important;
+  }
+
+  .search-any-field {
+    flex: 1 1 14rem !important;
+    margin-left: 0 !important;
+  }
   
   .search-header h2 {
     margin-bottom: 0 !important;
@@ -678,20 +699,21 @@
   }
 
   .search-header-subtype {
-    width: auto !important;
+    flex: 1 1 100% !important;
+    width: 100% !important;
     margin-left: 0 !important;
-    align-self: flex-start !important;
+    align-self: stretch !important;
   }
 
   .search-header-subtype .search-grid-dropdown {
-    width: auto !important;
+    width: 100% !important;
     min-width: 0 !important;
-    flex: 0 0 auto !important;
+    flex: 1 1 auto !important;
   }
 
   .search-header-subtype .type-filter-dropdown-container {
-    flex: 0 0 auto !important;
-    width: auto !important;
+    flex: 1 1 auto !important;
+    width: 100% !important;
   }
 
   .search-header-subtype .type-filter-toggle {
@@ -700,7 +722,7 @@
     height: auto !important;
     min-height: 1.6rem !important;
     min-width: 0 !important;
-    width: auto !important;
+    width: 100% !important;
     max-width: 100% !important;
   }
 

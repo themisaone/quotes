@@ -27,6 +27,18 @@
   min-width: 3.5rem;
   transition: border-color 0.2s, background 0.2s;
 }
+
+@media (min-width: 768px) {
+  .header-actions .display-mode-select,
+  .header-actions .btn-add,
+  .quotes-section-actions .btn-select-mode,
+  .quotes-section-actions .column-count-select,
+  .search-header-subtype .type-filter-toggle {
+    min-width: 6.35rem;
+    box-sizing: border-box;
+  }
+}
+
 .display-mode-select:hover,
 .column-count-select:hover {
   border-color: var(--primary-color);

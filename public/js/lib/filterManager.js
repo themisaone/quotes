@@ -134,29 +134,51 @@ function renderTypeSummary(summaryEl, checkboxSelector) {
   summaryEl.innerHTML = '(' + parts.join('') + ')';
 }
 
+function formatToggleSummary(checkboxSelector, { all, selected }) {
+  const checkboxes = [...document.querySelectorAll(checkboxSelector)];
+  if (checkboxes.length === 0) return all;
+
+  const checked = checkboxes.filter(cb => cb.checked);
+  if (checked.length === 0 || checked.length === checkboxes.length) return all;
+  return selected(checked.length);
+}
+
+function updateToggleLabel(labelId, checkboxSelector, labels) {
+  const label = document.getElementById(labelId);
+  if (!label) return;
+
+  label.textContent = formatToggleSummary(checkboxSelector, labels);
+  const checkedLabels = [...document.querySelectorAll(checkboxSelector)]
+    .filter(cb => cb.checked)
+    .map(cb => cb.dataset.label || cb.dataset.type)
+    .filter(Boolean);
+  label.title = checkedLabels.length ? checkedLabels.join(', ') : labels.all;
+}
+
 /**
- * Refresh active/inactive training type summary below the search title.
+ * Refresh the training type dropdown's compact selection label.
  */
 export function updateTrainingTypeSummary(isAllNotes = false) {
-  // In All Notes (combined) use id-prefix to avoid including quote-source checkboxes.
-  // In Training view all checkboxes are training types so the simple selector is fine.
   const selector = isAllNotes
     ? '.training-type-filter-options input[id^="filterTraining"]'
     : SELECTORS.trainingTypeCheckbox;
   renderTypeSummary(document.getElementById('trainingTypeSummary'), selector);
+  updateToggleLabel('trainingTypesFilterLabel', selector, {
+    all: '🏋️ All types',
+    selected: (count) => `🏋️ ${count} selected`,
+  });
 }
 
 /**
- * Refresh active/inactive quote source type summary below the search title.
- * In All Notes view, quote checkboxes live in the combined dropdown (filterQuote* IDs).
- * In Quote view, they live in the dedicated .type-filter-options dropdown.
+ * Refresh the quote source dropdown's compact selection label.
  */
 export function updateQuoteSourcesSummary() {
-  const inCombined = document.querySelector('.training-type-filter-options input[id^="filterQuote"]');
-  const selector = inCombined
-    ? '.training-type-filter-options input[id^="filterQuote"]'
-    : SELECTORS.quoteTypeOptions + ' input[type="checkbox"]';
+  const selector = SELECTORS.quoteTypeOptions + ' input[type="checkbox"]';
   renderTypeSummary(document.getElementById('quoteSourcesSummary'), selector);
+  updateToggleLabel('quoteSourcesFilterLabel', selector, {
+    all: '📋 All sources',
+    selected: (count) => `📋 ${count} selected`,
+  });
 }
 
 /**
@@ -227,49 +249,9 @@ export function populateGenericSubTypeFilterCheckboxes(subTypes) {
  */
 export function updateGenericSubTypeSummary() {
   renderTypeSummary(document.getElementById('genericSubTypeSummary'), SELECTORS.genericSubTypeCheckbox);
-}
-
-/**
- * Populate combined note types/sources for "All Notes" view
- */
-export function populateCombinedTypeFilterCheckboxes(getQuoteTypes, getTrainingTypes) {
-  const quoteTypes = getQuoteTypes();
-  const trainingTypes = getTrainingTypes();
-  const container = document.querySelector(SELECTORS.trainingTypeOptions);
-  
-  if (!container) return;
-  
-  // Store current checked states
-  const checkedStates = getCheckboxStates(container);
-  
-  // Clear and rebuild
-  container.innerHTML = '';
-  
-  // Add quote source types first
-  const quoteSectionLabel = document.createElement('div');
-  quoteSectionLabel.className = 'type-filter-section-label';
-  quoteSectionLabel.textContent = '📚 Quote Sources';
-  quoteSectionLabel.style.cssText = 'padding: 0.5rem 1rem; font-weight: 600; font-size: 0.85rem; color: var(--text-secondary); border-bottom: 1px solid var(--border); margin-bottom: 0.5rem;';
-  container.appendChild(quoteSectionLabel);
-  
-  quoteTypes.forEach(type => {
-    const checkboxId = `filterQuote${type.value.replace(/-/g, '')}`;
-    const isChecked = checkedStates[checkboxId] !== false;
-    container.appendChild(createTypeCheckbox(checkboxId, type, isChecked));
-  });
-  
-  // Add training types
-  const trainingSectionLabel = document.createElement('div');
-  trainingSectionLabel.className = 'type-filter-section-label';
-  trainingSectionLabel.textContent = '🏋️ Training Types';
-  trainingSectionLabel.style.cssText = 'padding: 0.5rem 1rem; font-weight: 600; font-size: 0.85rem; color: var(--text-secondary); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin-top: 0.5rem; margin-bottom: 0.5rem;';
-  container.appendChild(trainingSectionLabel);
-  
-  trainingTypes.forEach(type => {
-    const checkboxId = `filterTraining${type.value}`;
-    const typeDefault = type.defaultChecked !== false;
-    const isChecked = checkedStates[checkboxId] !== undefined ? checkedStates[checkboxId] : typeDefault;
-    container.appendChild(createTypeCheckbox(checkboxId, type, isChecked));
+  updateToggleLabel('genericSubTypesFilterLabel', SELECTORS.genericSubTypeCheckbox, {
+    all: '🏷️ All types',
+    selected: (count) => `🏷️ ${count} selected`,
   });
 }
 
@@ -323,42 +305,35 @@ export function updateSourcesFilterVisibility(currentNoteTypeFilter, getQuoteTyp
   const showQuoteSources = quotesInMode && currentNoteTypeFilter === 'quote';
   setElementVisibility(ELEMENT_IDS.sourcesFilterContainer, showQuoteSources);
   
-  // Show training types only when training is in the active mode
+  // Show training types only in the dedicated Training view. In All Notes the
+  // subtype controls stay hidden to keep broad search simple.
   const trainingInMode = !window._modeAllowedTypes || window._modeAllowedTypes.includes('training');
-  const showTrainingTypes = trainingInMode && (currentNoteTypeFilter === 'training' || isAllNotesView);
+  const showTrainingTypes = trainingInMode && currentNoteTypeFilter === 'training';
   setElementVisibility(ELEMENT_IDS.trainingTypesFilterContainer, showTrainingTypes);
   
   // Update the training types dropdown label based on view
-  updateTrainingTypesDropdownLabel(isAllNotesView);
+  updateTrainingTypesDropdownLabel(false);
   
   // Repopulate the training dropdown based on view
   if (showTrainingTypes && getQuoteTypes && getTrainingTypes) {
-    if (isAllNotesView) {
-      // Combined view: show both quote sources and training types
-      populateCombinedTypeFilterCheckboxes(getQuoteTypes, getTrainingTypes);
-    } else {
-      // Training view: show only training types
-      populateTrainingTypeFilterCheckboxes(getTrainingTypes);
-    }
+    populateTrainingTypeFilterCheckboxes(getTrainingTypes);
   }
 
-  // Refresh summaries — each only on its own dedicated page, never mixed.
-  // Only updateSourcesFilterVisibility controls display; renderTypeSummary only updates content.
+  // Refresh compact dropdown labels. The old long summary spans are optional
+  // and are not rendered in the current compact search layout.
   const trainingSummaryEl = document.getElementById('trainingTypeSummary');
   const quoteSummaryEl    = document.getElementById('quoteSourcesSummary');
 
-  // Training types summary: show on Training view AND All Notes view
-  if (currentNoteTypeFilter === 'training' || isAllNotesView) {
-    updateTrainingTypeSummary(isAllNotesView);
-    if (trainingSummaryEl) trainingSummaryEl.style.display = '';
+  if (currentNoteTypeFilter === 'training') {
+    updateTrainingTypeSummary(false);
+    if (trainingSummaryEl) trainingSummaryEl.style.display = 'none';
   } else {
     if (trainingSummaryEl) { trainingSummaryEl.style.display = 'none'; trainingSummaryEl.innerHTML = ''; }
   }
 
-  // Quote sources summary: show on Quote view AND All Notes view
-  if (currentNoteTypeFilter === 'quote' || isAllNotesView) {
+  if (currentNoteTypeFilter === 'quote') {
     updateQuoteSourcesSummary();
-    if (quoteSummaryEl) quoteSummaryEl.style.display = '';
+    if (quoteSummaryEl) quoteSummaryEl.style.display = 'none';
   } else {
     if (quoteSummaryEl) { quoteSummaryEl.style.display = 'none'; quoteSummaryEl.innerHTML = ''; }
   }
@@ -380,19 +355,19 @@ export function updateSourcesFilterVisibility(currentNoteTypeFilter, getQuoteTyp
   setElementVisibility(ELEMENT_IDS.genericSubTypesFilterContainer, showGenericSubTypes);
   if (showGenericSubTypes) {
     populateGenericSubTypeFilterCheckboxes(getGenericSubTypes(currentNoteTypeFilter));
-    // Update label to match the type
-    const genericSubTypesLabel = document.getElementById('genericSubTypesFilterLabel');
-    if (genericSubTypesLabel) {
-      genericSubTypesLabel.textContent = `🏷️ ${getNoteTypeConfig(currentNoteTypeFilter).label} Types`;
-    }
   }
   // Generic sub-type summary
   const genericSubTypeSummaryEl = document.getElementById('genericSubTypeSummary');
   if (showGenericSubTypes) {
     updateGenericSubTypeSummary();
-    if (genericSubTypeSummaryEl) genericSubTypeSummaryEl.style.display = '';
+    if (genericSubTypeSummaryEl) genericSubTypeSummaryEl.style.display = 'none';
   } else {
     if (genericSubTypeSummaryEl) { genericSubTypeSummaryEl.style.display = 'none'; genericSubTypeSummaryEl.innerHTML = ''; }
+  }
+
+  const subtypeSlot = document.querySelector('.search-header-subtype');
+  if (subtypeSlot) {
+    subtypeSlot.style.display = (showQuoteSources || showTrainingTypes || showGenericSubTypes) ? '' : 'none';
   }
   
   // Apply the correct search grid layout for this note type

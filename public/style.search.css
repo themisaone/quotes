@@ -95,14 +95,15 @@
   margin: 0;
 }
 
-/* Compact row: Search title (left) → gap → All fields label + input (fills rest) */
+/* Compact row: Search title → broad search input → optional subtype dropdown */
 .search-compact-bar {
   display: flex;
   align-items: center;
-  gap: 0;
+  gap: 0.65rem;
   margin-bottom: 0.75rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   width: 100%;
+  overflow: visible;
 }
 
 .search-compact-title {
@@ -117,14 +118,18 @@
 }
 
 .search-expand-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.45rem;
+  height: var(--d-btn-height);
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 0.65rem;
   color: var(--text-secondary);
-  padding: 0.15rem 0.25rem;
+  padding: 0;
   line-height: 1;
-  transition: transform 0.2s, color 0.2s;
+  transition: color 0.2s;
   flex-shrink: 0;
 }
 
@@ -132,18 +137,28 @@
   color: var(--text-primary);
 }
 
-.search-expand-toggle.open {
+.search-expand-toggle::before {
+  content: "";
+  width: 0;
+  height: 0;
+  border-top: 0.44rem solid transparent;
+  border-bottom: 0.44rem solid transparent;
+  border-left: 0.62rem solid currentColor;
+  transition: transform 0.18s ease;
+}
+
+.search-expand-toggle.open::before {
   transform: rotate(90deg);
 }
 
 .search-any-field {
-  flex: 1 1 12rem;
+  flex: 1 1 18rem;
   min-width: 0;
-  margin-left: 4.5rem;
+  margin-left: 0;
 }
 
 .search-any-field label {
-  min-width: 4.5rem;
+  display: none;
 }
 
 .search-any-input {
@@ -176,8 +191,9 @@
 
 /* Sub-type filter menus are position:absolute — must not clip when open */
 .search-advanced-panel.expanded .search-header,
-.search-advanced-panel.expanded .search-header-subtype,
-.search-advanced-panel.expanded .type-filter-dropdown-container {
+.search-compact-bar,
+.search-header-subtype,
+.type-filter-dropdown-container {
   overflow: visible;
 }
 
@@ -200,8 +216,9 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  flex-shrink: 0;
-  margin-left: auto;
+  flex: 0 0 auto;
+  margin-left: 0;
+  min-width: 0;
 }
 
 /* The dropdown block inside the header doesn't need the grid-cell layout it
@@ -210,6 +227,7 @@
    across empty space like a traditional select. */
 .search-header-subtype .search-grid-dropdown {
   flex: 0 0 auto;
+  min-width: 0;
 }
 
 /* Clear button (now placed inside .search-grid row 1) */
@@ -234,20 +252,26 @@
    so we size it to content and place the label-left / arrow-right. */
 .search-grid-dropdown .type-filter-toggle {
   min-width: 0;
-  padding: 0.4rem 0.9rem;
+  padding: 0 0.9rem;
+  box-sizing: border-box;
+  align-items: center;
   justify-content: space-between;
   gap: 0.6rem;
   height: var(--d-btn-height);
+  line-height: 1;
 }
 
 /* Label that sits inside the sub-type toggle button. Acts like the button
    text (label + arrow), replacing the old separate <label> element. */
 .type-filter-toggle-label {
+  display: inline-flex;
+  align-items: center;
   font-weight: 500;
+  line-height: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 22ch;
+  max-width: 18ch;
 }
 /* Dropdown panel opens downward from the button, not from the label */
 .search-grid-dropdown .type-filter-dropdown {
@@ -400,6 +424,7 @@
 
 .dropdown-arrow {
   font-size: 0.7rem;
+  line-height: 1;
   transition: transform 0.2s;
 }
 

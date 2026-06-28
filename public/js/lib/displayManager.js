@@ -105,7 +105,7 @@ function addSearchFilters(params, globalSettings) {
 }
 
 /**
- * Add quote type filters to params (for Quote view or All Notes view)
+ * Add quote type filters to params (Quote view only)
  */
 function addQuoteTypeFilters(params, currentNoteTypeFilter, getQuoteTypes) {
   const quoteTypes = getQuoteTypes();
@@ -115,9 +115,6 @@ function addQuoteTypeFilters(params, currentNoteTypeFilter, getQuoteTypes) {
   if (currentNoteTypeFilter === 'quote') {
     // Quote view: read from the quote-specific dropdown
     selectedTypes = getSelectedCheckboxValues('.type-filter-options input[type="checkbox"]');
-  } else if (currentNoteTypeFilter === null) {
-    // All Notes: combined dropdown — read only the filterQuote* checkboxes
-    selectedTypes = getSelectedCheckboxValues('.training-type-filter-options input[id^="filterQuote"]');
   } else {
     return;
   }
@@ -129,20 +126,14 @@ function addQuoteTypeFilters(params, currentNoteTypeFilter, getQuoteTypes) {
 }
 
 /**
- * Add training type filters to params (Training view AND All Notes view)
+ * Add training type filters to params (Training view only)
  */
 function addTrainingTypeFilters(params, currentNoteTypeFilter) {
-  // Run for Training view and All Notes; skip all other note types
-  if (currentNoteTypeFilter !== 'training' && currentNoteTypeFilter !== null) {
+  if (currentNoteTypeFilter !== 'training') {
     return;
   }
 
-  // In All Notes (combined dropdown) use id-prefix to exclude quote-source checkboxes.
-  // In Training view all checkboxes are training types so the simple selector is sufficient.
-  const trainingSelector = currentNoteTypeFilter === null
-    ? '.training-type-filter-options input[id^="filterTraining"]'
-    : '.training-type-filter-options input[type="checkbox"]';
-  const selectedTrainingTypes = getSelectedCheckboxValues(trainingSelector);
+  const selectedTrainingTypes = getSelectedCheckboxValues('.training-type-filter-options input[type="checkbox"]');
 
   if (selectedTrainingTypes.length > 0) {
     params.append("training_types", selectedTrainingTypes.join(","));
