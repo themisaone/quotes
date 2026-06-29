@@ -296,6 +296,7 @@
 .card-note-title {
   padding-bottom: 0.4rem;
   margin-bottom: 1.0rem;
+  margin-top: 0.5rem;
   border-bottom: 1px solid var(--border);
 }
 

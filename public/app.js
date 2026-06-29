@@ -4,7 +4,7 @@ import {
   updateUrlHash as updateUrlHashLib,
   updateActiveMenuState as updateActiveMenuStateLib,
   updatePageTitle as updatePageTitleLib
-} from './js/lib/viewManager.js?v=20260425clean';
+} from './js/lib/viewManager.js?v=20260629mobiletitle1';
 
 import {
   escapeHtml,
@@ -186,7 +186,7 @@ import {
   setTrainingSubMode,
   getListPanePageSize,
   restoreTrainingDateFiltersToBar
-} from './js/lib/listPaneView.js?v=20260622listrefresh1';
+} from './js/lib/listPaneView.js?v=20260629oldicon1';
 import {
   configurePaneEditor,
   syncPaneTextToModalHidden,
@@ -1396,7 +1396,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   applyGrandTotalCounterVisibility();
   applyMobileBottomNavClass();
 
-  window.matchMedia('(max-width: 767px)').addEventListener('change', applyMobileBottomNavClass);
+  window.matchMedia('(max-width: 767px)').addEventListener('change', () => {
+    applyMobileBottomNavClass();
+    updateMainTitle();
+  });
   
   // Show/hide metadata search section based on current filter and settings
   const metaSearchEnabled = globalSettings?.enableQuoteMetaSearches === true;

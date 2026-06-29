@@ -3,8 +3,7 @@
  *
  * Renders a monthly calendar of training notes into a container (typically the
  * left column of the list-pane view).  Days on which a training took place show
- * an icon row per distinct sub-type (from settings).  The legend lists
- * sub-types by icon + label.
+ * an icon row per distinct sub-type.  The legend lists sub-types by icon + label.
  *
  * Public API
  * ----------

@@ -15,6 +15,18 @@
 import { getElementByIdSafe } from '../constants.js';
 import { getNoteTypeConfig, getNoteTypes } from './noteTypes.js';
 
+function isPhoneTitleMode() {
+  return typeof window !== 'undefined'
+    && window.matchMedia
+    && window.matchMedia('(max-width: 767px)').matches;
+}
+
+function getResponsiveTitleLabel(label) {
+  if (!isPhoneTitleMode()) return label;
+  const compact = String(label || '').replace(/\s+Notes$/i, '').trim();
+  return compact || label;
+}
+
 /**
  * Parse URL hash and return note type filter.
  * Uses the dynamic note types list so any configured type works automatically.
@@ -101,5 +113,5 @@ export function updatePageTitle(noteTypeFilter) {
 
   const config = getNoteTypeConfig(noteTypeFilter);
   titleIcon.textContent = config.icon || '📝';
-  titleText.textContent = config.label || noteTypeFilter;
+  titleText.textContent = getResponsiveTitleLabel(config.label || noteTypeFilter);
 }

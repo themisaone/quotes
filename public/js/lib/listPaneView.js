@@ -18,7 +18,7 @@
  */
 
 import { escapeHtml, resolveAttachmentUrl } from './utils.js';
-import { renderTrainingCalendar } from './trainingCalendar.js';
+import { renderTrainingCalendar } from './trainingCalendar.js?v=20260629oldicon1';
 import {
   buildPaneMetaSections,
   buildPaneScoreHtml,
