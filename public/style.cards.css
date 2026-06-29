@@ -106,8 +106,16 @@
   user-select: text;
 }
 
+.welcome-quote-container {
+  width: min(88ch, calc(100vw - 2rem));
+  max-width: 800px;
+  box-sizing: border-box;
+}
+
 .welcome-quote-container .quote-card {
-  max-width: 600px;
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
   border: 8px double #f0b429;
 }
 

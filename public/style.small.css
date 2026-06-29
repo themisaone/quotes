@@ -209,6 +209,18 @@
     margin-bottom: 0.32rem !important;
   }
 
+  #quoteModal .quote-editor-group.fullscreen {
+    padding-top: max(0.55rem, env(safe-area-inset-top, 0px)) !important;
+    padding-right: max(0.65rem, env(safe-area-inset-right, 0px)) !important;
+    padding-bottom: max(0.9rem, env(safe-area-inset-bottom, 0px)) !important;
+    padding-left: max(0.65rem, env(safe-area-inset-left, 0px)) !important;
+    box-sizing: border-box !important;
+  }
+
+  #quoteModal .quote-editor-group.fullscreen .quote-editor-toolbar {
+    margin-bottom: 0.15rem !important;
+  }
+
   #quoteModal .form-row,
   #quoteModal .form-row-2,
   #quoteModal .form-row-3 {
