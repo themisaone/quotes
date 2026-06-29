@@ -1115,16 +1115,34 @@
   
   /* Compact buttons */
   .btn {
-    padding: 0.3rem 0.6rem !important;
+    height: 30px !important;
+    min-height: 30px !important;
+    padding: 0 0.6rem !important;
     font-size: 11px !important;  /* Was 14px, now 20% smaller */
-    line-height: 1.2 !important;
+    line-height: 1 !important;
+    box-sizing: border-box !important;
   }
   
   .btn-primary,
   .btn-secondary {
-    padding: 0.3rem 0.6rem !important;
+    height: 30px !important;
+    min-height: 30px !important;
+    padding: 0 0.6rem !important;
     font-size: 11px !important;
-    line-height: 1.2 !important;
+    line-height: 1 !important;
+    box-sizing: border-box !important;
+  }
+
+  .header-actions .btn-add.desktop-text,
+  .header-actions .btn-bulk.desktop-text {
+    display: none !important;
+  }
+
+  .header-actions .btn-add.tablet-text,
+  .header-actions .btn-bulk.tablet-text {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .header-actions .compact-select-button,
@@ -1231,6 +1249,13 @@
     align-self: stretch !important;
   }
 
+  #quoteModal,
+  #quoteModal .modal-content,
+  #quoteModal .modal-body {
+    -webkit-text-size-adjust: 100% !important;
+    text-size-adjust: 100% !important;
+  }
+
   #quoteModal .modal-header {
     border-radius: 0 !important;
     padding-left: max(0.75rem, env(safe-area-inset-left, 0px)) !important;
@@ -1259,6 +1284,18 @@
     margin-right: calc(-1 * max(1rem, env(safe-area-inset-right, 0px))) !important;
     margin-bottom: calc(-1 * max(1.5rem, env(safe-area-inset-bottom, 0px))) !important;
     border-radius: 0 !important;
+  }
+
+  #quoteModal .quote-modal-inline-action.btn.btn-primary {
+    min-width: 4.1rem !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    padding: 0 0.55rem !important;
+    line-height: 1 !important;
+  }
+
+  #quoteModal #addTagBtn.quote-modal-inline-action {
+    min-width: 5.7rem !important;
   }
   
   /* Compact form elements */

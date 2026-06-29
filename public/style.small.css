@@ -76,4 +76,222 @@
     border-radius: 0 !important;
     border: none !important;
   }
+
+  #quoteModal .modal-header {
+    gap: 0.3rem !important;
+    overflow: hidden !important;
+    padding-left: max(0.6rem, env(safe-area-inset-left, 0px)) !important;
+    padding-right: max(0.45rem, env(safe-area-inset-right, 0px)) !important;
+    padding-top: max(0.3rem, env(safe-area-inset-top, 0px)) !important;
+    padding-bottom: 0.3rem !important;
+    flex-wrap: nowrap !important;
+  }
+
+  #quoteModal .modal-header-left {
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+  }
+
+  #quoteModal .modal-header > div[style*="display:flex"] {
+    min-width: 0 !important;
+    flex: 0 1 auto !important;
+    gap: 0.25rem !important;
+    margin-right: 0.15rem !important;
+  }
+
+  #quoteModal .modal-header > div[style*="display:flex"] > span {
+    display: none !important;
+  }
+
+  #quoteModal .modal-notetype-select {
+    max-width: 5.8rem !important;
+    min-width: 0 !important;
+    font-size: 0.72rem !important;
+  }
+
+  #quoteModal .quote-metadata-header {
+    display: none !important;
+  }
+
+  #quoteModal .modal-header .close {
+    width: 26px !important;
+    height: 26px !important;
+    font-size: 1.5rem !important;
+  }
+
+  #quoteModal .modal-body {
+    overflow-x: hidden !important;
+    padding-top: 0.55rem !important;
+    padding-left: max(0.65rem, env(safe-area-inset-left, 0px)) !important;
+    padding-right: max(0.65rem, env(safe-area-inset-right, 0px)) !important;
+    padding-bottom: max(0.9rem, env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  #quoteModal .form-actions {
+    margin-left: calc(-1 * max(0.65rem, env(safe-area-inset-left, 0px))) !important;
+    margin-right: calc(-1 * max(0.65rem, env(safe-area-inset-right, 0px))) !important;
+    margin-bottom: calc(-1 * max(0.9rem, env(safe-area-inset-bottom, 0px))) !important;
+  }
+
+  #quoteModal .form-group {
+    margin-bottom: 0.15rem !important;
+  }
+
+  #quoteModal .quote-editor-group {
+    margin-bottom: 0.32rem !important;
+  }
+
+  #quoteModal .form-row,
+  #quoteModal .form-row-2,
+  #quoteModal .form-row-3 {
+    gap: 0.15rem !important;
+  }
+
+  #quoteModal .form-row-with-separator {
+    padding-top: 0.32rem !important;
+  }
+
+  #quoteModal .form-group-inline {
+    gap: 0.42rem !important;
+  }
+
+  #quoteModal #quoteSpecificFields {
+    gap: 0.18rem !important;
+    margin-top: 0.35rem !important;
+  }
+
+  #quoteModal #quoteSpecificFields > .form-row {
+    margin-bottom: 0.18rem !important;
+  }
+
+  #quoteModal #quoteForm,
+  #quoteModal .quote-editor-group,
+  #quoteModal .quote-editor-body,
+  #quoteModal .quote-modal-editor-col,
+  #quoteModal #quoteEditor,
+  #quoteModal .ql-toolbar.ql-snow,
+  #quoteModal .ql-container.ql-snow,
+  #quoteModal #noteTitle {
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  #quoteModal #noteTitle {
+    width: 100% !important;
+    font-size: 1.6rem !important;
+    line-height: 1.16 !important;
+    padding-top: 0.05rem !important;
+    padding-bottom: 0.22rem !important;
+  }
+
+  #quoteModal .quote-editor-toolbar {
+    flex-wrap: wrap !important;
+    align-items: flex-start !important;
+    gap: 0.22rem !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  #quoteModal .quote-editor-toolbar > div:first-child {
+    flex: 1 1 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    flex-wrap: wrap !important;
+    gap: 0.28rem !important;
+  }
+
+  #quoteModal .score-radio-group {
+    flex: 1 1 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    gap: 0.16rem !important;
+    padding-bottom: 0.05rem !important;
+  }
+
+  #quoteModal .score-radio-label {
+    padding: 0.16rem 0.25rem !important;
+  }
+
+  #quoteModal .score-radio-label span {
+    font-size: 1rem !important;
+  }
+
+  #quoteModal .btn-attach-toggle {
+    padding: 0.2rem 0.5rem !important;
+    font-size: 0.72rem !important;
+    max-width: 100% !important;
+  }
+
+  #quoteModal .ql-toolbar.ql-snow {
+    display: flex !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+    gap: 0 !important;
+    overflow: hidden !important;
+    padding: 2px 3px !important;
+    white-space: nowrap !important;
+  }
+
+  #quoteModal .ql-toolbar.ql-snow .ql-formats {
+    display: inline-flex !important;
+    align-items: center !important;
+    flex: 0 0 auto !important;
+    margin-right: 2px !important;
+  }
+
+  #quoteModal .ql-toolbar.ql-snow button {
+    width: 20px !important;
+    height: 20px !important;
+    padding: 1px !important;
+  }
+
+  #quoteModal .ql-toolbar.ql-snow .ql-picker {
+    font-size: 9.5px !important;
+    height: 20px !important;
+    line-height: 20px !important;
+  }
+
+  #quoteModal .ql-toolbar.ql-snow .ql-picker-label {
+    padding-left: 2px !important;
+    padding-right: 12px !important;
+    line-height: 18px !important;
+  }
+
+  #quoteModal .ql-toolbar.ql-snow .ql-picker:not(.ql-color-picker):not(.ql-icon-picker) {
+    width: 58px !important;
+  }
+
+  #quoteModal .ql-toolbar.ql-snow .ql-color-picker,
+  #quoteModal .ql-toolbar.ql-snow .ql-icon-picker {
+    width: 22px !important;
+  }
+
+  #quoteModal .ql-toolbar.ql-snow svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+
+  #quoteModal .ql-editor {
+    font-size: 0.8rem !important;
+    line-height: 1.5 !important;
+    padding: 10px 12px !important;
+  }
+
+  #quoteModal #selectedTags {
+    gap: 0.35rem !important;
+    margin-top: 0.35rem !important;
+  }
+
+  #quoteModal .modal-body .quote-modal-field-row .quote-modal-inline-action.btn.btn-primary {
+    height: 32px !important;
+    min-height: 32px !important;
+    max-height: 32px !important;
+    padding: 0 0.55rem !important;
+    line-height: 1 !important;
+  }
+
+  #quoteModal .modal-body .quote-modal-field-row #addTagBtn.quote-modal-inline-action {
+    min-width: 5.7rem !important;
+  }
 }
