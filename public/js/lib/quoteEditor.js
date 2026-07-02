@@ -20,6 +20,12 @@ import { MODAL_IDS, getElementByIdSafe, getElementValue } from '../constants.js'
 import { downscaleImage } from './attachments.js';
 import { getNoteTypeConfig, hasGenericSubTypeField } from './noteTypes.js';
 import { showConfirm } from './confirmDialog.js';
+import {
+  NOTE_FORMAT_HTML,
+  NOTE_FORMAT_MARKDOWN,
+  normalizeNoteFormat,
+  renderMarkdown,
+} from './markdown.js?v=20260702format1';
 
 // ============= CONSTANTS =============
 
@@ -45,6 +51,9 @@ const KEYBOARD_SHORTCUTS = {
 // ============= STATE =============
 
 let quillEditorInstance = null;
+let markdownEditorWired = false;
+let markdownSourceVisible = false;
+const MARKDOWN_HIGHLIGHT_COLOR = '#fff3a3';
 
 // ============= HELPERS =============
 
@@ -137,7 +146,7 @@ function _wireQuillInstance(quill, hiddenInputId, { onTextChange } = {}) {
   quill.on('text-change', (delta, oldDelta, source) => {
     const html = quill.root.innerHTML;
     const hiddenInput = getElementByIdSafe(hiddenInputId);
-    if (hiddenInput) hiddenInput.value = html;
+    if (hiddenInput && getActiveNoteFormat() === NOTE_FORMAT_HTML) hiddenInput.value = html;
     onTextChange?.(source);
   });
 
@@ -169,6 +178,479 @@ function _wireQuillInstance(quill, hiddenInputId, { onTextChange } = {}) {
   });
 }
 
+function getMarkdownEditorElement() {
+  return document.getElementById('markdownEditor');
+}
+
+function getMarkdownPreviewElement() {
+  return document.getElementById('markdownPreviewEditor');
+}
+
+function getNoteFormatInput() {
+  return document.getElementById('noteFormat');
+}
+
+function getHtmlSourceButton() {
+  return document.getElementById('viewHtmlBtn');
+}
+
+function getMarkdownSourceToggleButton() {
+  return document.getElementById('toggleMarkdownSourceBtn');
+}
+
+function getMarkdownFormatControls() {
+  return document.getElementById('markdownFormatControls');
+}
+
+function setSiblingQuillToolbarHidden(quillHost, hidden) {
+  const parent = quillHost?.parentElement;
+  if (!parent) return;
+  Array.from(parent.children)
+    .filter((child) => child.classList?.contains('ql-toolbar'))
+    .forEach((toolbar) => {
+      toolbar.hidden = hidden;
+    });
+}
+
+function wireMarkdownEditor(hiddenInputId = 'quoteText') {
+  const markdownEditor = getMarkdownEditorElement();
+  const markdownPreview = getMarkdownPreviewElement();
+  const toggleButton = getMarkdownSourceToggleButton();
+  if ((!markdownEditor && !markdownPreview) || markdownEditorWired) return;
+  markdownEditorWired = true;
+  markdownEditor?.addEventListener('input', () => {
+    if (getActiveNoteFormat() !== NOTE_FORMAT_MARKDOWN) return;
+    const hiddenInput = getElementByIdSafe(hiddenInputId);
+    if (hiddenInput) hiddenInput.value = markdownEditor.value;
+  });
+  markdownPreview?.addEventListener('input', () => {
+    if (getActiveNoteFormat() !== NOTE_FORMAT_MARKDOWN || markdownSourceVisible) return;
+    maybeApplyMarkdownBlockShortcut(markdownPreview);
+    syncHiddenMarkdownFromActiveView(hiddenInputId);
+    updateMarkdownPreviewEmptyState();
+  });
+  markdownPreview?.addEventListener('keydown', (event) => {
+    if (getActiveNoteFormat() !== NOTE_FORMAT_MARKDOWN || markdownSourceVisible) return;
+    if (handleMarkdownFormatShortcut(event, hiddenInputId)) return;
+    if (event.key !== 'Enter' || event.shiftKey) return;
+    if (handleMarkdownPreviewEnter(markdownPreview)) {
+      event.preventDefault();
+      syncHiddenMarkdownFromActiveView(hiddenInputId);
+      updateMarkdownPreviewEmptyState();
+    }
+  });
+  markdownPreview?.addEventListener('paste', (event) => {
+    const text = event.clipboardData?.getData('text/plain');
+    if (!text) return;
+    event.preventDefault();
+    document.execCommand('insertText', false, text);
+  });
+  toggleButton?.addEventListener('click', () => {
+    if (getActiveNoteFormat() !== NOTE_FORMAT_MARKDOWN) return;
+    setMarkdownSourceVisible(!markdownSourceVisible, hiddenInputId);
+  });
+  getMarkdownFormatControls()?.querySelectorAll('[data-markdown-format]').forEach((button) => {
+    button.addEventListener('mousedown', (event) => event.preventDefault());
+    button.addEventListener('click', () => {
+      applyMarkdownInlineFormat(button.dataset.markdownFormat, hiddenInputId);
+    });
+  });
+}
+
+function updateMarkdownFormatControlsVisibility() {
+  const controls = getMarkdownFormatControls();
+  if (!controls) return;
+  controls.hidden = getActiveNoteFormat() !== NOTE_FORMAT_MARKDOWN || markdownSourceVisible;
+}
+
+function updateMarkdownPreviewEmptyState() {
+  const preview = getMarkdownPreviewElement();
+  if (!preview) return;
+  const hasVisualContent = !!preview.querySelector('hr, img, pre, blockquote, ul, ol, h1, h2, h3, h4, h5, h6');
+  const empty = !preview.textContent.trim() && !hasVisualContent;
+  preview.dataset.empty = empty ? 'true' : 'false';
+  if (empty && !preview.innerHTML.trim()) preview.innerHTML = '<p><br></p>';
+}
+
+function setMarkdownPreviewContent(markdown) {
+  const preview = getMarkdownPreviewElement();
+  if (!preview) return;
+  preview.innerHTML = renderMarkdown(markdown) || '<p><br></p>';
+  updateMarkdownPreviewEmptyState();
+}
+
+function markdownFromChildren(node) {
+  return Array.from(node.childNodes).map(markdownFromNode).join('');
+}
+
+function markdownFromInlineChildren(node) {
+  return markdownFromChildren(node).replace(/\n{2,}$/g, '');
+}
+
+function isHighlightedElement(node) {
+  if (node.tagName?.toLowerCase() === 'mark') return true;
+  const style = node.getAttribute?.('style') || '';
+  return /background(?:-color)?\s*:\s*(?!transparent|none)/i.test(style);
+}
+
+function markdownFromNode(node) {
+  if (node.nodeType === Node.TEXT_NODE) return node.textContent || '';
+  if (node.nodeType !== Node.ELEMENT_NODE) return '';
+
+  const tag = node.tagName.toLowerCase();
+  if (tag === 'br') return '\n';
+  if (tag === 'hr') return '---\n\n';
+  if (/^h[1-6]$/.test(tag)) {
+    return `${'#'.repeat(Number(tag[1]))} ${markdownFromInlineChildren(node).trim()}\n\n`;
+  }
+  if (tag === 'p' || tag === 'div') {
+    const text = markdownFromInlineChildren(node).trim();
+    return text ? `${text}\n\n` : '\n';
+  }
+  if (tag === 'ul') {
+    return `${Array.from(node.children).map((li) => `- ${markdownFromInlineChildren(li).trim()}`).join('\n')}\n\n`;
+  }
+  if (tag === 'ol') {
+    return `${Array.from(node.children).map((li, index) => `${index + 1}. ${markdownFromInlineChildren(li).trim()}`).join('\n')}\n\n`;
+  }
+  if (tag === 'li') return markdownFromInlineChildren(node);
+  if (tag === 'blockquote') {
+    return markdownFromChildren(node).trim().split('\n').map((line) => `> ${line}`).join('\n') + '\n\n';
+  }
+  if (tag === 'pre') return `\`\`\`\n${node.textContent || ''}\n\`\`\`\n\n`;
+  if (tag === 'code') return `\`${node.textContent || ''}\``;
+  if (isHighlightedElement(node)) return `==${markdownFromInlineChildren(node)}==`;
+  if (tag === 'strong' || tag === 'b') return `**${markdownFromInlineChildren(node)}**`;
+  if (tag === 'em' || tag === 'i') return `*${markdownFromInlineChildren(node)}*`;
+  if (tag === 'u') return `++${markdownFromInlineChildren(node)}++`;
+  if (tag === 'del' || tag === 's' || tag === 'strike') return `~~${markdownFromInlineChildren(node)}~~`;
+  if (tag === 'a') {
+    const label = markdownFromInlineChildren(node) || node.getAttribute('href') || '';
+    return `[${label}](${node.getAttribute('href') || ''})`;
+  }
+  return markdownFromChildren(node);
+}
+
+function markdownFromPreview() {
+  const preview = getMarkdownPreviewElement();
+  if (!preview) return '';
+  return markdownFromChildren(preview).trim();
+}
+
+function syncHiddenMarkdownFromActiveView(hiddenInputId = 'quoteText') {
+  const hiddenInput = getElementByIdSafe(hiddenInputId);
+  if (!hiddenInput) return;
+  hiddenInput.value = markdownSourceVisible
+    ? (getMarkdownEditorElement()?.value || '')
+    : markdownFromPreview();
+}
+
+function setMarkdownSourceVisible(showSource, hiddenInputId = 'quoteText') {
+  const markdownEditor = getMarkdownEditorElement();
+  const preview = getMarkdownPreviewElement();
+  const toggleButton = getMarkdownSourceToggleButton();
+  if (!markdownEditor || !preview) return;
+
+  if (showSource) {
+    markdownEditor.value = markdownFromPreview();
+  } else {
+    setMarkdownPreviewContent(markdownEditor.value);
+  }
+
+  markdownSourceVisible = showSource;
+  markdownEditor.hidden = !showSource;
+  preview.hidden = showSource;
+  if (toggleButton) toggleButton.textContent = showSource ? 'Preview' : 'Raw Markdown';
+  updateMarkdownFormatControlsVisibility();
+  syncHiddenMarkdownFromActiveView(hiddenInputId);
+}
+
+function focusMarkdownPreview() {
+  const preview = getMarkdownPreviewElement();
+  preview?.focus();
+  return preview;
+}
+
+function wrapSelectionWithElement(tagName) {
+  const selection = window.getSelection();
+  const preview = getMarkdownPreviewElement();
+  if (!selection || selection.rangeCount === 0 || !preview?.contains(selection.anchorNode)) return false;
+  const range = selection.getRangeAt(0);
+  if (range.collapsed) return false;
+
+  const wrapper = document.createElement(tagName);
+  try {
+    wrapper.appendChild(range.extractContents());
+    range.insertNode(wrapper);
+    selection.removeAllRanges();
+    const nextRange = document.createRange();
+    nextRange.selectNodeContents(wrapper);
+    selection.addRange(nextRange);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function applyMarkdownInlineFormat(format, hiddenInputId = 'quoteText') {
+  if (getActiveNoteFormat() !== NOTE_FORMAT_MARKDOWN || markdownSourceVisible) return;
+  focusMarkdownPreview();
+
+  if (format === 'highlight') {
+    if (!wrapSelectionWithElement('mark')) {
+      document.execCommand('hiliteColor', false, MARKDOWN_HIGHLIGHT_COLOR);
+      document.execCommand('backColor', false, MARKDOWN_HIGHLIGHT_COLOR);
+    }
+  } else {
+    const commandByFormat = {
+      bold: 'bold',
+      italic: 'italic',
+      underline: 'underline',
+      strike: 'strikeThrough',
+    };
+    const command = commandByFormat[format];
+    if (command) document.execCommand(command, false, null);
+  }
+
+  syncHiddenMarkdownFromActiveView(hiddenInputId);
+  updateMarkdownPreviewEmptyState();
+}
+
+function handleMarkdownFormatShortcut(event, hiddenInputId = 'quoteText') {
+  const modifier = event.ctrlKey || event.metaKey;
+  if (!modifier) return false;
+
+  const key = event.key.toLowerCase();
+  let format = null;
+  if (!event.shiftKey && key === 'b') format = 'bold';
+  if (!event.shiftKey && key === 'i') format = 'italic';
+  if (!event.shiftKey && key === 'u') format = 'underline';
+  if (event.shiftKey && key === 'x') format = 'strike';
+  if (event.shiftKey && key === 'h') format = 'highlight';
+  if (!format) return false;
+
+  event.preventDefault();
+  applyMarkdownInlineFormat(format, hiddenInputId);
+  return true;
+}
+
+function placeCursorAtEnd(element) {
+  const range = document.createRange();
+  const selection = window.getSelection();
+  range.selectNodeContents(element);
+  range.collapse(false);
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
+
+function getSelectionBlock(root) {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return null;
+  let node = selection.anchorNode;
+  if (!node || !root.contains(node)) return null;
+  if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
+  while (node && node !== root) {
+    if (/^(p|div|h[1-6]|li)$/i.test(node.tagName || '')) return node;
+    node = node.parentElement;
+  }
+  return null;
+}
+
+function findAncestorWithin(node, root, selector) {
+  let current = node;
+  while (current && current !== root) {
+    if (current.nodeType === Node.ELEMENT_NODE && current.matches(selector)) return current;
+    current = current.parentElement;
+  }
+  return null;
+}
+
+function isVisuallyEmpty(element) {
+  return !String(element?.textContent || '').trim();
+}
+
+function insertParagraphAfter(node) {
+  const paragraph = document.createElement('p');
+  paragraph.innerHTML = '<br>';
+  node.after(paragraph);
+  placeCursorAtEnd(paragraph);
+  return paragraph;
+}
+
+function handleMarkdownPreviewEnter(root) {
+  const block = getSelectionBlock(root);
+  if (!block) return false;
+
+  const quote = findAncestorWithin(block, root, 'blockquote');
+  if (quote && /^(p|div)$/i.test(block.tagName) && isVisuallyEmpty(block)) {
+    block.remove();
+    insertParagraphAfter(quote);
+    return true;
+  }
+
+  if (block.tagName?.toLowerCase() === 'li' && isVisuallyEmpty(block)) {
+    const list = block.parentElement;
+    block.remove();
+    if (list && !list.querySelector('li')) {
+      insertParagraphAfter(list);
+      list.remove();
+      return true;
+    }
+    insertParagraphAfter(list || block);
+    return true;
+  }
+
+  return false;
+}
+
+function maybeApplyMarkdownBlockShortcut(root) {
+  const block = getSelectionBlock(root);
+  if (!block || !/^(p|div)$/i.test(block.tagName)) return false;
+  const text = block.textContent || '';
+  if (/^\s{0,3}([-*_])(?:\s*\1){2,}\s*$/.test(text)) {
+    const hr = document.createElement('hr');
+    const next = document.createElement('p');
+    next.innerHTML = '<br>';
+    block.replaceWith(hr, next);
+    placeCursorAtEnd(next);
+    return true;
+  }
+  const blockquote = text.match(/^>\s(.*)$/);
+  if (blockquote) {
+    const quote = document.createElement('blockquote');
+    const paragraph = document.createElement('p');
+    paragraph.textContent = blockquote[1] || '';
+    if (!paragraph.textContent) paragraph.innerHTML = '<br>';
+    quote.appendChild(paragraph);
+    block.replaceWith(quote);
+    placeCursorAtEnd(paragraph);
+    return true;
+  }
+  const unorderedList = text.match(/^[-*+]\s(.*)$/);
+  if (unorderedList) {
+    const list = document.createElement('ul');
+    const item = document.createElement('li');
+    item.textContent = unorderedList[1] || '';
+    if (!item.textContent) item.innerHTML = '<br>';
+    list.appendChild(item);
+    block.replaceWith(list);
+    placeCursorAtEnd(item);
+    return true;
+  }
+  const orderedList = text.match(/^\d+[.)]\s(.*)$/);
+  if (orderedList) {
+    const list = document.createElement('ol');
+    const item = document.createElement('li');
+    item.textContent = orderedList[1] || '';
+    if (!item.textContent) item.innerHTML = '<br>';
+    list.appendChild(item);
+    block.replaceWith(list);
+    placeCursorAtEnd(item);
+    return true;
+  }
+  const heading = text.match(/^(#{1,3})\s(.*)$/);
+  if (heading) {
+    const next = document.createElement(`h${heading[1].length}`);
+    next.textContent = heading[2] || '';
+    if (!next.textContent) next.innerHTML = '<br>';
+    block.replaceWith(next);
+    placeCursorAtEnd(next);
+    return true;
+  }
+  return false;
+}
+
+export function getActiveNoteFormat() {
+  return normalizeNoteFormat(getNoteFormatInput()?.value);
+}
+
+export function setModalTextEditorFormat(format, hiddenInputId = 'quoteText') {
+  const normalized = normalizeNoteFormat(format);
+  const noteFormatInput = getNoteFormatInput();
+  const quillHost = document.getElementById('quoteEditor');
+  const markdownEditor = getMarkdownEditorElement();
+  const markdownPreview = getMarkdownPreviewElement();
+  const htmlSourceButton = getHtmlSourceButton();
+  const markdownSourceButton = getMarkdownSourceToggleButton();
+  const useMarkdown = normalized === NOTE_FORMAT_MARKDOWN;
+
+  if (noteFormatInput) noteFormatInput.value = normalized;
+  if (quillHost) {
+    quillHost.hidden = useMarkdown;
+    setSiblingQuillToolbarHidden(quillHost, useMarkdown);
+  }
+  if (markdownEditor) markdownEditor.required = false;
+  if (markdownPreview) markdownPreview.hidden = !useMarkdown || markdownSourceVisible;
+  if (markdownEditor) markdownEditor.hidden = !useMarkdown || !markdownSourceVisible;
+  if (htmlSourceButton) {
+    htmlSourceButton.style.display = useMarkdown ? 'none' : '';
+  }
+  if (markdownSourceButton) markdownSourceButton.hidden = !useMarkdown;
+  updateMarkdownFormatControlsVisibility();
+  wireMarkdownEditor(hiddenInputId);
+}
+
+export function setModalEditorText(format, text, quill, hiddenInputId = 'quoteText') {
+  const normalized = normalizeNoteFormat(format);
+  const hiddenInput = getElementByIdSafe(hiddenInputId);
+  const markdownEditor = getMarkdownEditorElement();
+  const markdownPreview = getMarkdownPreviewElement();
+  setModalTextEditorFormat(normalized, hiddenInputId);
+
+  if (normalized === NOTE_FORMAT_MARKDOWN) {
+    markdownSourceVisible = false;
+    if (markdownEditor) markdownEditor.value = text || '';
+    if (markdownPreview) setMarkdownPreviewContent(text || '');
+    setMarkdownSourceVisible(false, hiddenInputId);
+    if (hiddenInput) hiddenInput.value = text || '';
+    return;
+  }
+
+  if (markdownEditor) markdownEditor.value = '';
+  if (markdownPreview) {
+    markdownPreview.innerHTML = '';
+    markdownPreview.hidden = true;
+  }
+  if (quill) {
+    quill.setText('');
+    if (text) {
+      if (text.includes('<')) {
+        quill.clipboard.dangerouslyPasteHTML(text);
+      } else {
+        quill.setText(text);
+      }
+    }
+    if (hiddenInput) hiddenInput.value = quill.root.innerHTML;
+  } else if (hiddenInput) {
+    hiddenInput.value = text || '';
+  }
+}
+
+export function getModalEditorText(hiddenInputId = 'quoteText') {
+  const hiddenInput = getElementByIdSafe(hiddenInputId);
+  if (document.getElementById('quoteModal')?.classList.contains('modal-properties-only')) {
+    return hiddenInput?.value || '';
+  }
+  if (getActiveNoteFormat() === NOTE_FORMAT_MARKDOWN) {
+    return markdownSourceVisible
+      ? (getMarkdownEditorElement()?.value || hiddenInput?.value || '')
+      : markdownFromPreview();
+  }
+  return quillEditorInstance?.root?.innerHTML || hiddenInput?.value || '';
+}
+
+export function focusActiveEditor() {
+  if (getActiveNoteFormat() === NOTE_FORMAT_MARKDOWN) {
+    if (markdownSourceVisible) {
+      getMarkdownEditorElement()?.focus();
+    } else {
+      getMarkdownPreviewElement()?.focus();
+    }
+  } else if (quillEditorInstance) {
+    quillEditorInstance.focus();
+  }
+}
+
 // ============= QUILL EDITOR INITIALIZATION =============
 
 /**
@@ -196,6 +678,7 @@ export function initializeQuillEditor(editorSelector = '#quoteEditor', hiddenInp
   quillEditorInstance = createQuillEditor(editorSelector, hiddenInputId);
   if (!quillEditorInstance) return null;
 
+  wireMarkdownEditor(hiddenInputId);
   setupFullscreenEditor();
   console.log('✅ Quill editor initialized');
   return quillEditorInstance;
@@ -257,9 +740,7 @@ function toggleFullscreenMode(enable, editorGroup, toggleBtn) {
     toggleBtn.title = 'Exit Fullscreen (Esc)';
     
     // Focus editor
-    if (quillEditorInstance) {
-      quillEditorInstance.focus();
-    }
+    focusActiveEditor();
   } else {
     // Exit fullscreen
     editorGroup.classList.remove('fullscreen');
@@ -326,7 +807,8 @@ export function collectFormData(state) {
   }
   
   return {
-    note_text: getElementValue(MODAL_IDS.QUOTE_TEXT),
+    note_text: getModalEditorText(MODAL_IDS.QUOTE_TEXT),
+    note_format: getActiveNoteFormat(),
     note_title: (document.getElementById('noteTitle')?.value?.trim() || null),
     author: getElementValue(MODAL_IDS.AUTHOR_INPUT),
     source: getElementValue(MODAL_IDS.SOURCE_INPUT),

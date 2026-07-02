@@ -222,7 +222,9 @@
   }
 
   /* Quote editor */
-  #quoteEditor {
+  #quoteEditor,
+  #markdownEditor,
+  #markdownPreviewEditor {
     height: calc(3.4rem + 42px + 12px) !important;
   }
 
@@ -877,6 +879,10 @@
   }
   .card-note-title {
     font-size: var(--m-font-xl);
+  }
+
+  #quoteModal .quote-editor-group.fullscreen {
+    padding: 0.85rem !important;
   }
 
 }

@@ -734,15 +734,17 @@ function registerExportImportRoutes(app, {
             const importCreatedAt = note.created_at || new Date();
             const importUpdatedAt = note.updated_at || new Date();
             const importTranslationGroup = note.translation_group ?? null;
+            const importNoteFormat = note.note_format === "markdown" ? "markdown" : "html";
 
             if (hasId && idExists.rows.length > 0) {
               const insertResult = await client.query(
-                `INSERT INTO notes (note_text, note_title, author_id, source_id, type, comment, note_type, note_date, score,
+                `INSERT INTO notes (note_text, note_format, note_title, author_id, source_id, type, comment, note_type, note_date, score,
                                      attachment_type, created_at, updated_at, translation_group)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
                  RETURNING id`,
                 [
                   note.note_text,
+                  importNoteFormat,
                   importNoteTitle,
                   authorId,
                   sourceId,
@@ -761,12 +763,13 @@ function registerExportImportRoutes(app, {
             } else if (hasId && idExists.rows.length === 0) {
               quoteId = note.id;
               await client.query(
-                `INSERT INTO notes (id, note_text, note_title, author_id, source_id, type, comment, note_type, note_date, score,
+                `INSERT INTO notes (id, note_text, note_format, note_title, author_id, source_id, type, comment, note_type, note_date, score,
                                      attachment_type, created_at, updated_at, translation_group)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
                 [
                   quoteId,
                   note.note_text,
+                  importNoteFormat,
                   importNoteTitle,
                   authorId,
                   sourceId,
@@ -783,12 +786,13 @@ function registerExportImportRoutes(app, {
               );
             } else {
               const insertResult = await client.query(
-                `INSERT INTO notes (note_text, note_title, author_id, source_id, type, comment, note_type, note_date, score,
+                `INSERT INTO notes (note_text, note_format, note_title, author_id, source_id, type, comment, note_type, note_date, score,
                                      attachment_type, created_at, updated_at, translation_group)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
                  RETURNING id`,
                 [
                   note.note_text,
+                  importNoteFormat,
                   importNoteTitle,
                   authorId,
                   sourceId,

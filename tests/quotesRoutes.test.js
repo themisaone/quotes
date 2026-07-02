@@ -552,8 +552,8 @@ test("POST /api/quotes creates a note and returns enriched response", async () =
   });
   assert.deepEqual(client.calls.map((call) => call.sql), [
     "BEGIN",
-    `INSERT INTO notes (note_text, note_title, author_id, source_id, comment, type, score, note_type, note_date, translation_group) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
+    `INSERT INTO notes (note_text, note_format, note_title, author_id, source_id, comment, type, score, note_type, note_date, translation_group) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) 
        RETURNING *`,
     "UPDATE notes SET thumbnail = $1, attachment_full = $2, attachment_type = $3 WHERE id = $4",
     "COMMIT",
@@ -1048,7 +1048,7 @@ test("POST /api/notes/merge moves content and returns enriched main note", async
     if (/SELECT \* FROM note_attachments WHERE note_id = \$1 ORDER BY position$/.test(sql)) {
       return { rows: [{ id: 10, thumbnail: "other-thumb", attachment_full: "other-full", attachment_type: "image" }] };
     }
-    if (/SELECT id, note_text, comment FROM notes/.test(sql)) {
+    if (/SELECT id, note_text, note_format, comment FROM notes/.test(sql)) {
       return { rows: [{ id: 2, note_text: "other", comment: "src" }] };
     }
     if (/SELECT DISTINCT tag_id/.test(sql)) {

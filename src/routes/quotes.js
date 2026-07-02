@@ -280,7 +280,7 @@ function registerQuoteRoutes(app, {
       }
 
       const result = await pool.query(
-        `SELECT q.id, q.note_text, q.language, q.type,
+        `SELECT q.id, q.note_text, q.note_format, q.language, q.type,
               a.name as author_name,
               s.name as source_name
        FROM notes q
@@ -322,6 +322,7 @@ function registerQuoteRoutes(app, {
         note_type = "quote",
         note_date = null,
         translation_group = null,
+        note_format = "html",
         storageThresholdMB = 1,
       } = req.body;
 
@@ -343,11 +344,12 @@ function registerQuoteRoutes(app, {
       });
 
       const result = await client.query(
-        `INSERT INTO notes (note_text, note_title, author_id, source_id, comment, type, score, note_type, note_date, translation_group) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
+        `INSERT INTO notes (note_text, note_format, note_title, author_id, source_id, comment, type, score, note_type, note_date, translation_group) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) 
        RETURNING *`,
         buildQuoteInsertParams({
           noteText: note_text,
+          noteFormat: note_format,
           noteTitle: note_title,
           authorId,
           sourceId,
@@ -455,6 +457,7 @@ function registerQuoteRoutes(app, {
         note_type,
         note_date,
         translation_group,
+        note_format,
         storageThresholdMB = 1,
       } = req.body;
 
@@ -507,6 +510,7 @@ function registerQuoteRoutes(app, {
         noteType: note_type,
         noteDate: note_date,
         translationGroup: translation_group,
+        noteFormat: note_format,
       });
       for (const field of scalarFields) {
         updateFields.push(`${field.column} = $${paramCounter}`);
@@ -753,13 +757,18 @@ function registerQuoteRoutes(app, {
 
       if (appendTexts) {
         const others = await client.query(
-          `SELECT id, note_text, comment FROM notes WHERE id = ANY($1::int[]) ORDER BY id`,
+          `SELECT id, note_text, note_format, comment FROM notes WHERE id = ANY($1::int[]) ORDER BY id`,
           [otherNoteIds]
         );
+        const mainFormat = mainRow.rows[0].note_format === "markdown" ? "markdown" : "html";
         const dividerParts = others.rows
           .filter((row) => row.note_text && row.note_text.trim() !== "")
           .map((row) => {
             const label = row.comment ? `<em>${row.comment}</em>` : "";
+            if (mainFormat === "markdown") {
+              const mdLabel = row.comment ? `\n\n---\n\n_${row.comment}_\n\n` : "\n\n---\n\n";
+              return `${mdLabel}${row.note_text}`;
+            }
             return `<hr>${label}${row.note_text}`;
           });
         if (dividerParts.length > 0) {

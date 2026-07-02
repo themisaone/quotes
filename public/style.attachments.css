@@ -650,16 +650,30 @@
   z-index: 10000;
   background: var(--surface);
   color: var(--text-primary);
-  padding: 2rem;
+  padding: 1rem;
   margin: 0;
   overflow-y: auto; /* The fullscreen panel itself scrolls */
 }
 
-.quote-editor-group.fullscreen #quoteEditor {
+.quote-editor-group.fullscreen #quoteEditor:not([hidden]),
+.quote-editor-group.fullscreen #markdownEditor:not([hidden]),
+.quote-editor-group.fullscreen #markdownPreviewEditor:not([hidden]) {
   height: auto !important; /* Grow with content */
   min-height: 70vh;        /* At least 70% of viewport so it looks like a real editor */
   display: flex;
   flex-direction: column;
+}
+
+.quote-editor-group.fullscreen #markdownEditor[hidden],
+.quote-editor-group.fullscreen #markdownPreviewEditor[hidden],
+.quote-editor-group.fullscreen #quoteEditor[hidden] {
+  display: none !important;
+}
+
+.quote-editor-group.fullscreen #markdownEditor:not([hidden]),
+.quote-editor-group.fullscreen #markdownPreviewEditor:not([hidden]) {
+  display: block;
+  min-height: 72vh;
 }
 
 .quote-editor-group.fullscreen .ql-container {

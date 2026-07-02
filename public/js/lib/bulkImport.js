@@ -555,6 +555,7 @@ async function submitSingleQuote(quoteText, formData) {
 function buildQuotePayload(quoteText, formData) {
   return {
     note_text: quoteText,
+    note_format: 'markdown',
     author: formData.author,
     source: formData.source,
     sourceType: formData.sourceType,

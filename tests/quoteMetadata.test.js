@@ -88,7 +88,17 @@ test("buildQuoteInsertParams normalizes title and note text", () => {
       noteDate: "2026-06-23",
       translationGroup: "group-1",
     }),
-    ["", null, 1, 2, "comment", "ARTICLE", 5, "historical", "2026-06-23", "group-1"]
+    ["", "html", null, 1, 2, "comment", "ARTICLE", 5, "historical", "2026-06-23", "group-1"]
+  );
+});
+
+test("buildQuoteInsertParams preserves markdown text and stores markdown format", () => {
+  assert.deepEqual(
+    buildQuoteInsertParams({
+      noteText: "# Title\n\n<p><br></p>",
+      noteFormat: "markdown",
+    }),
+    ["# Title\n\n<p><br></p>", "markdown", null, null, null, "", "BOOK", null, "quote", null, null]
   );
 });
 
@@ -113,6 +123,19 @@ test("buildQuoteScalarUpdateFields emits only provided scalar fields", () => {
       { column: "score", value: 0 },
       { column: "attachment_type", value: "pdf" },
       { column: "note_type", value: "note" },
+    ]
+  );
+});
+
+test("buildQuoteScalarUpdateFields stores provided note format", () => {
+  assert.deepEqual(
+    buildQuoteScalarUpdateFields({
+      noteText: "## Markdown",
+      noteFormat: "markdown",
+    }),
+    [
+      { column: "note_text", value: "## Markdown" },
+      { column: "note_format", value: "markdown" },
     ]
   );
 });

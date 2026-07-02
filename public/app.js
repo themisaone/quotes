@@ -37,12 +37,12 @@ import {
 
 import {
   createQuoteCard as createQuoteCardLib
-} from './js/lib/cardRenderer.js?v=20260605optiontabs7';
+} from './js/lib/cardRenderer.js?v=20260702format1';
 
 import {
   setupAddModal,
   setupEditModal
-} from './js/lib/modalRenderer.js?v=20260605paneedit';
+} from './js/lib/modalRenderer.js?v=20260702format1';
 
 import {
   exportToPdf as exportToPdfLib,
@@ -146,9 +146,10 @@ import {
 
 import {
   initializeQuillEditor,
+  focusActiveEditor,
   handleFormSubmit as handleFormSubmitLib,
   deleteQuote as deleteQuoteLib
-} from './js/lib/quoteEditor.js?v=20260605paneatt2';
+} from './js/lib/quoteEditor.js?v=20260702format1';
 
 import {
   initializeBulkImport,
@@ -186,14 +187,14 @@ import {
   setTrainingSubMode,
   getListPanePageSize,
   restoreTrainingDateFiltersToBar
-} from './js/lib/listPaneView.js?v=20260629oldicon1';
+} from './js/lib/listPaneView.js?v=20260702format1';
 import {
   configurePaneEditor,
   syncPaneTextToModalHidden,
   applyPaneSavedNote,
   getPaneEditorHtml,
   getPaneEditorNoteId,
-} from './js/lib/paneEditor.js?v=20260605paneatt7';
+} from './js/lib/paneEditor.js?v=20260702format1';
 import {
   configurePaneAttachments,
   renderPaneAttachments,
@@ -2656,9 +2657,7 @@ function openAddModal() {
   
   // Set focus to Quote text editor after modal is displayed
   setTimeout(() => {
-    if (quillEditor) {
-      quillEditor.focus();
-    }
+    focusActiveEditor();
   }, 100); // Small delay to ensure modal is fully rendered
 }
 

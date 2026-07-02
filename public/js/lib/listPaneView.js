@@ -18,19 +18,20 @@
  */
 
 import { escapeHtml, resolveAttachmentUrl } from './utils.js';
+import { noteTextToPlainText } from './markdown.js?v=20260702format1';
 import { renderTrainingCalendar } from './trainingCalendar.js?v=20260629oldicon1';
 import {
   buildPaneMetaSections,
   buildPaneScoreHtml,
   buildListPaneRowMetaHtml,
-} from './cardRenderer.js?v=20260605optiontabs7';
+} from './cardRenderer.js?v=20260702format1';
 import {
   ensurePaneEditorShell,
   loadPaneNote,
   confirmLeavePaneEditor,
   flushPendingPaneNoteSaved,
   resetPaneEditor,
-} from './paneEditor.js?v=20260605paneatt7';
+} from './paneEditor.js?v=20260702format1';
 import {
   renderPaneAttachments,
   resetPaneAttachments,
@@ -88,13 +89,6 @@ export function restoreTrainingDateFiltersToBar({ hide = false } = {}) {
 // ─────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────
-
-function stripHtml(html) {
-  if (!html) return '';
-  const tmp = document.createElement('div');
-  tmp.innerHTML = html;
-  return (tmp.textContent || tmp.innerText || '').replace(/\s+/g, ' ').trim();
-}
 
 function formatTrainingDate(dateString) {
   if (!dateString) return '';
@@ -171,7 +165,7 @@ function listPaneTitle(note) {
 function buildTitledRowHtml(note, idx, isSelected, opts) {
   const selCls = isSelected ? ' lp-selected' : '';
   const title = listPaneTitle(note);
-  const previewRaw = stripHtml(note.note_text);
+  const previewRaw = noteTextToPlainText(note);
   const previewHtml = previewRaw
     ? `<div class="lp-row-preview">${escapeHtml(previewRaw)}</div>`
     : '';
@@ -252,7 +246,7 @@ function buildRowHtml(note, idx, isSelected, opts) {
   }
 
   // ── Preview text ──
-  const preview = stripHtml(note.note_text).slice(0, 100);
+  const preview = noteTextToPlainText(note).slice(0, 100);
 
   // ── Thumbnail (small, optional) ──
   let thumbHtml = '';

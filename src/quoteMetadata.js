@@ -1,4 +1,5 @@
 const { sanitizeNoteText } = require("./noteText");
+const { NOTE_FORMAT_HTML, normalizeNoteFormat } = require("./markdown");
 const tagHelpers = require("./tagHelpers");
 
 async function getOrCreateQuoteAuthorId(author, client) {
@@ -51,9 +52,12 @@ function buildQuoteInsertParams({
   noteType = "quote",
   noteDate = null,
   translationGroup = null,
+  noteFormat = NOTE_FORMAT_HTML,
 }) {
+  const normalizedNoteFormat = normalizeNoteFormat(noteFormat);
   return [
-    sanitizeNoteText(noteText),
+    sanitizeNoteText(noteText, normalizedNoteFormat),
+    normalizedNoteFormat,
     noteTitle || null,
     authorId,
     sourceId,
@@ -80,11 +84,16 @@ function buildQuoteScalarUpdateFields({
   noteType,
   noteDate,
   translationGroup,
+  noteFormat,
 }) {
   const fields = [];
 
   if (noteText !== undefined) {
-    fields.push({ column: "note_text", value: sanitizeNoteText(noteText) });
+    const normalizedNoteFormat = normalizeNoteFormat(noteFormat);
+    fields.push({ column: "note_text", value: sanitizeNoteText(noteText, normalizedNoteFormat) });
+  }
+  if (noteFormat !== undefined) {
+    fields.push({ column: "note_format", value: normalizeNoteFormat(noteFormat) });
   }
   if (noteTitle !== undefined) {
     fields.push({ column: "note_title", value: noteTitle || null });

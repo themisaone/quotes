@@ -479,6 +479,7 @@ async function prepareQuotesForPdf(quotes, deps = {}) {
 }
 
 const PDF_ATT_ICONS = { pdf: "📄", video: "🎬", document: "📎", encrypted: "🔒", audio: "🎵" };
+const { renderNoteText } = require("../markdown");
 
 function buildNoteCommentHtml(note) {
   const comment = note.comment && String(note.comment).trim();
@@ -518,7 +519,7 @@ function buildNoteCardHtml(note, pdfColumns = 1, trainingTypes = []) {
   const titleHtml = `<div class="note-title">${escapeHtml(getNoteTitleForPdf(note))}</div>`;
   const tagsHtml = note.tags
     ? `<div class="note-meta">🏷 ${escapeHtml(note.tags)}</div>` : "";
-  const textHtml = `<div class="note-text">${note.note_text || ""}</div>`;
+  const textHtml = `<div class="note-text">${renderNoteText(note)}</div>`;
   const stackedClass = stacked ? " note-card-stacked" : "";
 
   // Tegneserie: full-width image, title above, text AFTER the image (if any).

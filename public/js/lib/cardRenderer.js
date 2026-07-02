@@ -29,6 +29,7 @@
  */
 
 import { escapeHtml, resolveAttachmentUrl, normalizeTextColors } from './utils.js?v=20260318a';
+import { renderNoteText, isNoteTextEmpty } from './markdown.js?v=20260702format1';
 import { getNoteTypeBadgeHtml, getNoteTypeConfig, getGenericSubTypes } from './noteTypes.js';
 
 /**
@@ -409,7 +410,8 @@ export function createQuoteCard(note, currentNoteTypeFilter, getTrainingTypes, g
   const tags = buildClickableTagsHtml(note.tags);
 
   // Check if content is long
-  const isLong = isLongContent(note.note_text);
+  const renderedNoteText = normalizeTextColors(renderNoteText(note));
+  const isLong = isLongContent(renderedNoteText);
   const quoteId = `quote-${note.id}`;
   const expandBtnId = `expand-${note.id}`;
 
@@ -452,8 +454,7 @@ export function createQuoteCard(note, currentNoteTypeFilter, getTrainingTypes, g
                     ${tags ? `<div class="quote-tags-inline">${tags}</div>` : ''}
                 </div>`;
 
-  const isTextEmpty = !note.note_text || note.note_text === ''
-    || /^(\s|<br\s*\/?>|<p[^>]*>\s*(<br\s*\/?>|&nbsp;)?\s*<\/p>)*$/i.test(note.note_text);
+  const isTextEmpty = isNoteTextEmpty(note);
   const stretchEnabled = globalSettings?.stretchImagesWhenEmpty === true;
   const hasMultipleAttachments = note.attachments && note.attachments.length > 1;
   const isTegneserie = noteType === 'tegneserie';
@@ -480,7 +481,7 @@ export function createQuoteCard(note, currentNoteTypeFilter, getTrainingTypes, g
   const expandBtnHtml = isLong
     ? `<button class="expand-btn" id="${expandBtnId}" onclick="event.stopPropagation(); toggleQuoteExpand('${note.id}')">▼ Show more</button>`
     : '';
-  const quoteBodyHtml = `<div class="quote-text ${isLong ? 'collapsible' : ''}" id="${quoteId}" data-expanded="false">${normalizeTextColors(note.note_text)}</div>${expandBtnHtml}`;
+  const quoteBodyHtml = `<div class="quote-text ${isLong ? 'collapsible' : ''}" id="${quoteId}" data-expanded="false">${renderedNoteText}</div>${expandBtnHtml}`;
 
   const topSection = (isImageOnly && imageOnlySection)
     ? imageOnlySection

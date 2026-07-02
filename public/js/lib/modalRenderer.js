@@ -29,6 +29,14 @@
 
 import { normalizeTextColors } from './utils.js';
 import { hasAuthorField, hasDateField } from './noteTypes.js';
+import {
+  NOTE_FORMAT_MARKDOWN,
+  normalizeNoteFormat,
+} from './markdown.js?v=20260702format1';
+import {
+  setModalEditorText,
+  setModalTextEditorFormat,
+} from './quoteEditor.js?v=20260702format1';
 
 /**
  * Format metadata display (created/updated timestamps)
@@ -176,9 +184,13 @@ export function clearTypeSpecificFields(elements) {
  */
 export function setCommonFields(note, elements, quillEditor) {
   const { quoteTextInput, noteInput, noteTypeSelect, scoreRadios, translationGroupInput } = elements;
+  const noteFormat = normalizeNoteFormat(note.note_format);
   
   // Set quote text in Quill editor
-  if (quillEditor) {
+  if (noteFormat === NOTE_FORMAT_MARKDOWN || !quillEditor) {
+    setModalEditorText(noteFormat, note.note_text || '', quillEditor);
+  } else if (quillEditor) {
+    setModalTextEditorFormat(noteFormat);
     if (note.note_text) {
       if (note.note_text.includes('<')) {
         // Strip near-black inline colors before loading so the palette's
@@ -195,7 +207,9 @@ export function setCommonFields(note, elements, quillEditor) {
   }
   
   if (quoteTextInput) {
-    quoteTextInput.value = note.note_text || '';
+    quoteTextInput.value = noteFormat === NOTE_FORMAT_MARKDOWN
+      ? (note.note_text || '')
+      : (quillEditor?.root?.innerHTML || note.note_text || '');
   }
   
   if (noteInput) {
@@ -246,13 +260,8 @@ export function resetModalFields(quillEditor, elements) {
     form.reset();
   }
   
-  if (quillEditor) {
-    quillEditor.setText('');
-  }
-  
-  if (quoteTextInput) {
-    quoteTextInput.value = '';
-  }
+  setModalEditorText('html', '', quillEditor);
+  if (quoteTextInput) quoteTextInput.value = '';
   
   if (noteInput) {
     noteInput.value = '';
@@ -343,6 +352,7 @@ export function setupAddModal(noteType, currentNoteTypeFilter, elements, quillEd
   
   // Reset all fields
   resetModalFields(quillEditor, elements);
+  setModalEditorText('markdown', '', quillEditor);
   
   // Set note type
   if (noteTypeSelect) {

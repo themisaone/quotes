@@ -324,7 +324,7 @@ function registerQuoteBulkRoutes(app, {
 
       for (const oldId of quoteIds) {
         const noteRes = await client.query(
-          `SELECT note_text, note_title, author_id, source_id, type, score, thumbnail, attachment_full,
+          `SELECT note_text, note_format, note_title, author_id, source_id, type, score, thumbnail, attachment_full,
                 attachment_type, attachment_filename, comment, translation_group, note_type, note_date
          FROM notes WHERE id = $1`,
           [oldId]
@@ -334,12 +334,13 @@ function registerQuoteBulkRoutes(app, {
 
         const insertRes = await client.query(
           `INSERT INTO notes
-           (note_text, note_title, author_id, source_id, type, score, thumbnail, attachment_full,
+           (note_text, note_format, note_title, author_id, source_id, type, score, thumbnail, attachment_full,
             attachment_type, attachment_filename, comment, translation_group, note_type, note_date)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
          RETURNING id`,
           [
             orig.note_text,
+            orig.note_format || "html",
             orig.note_title,
             orig.author_id,
             orig.source_id,
@@ -464,7 +465,7 @@ function registerQuoteBulkRoutes(app, {
 
       for (const origId of quoteIds) {
         const noteRes = await client.query(
-          `SELECT note_text, note_title, author_id, source_id, type, score, comment,
+          `SELECT note_text, note_format, note_title, author_id, source_id, type, score, comment,
                 translation_group, note_type, note_date
          FROM notes WHERE id = $1`,
           [origId]
@@ -486,12 +487,13 @@ function registerQuoteBulkRoutes(app, {
 
           const insRes = await client.query(
             `INSERT INTO notes
-             (note_text, note_title, author_id, source_id, type, score, comment,
+             (note_text, note_format, note_title, author_id, source_id, type, score, comment,
               translation_group, note_type, note_date)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
            RETURNING id`,
             [
               orig.note_text,
+              orig.note_format || "html",
               orig.note_title,
               orig.author_id,
               orig.source_id,

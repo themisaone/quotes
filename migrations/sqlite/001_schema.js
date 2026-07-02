@@ -38,6 +38,7 @@ async function migrate({ client: providedClient, logger = console } = {}) {
       CREATE TABLE IF NOT EXISTS notes (
         id                  INTEGER PRIMARY KEY AUTOINCREMENT,
         note_text           TEXT NOT NULL,
+        note_format         TEXT NOT NULL DEFAULT 'html',
         note_title          TEXT DEFAULT NULL,
         author_id           INTEGER REFERENCES authors(id) ON DELETE SET NULL,
         source_id           INTEGER REFERENCES sources(id) ON DELETE SET NULL,

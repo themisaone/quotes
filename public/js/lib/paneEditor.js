@@ -3,18 +3,26 @@
  */
 
 import { normalizeTextColors } from './utils.js';
-import { createQuillEditor } from './quoteEditor.js?v=20260605paneatt2';
+import { createQuillEditor } from './quoteEditor.js?v=20260702format1';
 import { showUnsavedChangesConfirm } from './confirmDialog.js';
+import {
+  NOTE_FORMAT_HTML,
+  NOTE_FORMAT_MARKDOWN,
+  normalizeNoteFormat,
+} from './markdown.js?v=20260702format1';
 
 let _apiUrl = '';
 let _quill = null;
 let _wiredQuill = null;
 let _baselineHtml = '';
+let _baselineMarkdown = '';
 let _currentNoteId = null;
+let _currentNoteFormat = NOTE_FORMAT_HTML;
 let _onNoteSaved = null;
 let _onDirtyChange = null;
 let _saveBtn = null;
 let _pendingSavedNote = null;
+let _markdownEditorWired = false;
 /** Explicit UI dirty flag — Quill HTML comparison alone is unreliable after save. */
 let _uiDirty = false;
 
@@ -62,9 +70,12 @@ export function resetPaneEditor() {
   _wiredQuill = null;
   _saveBtn = null;
   _currentNoteId = null;
+  _currentNoteFormat = NOTE_FORMAT_HTML;
   _baselineHtml = '';
+  _baselineMarkdown = '';
   _pendingSavedNote = null;
   _uiDirty = false;
+  _markdownEditorWired = false;
 }
 
 export function configurePaneEditor({ apiUrl, onNoteSaved, onDirtyChange } = {}) {
@@ -75,7 +86,12 @@ export function configurePaneEditor({ apiUrl, onNoteSaved, onDirtyChange } = {})
 
 export function isPaneEditorDirty() {
   if (!_uiDirty) return false;
-  if (!_quill || _currentNoteId == null) return false;
+  if (_currentNoteId == null) return false;
+  if (_currentNoteFormat === NOTE_FORMAT_MARKDOWN) {
+    const markdown = document.getElementById('lpPaneMarkdown');
+    return (markdown?.value || '') !== _baselineMarkdown;
+  }
+  if (!_quill) return false;
   return _normalizeComparable(_quill.root.innerHTML) !== _normalizeComparable(_baselineHtml);
 }
 
@@ -83,7 +99,53 @@ export function getPaneEditorNoteId() {
   return _currentNoteId;
 }
 
-function _setPaneContent(noteText) {
+function _setPaneEditorMode(format, pane = document.querySelector('.lp-pane')) {
+  _currentNoteFormat = normalizeNoteFormat(format);
+  const hostPane = pane || document.querySelector('.lp-pane');
+  const quillHost = hostPane?.querySelector('#lpPaneQuill') || document.getElementById('lpPaneQuill');
+  const markdown = hostPane?.querySelector('#lpPaneMarkdown') || document.getElementById('lpPaneMarkdown');
+  const formatInput = hostPane?.querySelector('#lpPaneFormat') || document.getElementById('lpPaneFormat');
+  const useMarkdown = _currentNoteFormat === NOTE_FORMAT_MARKDOWN;
+  if (formatInput) formatInput.value = _currentNoteFormat;
+  if (quillHost) {
+    quillHost.hidden = useMarkdown;
+    const parent = quillHost.parentElement;
+    if (parent) {
+      Array.from(parent.children)
+        .filter((child) => child.classList?.contains('ql-toolbar'))
+        .forEach((toolbar) => {
+          toolbar.hidden = useMarkdown;
+        });
+    }
+  }
+  if (markdown) markdown.hidden = !useMarkdown;
+}
+
+function _wirePaneMarkdown() {
+  const markdown = document.getElementById('lpPaneMarkdown');
+  if (!markdown || _markdownEditorWired) return;
+  _markdownEditorWired = true;
+  markdown.addEventListener('input', () => {
+    if (_currentNoteFormat !== NOTE_FORMAT_MARKDOWN) return;
+    const hidden = document.getElementById('lpPaneText');
+    if (hidden) hidden.value = markdown.value;
+    _markEditorDirty();
+  });
+}
+
+function _setPaneContent(noteText, noteFormat, pane) {
+  _setPaneEditorMode(noteFormat, pane);
+  _wirePaneMarkdown();
+  const hidden = document.getElementById('lpPaneText');
+
+  if (_currentNoteFormat === NOTE_FORMAT_MARKDOWN) {
+    const markdown = document.getElementById('lpPaneMarkdown');
+    if (markdown) markdown.value = noteText || '';
+    if (hidden) hidden.value = noteText || '';
+    _baselineMarkdown = noteText || '';
+    return;
+  }
+
   if (!_quill) return;
   const normalized = noteText ? normalizeTextColors(noteText) : '';
   _quill.setText('', 'silent');
@@ -94,7 +156,6 @@ function _setPaneContent(noteText) {
       _quill.setText(normalized, 'silent');
     }
   }
-  const hidden = document.getElementById('lpPaneText');
   if (hidden) hidden.value = _quill.root.innerHTML;
 }
 
@@ -115,6 +176,9 @@ function _syncSaveButton(dirty) {
 function _markEditorClean() {
   _uiDirty = false;
   if (_quill) _baselineHtml = _quill.root.innerHTML;
+  if (_currentNoteFormat === NOTE_FORMAT_MARKDOWN) {
+    _baselineMarkdown = document.getElementById('lpPaneMarkdown')?.value || '';
+  }
   _syncSaveButton(false);
   _onDirtyChange?.(false);
 }
@@ -128,9 +192,10 @@ function _markEditorDirty() {
 function _loadNoteIntoEditor(note, pane) {
   _ensureQuillInstance(pane);
   _currentNoteId = note?.id ?? null;
-  const html = note?.note_text || '';
-  _setPaneContent(html);
-  _baselineHtml = _quill ? _quill.root.innerHTML : html;
+  const noteText = note?.note_text || '';
+  const noteFormat = normalizeNoteFormat(note?.note_format);
+  _setPaneContent(noteText, noteFormat, pane);
+  _baselineHtml = _quill ? _quill.root.innerHTML : noteText;
   _markEditorClean();
 }
 
@@ -165,7 +230,9 @@ const PANE_SHELL_HTML = `
     </div>
     <div class="lp-pane-editor-wrap">
       <div id="lpPaneQuill"></div>
+      <textarea id="lpPaneMarkdown" class="lp-pane-markdown-editor" spellcheck="true" hidden></textarea>
       <input type="hidden" id="lpPaneText" />
+      <input type="hidden" id="lpPaneFormat" value="html" />
     </div>
   </div>`;
 
@@ -178,6 +245,7 @@ export function ensurePaneEditorShell(pane, { onProperties, onSave }) {
       placeholder: 'Edit note text here…',
     });
     _wirePaneQuill();
+    _wirePaneMarkdown();
     pane.querySelector('#lpPropsBtn')?.addEventListener('click', () => onProperties?.());
     pane.querySelector('#lpSaveBtn')?.addEventListener('click', async (e) => {
       e.preventDefault();
@@ -188,6 +256,7 @@ export function ensurePaneEditorShell(pane, { onProperties, onSave }) {
   } else {
     _saveBtn = pane.querySelector('#lpSaveBtn');
     _ensureQuillInstance(pane);
+    _wirePaneMarkdown();
     _migratePaneInfoOrder(pane);
   }
 }
@@ -210,30 +279,34 @@ export function loadPaneNote(note, pane) {
 }
 
 export function getPaneEditorHtml() {
+  if (_currentNoteFormat === NOTE_FORMAT_MARKDOWN) {
+    return document.getElementById('lpPaneMarkdown')?.value || '';
+  }
   return _quill ? _quill.root.innerHTML : '';
 }
 
 export function syncPaneTextToModalHidden() {
   const modalHidden = document.getElementById('quoteText');
-  if (modalHidden && _quill) {
-    modalHidden.value = _quill.root.innerHTML;
-  }
+  if (modalHidden) modalHidden.value = getPaneEditorHtml();
+  const modalFormat = document.getElementById('noteFormat');
+  if (modalFormat) modalFormat.value = _currentNoteFormat;
 }
 
 export async function savePaneEditorText({ deferNotify = false } = {}) {
-  if (!_quill || _currentNoteId == null || !_apiUrl) return false;
+  if (_currentNoteId == null || !_apiUrl) return false;
+  if (_currentNoteFormat === NOTE_FORMAT_HTML && !_quill) return false;
 
   if (!_uiDirty) {
     _markEditorClean();
     return true;
   }
 
-  const note_text = _quill.root.innerHTML;
+  const note_text = getPaneEditorHtml();
   try {
     const response = await fetch(`${_apiUrl}/quotes/${_currentNoteId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ note_text }),
+      body: JSON.stringify({ note_text, note_format: _currentNoteFormat }),
     });
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));

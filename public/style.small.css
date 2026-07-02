@@ -249,6 +249,8 @@
   #quoteModal .quote-editor-body,
   #quoteModal .quote-modal-editor-col,
   #quoteModal #quoteEditor,
+  #quoteModal #markdownEditor,
+  #quoteModal #markdownPreviewEditor,
   #quoteModal .ql-toolbar.ql-snow,
   #quoteModal .ql-container.ql-snow,
   #quoteModal #noteTitle {

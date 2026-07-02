@@ -349,7 +349,7 @@ test("POST /api/quotes/bulk-delete does not delete files when the DB delete roll
 test("POST /api/quotes/bulk-duplicate copies flat attachments, extra attachments, and tags", async () => {
   const client = makeClient((sql) => {
     if (sql === "BEGIN" || sql === "COMMIT") return { rows: [], rowCount: 0 };
-    if (/SELECT note_text, note_title/.test(sql)) {
+    if (/SELECT note_text, note_format, note_title/.test(sql)) {
       return {
         rows: [
           {
@@ -439,7 +439,7 @@ test("POST /api/quotes/bulk-duplicate copies flat attachments, extra attachments
 test("POST /api/quotes/bulk-split creates notes for extra attachments and cleans originals", async () => {
   const client = makeClient((sql) => {
     if (sql === "BEGIN" || sql === "COMMIT") return { rows: [], rowCount: 0 };
-    if (/SELECT note_text, note_title/.test(sql)) {
+    if (/SELECT note_text, note_format, note_title/.test(sql)) {
       return {
         rows: [
           {
@@ -550,7 +550,7 @@ test("POST /api/quotes/bulk-split creates notes for extra attachments and cleans
 test("POST /api/quotes/bulk-duplicate deletes copied files when the transaction rolls back", async () => {
   const client = makeClient((sql) => {
     if (sql === "BEGIN" || sql === "ROLLBACK") return { rows: [], rowCount: 0 };
-    if (/SELECT note_text, note_title/.test(sql)) {
+    if (/SELECT note_text, note_format, note_title/.test(sql)) {
       return {
         rows: [
           {
@@ -629,7 +629,7 @@ test("POST /api/quotes/bulk-duplicate deletes copied files when the transaction 
 test("POST /api/quotes/bulk-split deletes copied files on rollback without deleting originals", async () => {
   const client = makeClient((sql) => {
     if (sql === "BEGIN" || sql === "ROLLBACK") return { rows: [], rowCount: 0 };
-    if (/SELECT note_text, note_title/.test(sql)) {
+    if (/SELECT note_text, note_format, note_title/.test(sql)) {
       return {
         rows: [
           {

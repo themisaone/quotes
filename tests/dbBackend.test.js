@@ -245,7 +245,7 @@ test("migration runner uses the SQLite migration set for SQLite pools", async (t
   assert.match(getDefaultMigrationsPath(pool), /migrations\/sqlite$/);
 
   const result = await runMigrations({ pool, quietWhenNoPending: true });
-  assert.deepEqual(result.ran, ["001_schema.js"]);
+  assert.deepEqual(result.ran, ["001_schema.js", "002_note_format.js"]);
 
   const tables = await pool.query(
     "SELECT name FROM sqlite_master WHERE type = $1 AND name IN ($2, $3, $4) ORDER BY name",
