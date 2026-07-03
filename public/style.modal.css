@@ -243,6 +243,59 @@
   opacity: 1;
 }
 
+.modal-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.modal-header-action-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: white;
+  opacity: 0.9;
+  font: inherit;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.modal-header-action-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  opacity: 1;
+}
+
+.btn-attach-toggle.btn-details-toggle.active,
+.btn-attach-toggle.btn-details-toggle.active:hover:not(:disabled) {
+  background: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+  color: white !important;
+}
+
+@media (hover: none), (pointer: coarse) {
+  .btn-attach-toggle.btn-details-toggle:hover:not(:disabled):not(.active) {
+    background: var(--card-bg) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-secondary) !important;
+  }
+}
+
+@media (max-width: 767px),
+       (min-width: 768px) and (max-width: 1100px) and (orientation: landscape) {
+  #quoteModal #toggleQuoteModalMaximize {
+    display: none !important;
+  }
+}
+
 /* Modal body padding */
 .modal-body {
   padding: var(--d-pad-md);
@@ -282,6 +335,124 @@
 
 .modal-wide {
   max-width: 1100px !important;
+}
+
+@media (min-width: 1101px) {
+  #quoteModal .modal-content.modal-wide:not(.modal-expanded) {
+    height: min(820px, 90vh);
+    max-height: min(820px, 90vh);
+  }
+
+  #quoteModal .modal-content.modal-wide:not(.modal-expanded) .modal-body,
+  #quoteModal .modal-content.modal-wide:not(.modal-expanded) #quoteForm,
+  #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-editor-group,
+  #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-editor-body,
+  #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-modal-editor-split,
+  #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-modal-editor-col,
+  #quoteModal .modal-content.modal-wide:not(.modal-expanded) #quoteEditor {
+    min-height: 0;
+  }
+
+  #quoteModal .modal-content.modal-wide:not(.modal-expanded) .modal-body,
+  #quoteModal .modal-content.modal-wide:not(.modal-expanded) #quoteForm,
+  #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-editor-group,
+  #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-editor-body,
+  #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-modal-editor-col,
+  #quoteModal .modal-content.modal-wide:not(.modal-expanded) #quoteEditor {
+    display: flex;
+    flex-direction: column;
+  }
+
+  #quoteModal .modal-content.modal-wide:not(.modal-expanded) #quoteForm,
+  #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-editor-group,
+  #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-editor-body,
+  #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-modal-editor-split,
+  #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-modal-editor-col,
+  #quoteModal .modal-content.modal-wide:not(.modal-expanded) #quoteEditor {
+    flex: 1 1 auto;
+  }
+
+  #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-modal-editor-split {
+    align-items: stretch;
+  }
+
+  #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-editor-toolbar,
+  #quoteModal .modal-content.modal-wide:not(.modal-expanded) #quoteEditor .ql-toolbar,
+  #quoteModal .modal-content.modal-wide:not(.modal-expanded) #quoteDetailsSection,
+  #quoteModal .modal-content.modal-wide:not(.modal-expanded) .form-actions {
+    flex: 0 0 auto;
+  }
+
+  #quoteModal .modal-content.modal-wide:not(.modal-expanded) #quoteEditor {
+    height: auto !important;
+    min-height: 240px;
+  }
+
+  #quoteModal .modal-content.modal-wide:not(.modal-expanded) #quoteEditor .ql-container {
+    flex: 1 1 auto;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: hidden;
+  }
+
+  #quoteModal .modal-content.modal-wide:not(.modal-expanded) #quoteEditor .ql-editor {
+    overflow-y: auto !important;
+  }
+}
+
+#quoteModal .modal-content.modal-expanded {
+  width: min(1600px, 96vw);
+  max-width: 96vw !important;
+  max-height: 96vh;
+  height: 96vh;
+}
+
+#quoteModal .modal-content.modal-expanded .modal-body,
+#quoteModal .modal-content.modal-expanded #quoteForm,
+#quoteModal .modal-content.modal-expanded .quote-editor-group,
+#quoteModal .modal-content.modal-expanded .quote-editor-body,
+#quoteModal .modal-content.modal-expanded .quote-modal-editor-split,
+#quoteModal .modal-content.modal-expanded .quote-modal-editor-col,
+#quoteModal .modal-content.modal-expanded #quoteEditor {
+  min-height: 0;
+}
+
+#quoteModal .modal-content.modal-expanded .modal-body,
+#quoteModal .modal-content.modal-expanded #quoteForm,
+#quoteModal .modal-content.modal-expanded .quote-editor-group,
+#quoteModal .modal-content.modal-expanded .quote-editor-body,
+#quoteModal .modal-content.modal-expanded .quote-modal-editor-col,
+#quoteModal .modal-content.modal-expanded #quoteEditor {
+  display: flex;
+  flex-direction: column;
+}
+
+#quoteModal .modal-content.modal-expanded #quoteForm,
+#quoteModal .modal-content.modal-expanded .quote-editor-group,
+#quoteModal .modal-content.modal-expanded .quote-editor-body,
+#quoteModal .modal-content.modal-expanded .quote-modal-editor-split,
+#quoteModal .modal-content.modal-expanded .quote-modal-editor-col,
+#quoteModal .modal-content.modal-expanded #quoteEditor {
+  flex: 1 1 auto;
+}
+
+#quoteModal .modal-content.modal-expanded .quote-modal-editor-split {
+  align-items: stretch;
+}
+
+#quoteModal .modal-content.modal-expanded #quoteEditor {
+  height: auto !important;
+  min-height: 240px;
+}
+
+#quoteModal .modal-content.modal-expanded #quoteEditor .ql-toolbar {
+  flex: 0 0 auto;
+}
+
+#quoteModal .modal-content.modal-expanded #quoteEditor .ql-container {
+  flex: 1 1 auto;
+  height: auto !important;
+  min-height: 0 !important;
 }
 
 @keyframes slideDown {
@@ -351,6 +522,10 @@
   max-width: 100%;
 }
 
+#quoteModal .quote-editor-group {
+  margin-bottom: var(--d-pad-md);
+}
+
 .modal-content .form-group:last-of-type {
   margin-bottom: 0;
 }
@@ -362,6 +537,45 @@
 .form-row-2 .form-group,
 .form-row-3 .form-group {
   margin-bottom: 0;
+}
+
+.quote-details-section {
+  margin-top: 0.2rem;
+  border-top: 0;
+  padding-top: 0;
+}
+
+.quote-details-section:not([open]) {
+  margin-top: 0;
+  border-top: 0;
+  padding-top: 0;
+}
+
+.quote-details-summary {
+  display: none;
+}
+
+.quote-details-summary::marker {
+  content: "";
+}
+
+.quote-details-summary-hint {
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 400;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quote-details-content {
+  padding-top: 0.2rem;
+}
+
+.quote-details-content > .form-row-with-separator:first-child {
+  border-top: 0;
+  padding-top: 0;
 }
 
 .autocomplete-wrapper {
@@ -486,7 +700,7 @@ label {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.3rem 0.5rem;
+  padding: 0.3rem 0.1rem;
   border-radius: 6px;
   transition: all 0.2s ease;
   border: 2px solid transparent;
@@ -830,6 +1044,19 @@ textarea {
 
   #quoteModal .image-preview-vertical img {
     max-width: 100% !important;
+  }
+
+  #quoteModal .quote-details-section {
+    margin-top: 0.2rem;
+    padding-top: 0;
+  }
+
+  #quoteModal .quote-details-summary {
+    min-height: 0;
+  }
+
+  #quoteModal .quote-details-summary-hint {
+    display: none;
   }
 
   #quoteModal .quote-attach-picker-actions {

@@ -3,7 +3,7 @@
  */
 
 import { normalizeTextColors } from './utils.js?v=20260703color1';
-import { createQuillEditor } from './quoteEditor.js?v=20260605paneatt2';
+import { createQuillEditor } from './quoteEditor.js?v=20260703nofullscreen1';
 import { showUnsavedChangesConfirm } from './confirmDialog.js';
 
 let _apiUrl = '';

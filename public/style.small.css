@@ -46,7 +46,7 @@
     padding-bottom: env(safe-area-inset-bottom, 0) !important;
   }
 
-  /* Inset floating modals (not the full-screen note editor #quoteModal) */
+  /* Inset floating modals (not the viewport-filling note modal #quoteModal) */
   .modal:not(#quoteModal) .modal-content {
     margin-left: max(0.5rem, env(safe-area-inset-left, 0px)) !important;
     margin-right: max(0.5rem, env(safe-area-inset-right, 0px)) !important;
@@ -187,6 +187,12 @@
     font-size: 1.5rem !important;
   }
 
+  @media (min-width: 700px) {
+    #quoteModal #toggleQuoteModalMaximize {
+      display: inline-flex !important;
+    }
+  }
+
   #quoteModal .modal-body {
     overflow-x: hidden !important;
     padding-top: 0.55rem !important;
@@ -209,16 +215,18 @@
     margin-bottom: 0.32rem !important;
   }
 
-  #quoteModal .quote-editor-group.fullscreen {
-    padding-top: max(0.55rem, env(safe-area-inset-top, 0px)) !important;
-    padding-right: max(0.65rem, env(safe-area-inset-right, 0px)) !important;
-    padding-bottom: max(0.9rem, env(safe-area-inset-bottom, 0px)) !important;
-    padding-left: max(0.65rem, env(safe-area-inset-left, 0px)) !important;
-    box-sizing: border-box !important;
+  #quoteModal .modal-content.modal-expanded .quote-editor-toolbar {
+    flex: 0 0 auto !important;
+    position: relative !important;
+    z-index: 1 !important;
   }
 
-  #quoteModal .quote-editor-group.fullscreen .quote-editor-toolbar {
-    margin-bottom: 0.15rem !important;
+  #quoteModal .modal-content.modal-expanded #quoteEditor {
+    min-height: 7rem !important;
+  }
+
+  #quoteModal .modal-content.modal-expanded:has(#quoteDetailsSection:not([open])) #quoteEditor {
+    min-height: 12rem !important;
   }
 
   #quoteModal .form-row,

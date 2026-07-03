@@ -148,7 +148,7 @@ import {
   initializeQuillEditor,
   handleFormSubmit as handleFormSubmitLib,
   deleteQuote as deleteQuoteLib
-} from './js/lib/quoteEditor.js?v=20260605paneatt2';
+} from './js/lib/quoteEditor.js?v=20260703nofullscreen1';
 
 import {
   initializeBulkImport,
@@ -186,14 +186,14 @@ import {
   setTrainingSubMode,
   getListPanePageSize,
   restoreTrainingDateFiltersToBar
-} from './js/lib/listPaneView.js?v=20260629oldicon1';
+} from './js/lib/listPaneView.js?v=20260703nofullscreen1';
 import {
   configurePaneEditor,
   syncPaneTextToModalHidden,
   applyPaneSavedNote,
   getPaneEditorHtml,
   getPaneEditorNoteId,
-} from './js/lib/paneEditor.js?v=20260605paneatt7';
+} from './js/lib/paneEditor.js?v=20260703nofullscreen1';
 import {
   configurePaneAttachments,
   renderPaneAttachments,
@@ -570,6 +570,8 @@ const quoteForm = getElementByIdSafe("quoteForm");
 const addQuoteBtn = getElementByIdSafe("addQuoteBtn");
 const closeModal = document.querySelector(".close");
 const cancelBtn = getElementByIdSafe("cancelBtn");
+const toggleQuoteModalMaximizeBtn = getElementByIdSafe("toggleQuoteModalMaximize");
+const toggleQuoteDetailsBtn = getElementByIdSafe("toggleQuoteDetailsBtn");
 const quotesList = getElementByIdSafe("quotesList");
 const lpWrapper = getElementByIdSafe("lpWrapper");   // dedicated container for list-pane view
 const quoteCount = getElementByIdSafe("quoteCount");
@@ -1458,13 +1460,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupEventListeners();
   setupMenuNavigation();
 
-  // Double-click on the quote modal header → toggle full-screen expansion.
-  // Only meaningful on medium screens (tablet); on desktop the modal is already wide.
+  // Double-click on the quote modal header also toggles maximize; the visible
+  // header button is the primary affordance.
   const _quoteModalHeader = document.querySelector('#quoteModal .modal-header');
-  const _quoteModalContent = document.querySelector('#quoteModal .modal-content');
-  if (_quoteModalHeader && _quoteModalContent) {
+  if (_quoteModalHeader) {
     _quoteModalHeader.addEventListener('dblclick', () => {
-      _quoteModalContent.classList.toggle('modal-expanded');
+      toggleQuoteModalMaximized();
     });
   }
   // Side-menu layout active on medium screens — no landing page needed
@@ -1539,6 +1540,27 @@ function setupEventListeners() {
   
   closeModal.addEventListener("click", closeQuoteModal);
   cancelBtn.addEventListener("click", closeQuoteModal);
+  if (toggleQuoteModalMaximizeBtn) {
+    toggleQuoteModalMaximizeBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleQuoteModalMaximized();
+    });
+  }
+  if (toggleQuoteDetailsBtn) {
+    toggleQuoteDetailsBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      const details = document.getElementById('quoteDetailsSection');
+      if (!details) return;
+      details.open = !details.open;
+      syncQuoteDetailsToggle();
+      const shouldReleaseFocus = e.detail > 0 ||
+        (window.matchMedia && window.matchMedia('(hover: none), (pointer: coarse)').matches);
+      if (shouldReleaseFocus) {
+        e.currentTarget.blur();
+      }
+    });
+  }
   quoteForm.addEventListener("submit", handleSubmit);
   clearBtn.addEventListener("click", clearFilters);
   
@@ -2604,6 +2626,69 @@ function initializeNoteModalEntityNav() {
   }
 }
 
+function isSmallModalViewport() {
+  return window.matchMedia
+    ? window.matchMedia("(max-width: 767px)").matches
+    : window.innerWidth <= 767;
+}
+
+function isCompactModalViewport() {
+  return window.matchMedia
+    ? window.matchMedia("(max-width: 1100px)").matches
+    : window.innerWidth <= 1100;
+}
+
+function isMediumPortraitModalViewport() {
+  return window.matchMedia
+    ? window.matchMedia("(min-width: 700px) and (max-width: 1100px) and (orientation: portrait)").matches
+    : window.innerWidth >= 700 && window.innerWidth <= 1100 && window.innerHeight > window.innerWidth;
+}
+
+function canUseQuoteModalMaximize() {
+  return !isCompactModalViewport() || isMediumPortraitModalViewport();
+}
+
+function setQuoteModalMaximized(enabled) {
+  const content = document.querySelector('#quoteModal .modal-content');
+  if (!content) return;
+
+  if (enabled && !canUseQuoteModalMaximize()) {
+    enabled = false;
+  }
+
+  content.classList.toggle('modal-expanded', Boolean(enabled));
+  if (toggleQuoteModalMaximizeBtn) {
+    const isExpanded = content.classList.contains('modal-expanded');
+    toggleQuoteModalMaximizeBtn.textContent = isExpanded ? '↙' : '⛶';
+    toggleQuoteModalMaximizeBtn.title = isExpanded ? 'Restore modal size' : 'Maximize modal';
+    toggleQuoteModalMaximizeBtn.setAttribute('aria-label', toggleQuoteModalMaximizeBtn.title);
+    toggleQuoteModalMaximizeBtn.setAttribute('aria-pressed', String(isExpanded));
+  }
+}
+
+function toggleQuoteModalMaximized() {
+  const content = document.querySelector('#quoteModal .modal-content');
+  setQuoteModalMaximized(!content?.classList.contains('modal-expanded'));
+}
+
+function syncQuoteDetailsToggle() {
+  const details = document.getElementById('quoteDetailsSection');
+  if (!details || !toggleQuoteDetailsBtn) return;
+
+  const isOpen = details.open;
+  toggleQuoteDetailsBtn.classList.toggle('active', isOpen);
+  toggleQuoteDetailsBtn.title = isOpen ? 'Hide details' : 'Show details';
+  toggleQuoteDetailsBtn.setAttribute('aria-label', toggleQuoteDetailsBtn.title);
+  toggleQuoteDetailsBtn.setAttribute('aria-pressed', String(isOpen));
+}
+
+function setQuoteDetailsDefault({ forceOpen = false } = {}) {
+  const details = document.getElementById('quoteDetailsSection');
+  if (!details) return;
+  details.open = forceOpen || !isSmallModalViewport();
+  syncQuoteDetailsToggle();
+}
+
 function openAddModal() {
   // MIGRATED: Using library function
   const noteType = currentNoteTypeFilter || 'quote';
@@ -2655,6 +2740,7 @@ function openAddModal() {
   
   // Update attachment panel visibility based on state
   updateAttachmentPanelVisibility();
+  setQuoteDetailsDefault();
   
   // Show modal
   quoteModal.style.display = "block";
@@ -2747,6 +2833,7 @@ function openEditModal(quote, options = {}) {
   
   // Update attachment panel visibility
   updateAttachmentPanelVisibility();
+  setQuoteDetailsDefault({ forceOpen: propertiesOnly });
 
 
   // Show modal
@@ -2757,7 +2844,7 @@ function closeQuoteModal() {
   quoteModal.style.display = "none";
   quoteModal.classList.remove('modal-properties-only');
   quoteModal.classList.remove('has-attachment');
-  document.querySelector('#quoteModal .modal-content')?.classList.remove('modal-expanded');
+  setQuoteModalMaximized(false);
   quoteForm.reset();
   editingQuoteId = null;
   currentQuoteImage = "";

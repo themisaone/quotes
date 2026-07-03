@@ -37,11 +37,6 @@ const INLINE_IMAGE_MAX_PX = 1200;
 
 const QUILL_PLACEHOLDER = 'Enter the quote text...';
 
-const KEYBOARD_SHORTCUTS = {
-  ESCAPE: 'Escape',
-  F11: 'F11'
-};
-
 // ============= STATE =============
 
 let quillEditorInstance = null;
@@ -196,7 +191,6 @@ export function initializeQuillEditor(editorSelector = '#quoteEditor', hiddenInp
   quillEditorInstance = createQuillEditor(editorSelector, hiddenInputId);
   if (!quillEditorInstance) return null;
 
-  setupFullscreenEditor();
   console.log('✅ Quill editor initialized');
   return quillEditorInstance;
 }
@@ -207,65 +201,6 @@ export function initializeQuillEditor(editorSelector = '#quoteEditor', hiddenInp
  */
 export function getQuillEditor() {
   return quillEditorInstance;
-}
-
-// ============= FULLSCREEN EDITOR =============
-
-/**
- * Setup fullscreen editor toggle functionality
- */
-function setupFullscreenEditor() {
-  const toggleBtn = getElementByIdSafe('toggleFullscreenEditor', 'setupFullscreenEditor');
-  const editorGroup = document.querySelector('.quote-editor-group');
-  
-  if (!toggleBtn || !editorGroup) return;
-  
-  let isFullscreen = false;
-  
-  toggleBtn.addEventListener('click', () => {
-    isFullscreen = !isFullscreen;
-    toggleFullscreenMode(isFullscreen, editorGroup, toggleBtn);
-  });
-  
-  // ESC key to exit fullscreen
-  document.addEventListener('keydown', (e) => {
-    if (e.key === KEYBOARD_SHORTCUTS.ESCAPE && isFullscreen) {
-      isFullscreen = false;
-      toggleFullscreenMode(false, editorGroup, toggleBtn);
-    }
-    
-    // F11 to toggle fullscreen
-    if (e.key === KEYBOARD_SHORTCUTS.F11) {
-      e.preventDefault();
-      isFullscreen = !isFullscreen;
-      toggleFullscreenMode(isFullscreen, editorGroup, toggleBtn);
-    }
-  });
-}
-
-/**
- * Toggle fullscreen mode for editor
- * @param {boolean} enable - Enable or disable fullscreen
- * @param {HTMLElement} editorGroup - Editor container element
- * @param {HTMLElement} toggleBtn - Toggle button element
- */
-function toggleFullscreenMode(enable, editorGroup, toggleBtn) {
-  if (enable) {
-    // Enter fullscreen
-    editorGroup.classList.add('fullscreen');
-    toggleBtn.textContent = '✕';
-    toggleBtn.title = 'Exit Fullscreen (Esc)';
-    
-    // Focus editor
-    if (quillEditorInstance) {
-      quillEditorInstance.focus();
-    }
-  } else {
-    // Exit fullscreen
-    editorGroup.classList.remove('fullscreen');
-    toggleBtn.textContent = '⛶';
-    toggleBtn.title = 'Fullscreen Editor (F11)';
-  }
 }
 
 // ============= DATE PARSING =============

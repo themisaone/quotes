@@ -179,6 +179,220 @@
     padding: var(--m-pad-sm) var(--m-pad-md) var(--m-pad-md) var(--m-pad-md) !important;
   }
 
+  #quoteModal #toggleQuoteModalMaximize {
+    display: inline-flex !important;
+  }
+
+  @media (orientation: landscape) {
+    #quoteModal #toggleQuoteModalMaximize {
+      display: none !important;
+    }
+  }
+
+  #quoteModal .modal-content {
+    width: 82vw !important;
+    max-width: 95vw !important;
+    height: min(94vh, calc(100vh - 1rem)) !important;
+    max-height: min(94vh, calc(100vh - 1rem)) !important;
+  }
+
+  @supports (height: 100svh) {
+    #quoteModal .modal-content {
+      height: min(94svh, calc(100svh - 1rem)) !important;
+      max-height: min(94svh, calc(100svh - 1rem)) !important;
+    }
+  }
+
+  @supports (height: 100dvh) {
+    #quoteModal .modal-content {
+      height: min(94dvh, calc(100dvh - 1rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))) !important;
+      max-height: min(94dvh, calc(100dvh - 1rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))) !important;
+    }
+  }
+
+  @media (orientation: portrait) {
+    #quoteModal .modal-content {
+      width: min(95vw, calc(100vw - 1rem)) !important;
+      max-width: calc(100vw - 1rem) !important;
+    }
+
+    #quoteModal .modal-header {
+      overflow: hidden !important;
+      gap: 0.4rem !important;
+    }
+
+    #quoteModal .modal-header-left {
+      flex: 1 1 auto !important;
+      min-width: 0 !important;
+    }
+
+    #quoteModal .modal-header > div[style*="display:flex"] {
+      flex: 0 1 auto !important;
+      min-width: 0 !important;
+      margin-right: 0.2rem !important;
+    }
+
+    #quoteModal .modal-header > div[style*="display:flex"] > span {
+      display: none !important;
+    }
+
+    #quoteModal .modal-notetype-select {
+      max-width: 8rem !important;
+      min-width: 0 !important;
+    }
+
+    #quoteModal .quote-metadata-header {
+      flex: 1 1 auto !important;
+      min-width: 0 !important;
+      max-width: 14rem !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      white-space: nowrap !important;
+      margin-left: 0 !important;
+      padding-right: 0.25rem !important;
+    }
+
+    #quoteModal .modal-header-actions {
+      flex: 0 0 auto !important;
+    }
+
+    #quoteModal .modal-content.modal-expanded {
+      width: min(95vw, calc(100vw - 1rem)) !important;
+      max-width: calc(100vw - 1rem) !important;
+      height: min(96vh, calc(100vh - 0.75rem)) !important;
+      max-height: min(96vh, calc(100vh - 0.75rem)) !important;
+    }
+
+    @supports (height: 100svh) {
+      #quoteModal .modal-content.modal-expanded {
+        height: min(96svh, calc(100svh - 0.75rem)) !important;
+        max-height: min(96svh, calc(100svh - 0.75rem)) !important;
+      }
+    }
+
+    @supports (height: 100dvh) {
+      #quoteModal .modal-content.modal-expanded {
+        height: min(96dvh, calc(100dvh - 0.75rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))) !important;
+        max-height: min(96dvh, calc(100dvh - 0.75rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))) !important;
+      }
+    }
+  }
+
+  @media (orientation: landscape) {
+    #quoteModal .modal-content.modal-expanded {
+      width: 82vw !important;
+      max-width: 95vw !important;
+    }
+  }
+
+  #quoteModal .modal-content .modal-body,
+  #quoteModal .modal-content #quoteForm,
+  #quoteModal .modal-content .quote-editor-group,
+  #quoteModal .modal-content .quote-editor-body,
+  #quoteModal .modal-content .quote-modal-editor-split,
+  #quoteModal .modal-content .quote-modal-editor-col,
+  #quoteModal .modal-content #quoteEditor {
+    min-height: 0;
+  }
+
+  #quoteModal .modal-content .modal-body,
+  #quoteModal .modal-content #quoteForm,
+  #quoteModal .modal-content .quote-editor-group,
+  #quoteModal .modal-content .quote-editor-body,
+  #quoteModal .modal-content .quote-modal-editor-col,
+  #quoteModal .modal-content #quoteEditor {
+    display: flex;
+    flex-direction: column;
+  }
+
+  #quoteModal .modal-content #quoteForm,
+  #quoteModal .modal-content .quote-editor-group,
+  #quoteModal .modal-content .quote-editor-body,
+  #quoteModal .modal-content .quote-modal-editor-split,
+  #quoteModal .modal-content .quote-modal-editor-col,
+  #quoteModal .modal-content #quoteEditor {
+    flex: 1 1 auto;
+  }
+
+  #quoteModal .modal-content .quote-modal-editor-split {
+    align-items: stretch;
+    overflow: hidden;
+  }
+
+  #quoteModal .modal-content #attachmentContainer.quote-modal-attachment-col:not(.hidden) {
+    flex: 0 1 180px !important;
+    width: min(180px, 22vw) !important;
+    max-width: min(180px, 22vw) !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    align-self: stretch;
+    overflow: hidden;
+    margin-right: 0.6rem;
+  }
+
+  #quoteModal .modal-content #attachmentContainer .image-preview-vertical {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+  }
+
+  #quoteModal .modal-content #attachmentContainer .image-preview-vertical img {
+    max-width: 100% !important;
+    max-height: 100% !important;
+  }
+
+  #quoteModal .modal-content #attachmentContainer .image-preview-vertical > div {
+    min-height: 0;
+  }
+
+  #quoteModal .modal-content .modal-att-strip {
+    margin-top: 4px;
+    padding: 2px 2px 5px;
+    gap: 5px;
+  }
+
+  #quoteModal .modal-content .modal-att-item {
+    width: 54px;
+    height: 54px;
+  }
+
+  #quoteModal .modal-content .quote-editor-toolbar,
+  #quoteModal .modal-content #quoteEditor .ql-toolbar {
+    flex: 0 0 auto;
+  }
+
+  #quoteModal .modal-content .quote-editor-toolbar {
+    position: relative;
+    z-index: 1;
+  }
+
+  #quoteModal .modal-content #quoteDetailsSection,
+  #quoteModal .modal-content .form-actions {
+    flex: 0 0 auto;
+  }
+
+  #quoteModal .modal-content #quoteEditor {
+    height: auto !important;
+    min-height: 6rem !important;
+  }
+
+  #quoteModal .modal-content:has(#quoteDetailsSection:not([open])) #quoteEditor {
+    min-height: 14rem !important;
+  }
+
+  #quoteModal .modal-content #quoteEditor .ql-container {
+    flex: 1 1 auto;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: hidden;
+  }
+
+  #quoteModal .modal-content #quoteEditor .ql-editor {
+    overflow-y: auto !important;
+  }
+
   /* form-group vertical gap — only between independent groups */
   .modal-content .form-group,
   .form-group {
@@ -818,6 +1032,12 @@
     font-size: var(--m-font-base) !important;
   }
 
+  #quoteModal #selectedTags .tag-removable {
+    font-size: var(--m-font-base) !important;
+    padding: 0.12rem 0.45rem !important;
+    line-height: 1.2 !important;
+  }
+
   .modal-header h2 {
     font-size: var(--m-font-lg) !important;
     line-height: 1 !important;
@@ -877,10 +1097,6 @@
   }
   .card-note-title {
     font-size: var(--m-font-xl);
-  }
-
-  #quoteModal .quote-editor-group.fullscreen {
-    padding: 0.85rem !important;
   }
 
 }

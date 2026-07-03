@@ -15,17 +15,17 @@
     <link rel="stylesheet" href="style.sidemenu.css?v=20260628collapsedmenu5" />
     <link rel="stylesheet" href="style.search.css?v=20260628controlalign1" />
     <link rel="stylesheet" href="style.buttons.css?v=20260626noback1" />
-    <link rel="stylesheet" href="style.modal.css?v=20260702attachsource1" />
+    <link rel="stylesheet" href="style.modal.css?v=20260703editorgap1" />
     <link rel="stylesheet" href="style.cards.css?v=20260629randomwidth1" />
     <link rel="stylesheet" href="style.selection.css?v=20260625runtime1" />
-    <link rel="stylesheet" href="style.attachments.css?v=20260625runtime1" />
+    <link rel="stylesheet" href="style.attachments.css?v=20260703nofullscreen1" />
     <link rel="stylesheet" href="style.entities.css?v=20260625runtime1" />
     <link rel="stylesheet" href="style.settings.css?v=20260626datamgmt1" />
     <link rel="stylesheet" href="style.dialogs.css?v=20260625runtime1" />
     <link rel="stylesheet" href="style.views.css?v=20260628smallgallery1" />
     <link rel="stylesheet" href="style.mobile.css?v=20260629mobileheader1" />
-    <link rel="stylesheet" href="style.small.css?v=20260629fullscreen1" />
-    <link rel="stylesheet" href="style.medium.css?v=20260629mobileheader1" />
+    <link rel="stylesheet" href="style.small.css?v=20260703nofullscreen1" />
+    <link rel="stylesheet" href="style.medium.css?v=20260703modaltags1" />
     <!-- Font Awesome for dice icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <!-- Quill Editor -->
@@ -1610,7 +1610,10 @@
             </select>
           </div>
           <div id="quoteMetadata" class="quote-metadata-header" style="display: none;"></div>
-          <span class="close">&times;</span>
+          <div class="modal-header-actions">
+            <button type="button" id="toggleQuoteModalMaximize" class="modal-header-action-btn" title="Maximize modal" aria-label="Maximize modal" aria-pressed="false">⛶</button>
+            <span class="close">&times;</span>
+          </div>
         </div>
         <div class="modal-body">
           <form id="quoteForm">
@@ -1628,8 +1631,8 @@
             <div class="quote-editor-toolbar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0;">
               <div style="display: flex; align-items: center; gap: 0.5rem;">
                 <label for="quoteText" style="margin-bottom: 0;"><span id="quoteTextLabel">📝 Note text *</span></label>
-                <button type="button" id="toggleFullscreenEditor" class="btn-icon" title="Fullscreen Editor" style="padding: 0.25rem 0.5rem; font-size: 0.9rem;">
-                  ⛶
+                <button type="button" id="toggleQuoteDetailsBtn" class="btn-attach-toggle btn-details-toggle" title="Hide details" aria-controls="quoteDetailsSection" aria-pressed="true">
+                  Details
                 </button>
                 <button type="button" id="toggleAttachmentBtn" class="btn-attach-toggle" title="Toggle attachment panel">
                   📎 Add attachment
@@ -1737,155 +1740,162 @@
             </div><!-- /.quote-editor-body -->
           </div>
 
-          <div class="form-row form-row-with-separator">
-            <div class="form-group form-group-inline" style="flex: 1;">
-              <label for="note"><span id="noteLabel">💭 Comment</span></label>
-              <input
-                type="text"
-                id="comment"
-                placeholder="Additional context..."
-              />
-            </div>
-
-            <div class="form-group" style="flex: 1; min-width: 0;">
-              <div class="form-group-inline quote-modal-field-row">
-                <label for="tagInput">🏷️ Tags</label>
-                <div class="autocomplete-wrapper">
-                  <input type="text" id="tagInput" placeholder="Type tag name..." autocomplete="off" />
-                  <div id="tagInputSuggestions" class="autocomplete-suggestions"></div>
-                </div>
-                <button type="button" id="addTagBtn" class="btn btn-primary quote-modal-inline-action">+ Add Tag</button>
-              </div>
-              <div id="selectedTags" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;"></div>
-              <input type="hidden" id="tags" />
-            </div>
-          </div>
-
-          <div class="form-row-with-separator" style="margin-top: 0.5rem; flex-direction: column; gap: 0.6rem;" id="quoteSpecificFields">
-            <!-- Row 1: Author + Source -->
-            <div class="form-row" style="margin-bottom: 0.6rem;">
-              <div class="form-group form-group-inline quote-modal-field-row" style="flex: 1; min-width: 0;">
-                <label for="author">✍️ Author</label>
-                <div class="autocomplete-wrapper">
+          <details id="quoteDetailsSection" class="quote-details-section" open>
+            <summary class="quote-details-summary">
+              Details
+            </summary>
+            <div class="quote-details-content">
+              <div class="form-row form-row-with-separator">
+                <div class="form-group form-group-inline" style="flex: 1;">
+                  <label for="note"><span id="noteLabel">💭 Comment</span></label>
                   <input
                     type="text"
-                    id="author"
-                    placeholder="Author name"
-                    autocomplete="off"
+                    id="comment"
+                    placeholder="Additional context..."
                   />
-                  <div id="authorSuggestions" class="autocomplete-suggestions"></div>
                 </div>
-                <input type="hidden" id="noteModalAuthorId" value="" />
-                <button type="button" id="showAuthorFromNoteBtn" class="btn btn-primary quote-modal-inline-action" title="Open this author on the Authors page" disabled>Show</button>
+
+                <div class="form-group" style="flex: 1; min-width: 0;">
+                  <div class="form-group-inline quote-modal-field-row">
+                    <label for="tagInput">🏷️ Tags</label>
+                    <div class="autocomplete-wrapper">
+                      <input type="text" id="tagInput" placeholder="Type tag name..." autocomplete="off" />
+                      <div id="tagInputSuggestions" class="autocomplete-suggestions"></div>
+                    </div>
+                    <button type="button" id="addTagBtn" class="btn btn-primary quote-modal-inline-action">+ Add Tag</button>
+                  </div>
+                  <div id="selectedTags" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;"></div>
+                  <input type="hidden" id="tags" />
+                </div>
               </div>
 
-              <div class="form-group form-group-inline quote-modal-field-row" style="flex: 1; min-width: 0;">
-                <label for="source">📚 Source</label>
-                <div class="autocomplete-wrapper">
+              <div class="form-row-with-separator" style="margin-top: 0.5rem; flex-direction: column; gap: 0.6rem;" id="quoteSpecificFields">
+                <!-- Row 1: Author + Source -->
+                <div class="form-row" style="margin-bottom: 0.6rem;">
+                  <div class="form-group form-group-inline quote-modal-field-row" style="flex: 1; min-width: 0;">
+                    <label for="author">✍️ Author</label>
+                    <div class="autocomplete-wrapper">
+                      <input
+                        type="text"
+                        id="author"
+                        placeholder="Author name"
+                        autocomplete="off"
+                      />
+                      <div id="authorSuggestions" class="autocomplete-suggestions"></div>
+                    </div>
+                    <input type="hidden" id="noteModalAuthorId" value="" />
+                    <button type="button" id="showAuthorFromNoteBtn" class="btn btn-primary quote-modal-inline-action" title="Open this author on the Authors page" disabled>Show</button>
+                  </div>
+
+                  <div class="form-group form-group-inline quote-modal-field-row" style="flex: 1; min-width: 0;">
+                    <label for="source">📚 Source</label>
+                    <div class="autocomplete-wrapper">
+                      <input
+                        type="text"
+                        id="source"
+                        placeholder="Source title"
+                        autocomplete="off"
+                      />
+                      <div id="sourceSuggestions" class="autocomplete-suggestions"></div>
+                    </div>
+                    <input type="hidden" id="noteModalSourceId" value="" />
+                    <button type="button" id="showSourceFromNoteBtn" class="btn btn-primary quote-modal-inline-action" title="Open this source on the Sources page" disabled>Show</button>
+                  </div>
+                </div>
+
+                <!-- Row 2: Type + Group -->
+                <div class="form-row">
+                  <div class="form-group form-group-inline" style="flex: 1;">
+                    <label for="sourceType">📑 Type</label>
+                    <select id="sourceType">
+                      <option value="BOOK">📖 Book</option>
+                      <option value="MOVIE-TV">🎬 Movies & TV</option>
+                      <option value="ASSORTED">📝 Assorted</option>
+                      <option value="POETRY">📜 Poetry</option>
+                      <option value="LYRICS">🎵 Lyrics</option>
+                      <option value="JOKES">😂 Jokes</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group form-group-inline" style="flex: 1;" id="quoteGroupContainer">
+                    <label for="quoteTranslationGroup">🔗 Group</label>
+                    <input
+                      type="text"
+                      id="quoteTranslationGroup"
+                      placeholder="Group (optional)"
+                      title="Enter a group name to link related notes together"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Training-specific fields -->
+              <div class="form-row form-row-with-separator" style="margin-top: 0.5rem; display: none; flex-direction: row;" id="trainingSpecificFields">
+                <div class="form-group" style="flex: 1; position: relative; margin-bottom: 0;">
+                  <label for="noteDate">📅 Date</label>
+                  <div style="display: flex; gap: 0.5rem;">
+                    <input
+                      type="text"
+                      id="noteDate"
+                      placeholder="dd.mm.yyyy"
+                      title="Format: dd.mm.yyyy (optional)"
+                      style="flex: 1;"
+                    />
+                    <input
+                      type="date"
+                      id="noteDatePicker"
+                      style="position: absolute; opacity: 0; width: 0; pointer-events: none;"
+                    />
+                    <button
+                      type="button"
+                      id="openDatePickerBtn"
+                      onclick="document.getElementById('noteDatePicker').showPicker()"
+                      style="padding: 0.5rem; background: #ced1d6; border: none; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center;"
+                      title="Open date picker"
+                    >
+                      📅
+                    </button>
+                  </div>
+                </div>
+
+                <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                  <label for="trainingType">🏋️ Training Type</label>
+                  <select id="trainingType">
+                    <option value="">Select type...</option>
+                  </select>
+                </div>
+
+                <div class="form-group" style="flex: 1; margin-bottom: 0;" id="translationGroupContainer">
+                  <label for="translationGroup">🔗 Group</label>
                   <input
                     type="text"
-                    id="source"
-                    placeholder="Source title"
-                    autocomplete="off"
+                    id="translationGroup"
+                    placeholder="Group (optional)"
+                    title="Enter a group name to link related notes together"
                   />
-                  <div id="sourceSuggestions" class="autocomplete-suggestions"></div>
                 </div>
-                <input type="hidden" id="noteModalSourceId" value="" />
-                <button type="button" id="showSourceFromNoteBtn" class="btn btn-primary quote-modal-inline-action" title="Open this source on the Sources page" disabled>Show</button>
-              </div>
-            </div>
-
-            <!-- Row 2: Type + Group -->
-            <div class="form-row">
-              <div class="form-group form-group-inline" style="flex: 1;">
-                <label for="sourceType">📑 Type</label>
-                <select id="sourceType">
-                  <option value="BOOK">📖 Book</option>
-                  <option value="MOVIE-TV">🎬 Movies & TV</option>
-                  <option value="ASSORTED">📝 Assorted</option>
-                  <option value="POETRY">📜 Poetry</option>
-                  <option value="LYRICS">🎵 Lyrics</option>
-                  <option value="JOKES">😂 Jokes</option>
-                </select>
               </div>
 
-              <div class="form-group form-group-inline" style="flex: 1;" id="quoteGroupContainer">
-                <label for="quoteTranslationGroup">🔗 Group</label>
-                <input
-                  type="text"
-                  id="quoteTranslationGroup"
-                  placeholder="Group (optional)"
-                  title="Enter a group name to link related notes together"
-                />
+              <!-- Group field for generic behavior (note, puzzle, historical, …) -->
+              <div class="form-row form-row-with-separator" style="margin-top: 0.5rem; display: none;" id="genericSpecificFields">
+                <div class="form-group form-group-inline" id="genericSubTypeFields" style="flex: 1; margin-bottom: 0;">
+                  <label for="genericSubType">🏷️ Type</label>
+                  <select id="genericSubType">
+                    <option value="">Select type...</option>
+                  </select>
+                </div>
+                <div class="form-group form-group-inline" style="flex: 1; margin-bottom: 0;">
+                  <label for="genericTranslationGroup">🔗 Group</label>
+                  <input
+                    type="text"
+                    id="genericTranslationGroup"
+                    placeholder="Group (optional)"
+                    title="Enter a group name to link related notes together"
+                  />
+                </div>
               </div>
             </div>
-          </div>
-
-          <!-- Training-specific fields -->
-          <div class="form-row form-row-with-separator" style="margin-top: 0.5rem; display: none; flex-direction: row;" id="trainingSpecificFields">
-            <div class="form-group" style="flex: 1; position: relative; margin-bottom: 0;">
-              <label for="noteDate">📅 Date</label>
-              <div style="display: flex; gap: 0.5rem;">
-                <input
-                  type="text"
-                  id="noteDate"
-                  placeholder="dd.mm.yyyy"
-                  title="Format: dd.mm.yyyy (optional)"
-                  style="flex: 1;"
-                />
-                <input
-                  type="date"
-                  id="noteDatePicker"
-                  style="position: absolute; opacity: 0; width: 0; pointer-events: none;"
-                />
-                <button 
-                  type="button" 
-                  id="openDatePickerBtn"
-                  onclick="document.getElementById('noteDatePicker').showPicker()"
-                  style="padding: 0.5rem; background: #ced1d6; border: none; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center;"
-                  title="Open date picker"
-                >
-                  📅
-                </button>
-              </div>
-            </div>
-
-            <div class="form-group" style="flex: 1; margin-bottom: 0;">
-              <label for="trainingType">🏋️ Training Type</label>
-              <select id="trainingType">
-                <option value="">Select type...</option>
-              </select>
-            </div>
-            
-            <div class="form-group" style="flex: 1; margin-bottom: 0;" id="translationGroupContainer">
-              <label for="translationGroup">🔗 Group</label>
-              <input
-                type="text"
-                id="translationGroup"
-                placeholder="Group (optional)"
-                title="Enter a group name to link related notes together"
-              />
-            </div>
-          </div>
-
-          <!-- Group field for generic behavior (note, puzzle, historical, …) -->
-          <div class="form-row form-row-with-separator" style="margin-top: 0.5rem; display: none;" id="genericSpecificFields">
-            <div class="form-group form-group-inline" id="genericSubTypeFields" style="flex: 1; margin-bottom: 0;">
-              <label for="genericSubType">🏷️ Type</label>
-              <select id="genericSubType">
-                <option value="">Select type...</option>
-              </select>
-            </div>
-            <div class="form-group form-group-inline" style="flex: 1; margin-bottom: 0;">
-              <label for="genericTranslationGroup">🔗 Group</label>
-              <input
-                type="text"
-                id="genericTranslationGroup"
-                placeholder="Group (optional)"
-                title="Enter a group name to link related notes together"
-              />
-            </div>
-          </div>
+          </details>
 
           <div class="form-actions">
             <button type="submit" class="btn btn-primary">Save</button>
@@ -2253,6 +2263,6 @@ Quote number three..."
     <!-- Quill Editor Script -->
     <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
     <script type="module" src="js/lib/confirmDialog.js"></script>
-    <script type="module" src="app.js?v=20260703color1"></script>
+    <script type="module" src="app.js?v=20260703nofullscreen1"></script>
   </body>
 </html>

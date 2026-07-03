@@ -98,7 +98,6 @@ export const MODAL_IDS = {
   
   // Editor elements
   QUOTE_EDITOR: 'quoteEditor',
-  TOGGLE_FULLSCREEN_EDITOR: 'toggleFullscreenEditor',
   
   // Image/attachment handling
   IMAGE_FILE: 'imageFile',
