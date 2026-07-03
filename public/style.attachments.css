@@ -650,7 +650,7 @@
   z-index: 10000;
   background: var(--surface);
   color: var(--text-primary);
-  padding: 2rem;
+  padding: 1rem;
   margin: 0;
   overflow-y: auto; /* The fullscreen panel itself scrolls */
 }

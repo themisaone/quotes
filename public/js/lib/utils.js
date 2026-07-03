@@ -140,49 +140,58 @@ export function generateId() {
 }
 
 /**
- * Return true when a CSS color string is "near-black" (≤ 40/255 per channel).
- * Handles: black, #000, #000000, rgb(0,0,0), rgba(0,0,0,1), hsl(0,0%,0%).
+ * Return true when a CSS color string is neutral dark text rather than
+ * intentional coloured formatting. Handles black, gray hex/rgb/hsl values.
  */
-// Named CSS colors that are effectively "dark text" from Evernote imports
+// Named CSS colors that are effectively neutral dark text from imports.
 const DARK_NAMED_COLORS = new Set([
-  'black', 'darkslategray', 'darkslategrey', 'dimgray', 'dimgrey',
-  'verydarkgray', 'darkgray', 'darkgrey', 'gray', 'grey',
-  'slategray', 'slategrey', 'lightslategray', 'lightslategrey',
+  'black', 'dimgray', 'dimgrey', 'verydarkgray', 'darkgray', 'darkgrey',
+  'gray', 'grey', 'slategray', 'slategrey', 'darkslategray',
+  'darkslategrey', 'lightslategray', 'lightslategrey',
 ]);
 
-function isNearBlack(colorStr) {
+export function isNearBlack(colorStr) {
   const s = (colorStr || '').trim().toLowerCase();
   if (!s) return false;
 
   // Named dark colours
   if (DARK_NAMED_COLORS.has(s)) return true;
 
-  // Threshold: strip any colour whose perceived brightness is ≤ 100/255 (~39%).
-  // This removes near-blacks like #333, rgb(51,51,51) etc. while keeping
-  // intentional saturated colours (red highlights, blue links, green badges…).
-  const THRESHOLD = 100;
+  // Strip only neutral dark colours. Saturated colours such as Quill red
+  // rgb(230, 0, 0) are intentionally chosen formatting and must survive.
+  const DARK_LUMA_THRESHOLD = 100;
+  const NEUTRAL_CHANNEL_SPREAD = 35;
+  const isNeutralDarkRgb = (r, g, b) => {
+    const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+    const spread = Math.max(r, g, b) - Math.min(r, g, b);
+    return luma <= DARK_LUMA_THRESHOLD && spread <= NEUTRAL_CHANNEL_SPREAD;
+  };
 
   // #rgb  e.g. #000 #111 #333
   const h3 = s.match(/^#([0-9a-f])([0-9a-f])([0-9a-f])$/);
   if (h3) {
     const [r, g, b] = h3.slice(1).map(c => parseInt(c, 16) * 17);
-    return 0.299 * r + 0.587 * g + 0.114 * b <= THRESHOLD;
+    return isNeutralDarkRgb(r, g, b);
   }
   // #rrggbb  e.g. #000000 #1a1a1a #333333
   const h6 = s.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/);
   if (h6) {
     const [r, g, b] = h6.slice(1).map(c => parseInt(c, 16));
-    return 0.299 * r + 0.587 * g + 0.114 * b <= THRESHOLD;
+    return isNeutralDarkRgb(r, g, b);
   }
   // rgb(r,g,b) / rgba(r,g,b,a)
   const rgb = s.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
   if (rgb) {
     const [r, g, b] = rgb.slice(1, 4).map(Number);
-    return 0.299 * r + 0.587 * g + 0.114 * b <= THRESHOLD;
+    return isNeutralDarkRgb(r, g, b);
   }
   // hsl(h, s%, l%)
-  const hsl = s.match(/^hsla?\(\s*[\d.]+\s*,\s*[\d.]+%\s*,\s*([\d.]+)%/);
-  if (hsl) return parseFloat(hsl[1]) <= 40;
+  const hsl = s.match(/^hsla?\(\s*[\d.]+\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%/);
+  if (hsl) {
+    const saturation = parseFloat(hsl[1]);
+    const lightness = parseFloat(hsl[2]);
+    return saturation <= 18 && lightness <= 40;
+  }
 
   return false;
 }

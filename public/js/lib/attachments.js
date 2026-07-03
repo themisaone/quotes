@@ -16,7 +16,7 @@
  * - Requires resolveAttachmentUrl, getAttachmentIcon, escapeHtml from utils
  */
 
-import { resolveAttachmentUrl, getAttachmentIcon } from './utils.js?v=20260318a';
+import { resolveAttachmentUrl, getAttachmentIcon } from './utils.js?v=20260703color1';
 import { getElementByIdSafe } from '../constants.js?v=20260318a';
 
 // ============= CONSTANTS =============

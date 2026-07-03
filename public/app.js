@@ -9,7 +9,7 @@ import {
 import {
   escapeHtml,
   getAttachmentIcon
-} from './js/lib/utils.js?v=20260317f';
+} from './js/lib/utils.js?v=20260703color1';
 
 import {
   readAttachmentFile as readAttachmentFileLib,
@@ -843,7 +843,12 @@ const sourceSuggestions = getElementByIdSafe("sourceSuggestions");
 const tagsSuggestions = getElementByIdSafe("tagsSuggestions");
 const noteInput = getElementByIdSafe("comment");
 const quoteImageFile = getElementByIdSafe("quoteImageFile");
+const quoteImageGalleryFile = getElementByIdSafe("quoteImageGalleryFile");
+const quoteCameraFile = getElementByIdSafe("quoteCameraFile");
 const quoteImagePreview = getElementByIdSafe("quoteImagePreview");
+const quoteAttachGalleryBtn = getElementByIdSafe("quoteAttachGalleryBtn");
+const quoteAttachCameraBtn = getElementByIdSafe("quoteAttachCameraBtn");
+const quoteAttachFilesBtn = getElementByIdSafe("quoteAttachFilesBtn");
 const clearQuoteImageBtn = getElementByIdSafe("clearQuoteImage");
 
 // State for quote image
@@ -3661,27 +3666,105 @@ function handleSourceFileSelect(e) {
 
 // ============= QUOTE IMAGE HANDLING =============
 
-// Handle quote image file selection
-quoteImageFile.addEventListener("change", async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+function isSmallViewport() {
+  return window.matchMedia
+    ? window.matchMedia("(max-width: 767px)").matches
+    : window.innerWidth <= 767;
+}
+
+const QUOTE_GALLERY_ACCEPT = "image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif";
+const QUOTE_GALLERY_PICKER_TYPES = [{
+  description: "Images",
+  accept: {
+    "image/jpeg": [".jpg", ".jpeg"],
+    "image/png": [".png"],
+    "image/webp": [".webp"],
+    "image/gif": [".gif"],
+    "image/heic": [".heic"],
+    "image/heif": [".heif"],
+  },
+}];
+
+async function processQuoteAttachmentFile(file) {
   // Edit mode → always upload to the server immediately (first or additional attachment)
   if (editingQuoteId) {
     await addAttachmentFromFile(file, editingQuoteId);
-    quoteImageFile.value = "";
     return;
   }
 
   // Add mode + existing primary attachment → queue for upload after save
   if (currentQuoteImage || currentQuoteImageFull) {
     await queuePendingAttachment(file);
-    quoteImageFile.value = "";
     return;
   }
 
   // Add mode, no attachment yet — set as the primary (local state only until save)
-  readAttachmentFile(file, "quote");
-});
+  await readAttachmentFile(file, "quote");
+}
+
+function wireQuoteAttachmentInput(input) {
+  if (!input) return;
+
+  input.addEventListener("change", async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      await processQuoteAttachmentFile(file);
+    } catch (err) {
+      console.error("Could not add attachment:", err);
+    } finally {
+      input.value = "";
+    }
+  });
+}
+
+function openQuoteAttachmentInput(input) {
+  if (!input) return;
+  input.value = "";
+  input.click();
+}
+
+async function openQuoteGalleryPicker() {
+  if (quoteImageGalleryFile) quoteImageGalleryFile.accept = QUOTE_GALLERY_ACCEPT;
+
+  if (window.showOpenFilePicker) {
+    try {
+      const [handle] = await window.showOpenFilePicker({
+        multiple: false,
+        types: QUOTE_GALLERY_PICKER_TYPES,
+      });
+      const file = await handle?.getFile?.();
+      if (file) await processQuoteAttachmentFile(file);
+      return;
+    } catch (err) {
+      if (err?.name === "AbortError") return;
+      console.warn("Image picker unavailable, falling back to file input:", err);
+    }
+  }
+
+  openQuoteAttachmentInput(quoteImageGalleryFile);
+}
+
+function wireQuoteAttachmentPickerButton(button, opener) {
+  if (!button || !opener) return;
+  button.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (typeof opener === "function") {
+      opener();
+    } else {
+      openQuoteAttachmentInput(opener);
+    }
+  });
+}
+
+wireQuoteAttachmentInput(quoteImageFile);
+wireQuoteAttachmentInput(quoteImageGalleryFile);
+wireQuoteAttachmentInput(quoteCameraFile);
+wireQuoteAttachmentPickerButton(quoteAttachGalleryBtn, openQuoteGalleryPicker);
+wireQuoteAttachmentPickerButton(quoteAttachCameraBtn, quoteCameraFile);
+wireQuoteAttachmentPickerButton(quoteAttachFilesBtn, quoteImageFile);
 
 // Handle quote image paste
 getElementByIdSafe("quoteModal").addEventListener("paste", (e) => {
@@ -4171,8 +4254,13 @@ quoteImagePreview.addEventListener('click', (e) => {
       showFullImage(imageSrc, editingQuoteId, currentAttachmentType);
     }
   } else {
-    // No image - open file dialog
-    quoteImageFile.click();
+    // No image - on phones, prefer the photo gallery path; the Files button
+    // remains available beside it for PDFs, audio, video, and documents.
+    if (isSmallViewport()) {
+      openQuoteGalleryPicker();
+    } else {
+      openQuoteAttachmentInput(quoteImageFile);
+    }
   }
 });
 
@@ -5814,6 +5902,15 @@ function toggleAttachmentPanel() {
   // Has attachment — open a dedicated picker that routes straight to the right handler,
   // bypassing the first-attachment routing in quoteImageFile.change.
   if (hasAttachment) {
+    if (isSmallViewport()) {
+      container.classList.remove('hidden');
+      document.getElementById('quoteAttachPickerActions')?.scrollIntoView({
+        block: 'nearest',
+        behavior: 'smooth',
+      });
+      return;
+    }
+
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = quoteImageFile?.accept || 'image/*';

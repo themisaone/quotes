@@ -755,6 +755,10 @@ textarea {
   margin-top: 0;
 }
 
+.quote-attach-picker-actions {
+  display: none;
+}
+
 @media (max-width: 767px) {
   #quoteModal .quote-modal-editor-split {
     flex-direction: column !important;
@@ -826,6 +830,31 @@ textarea {
 
   #quoteModal .image-preview-vertical img {
     max-width: 100% !important;
+  }
+
+  #quoteModal .quote-attach-picker-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.35rem;
+    margin-top: 0.45rem;
+  }
+
+  #quoteModal .quote-attach-picker-btn {
+    min-width: 0;
+    min-height: 2.15rem;
+    padding: 0.35rem 0.45rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text-primary);
+    font-size: 0.82rem;
+    line-height: 1.1;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  #quoteModal .quote-attach-picker-btn:active {
+    transform: translateY(1px);
   }
 }
 

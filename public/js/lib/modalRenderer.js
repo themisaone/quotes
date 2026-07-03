@@ -27,7 +27,7 @@
  * - Reusable helper functions
  */
 
-import { normalizeTextColors } from './utils.js';
+import { normalizeTextColors } from './utils.js?v=20260703color1';
 import { hasAuthorField, hasDateField } from './noteTypes.js';
 
 /**

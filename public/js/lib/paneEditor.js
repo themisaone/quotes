@@ -2,7 +2,7 @@
  * paneEditor.js — inline Quill editor for list-pane right column.
  */
 
-import { normalizeTextColors } from './utils.js';
+import { normalizeTextColors } from './utils.js?v=20260703color1';
 import { createQuillEditor } from './quoteEditor.js?v=20260605paneatt2';
 import { showUnsavedChangesConfirm } from './confirmDialog.js';
 

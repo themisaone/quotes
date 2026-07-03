@@ -17,7 +17,7 @@
  *   Call after saving a note to refresh the pane content in-place.
  */
 
-import { escapeHtml, resolveAttachmentUrl } from './utils.js';
+import { escapeHtml, resolveAttachmentUrl } from './utils.js?v=20260703color1';
 import { renderTrainingCalendar } from './trainingCalendar.js?v=20260629oldicon1';
 import {
   buildPaneMetaSections,

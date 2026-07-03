@@ -13,7 +13,7 @@ import { API_URL } from './api.js';
 import { getElementByIdSafe } from '../constants.js';
 import { showConfirm } from './confirmDialog.js';
 import { initNoteTypes } from './noteTypes.js';
-import { escapeHtml } from './utils.js';
+import { escapeHtml } from './utils.js?v=20260703color1';
 
 // ============= GLOBAL STATE =============
 

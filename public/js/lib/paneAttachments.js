@@ -3,7 +3,7 @@
  * All attachments in one horizontal row (max 512px each); primary shown once with ✕.
  */
 
-import { resolveAttachmentUrl, escapeHtml } from './utils.js';
+import { resolveAttachmentUrl, escapeHtml } from './utils.js?v=20260703color1';
 
 const FILE_ICONS = { pdf: '📄', video: '🎬', document: '📎', encrypted: '🔒' };
 const FILE_LABELS = { pdf: 'PDF', video: 'Video', document: 'File', encrypted: 'Encrypted' };

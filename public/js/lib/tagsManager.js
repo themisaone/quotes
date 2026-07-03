@@ -25,7 +25,7 @@
  */
 
 import { API_URL } from './api.js';
-import { escapeHtml } from './utils.js';
+import { escapeHtml } from './utils.js?v=20260703color1';
 import { showConfirm } from './confirmDialog.js';
 import { 
   FILTER_IDS,

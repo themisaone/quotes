@@ -469,7 +469,7 @@
   width: 100% !important; /* Match note field width */
   min-width: auto !important;
   max-width: 100% !important;
-  height: calc(6.4rem + 42px + 24px) !important; /* 4 lines (6.4rem) + toolbar (42px) + padding (24px) */
+  height: calc(18.4rem + 42px + 24px) !important; /* 4 lines (6.4rem) + toolbar (42px) + padding (24px) */
   border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden; /* Prevent container from expanding */
