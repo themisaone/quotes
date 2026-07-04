@@ -32,6 +32,7 @@ export const FILTER_IDS = {
   // Source type filters (checkboxes in Sources view)
   FILTER_BOOK: 'filterBook',
   FILTER_MOVIE: 'filterMovie',
+  FILTER_ASSORTED: 'filterAssorted',
   FILTER_POETRY: 'filterPoetry',
   FILTER_LYRICS: 'filterLyrics',
   FILTER_JOKES: 'filterJokes',

@@ -13,10 +13,17 @@
   align-items: center;
   gap: 1rem;
   margin-top: 1rem;
+  margin-bottom: 0;
   padding: 0;
   background: transparent;
   border-radius: 0;
   box-shadow: none;
+}
+
+#authorsView .search-section,
+#sourcesView .search-section,
+#tagsView .search-tags-panel {
+  padding-bottom: 1rem;
 }
 
 .search-box {
@@ -59,6 +66,52 @@
 .sort-controls label {
   font-weight: 500;
   color: var(--text-secondary);
+}
+
+.sources-type-filter {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.sources-type-filter .type-filter-dropdown-container {
+  position: relative;
+}
+
+.sources-type-filter .type-filter-toggle {
+  min-width: 10.5rem;
+}
+
+.entity-sort-select {
+  min-width: 11rem;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 0.875rem 0.875rem;
+  cursor: pointer;
+}
+
+.entity-sort-select,
+#tagsView .tag-type-select,
+.sources-type-filter.search-grid-dropdown .type-filter-toggle {
+  height: var(--d-btn-height);
+  min-height: var(--d-btn-height);
+  border: 1px solid var(--border);
+  border-radius: var(--bradius-small);
+  background-color: var(--surface);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.entity-sort-select,
+#tagsView .tag-type-select {
+  padding: 0 2.25rem 0 0.65rem;
+}
+
+.sources-type-filter.search-grid-dropdown .type-filter-toggle {
+  padding: 0 0.65rem;
 }
 
 .sort-btn {
@@ -373,6 +426,8 @@
 .tag-type-select {
   width: auto;
   min-width: 180px;
+  background-position: right 0.75rem center;
+  background-size: 0.875rem 0.875rem;
 }
 
 .training-date-select:hover:not(:disabled) {

@@ -296,6 +296,7 @@ function setupSourceTypeFilters(loadSourcesCallback) {
   const filterIds = [
     FILTER_IDS.FILTER_BOOK,
     FILTER_IDS.FILTER_MOVIE,
+    FILTER_IDS.FILTER_ASSORTED,
     FILTER_IDS.FILTER_POETRY,
     FILTER_IDS.FILTER_LYRICS,
     FILTER_IDS.FILTER_JOKES

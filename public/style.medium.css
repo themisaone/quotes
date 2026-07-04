@@ -736,6 +736,37 @@
     background: transparent !important;
   }
 
+  #authorsView .search-section,
+  #sourcesView .search-section,
+  #tagsView .search-tags-panel {
+    padding-bottom: 1rem !important;
+  }
+
+  #tagsView .tag-type-select {
+    height: var(--d-btn-height) !important;
+    min-height: var(--d-btn-height) !important;
+    padding: 0 2.25rem 0 0.65rem !important;
+    font-size: 0.9rem !important;
+  }
+
+  #authorsView .entity-sort-select,
+  #sourcesView .entity-sort-select,
+  #tagsView .entity-sort-select {
+    height: var(--d-btn-height) !important;
+    min-height: var(--d-btn-height) !important;
+    padding: 0 2.25rem 0 0.65rem !important;
+    border-radius: var(--bradius-small) !important;
+    font-size: 0.9rem !important;
+  }
+
+  #sourcesView .sources-type-filter .type-filter-toggle {
+    height: var(--d-btn-height) !important;
+    min-height: var(--d-btn-height) !important;
+    padding: 0 0.65rem !important;
+    border-radius: var(--bradius-small) !important;
+    font-size: 0.9rem !important;
+  }
+
   /* ── Medium search-grid: compress so Tags|Text|Score|Clear fits in the
         narrower main-content width without overflowing ────────────────── */
   .search-grid {
@@ -1095,6 +1126,11 @@
   }
 
   /* Tag cards */
+  .tags-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 0.55rem !important;
+  }
+
   .tag-card-name {
     font-size: var(--m-font-md) !important;
     font-weight: 600;
@@ -1102,11 +1138,20 @@
 
   .tag-card-count {
     font-size: var(--m-font-base) !important;
-    padding: var(--m-pad-xs) 0.7rem !important;
+    padding: 0.2rem 0.45rem !important;
+  }
+
+  .tag-card-actions {
+    gap: 0.3rem !important;
+  }
+
+  .tag-browse-add-btn,
+  .tag-delete-btn {
+    padding: 1px 5px !important;
   }
 
   .tag-card {
-    padding: var(--m-card-pad) var(--m-pad-xl) !important;
+    padding: var(--m-pad-xs) var(--m-pad-sm) !important;
   }
 
   /* Fix Quill h2 white box in medium mode */

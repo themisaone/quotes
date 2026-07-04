@@ -170,6 +170,7 @@ export async function loadSources() {
   try {
     const filterBook   = _deps.getElementByIdSafe('filterBook')?.checked   !== false;
     const filterMovie  = _deps.getElementByIdSafe('filterMovie')?.checked  !== false;
+    const filterAssorted = _deps.getElementByIdSafe('filterAssorted')?.checked !== false;
     const filterPoetry = _deps.getElementByIdSafe('filterPoetry')?.checked !== false;
     const filterLyrics = _deps.getElementByIdSafe('filterLyrics')?.checked !== false;
     const filterJokes  = _deps.getElementByIdSafe('filterJokes')?.checked  !== false;
@@ -182,7 +183,7 @@ export async function loadSources() {
     if (_deps.getElementByIdSafe('filterBook')) {
       // Only apply the type filter when the user has explicitly unchecked
       // at least one of the boxes — otherwise leave the full list visible.
-      if (!filterBook || !filterMovie || !filterPoetry || !filterLyrics || !filterJokes) {
+      if (!filterBook || !filterMovie || !filterAssorted || !filterPoetry || !filterLyrics || !filterJokes) {
         sources = sources.filter((source) => {
           if (!source.type) return filterBook;     // legacy: default to BOOK
           if (source.type === 'BOOK')     return filterBook;
@@ -190,7 +191,7 @@ export async function loadSources() {
           if (source.type === 'POETRY')   return filterPoetry;
           if (source.type === 'LYRICS')   return filterLyrics;
           if (source.type === 'JOKES')    return filterJokes;
-          if (source.type === 'ASSORTED') return true;
+          if (source.type === 'ASSORTED') return filterAssorted;
           return false;
         });
       }
@@ -273,7 +274,7 @@ export function displaySources(sources) {
                 ? `
                 <div class="card-author">
                     <a href="#" class="card-filter-author" data-name="${authorName}">
-                        by ${authorName}
+                        ${authorName}
                     </a>
                 </div>
             `

@@ -172,7 +172,7 @@ import {
   setupMenuNavigation as setupMenuNavigationLib,
   handleHashChange,
   initializeHashChangeListener
-} from './js/lib/pageCoordinator.js?v=20260626optiontabs1';
+} from './js/lib/pageCoordinator.js?v=20260704sourcesdropdown1';
 import { showConfirm, showPdfExportConfirm } from './js/lib/confirmDialog.js';
 import { encryptFileBuffer, decryptFileBuffer } from './js/lib/cryptoUtils.js';
 import {
@@ -216,7 +216,7 @@ import {
   loadSources,
   displayAuthors,
   displaySources
-} from './js/lib/entityListPage.js?v=20260614sourceclick';
+} from './js/lib/entityListPage.js?v=20260704sourceby1';
 
 // ============= CONSTANTS =============
 // Same origin as the page (correct when port is omitted, e.g. http://localhost or reverse proxy)
@@ -2315,13 +2315,94 @@ function setupEventListeners() {
     }
   });
 
-  // Sources view: Type filter checkboxes
-  ["filterBook", "filterMovie"].forEach((id) => {
+  const sourceTypeFilterIds = [
+    "filterBook",
+    "filterMovie",
+    "filterAssorted",
+    "filterPoetry",
+    "filterLyrics",
+    "filterJokes"
+  ];
+
+  const updateSourceTypeFilterLabel = () => {
+    const checkboxes = sourceTypeFilterIds
+      .map((id) => document.getElementById(id))
+      .filter(Boolean);
+    const checked = checkboxes.filter((checkbox) => checkbox.checked);
+    const label = document.getElementById("sourceTypeFilterLabel");
+    if (!label) return;
+    if (checked.length === checkboxes.length) {
+      label.textContent = "📋 All sources";
+    } else if (checked.length === 0) {
+      label.textContent = "📋 No sources";
+    } else if (checked.length === 1) {
+      const row = checked[0].closest(".type-filter-option");
+      const icon = row?.querySelector(".type-icon")?.textContent?.trim() || "📋";
+      const text = row?.querySelector("span:last-child")?.textContent?.trim() || "1 source";
+      label.textContent = `${icon} ${text}`;
+    } else {
+      label.textContent = `📋 ${checked.length} sources`;
+    }
+  };
+
+  const reloadSourcesAfterTypeFilterChange = () => {
+    updateSourceTypeFilterLabel();
+    loadSources();
+  };
+
+  sourceTypeFilterIds.forEach((id) => {
     const checkbox = getElementByIdSafe(id);
     if (checkbox) {
-      checkbox.addEventListener("change", loadSources);
+      checkbox.addEventListener("change", reloadSourcesAfterTypeFilterChange);
     }
   });
+
+  updateSourceTypeFilterLabel();
+
+  const sourceTypeFilterToggle = getElementByIdSafe("sourceTypeFilterToggle");
+  const sourceTypeFilterDropdown = getElementByIdSafe("sourceTypeFilterDropdown");
+  if (sourceTypeFilterToggle && sourceTypeFilterDropdown) {
+    sourceTypeFilterToggle.addEventListener("click", (e) => {
+      e.stopPropagation();
+      sourceTypeFilterDropdown.classList.toggle("show");
+      sourceTypeFilterToggle.classList.toggle("open", sourceTypeFilterDropdown.classList.contains("show"));
+    });
+
+    sourceTypeFilterDropdown.addEventListener("click", (e) => {
+      e.stopPropagation();
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest(".sources-type-filter")) {
+        sourceTypeFilterDropdown.classList.remove("show");
+        sourceTypeFilterToggle.classList.remove("open");
+      }
+    });
+  }
+
+  const sourceTypeSelectAllBtn = getElementByIdSafe("sourceTypeSelectAllBtn");
+  if (sourceTypeSelectAllBtn) {
+    sourceTypeSelectAllBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      sourceTypeFilterIds.forEach((id) => {
+        const checkbox = document.getElementById(id);
+        if (checkbox) checkbox.checked = true;
+      });
+      reloadSourcesAfterTypeFilterChange();
+    });
+  }
+
+  const sourceTypeDeselectAllBtn = getElementByIdSafe("sourceTypeDeselectAllBtn");
+  if (sourceTypeDeselectAllBtn) {
+    sourceTypeDeselectAllBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      sourceTypeFilterIds.forEach((id) => {
+        const checkbox = document.getElementById(id);
+        if (checkbox) checkbox.checked = false;
+      });
+      reloadSourcesAfterTypeFilterChange();
+    });
+  }
 
   // Sources view: Search input
   const searchSourceName = getElementByIdSafe("searchSourceName");
@@ -2332,22 +2413,11 @@ function setupEventListeners() {
     });
   }
 
-  // Sources view: Sort buttons
-  const sortByName = getElementByIdSafe("sortByName");
-  const sortByCount = getElementByIdSafe("sortByCount");
-  if (sortByName) {
-    sortByName.addEventListener("click", () => {
-      window.sourceSortBy = "name";
-      sortByName.classList.add("active");
-      sortByCount.classList.remove("active");
-      loadSources();
-    });
-  }
-  if (sortByCount) {
-    sortByCount.addEventListener("click", () => {
-      window.sourceSortBy = "count";
-      sortByCount.classList.add("active");
-      sortByName.classList.remove("active");
+  // Sources view: Sort dropdown
+  const sortSourcesBySelect = getElementByIdSafe("sortSourcesBySelect");
+  if (sortSourcesBySelect) {
+    sortSourcesBySelect.addEventListener("change", () => {
+      window.sourceSortBy = sortSourcesBySelect.value === "count" ? "count" : "name";
       loadSources();
     });
   }
@@ -2361,22 +2431,11 @@ function setupEventListeners() {
     });
   }
 
-  // Authors view: Sort buttons
-  const sortAuthorsByName = getElementByIdSafe("sortAuthorsByName");
-  const sortAuthorsByCount = getElementByIdSafe("sortAuthorsByCount");
-  if (sortAuthorsByName) {
-    sortAuthorsByName.addEventListener("click", () => {
-      window.authorSortBy = "name";
-      sortAuthorsByName.classList.add("active");
-      sortAuthorsByCount.classList.remove("active");
-      loadAuthors();
-    });
-  }
-  if (sortAuthorsByCount) {
-    sortAuthorsByCount.addEventListener("click", () => {
-      window.authorSortBy = "count";
-      sortAuthorsByCount.classList.add("active");
-      sortAuthorsByName.classList.remove("active");
+  // Authors view: Sort dropdown
+  const sortAuthorsBySelect = getElementByIdSafe("sortAuthorsBySelect");
+  if (sortAuthorsBySelect) {
+    sortAuthorsBySelect.addEventListener("change", () => {
+      window.authorSortBy = sortAuthorsBySelect.value === "count" ? "count" : "name";
       loadAuthors();
     });
   }
@@ -5692,8 +5751,7 @@ let currentSortBy = "name";
 
 document.addEventListener("DOMContentLoaded", () => {
   const searchInput = getElementByIdSafe("searchSourcesInput");
-  const sortByName = getElementByIdSafe("sortTagsByName");
-  const sortByCount = getElementByIdSafe("sortTagsByCount");
+  const sortSelect = getElementByIdSafe("sortTagsBySelect");
   const tagTypeFilter = getElementByIdSafe("tagTypeFilter");
   
   if (searchInput) {
@@ -5707,20 +5765,9 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
   
-  if (sortByName) {
-    sortByName.addEventListener("click", () => {
-      currentSortBy = "name";
-      sortByName.classList.add("active");
-      sortByCount.classList.remove("active");
-      filterTags();
-    });
-  }
-  
-  if (sortByCount) {
-    sortByCount.addEventListener("click", () => {
-      currentSortBy = "count";
-      sortByCount.classList.add("active");
-      sortByName.classList.remove("active");
+  if (sortSelect) {
+    sortSelect.addEventListener("change", () => {
+      currentSortBy = sortSelect.value === "count" ? "count" : "name";
       filterTags();
     });
   }

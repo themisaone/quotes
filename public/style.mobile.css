@@ -737,6 +737,11 @@
     box-sizing: border-box !important;
   }
 
+  #tagsView .search-tags-panel {
+    padding-bottom: 0.45rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+
   .search-section:has(.type-filter-dropdown.show) {
     overflow: visible !important;
   }
@@ -1348,6 +1353,25 @@
   
   .tag-card-count {
     font-size: 0.64rem !important;  /* Was 0.8rem, now 20% smaller */
+  }
+
+  #authorsView .entity-sort-select,
+  #sourcesView .entity-sort-select,
+  #tagsView .entity-sort-select,
+  #tagsView .tag-type-select {
+    height: var(--d-btn-height) !important;
+    min-height: var(--d-btn-height) !important;
+    padding: 0 2.25rem 0 0.65rem !important;
+    border-radius: var(--bradius-small) !important;
+    font-size: 0.9rem !important;
+  }
+
+  #sourcesView .sources-type-filter .type-filter-toggle {
+    height: var(--d-btn-height) !important;
+    min-height: var(--d-btn-height) !important;
+    padding: 0 0.65rem !important;
+    border-radius: var(--bradius-small) !important;
+    font-size: 0.9rem !important;
   }
   
   /* Compact side menu */

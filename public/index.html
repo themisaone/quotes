@@ -13,19 +13,19 @@
          up changes together. -->
     <link rel="stylesheet" href="style.css?v=20260625runtime1" />
     <link rel="stylesheet" href="style.sidemenu.css?v=20260628collapsedmenu5" />
-    <link rel="stylesheet" href="style.search.css?v=20260628controlalign1" />
+    <link rel="stylesheet" href="style.search.css?v=20260704entitycontrols1" />
     <link rel="stylesheet" href="style.buttons.css?v=20260626noback1" />
-    <link rel="stylesheet" href="style.modal.css?v=20260704labelgap1" />
+    <link rel="stylesheet" href="style.modal.css?v=20260704selectarrow1" />
     <link rel="stylesheet" href="style.cards.css?v=20260704titlepad1" />
     <link rel="stylesheet" href="style.selection.css?v=20260625runtime1" />
     <link rel="stylesheet" href="style.attachments.css?v=20260704buttons1" />
-    <link rel="stylesheet" href="style.entities.css?v=20260625runtime1" />
-    <link rel="stylesheet" href="style.settings.css?v=20260626datamgmt1" />
+    <link rel="stylesheet" href="style.entities.css?v=20260704entitycontrols1" />
+    <link rel="stylesheet" href="style.settings.css?v=20260704selectarrow1" />
     <link rel="stylesheet" href="style.dialogs.css?v=20260625runtime1" />
     <link rel="stylesheet" href="style.views.css?v=20260704panetitle1" />
-    <link rel="stylesheet" href="style.mobile.css?v=20260629mobileheader1" />
-    <link rel="stylesheet" href="style.small.css?v=20260704properties1" />
-    <link rel="stylesheet" href="style.medium.css?v=20260704properties1" />
+    <link rel="stylesheet" href="style.mobile.css?v=20260704entitycontrols1" />
+    <link rel="stylesheet" href="style.small.css?v=20260704entitysearch2" />
+    <link rel="stylesheet" href="style.medium.css?v=20260704entitycontrols1" />
     <!-- Font Awesome for dice icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <!-- Quill Editor -->
@@ -758,13 +758,11 @@
                   />
                 </div>
                 <div class="sort-controls">
-                  <label>Sort by:</label>
-                  <button id="sortAuthorsByName" class="sort-btn active">
-                    Name
-                  </button>
-                  <button id="sortAuthorsByCount" class="sort-btn">
-                    Number of Quotes
-                  </button>
+                  <label for="sortAuthorsBySelect">Sort by:</label>
+                  <select id="sortAuthorsBySelect" class="search-tags-sort-select entity-sort-select" title="Sort authors">
+                    <option value="name" selected>Name</option>
+                    <option value="count">Number of Quotes</option>
+                  </select>
                 </div>
               </div>
             </div>
@@ -807,52 +805,59 @@
                   <h2>🔍 Search Sources</h2>
                   
                   <!-- Source Type Filter -->
-                  <div class="source-type-filter">
-                    <label
-                      ><input
-                        type="checkbox"
-                        id="filterBook"
-                        value="BOOK"
-                        checked
-                      />
-                      📖 Books</label
-                    >
-                    <label
-                      ><input
-                        type="checkbox"
-                        id="filterMovie"
-                        value="MOVIE-TV"
-                        checked
-                      />
-                      🎬 Movies & TV</label
-                    >
-                    <label
-                      ><input
-                        type="checkbox"
-                        id="filterPoetry"
-                        value="POETRY"
-                        checked
-                      />
-                      📜 Poetry</label
-                    >
-                    <label
-                      ><input
-                        type="checkbox"
-                        id="filterLyrics"
-                        value="LYRICS"
-                        checked
-                      />
-                      🎵 Lyrics</label
-                    >
-                    <label
-                      ><input
-                        type="checkbox"
-                        id="filterJokes"
-                        value="JOKES"
-                        checked
-                      />
-                      😂 Jokes</label
-                    >
+                  <div class="sources-type-filter search-grid-dropdown">
+                    <div class="type-filter-dropdown-container">
+                      <button type="button" id="sourceTypeFilterToggle" class="type-filter-toggle">
+                        <span id="sourceTypeFilterLabel" class="type-filter-toggle-label">📋 All sources</span>
+                        <span class="dropdown-arrow">▼</span>
+                      </button>
+                      <div id="sourceTypeFilterDropdown" class="type-filter-dropdown">
+                        <div class="type-action-buttons">
+                          <button type="button" id="sourceTypeSelectAllBtn" class="type-action-btn">
+                            <span class="type-icon">✓</span>
+                            <span>Select All</span>
+                          </button>
+                          <div class="type-action-separator"></div>
+                          <button type="button" id="sourceTypeDeselectAllBtn" class="type-action-btn">
+                            <span class="type-icon">✗</span>
+                            <span>Clear All</span>
+                          </button>
+                        </div>
+                        <div class="type-filter-separator"></div>
+                        <div class="source-type-filter-options">
+                          <label class="type-filter-option">
+                            <input type="checkbox" id="filterBook" value="BOOK" checked />
+                            <span class="type-icon">📖</span>
+                            <span>Books</span>
+                          </label>
+                          <label class="type-filter-option">
+                            <input type="checkbox" id="filterMovie" value="MOVIE-TV" checked />
+                            <span class="type-icon">🎬</span>
+                            <span>Movies &amp; TV</span>
+                          </label>
+                          <label class="type-filter-option">
+                            <input type="checkbox" id="filterAssorted" value="ASSORTED" checked />
+                            <span class="type-icon">📝</span>
+                            <span>Assorted</span>
+                          </label>
+                          <label class="type-filter-option">
+                            <input type="checkbox" id="filterPoetry" value="POETRY" checked />
+                            <span class="type-icon">📜</span>
+                            <span>Poetry</span>
+                          </label>
+                          <label class="type-filter-option">
+                            <input type="checkbox" id="filterLyrics" value="LYRICS" checked />
+                            <span class="type-icon">🎵</span>
+                            <span>Lyrics</span>
+                          </label>
+                          <label class="type-filter-option">
+                            <input type="checkbox" id="filterJokes" value="JOKES" checked />
+                            <span class="type-icon">😂</span>
+                            <span>Jokes</span>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -868,11 +873,11 @@
                   />
                 </div>
                 <div class="sort-controls">
-                  <label>Sort by:</label>
-                  <button id="sortByName" class="sort-btn active">Name</button>
-                  <button id="sortByCount" class="sort-btn">
-                    Number of Quotes
-                  </button>
+                  <label for="sortSourcesBySelect">Sort by:</label>
+                  <select id="sortSourcesBySelect" class="search-tags-sort-select entity-sort-select" title="Sort sources">
+                    <option value="name" selected>Name</option>
+                    <option value="count">Number of Quotes</option>
+                  </select>
                 </div>
               </div>
             </div>
@@ -998,9 +1003,11 @@
                   />
                 </div>
                 <div class="search-tags-sort" style="align-self: flex-end;">
-                  <span>Sort by:</span>
-                  <button id="sortTagsByName" class="btn-sort active">Name</button>
-                  <button id="sortTagsByCount" class="btn-sort">Number of Quotes</button>
+                  <label for="sortTagsBySelect">Sort by:</label>
+                  <select id="sortTagsBySelect" class="search-tags-sort-select entity-sort-select" title="Sort tags">
+                    <option value="name" selected>Name</option>
+                    <option value="count">Number of Quotes</option>
+                  </select>
                 </div>
               </div>
             </div>
@@ -2263,6 +2270,6 @@ Quote number three..."
     <!-- Quill Editor Script -->
     <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
     <script type="module" src="js/lib/confirmDialog.js"></script>
-    <script type="module" src="app.js?v=20260703nofullscreen1"></script>
+    <script type="module" src="app.js?v=20260704sourceby1"></script>
   </body>
 </html>

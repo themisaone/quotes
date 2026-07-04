@@ -70,6 +70,11 @@
     background: transparent !important;
   }
 
+  #tagsView .search-tags-panel {
+    padding-bottom: 0.5rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+
   .quotes-section-header {
     background: transparent !important;
     padding: 0.2rem 0 0.2rem !important;
