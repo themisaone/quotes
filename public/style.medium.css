@@ -393,6 +393,18 @@
     overflow-y: auto !important;
   }
 
+  #quoteModal.modal-properties-only .modal-content {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: min(92vh, calc(100vh - 1rem)) !important;
+  }
+
+  @supports (height: 100dvh) {
+    #quoteModal.modal-properties-only .modal-content {
+      max-height: min(92dvh, calc(100dvh - 1rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))) !important;
+    }
+  }
+
   /* form-group vertical gap — only between independent groups */
   .modal-content .form-group,
   .form-group {
@@ -1036,6 +1048,20 @@
     font-size: var(--m-font-base) !important;
     padding: 0.12rem 0.45rem !important;
     line-height: 1.2 !important;
+  }
+
+  .lp-pane-title.note-title-heading {
+    flex: 1 0 100% !important;
+    max-width: 100% !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    word-break: normal !important;
+  }
+
+  .lp-pane-title-actions {
+    width: 100% !important;
+    justify-content: flex-end !important;
   }
 
   .modal-header h2 {

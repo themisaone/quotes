@@ -215,6 +215,25 @@
     margin-bottom: 0.32rem !important;
   }
 
+  #quoteModal.modal-properties-only.modal[style*="display: block"] {
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  #quoteModal.modal-properties-only .modal-content {
+    align-self: center !important;
+    flex: 0 1 auto !important;
+    width: min(96vw, calc(100vw - 1rem)) !important;
+    max-width: calc(100vw - 1rem) !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: calc(100dvh - 1rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
+    margin: 0.5rem !important;
+    border: 2px solid var(--border) !important;
+    border-radius: 12px !important;
+    box-shadow: var(--shadow-lg) !important;
+  }
+
   #quoteModal .modal-content.modal-expanded .quote-editor-toolbar {
     flex: 0 0 auto !important;
     position: relative !important;

@@ -283,8 +283,8 @@
 
 @media (hover: none), (pointer: coarse) {
   .btn-attach-toggle.btn-details-toggle:hover:not(:disabled):not(.active) {
-    background: var(--card-bg) !important;
-    border-color: var(--border-color) !important;
+    background: var(--bg-secondary) !important;
+    border-color: var(--border) !important;
     color: var(--text-secondary) !important;
   }
 }
@@ -496,6 +496,16 @@
 }
 
 /* List-pane Properties modal: hide editor body; keep score toolbar row */
+#quoteModal.modal-properties-only .modal-content {
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: min(820px, 90vh) !important;
+}
+#quoteModal.modal-properties-only .modal-body,
+#quoteModal.modal-properties-only #quoteForm,
+#quoteModal.modal-properties-only .quote-editor-group {
+  flex: 0 1 auto !important;
+}
 #quoteModal.modal-properties-only .quote-editor-body {
   display: none !important;
 }
@@ -520,6 +530,14 @@
 .quote-editor-group {
   width: 100%;
   max-width: 100%;
+}
+
+#quoteModal .quote-editor-toolbar {
+  padding: var(--lp-band-pad-top, 0.3rem) var(--lp-band-pad-x, 0) 0.5rem;
+}
+
+#quoteModal .quote-editor-toolbar label[for="quoteText"] {
+  margin-right: 0.25rem;
 }
 
 #quoteModal .quote-editor-group {

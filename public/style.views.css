@@ -639,9 +639,13 @@
   margin-bottom: 0.35rem;
 }
 .lp-pane-title.note-title-heading {
-  flex: 1;
+  flex: 1 1 18rem;
   min-width: 0;
-  word-break: break-word;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  word-break: normal;
   border-bottom: none;
   padding: 0;
 }

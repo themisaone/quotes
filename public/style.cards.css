@@ -299,6 +299,7 @@
   font-weight: 700;
   color: var(--link-color);
   line-height: 1.2;
+  border-radius: 0;
 }
 
 .card-note-title {
@@ -313,7 +314,7 @@
   border: none;
   border-bottom: 1px solid var(--border);
   background: transparent;
-  padding: 0.15rem 0.1rem 0.3rem;
+  padding: 0.1rem 0 0.5rem;
   outline: none;
   font-family: inherit;
 }
