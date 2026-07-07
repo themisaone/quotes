@@ -42,7 +42,7 @@ import {
 import {
   setupAddModal,
   setupEditModal
-} from './js/lib/modalRenderer.js?v=20260605paneedit';
+} from './js/lib/modalRenderer.js?v=20260704trainingdate1';
 
 import {
   exportToPdf as exportToPdfLib,
@@ -2483,8 +2483,34 @@ function setupEventListeners() {
   // Date picker sync - when date picker changes, update text input
   const noteDatePicker = getElementByIdSafe("noteDatePicker");
   const noteDateText = getElementByIdSafe("noteDate");
+  const openDatePickerBtn = getElementByIdSafe("openDatePickerBtn");
   
   if (noteDatePicker && noteDateText) {
+    const parseDisplayDateForPicker = () => {
+      const value = noteDateText.value.trim();
+      const match = value.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+      if (!match) return "";
+      const [, rawDay, rawMonth, year] = match;
+      const day = rawDay.padStart(2, "0");
+      const month = rawMonth.padStart(2, "0");
+      const isoDate = `${year}-${month}-${day}`;
+      const parsed = new Date(`${isoDate}T00:00:00`);
+      if (
+        Number.isNaN(parsed.getTime()) ||
+        parsed.getFullYear() !== Number(year) ||
+        parsed.getMonth() + 1 !== Number(month) ||
+        parsed.getDate() !== Number(day)
+      ) {
+        return "";
+      }
+      return isoDate;
+    };
+
+    const syncPickerFromText = () => {
+      const pickerValue = parseDisplayDateForPicker();
+      if (pickerValue) noteDatePicker.value = pickerValue;
+    };
+
     noteDatePicker.addEventListener("change", () => {
       const pickerValue = noteDatePicker.value; // YYYY-MM-DD
       if (pickerValue) {
@@ -2492,6 +2518,26 @@ function setupEventListeners() {
         noteDateText.value = `${day}.${month}.${year}`; // Convert to dd.mm.yyyy
       }
     });
+
+    noteDatePicker.addEventListener("pointerdown", syncPickerFromText);
+    noteDatePicker.addEventListener("focus", syncPickerFromText);
+    noteDateText.addEventListener("blur", syncPickerFromText);
+
+    if (openDatePickerBtn) {
+      openDatePickerBtn.addEventListener("click", () => {
+        syncPickerFromText();
+        if (typeof noteDatePicker.showPicker === "function") {
+          try {
+            noteDatePicker.showPicker();
+            return;
+          } catch (error) {
+            // Some browsers expose showPicker but reject it for styled/overlay inputs.
+          }
+        }
+        noteDatePicker.focus();
+        noteDatePicker.click();
+      });
+    }
   }
 
   // Note: Modal can only be closed via Cancel button, X button, or Save button

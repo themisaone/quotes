@@ -132,9 +132,10 @@ export function setQuoteFields(note, elements) {
  * Set default fields for Training type
  */
 export function setDefaultTrainingFields(elements) {
-  const { noteDateInput, trainingTypeSelect } = elements;
+  const { noteDateInput, noteDatePicker, trainingTypeSelect } = elements;
   
   if (noteDateInput) noteDateInput.value = "";
+  if (noteDatePicker) noteDatePicker.value = "";
   if (trainingTypeSelect) trainingTypeSelect.value = "WEIGHTS";
 }
 
@@ -165,9 +166,10 @@ export function setTrainingFields(note, elements) {
  * Clear type-specific fields
  */
 export function clearTypeSpecificFields(elements) {
-  const { noteDateInput, trainingTypeSelect } = elements;
+  const { noteDateInput, noteDatePicker, trainingTypeSelect } = elements;
   
   if (noteDateInput) noteDateInput.value = "";
+  if (noteDatePicker) noteDatePicker.value = "";
   if (trainingTypeSelect) trainingTypeSelect.value = "";
 }
 
