@@ -178,7 +178,29 @@ test("GET /api/quotes/training-years returns parsed years", async () => {
 
   assert.equal(response.status, 200);
   assert.deepEqual(response.body, { years: [2026, 2025] });
-  assert.match(options.calls[0].sql, /q\.note_type = 'training'/);
+  assert.match(options.calls[0].sql, /q\.note_type = \$1/);
+  assert.deepEqual(options.calls[0].params, ["training"]);
+});
+
+test("GET /api/quotes/training-years supports custom date-based note types", async () => {
+  const options = makeBaseOptions();
+  options.pool = {
+    async query(sql, params = []) {
+      options.calls.push({ sql, params });
+      return { rows: [{ year: "2026" }] };
+    },
+  };
+  const routes = makeRouteCollector(options);
+
+  const response = await invoke(routes, {
+    routePath: "/api/quotes/training-years",
+    query: { note_type: "SLEEP" },
+  });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(response.body, { years: [2026] });
+  assert.match(options.calls[0].sql, /q\.note_type = \$1/);
+  assert.deepEqual(options.calls[0].params, ["SLEEP"]);
 });
 
 test("GET /api/quotes returns an empty array without enrichment work", async () => {

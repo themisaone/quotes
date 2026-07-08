@@ -18,7 +18,7 @@
  */
 
 import { escapeHtml, resolveAttachmentUrl } from './utils.js?v=20260703color1';
-import { renderTrainingCalendar } from './trainingCalendar.js?v=20260629oldicon1';
+import { renderTrainingCalendar } from './trainingCalendar.js?v=20260708calendarselect1';
 import {
   buildPaneMetaSections,
   buildPaneScoreHtml,
@@ -45,10 +45,16 @@ let _selectedIndex = 0;
 let _opts = {};
 let _container = null;
 
-// Training sub-view (calendar / list) — toggled from page header #trainingSubModeSelect.
+// Date-based sub-view (calendar / list) — toggled from page header #trainingSubModeSelect.
 // Persisted in localStorage so the choice survives reloads.
 const TRAINING_SUBMODE_KEY = 'lpTrainingSubMode';
 const VALID_SUBMODES = new Set(['calendar', 'list']);
+
+function getSubModeStorageKey(noteType = 'training') {
+  return noteType && noteType !== 'training'
+    ? `${TRAINING_SUBMODE_KEY}_${noteType}`
+    : TRAINING_SUBMODE_KEY;
+}
 
 /** List-pane page size (all types) — will move to Settings later. */
 export const LP_LIST_PAGE_SIZE = 12;
@@ -59,18 +65,18 @@ export function getListPanePageSize(_noteType) {
   return LP_LIST_PAGE_SIZE;
 }
 
-export function getTrainingSubMode() {
+export function getTrainingSubMode(noteType = 'training') {
   const v = (typeof localStorage !== 'undefined')
-    ? localStorage.getItem(TRAINING_SUBMODE_KEY)
+    ? localStorage.getItem(getSubModeStorageKey(noteType))
     : null;
   if (VALID_SUBMODES.has(v)) return v;
-  const def = getNoteTypeDefaultDisplayMode('training');
+  const def = getNoteTypeDefaultDisplayMode(noteType);
   return VALID_SUBMODES.has(def) ? def : 'calendar';
 }
 
-export function setTrainingSubMode(mode) {
+export function setTrainingSubMode(mode, noteType = 'training') {
   if (!VALID_SUBMODES.has(mode)) return;
-  try { localStorage.setItem(TRAINING_SUBMODE_KEY, mode); } catch { /* ignore */ }
+  try { localStorage.setItem(getSubModeStorageKey(noteType), mode); } catch { /* ignore */ }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -226,16 +232,18 @@ function buildRowHtml(note, idx, isSelected, opts) {
   const { currentNoteTypeFilter, getTrainingTypes, getQuoteTypes } = opts;
   const noteType = note.note_type || currentNoteTypeFilter || 'note';
   const selCls = isSelected ? ' lp-selected' : '';
+  const useDateBasedLayout =
+    opts.isDateBehaviorType === true || opts.isTrainingBehaviorType === true || currentNoteTypeFilter === 'training';
 
-  if (currentNoteTypeFilter !== 'training') {
+  if (!useDateBasedLayout) {
     return buildTitledRowHtml(note, idx, isSelected, opts);
   }
 
-  // ── Training list rows ──
+  // ── Date-based list rows ──
   let headerHtml = '';
-  if (noteType === 'training') {
+  if (useDateBasedLayout) {
     const dateStr  = formatTrainingDate(note.note_date);
-    const typeStr  = getTrainingLabel(note.source_type, getTrainingTypes);
+    const typeStr  = getTrainingLabel(note.source_type, () => getTrainingTypes(noteType));
     headerHtml = `
       ${dateStr ? `<span class="lp-row-date">${escapeHtml(dateStr)}</span>` : ''}
       ${typeStr ? `<span class="lp-row-badge">${typeStr}</span>` : ''}`;
@@ -444,11 +452,12 @@ export function renderListPaneView(container, notes, opts) {
   const restoredIdx = wantedId != null ? notes.findIndex(n => n.id == wantedId) : -1;
   _selectedIndex = restoredIdx >= 0 ? restoredIdx : 0;
 
-  const isTraining = opts.currentNoteTypeFilter === 'training';
+  const isTraining =
+    opts.isDateBehaviorType === true || opts.isTrainingBehaviorType === true || opts.currentNoteTypeFilter === 'training';
   const useTitledLayout = !isTraining;
-  const subMode = isTraining ? getTrainingSubMode() : 'list';
+  const subMode = isTraining ? getTrainingSubMode(opts.currentNoteTypeFilter) : 'list';
 
-  // ── Training + Calendar sub-mode ─────────────────────────────────────────
+  // ── Date-based + Calendar sub-mode ───────────────────────────────────────
   if (isTraining && subMode === 'calendar') {
     // Filter-bar Year/Month are redundant here (calendar's own header owns
     // month navigation).  Put them back in the filter bar if they were moved
@@ -456,7 +465,7 @@ export function renderListPaneView(container, notes, opts) {
     restoreTrainingDateFiltersToBar({ hide: true });
 
     container.innerHTML = `
-      <div class="lp-layout">
+      <div class="lp-layout lp-layout-calendar">
         <div class="lp-list lp-list-calendar" id="lpList"></div>
         <div class="lp-pane" id="lpPane"></div>
       </div>`;
@@ -492,14 +501,28 @@ export function renderListPaneView(container, notes, opts) {
     }
 
     renderTrainingCalendar(calHost, {
-      getTrainingTypes: opts.getTrainingTypes,
+      noteType:         opts.currentNoteTypeFilter || 'training',
+      getTrainingTypes: () => opts.getTrainingTypes(opts.currentNoteTypeFilter || 'training'),
+      enableSubtypeFilter: opts.hasTrainingSubTypes === true,
       initialNoteId:    opts.initialNoteId ?? null,
       initialYear,
       initialMonth,
-      onSelectNote: (monthNotes, idx) => {
+      onSelectNote: async (monthNotes, idx) => {
+        const currentId = _notes[_selectedIndex]?.id;
+        const targetId = monthNotes[idx]?.id;
+        const alreadySelected = currentId != null && targetId != null && String(currentId) === String(targetId);
+        if (alreadySelected && !pane.querySelector('.lp-pane-empty')) return true;
+
+        if (!alreadySelected) {
+          const leave = await confirmLeavePaneEditor();
+          if (leave === 'cancel') return false;
+        }
+
         _notes = monthNotes;
         _selectedIndex = idx;
         renderPane(pane, monthNotes[idx] || null);
+        flushPendingPaneNoteSaved();
+        return true;
       },
       // Keep the Year/Month filter selects visually synced so switching to
       // list mode (or any re-render) continues from the month the user

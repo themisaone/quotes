@@ -548,11 +548,19 @@ function saveQuoteTypesAndRefresh(types, populateTypeDropdowns, populateTypeFilt
  * Get training subTypes — derived from noteTypes[behavior='training'].subTypes
  * Falls back to legacy globalSettings.trainingTypes for backward compat.
  */
-export function getTrainingTypes() {
+export function getTrainingTypes(noteTypeValue = null) {
   if (!globalSettings) {
     throw new Error('Settings not loaded. Please refresh the page.');
   }
-  const trainingNoteType = (globalSettings.noteTypes || []).find(t => t.behavior === 'training');
+
+  if (noteTypeValue) {
+    const noteType = (globalSettings.noteTypes || []).find(t => t.value === noteTypeValue);
+    if (noteType?.behavior === 'training' || noteType?.behavior === 'diary') return noteType.subTypes || [];
+    return [];
+  }
+
+  const trainingNoteType = (globalSettings.noteTypes || []).find(t => t.value === 'training')
+    || (globalSettings.noteTypes || []).find(t => t.behavior === 'training');
   if (trainingNoteType?.subTypes?.length) return trainingNoteType.subTypes;
   if (globalSettings.trainingTypes?.length) return globalSettings.trainingTypes;
   return [{ value: 'GENERAL', label: 'General', icon: '💪' }];
@@ -638,7 +646,7 @@ export function setupTypeManagementListeners(populateTypeDropdowns, populateType
 
 /**
  * Default display mode for a note type from settings (not localStorage).
- * Training: `calendar` | `list`. Others: `cards` | `list-pane`.
+ * Date-based types: `calendar` | `list`. Others: `cards` | `list-pane`.
  */
 export function getNoteTypeDefaultDisplayMode(noteTypeValue) {
   const types = globalSettings?.noteTypes;
@@ -647,9 +655,13 @@ export function getNoteTypeDefaultDisplayMode(noteTypeValue) {
   const nt = types.find((t) => t.value === noteTypeValue);
   if (!nt) return fallback;
   const isTraining = nt.behavior === 'training' || nt.value === 'training';
+  const isDiary = nt.behavior === 'diary';
   const mode = nt.defaultDisplayMode;
   if (isTraining) {
     return (mode === 'list' || mode === 'calendar') ? mode : 'calendar';
+  }
+  if (isDiary) {
+    return (mode === 'cards' || mode === 'list' || mode === 'calendar') ? mode : 'calendar';
   }
   return (mode === 'list-pane' || mode === 'cards') ? mode : 'cards';
 }
@@ -707,28 +719,45 @@ export function renderNoteTypesList(rebuildMenuFn) {
     hintEl.style.display = 'none';
   }
 
-  const behaviorLabel = (b) => ({ quote: '📖 Quote', training: '🏋️ Training', generic: '📄 Generic' }[b] || b);
+  const behaviorLabel = (b) => ({
+    quote: '📖 Quote',
+    training: '🏋️ Training',
+    diary: '📅 Diary',
+    generic: '📄 Generic'
+  }[b] || b);
 
   const isTrainingType = (type) => type.behavior === 'training' || type.value === 'training';
+  const isDiaryType = (type) => type.behavior === 'diary';
 
   const displayModeSelectHtml = (type) => {
     const isTraining = isTrainingType(type);
-    const current = type.defaultDisplayMode || (isTraining ? 'calendar' : 'cards');
+    const isDiary = isDiaryType(type);
+    const current = type.defaultDisplayMode || (isTraining || isDiary ? 'calendar' : 'cards');
     if (isTraining) {
       return `<select class="note-type-display-mode-select" aria-label="Default display mode">
         <option value="calendar" ${current === 'calendar' ? 'selected' : ''}>Calendar</option>
         <option value="list" ${current === 'list' ? 'selected' : ''}>List</option>
       </select>`;
     }
+    if (isDiary) {
+      return `<select class="note-type-display-mode-select" aria-label="Default display mode">
+        <option value="calendar" ${current === 'calendar' ? 'selected' : ''}>Calendar</option>
+        <option value="list" ${current === 'list' ? 'selected' : ''}>List</option>
+        <option value="cards" ${current === 'cards' ? 'selected' : ''}>Cards</option>
+      </select>`;
+    }
     return `<select class="note-type-display-mode-select" aria-label="Default display mode">
       <option value="cards" ${current === 'cards' ? 'selected' : ''}>Cards</option>
-      <option value="list-pane" ${current === 'list-pane' ? 'selected' : ''}>List + Pane</option>
+      <option value="list-pane" ${current === 'list-pane' ? 'selected' : ''}>List</option>
     </select>`;
   };
 
   const normalizeDisplayModeForType = (type, mode) => {
     if (isTrainingType(type)) {
       return (mode === 'list' || mode === 'calendar') ? mode : 'calendar';
+    }
+    if (isDiaryType(type)) {
+      return (mode === 'cards' || mode === 'list' || mode === 'calendar') ? mode : 'calendar';
     }
     return (mode === 'list-pane' || mode === 'cards') ? mode : 'cards';
   };
@@ -744,9 +773,12 @@ export function renderNoteTypesList(rebuildMenuFn) {
 
   container.innerHTML = types.map((type) => {
     const index = allTypes.findIndex((t) => t.value === type.value);
-    const hasSubs = type.behavior === 'quote' || type.behavior === 'training' || type.behavior === 'generic';
+    const hasSubs = type.behavior === 'quote'
+      || type.behavior === 'training'
+      || type.behavior === 'diary'
+      || type.behavior === 'generic';
     const subs = type.subTypes || [];
-    const behaviorOpts = ['quote','training','generic'].map(b =>
+    const behaviorOpts = ['quote','training','diary','generic'].map(b =>
       `<option value="${b}" ${(type.behavior||'generic')===b?'selected':''}>${behaviorLabel(b)}</option>`).join('');
     const subsHtml = hasSubs ? `
         <div class="subtype-section">

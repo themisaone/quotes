@@ -18,7 +18,7 @@
 
 import { MODAL_IDS, getElementByIdSafe, getElementValue } from '../constants.js';
 import { downscaleImage } from './attachments.js';
-import { getNoteTypeConfig, hasGenericSubTypeField } from './noteTypes.js';
+import { getNoteTypeConfig, hasDateField, hasGenericSubTypeField } from './noteTypes.js';
 import { showConfirm } from './confirmDialog.js';
 
 // ============= CONSTANTS =============
@@ -236,8 +236,8 @@ function _readGroupInput(noteType) {
   let inputId;
   if (behavior === 'generic') {
     inputId = 'genericTranslationGroup';
-  } else if (noteType === 'training' || behavior === 'training') {
-    inputId = MODAL_IDS.TRANSLATION_GROUP_INPUT; // 'translationGroup' — training form
+  } else if (noteType === 'training' || hasDateField(noteType)) {
+    inputId = MODAL_IDS.TRANSLATION_GROUP_INPUT; // 'translationGroup' — date-based form
   } else {
     inputId = 'quoteTranslationGroup'; // quote / tegneserie / ... default
   }
@@ -252,10 +252,14 @@ function _readGroupInput(noteType) {
  */
 export function collectFormData(state) {
   const noteType = getElementValue(MODAL_IDS.NOTE_TYPE_SELECT);
+  const behavior = getNoteTypeConfig(noteType).behavior;
+  const isDateBehavior = hasDateField(noteType);
+  const usesDateSubtype = isDateBehavior && Array.from(document.getElementById(MODAL_IDS.TRAINING_TYPE_SELECT)?.options || [])
+    .some((option) => option.value);
   
-  // Parse note_date for training notes
+  // Parse note_date for date-based notes.
   let parsedNoteDate = null;
-  if (noteType === 'training') {
+  if (isDateBehavior) {
     const noteDateInput = getElementValue(MODAL_IDS.NOTE_DATE_INPUT);
     parsedNoteDate = parseNorwegianDate(noteDateInput);
   }
@@ -265,11 +269,13 @@ export function collectFormData(state) {
     note_title: (document.getElementById('noteTitle')?.value?.trim() || null),
     author: getElementValue(MODAL_IDS.AUTHOR_INPUT),
     source: getElementValue(MODAL_IDS.SOURCE_INPUT),
-    sourceType: noteType === 'training' 
+    sourceType: usesDateSubtype
       ? getElementValue(MODAL_IDS.TRAINING_TYPE_SELECT)
       : (hasGenericSubTypeField(noteType)
           ? getElementValue('genericSubType')
-          : (getElementValue(MODAL_IDS.SOURCE_TYPE_SELECT) || "ASSORTED")),
+          : (isDateBehavior
+              ? null
+              : (getElementValue(MODAL_IDS.SOURCE_TYPE_SELECT) || "ASSORTED"))),
     sourceId: window.currentSourceId || null,
     tags: getElementValue(MODAL_IDS.TAG_INPUT),
     comment: getElementValue(MODAL_IDS.COMMENT_INPUT),
@@ -298,9 +304,14 @@ export async function handleFormSubmit(e, config) {
   const { apiUrl, state, callbacks } = config;
   const quoteData = collectFormData(state);
 
-  // Validate training type is selected
-  if (quoteData.note_type === 'training' && !quoteData.sourceType) {
-    const select = document.getElementById('trainingType');
+  // Validate training sub-type only when this type actually uses training sub-types.
+  const isTrainingBehavior = getNoteTypeConfig(quoteData.note_type).behavior === 'training';
+  const trainingTypeSelect = document.getElementById('trainingType');
+  const hasTrainingTypeOptions = trainingTypeSelect
+    ? Array.from(trainingTypeSelect.options).some((option) => option.value)
+    : false;
+  if (isTrainingBehavior && hasTrainingTypeOptions && !quoteData.sourceType) {
+    const select = trainingTypeSelect;
     if (select) {
       select.style.outline = '2px solid #e74c3c';
       select.style.borderColor = '#e74c3c';

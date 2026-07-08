@@ -26,7 +26,7 @@ import {
   getElementByIdSafe,
   getCheckedValues
 } from '../constants.js';
-import { hasGenericSubTypeField } from './noteTypes.js';
+import { getNoteTypeConfig, hasDateField, hasGenericSubTypeField } from './noteTypes.js';
 
 // ============= MODULE STATE =============
 
@@ -128,20 +128,38 @@ function addQuoteTypeFilters(params, currentNoteTypeFilter, getQuoteTypes) {
 /**
  * Add training type filters to params (Training view only)
  */
-function addTrainingTypeFilters(params, currentNoteTypeFilter) {
-  if (currentNoteTypeFilter !== 'training') {
+function addTrainingTypeFilters(params, currentNoteTypeFilter, getTrainingTypes) {
+  const isDateBehavior = currentNoteTypeFilter && hasDateField(currentNoteTypeFilter);
+  if (!isDateBehavior) {
     return;
   }
 
-  const selectedTrainingTypes = getSelectedCheckboxValues('.training-type-filter-options input[type="checkbox"]');
+  const behavior = getNoteTypeConfig(currentNoteTypeFilter).behavior;
+  const configuredTypes = typeof getTrainingTypes === 'function'
+    ? getTrainingTypes(currentNoteTypeFilter)
+    : [];
+  const selectedTrainingTypes = configuredTypes.length > 0
+    ? getSelectedCheckboxValues('.training-type-filter-options input[type="checkbox"]')
+    : [];
 
-  if (selectedTrainingTypes.length > 0) {
+  if (selectedTrainingTypes.length > 0 && selectedTrainingTypes.length < configuredTypes.length) {
     params.append("training_types", selectedTrainingTypes.join(","));
   }
 
-  // Year and month filters only make sense in the dedicated Training view
-  if (currentNoteTypeFilter === 'training') {
-    const trainingFilters = getTrainingFilters();
+  const trainingFilters = getTrainingFilters();
+  if (behavior === 'diary' && trainingFilters.year) {
+    const year = parseInt(trainingFilters.year, 10);
+    const month = parseInt(trainingFilters.month, 10);
+    if (Number.isFinite(year) && Number.isFinite(month)) {
+      const mm = String(month).padStart(2, '0');
+      const lastDay = new Date(year, month, 0).getDate();
+      params.append("dateFrom", `${year}-${mm}-01`);
+      params.append("dateTo", `${year}-${mm}-${String(lastDay).padStart(2, '0')}`);
+    } else if (Number.isFinite(year)) {
+      params.append("dateFrom", `${year}-01-01`);
+      params.append("dateTo", `${year}-12-31`);
+    }
+  } else {
     if (trainingFilters.year) params.append("year", trainingFilters.year);
     if (trainingFilters.month && trainingFilters.year) params.append("month", trainingFilters.month);
   }
@@ -197,7 +215,7 @@ function buildQuotesParams(currentNoteTypeFilter, getQuoteTypes, getTrainingType
   }
   
   addQuoteTypeFilters(params, currentNoteTypeFilter, getQuoteTypes);
-  addTrainingTypeFilters(params, currentNoteTypeFilter);
+  addTrainingTypeFilters(params, currentNoteTypeFilter, getTrainingTypes);
   addGenericSubTypeFilters(params, currentNoteTypeFilter);
   addMetadataFilters(params);
   addPaginationParams(params);
@@ -212,7 +230,7 @@ export function buildExportParams(currentNoteTypeFilter, getQuoteTypes, getTrain
   addSearchFilters(params, globalSettings);
   if (currentNoteTypeFilter) params.append("note_type", currentNoteTypeFilter);
   addQuoteTypeFilters(params, currentNoteTypeFilter, getQuoteTypes);
-  addTrainingTypeFilters(params, currentNoteTypeFilter);
+  addTrainingTypeFilters(params, currentNoteTypeFilter, getTrainingTypes);
   addGenericSubTypeFilters(params, currentNoteTypeFilter);
   addMetadataFilters(params);
   params.append("limit", String(limit));

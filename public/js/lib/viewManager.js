@@ -42,12 +42,12 @@ export function parseUrlHash() {
   const types = getNoteTypes();
   if (types.length > 0) {
     // Exact match (e.g. #/note, #/training, #/journal)
-    const exact = types.find(t => t.value === view);
+    const exact = types.find(t => String(t.value).toLowerCase() === view);
     if (exact) return exact.value;
     // Pluralised match (e.g. #/notes → note, #/puzzles → puzzle)
     const dePluralized = view.endsWith('s') ? view.slice(0, -1) : null;
     if (dePluralized) {
-      const plural = types.find(t => t.value === dePluralized);
+      const plural = types.find(t => String(t.value).toLowerCase() === dePluralized);
       if (plural) return plural.value;
     }
   } else {

@@ -74,14 +74,22 @@ async function populateTrainingYears() {
       return;
     }
     
-    // Check if already populated (has more than just "All Years" option)
-    if (yearSelect.options.length > 1) {
+    const noteType = window.currentNoteTypeFilter || 'training';
+
+    // Check if already populated for this note type (has more than just "All Years" option)
+    if (yearSelect.options.length > 1 && yearSelect.dataset.noteType === noteType) {
       console.log("✅ Training years already populated, skipping");
       return;
     }
+
+    while (yearSelect.options.length > 1) {
+      yearSelect.remove(1);
+    }
+    yearSelect.dataset.noteType = noteType;
     
     console.log("🗓️ Populating training years...");
-    const response = await fetch(`${window.API_URL}/quotes/training-years`);
+    const params = new URLSearchParams({ note_type: noteType });
+    const response = await fetch(`${window.API_URL}/quotes/training-years?${params.toString()}`);
     const data = await response.json();
     console.log("🗓️ Training years data:", data);
     

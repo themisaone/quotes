@@ -142,19 +142,24 @@ function registerQuoteRoutes(app, {
     }
   });
 
-  // Get available years from training notes.
+  // Get available years from date-based notes. Defaults to the original
+  // training type for backward-compatible callers.
   app.get("/api/quotes/training-years", async (req, res) => {
     try {
+      const noteType =
+        typeof req.query.note_type === "string" && req.query.note_type.trim() !== ""
+          ? req.query.note_type.trim()
+          : "training";
       const query = `
       SELECT DISTINCT t.name as year
       FROM tags t
       JOIN note_tags qt ON t.id = qt.tag_id
       JOIN notes q ON qt.note_id = q.id
-      WHERE q.note_type = 'training' 
+      WHERE q.note_type = $1
         AND t.name ~ '^[0-9]{4}$'
       ORDER BY t.name DESC
     `;
-      const result = await pool.query(query);
+      const result = await pool.query(query, [noteType]);
       const years = result.rows.map((row) => parseInt(row.year));
       res.json({ years });
     } catch (error) {

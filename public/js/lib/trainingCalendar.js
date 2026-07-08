@@ -10,7 +10,7 @@
  * renderTrainingCalendar(container, opts) → void
  *   opts:
  *     getTrainingTypes : () => [{ value, label, icon, color }]
- *     onSelectNote     : (monthNotes, idx) => void
+ *     onSelectNote     : (monthNotes, idx) => void | false | Promise<void | false>
  *                        Called when the user clicks a day that has trainings.
  *                        monthNotes is the full list of trainings for the
  *                        currently-visible month (oldest-first by date).  idx
@@ -20,12 +20,10 @@
  *                        calendar's own prev/next/today buttons.  Use this to
  *                        keep external Year/Month select controls in sync.
  *                        NOT called when the caller provides initialYear/Month.
- *     initialYear?     : year to show initially (1–9999).  Falls back to the
- *                        year of initialNoteId, or today's year.
- *     initialMonth?    : month to show initially (1–12).  Falls back to the
- *                        month of initialNoteId, or today's month.
- *     initialNoteId?   : id of a training to open initially (picks the month
- *                        containing it, unless initialYear/Month is given).
+ *     initialYear?     : year to show initially (1–9999). Falls back to today.
+ *     initialMonth?    : month to show initially (1–12). Falls back to today.
+ *     initialNoteId?   : id of a training to open initially if it is present
+ *                        in the visible month.
  */
 
 import { API_URL, fetchWithRetry } from './api.js';
@@ -37,7 +35,9 @@ let _viewYear     = null;   // visible month's year (e.g. 2026)
 let _viewMonth    = null;   // visible month (1–12)
 let _monthNotes   = [];     // trainings for the visible month
 let _loading      = false;
-let _trainingYears = null;  // [2026, 2024, …] from /api/quotes/training-years (cached)
+let _trainingYearsByNoteType = new Map();  // noteType -> [2026, 2024, …]
+let _selectedDay  = null;   // { year, month, day } for the note shown in pane
+let _lastSelectedByNoteType = new Map();  // noteType -> { id, day }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -104,6 +104,59 @@ function fallbackTypeMeta(value) {
   return { label: value || 'Unknown', icon: '' };
 }
 
+function getCalendarNoteType() {
+  return _opts.noteType || 'training';
+}
+
+function rememberSelectedNote(note) {
+  if (!note || note.id == null) return;
+  _lastSelectedByNoteType.set(getCalendarNoteType(), {
+    id: String(note.id),
+    day: parseLocalDate(note.note_date),
+  });
+}
+
+function findNoteIndexById(noteId) {
+  if (noteId == null) return -1;
+  return _monthNotes.findIndex(n => String(n.id) === String(noteId));
+}
+
+function findFirstNoteIndexOnDay(dayParts) {
+  if (!dayParts) return -1;
+  return _monthNotes.findIndex(n => sameDay(parseLocalDate(n.note_date), dayParts));
+}
+
+function findInitialSelectionIndex() {
+  const explicitIdx = findNoteIndexById(_opts.initialNoteId);
+  if (explicitIdx >= 0) return explicitIdx;
+
+  const remembered = _lastSelectedByNoteType.get(getCalendarNoteType());
+  const rememberedIdx = findNoteIndexById(remembered?.id);
+  if (rememberedIdx >= 0) return rememberedIdx;
+
+  const rememberedDayIdx = findFirstNoteIndexOnDay(remembered?.day);
+  if (rememberedDayIdx >= 0) return rememberedDayIdx;
+
+  const today = todayParts();
+  if (today.year === _viewYear && today.month === _viewMonth) {
+    return findFirstNoteIndexOnDay(today);
+  }
+
+  return -1;
+}
+
+async function selectLoadedNote(idx) {
+  if (idx < 0 || idx >= _monthNotes.length) return false;
+  if (typeof _opts.onSelectNote === 'function') {
+    const result = await _opts.onSelectNote(_monthNotes, idx);
+    if (result === false) return false;
+  }
+  _selectedDay = parseLocalDate(_monthNotes[idx].note_date);
+  rememberSelectedNote(_monthNotes[idx]);
+  render();
+  return true;
+}
+
 // ─── Data fetching ───────────────────────────────────────────────────────────
 
 /**
@@ -130,7 +183,7 @@ async function fetchMonthTrainings(year, month) {
   const dateTo   = `${year}-${mm}-${String(lastDay).padStart(2, '0')}`;
 
   const params = new URLSearchParams();
-  params.append('note_type', 'training');
+  params.append('note_type', getCalendarNoteType());
   params.append('dateFrom',  dateFrom);
   params.append('dateTo',    dateTo);
   params.append('limit',     '500');
@@ -140,7 +193,7 @@ async function fetchMonthTrainings(year, month) {
   // cardio days shouldn't dot the calendar.  Reading directly from the DOM
   // keeps the calendar auto-in-sync when the user toggles the filter (the
   // calling code re-renders on every filter change).
-  const selectedTypes = readSelectedTrainingTypes();
+  const selectedTypes = _opts.enableSubtypeFilter ? readSelectedTrainingTypes() : [];
   if (selectedTypes.length > 0) {
     params.append('training_types', selectedTypes.join(','));
   }
@@ -182,7 +235,7 @@ const MONTH_NAMES = [
  */
 function buildYearOptions() {
   const set = new Set();
-  (_trainingYears || []).forEach(y => set.add(y));
+  (_trainingYearsByNoteType.get(getCalendarNoteType()) || []).forEach(y => set.add(y));
   set.add(new Date().getFullYear());
   set.add(_viewYear);
   for (let dy = -3; dy <= 3; dy++) set.add(_viewYear + dy);
@@ -222,7 +275,7 @@ function renderLegend(typeMap) {
   return `<div class="tc-legend">${items || '<span class="tc-legend-empty">No training sub-types configured</span>'}</div>`;
 }
 
-function renderDayCell(year, month, day, dayTrainings, typeMap, isToday) {
+function renderDayCell(year, month, day, dayTrainings, typeMap, isToday, isSelected) {
   // Aggregate sub-types (deduped, preserve encounter order).  A single day can
   // mix multiple sub-types — we show one small dot per distinct sub-type.
   const seen = new Set();
@@ -235,6 +288,7 @@ function renderDayCell(year, month, day, dayTrainings, typeMap, isToday) {
   let cellClasses = 'tc-day';
   if (subs.length > 0)  cellClasses += ' tc-day-has-training';
   if (isToday)          cellClasses += ' tc-day-today';
+  if (isSelected)       cellClasses += ' tc-day-selected';
 
   // Icons row — one glyph per distinct sub-type.  Sub-types without a
   // configured icon are skipped rather than leaving a blank gap.
@@ -289,7 +343,8 @@ function renderGrid(typeMap) {
   for (let d = 1; d <= total; d++) {
     const dayTrainings = byDay.get(d) || [];
     const isToday = today.year === _viewYear && today.month === _viewMonth && today.day === d;
-    cellsHtml += renderDayCell(_viewYear, _viewMonth, d, dayTrainings, typeMap, isToday);
+    const isSelected = sameDay(_selectedDay, { year: _viewYear, month: _viewMonth, day: d });
+    cellsHtml += renderDayCell(_viewYear, _viewMonth, d, dayTrainings, typeMap, isToday, isSelected);
   }
 
   return `
@@ -347,7 +402,7 @@ function render() {
 
   // Day click → pick first training of that day and notify caller
   _container.querySelectorAll('.tc-day-has-training').forEach(cell => {
-    cell.addEventListener('click', () => {
+    cell.addEventListener('click', async () => {
       const day = parseInt(cell.dataset.tcD, 10);
       // Find first training on that day in the month-notes array (preserves sort)
       const idx = _monthNotes.findIndex(n => {
@@ -355,25 +410,25 @@ function render() {
         return p && p.year === _viewYear && p.month === _viewMonth && p.day === day;
       });
       if (idx === -1) return;
-      if (typeof _opts.onSelectNote === 'function') {
-        _opts.onSelectNote(_monthNotes, idx);
-      }
+      await selectLoadedNote(idx);
     });
   });
 }
 
 async function fetchTrainingYearsOnce() {
-  if (_trainingYears) return _trainingYears;
+  const noteType = getCalendarNoteType();
+  if (_trainingYearsByNoteType.has(noteType)) return _trainingYearsByNoteType.get(noteType);
   try {
-    const resp = await fetchWithRetry(`${API_URL}/quotes/training-years`);
+    const params = new URLSearchParams({ note_type: noteType });
+    const resp = await fetchWithRetry(`${API_URL}/quotes/training-years?${params.toString()}`);
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const data = await resp.json();
-    _trainingYears = Array.isArray(data.years) ? data.years.filter(Number.isFinite) : [];
+    _trainingYearsByNoteType.set(noteType, Array.isArray(data.years) ? data.years.filter(Number.isFinite) : []);
   } catch (err) {
     console.error('[trainingCalendar] Failed to fetch training years', err);
-    _trainingYears = [];
+    _trainingYearsByNoteType.set(noteType, []);
   }
-  return _trainingYears;
+  return _trainingYearsByNoteType.get(noteType);
 }
 
 async function loadAndRender() {
@@ -389,6 +444,7 @@ async function loadAndRender() {
 export async function renderTrainingCalendar(container, opts) {
   _container = container;
   _opts      = opts || {};
+  _selectedDay = null;
 
   // Decide which month to show first.  Priority:
   //   1. Explicit initialYear/initialMonth from the caller (filter selects).
@@ -413,10 +469,7 @@ export async function renderTrainingCalendar(container, opts) {
 
   await loadAndRender();
 
-  // If we had an initialNoteId and it falls in the loaded month, notify the
-  // caller so the right pane opens on it.
-  if (opts && opts.initialNoteId != null && typeof opts.onSelectNote === 'function') {
-    const idx = _monthNotes.findIndex(n => String(n.id) === String(opts.initialNoteId));
-    if (idx >= 0) opts.onSelectNote(_monthNotes, idx);
-  }
+  // Prefer an explicit note from the caller; otherwise restore the last
+  // calendar selection for this note type; otherwise open today's note.
+  await selectLoadedNote(findInitialSelectionIndex());
 }

@@ -32,7 +32,8 @@ import {
   hasGenericSubTypeField,
   getGenericSubTypes,
   hasAuthorField,
-  hasSourceField
+  hasSourceField,
+  hasDateField
 } from './js/lib/noteTypes.js';
 
 import {
@@ -186,7 +187,7 @@ import {
   setTrainingSubMode,
   getListPanePageSize,
   restoreTrainingDateFiltersToBar
-} from './js/lib/listPaneView.js?v=20260703nofullscreen1';
+} from './js/lib/listPaneView.js?v=20260708calendarselect1';
 import {
   configurePaneEditor,
   syncPaneTextToModalHidden,
@@ -327,13 +328,17 @@ function populateTypeDropdowns() {
     }
   });
   
-  // Populate training type dropdown
+  populateTrainingTypeDropdown();
+}
+
+function populateTrainingTypeDropdown(noteType = 'training', preselectedValue) {
   const trainingTypeDropdown = getElementByIdSafe('trainingType');
   if (trainingTypeDropdown) {
-    const trainingTypes = getTrainingTypes();
-    const currentValue = trainingTypeDropdown.value;
+    const trainingTypes = getTrainingTypes(noteType);
+    const currentValue = preselectedValue ?? trainingTypeDropdown.value;
     
     trainingTypeDropdown.innerHTML = '<option value="">Select type...</option>';
+    trainingTypeDropdown.disabled = trainingTypes.length === 0;
     
     trainingTypes.forEach(type => {
       const option = document.createElement('option');
@@ -385,12 +390,18 @@ let currentNoteTypeFilter = null; // null = show all types
 // Persisted in localStorage per note type so each type remembers its preference.
 let currentViewMode = 'cards';
 
-// Training always uses list-pane (no Cards option). All other views — including
-// All Notes — can toggle Cards vs List+Pane via the header DISPLAY_MODE control.
-const LIST_PANE_ONLY_TYPES = new Set(['training']);
+// Training stays list-pane only (Calendar/List). Diary is date-based too, but
+// it can use Cards, Calendar, or List.
+function isDateBehaviorType(noteType) {
+  return Boolean(noteType) && hasDateField(noteType);
+}
+
+function isTrainingBehaviorType(noteType) {
+  return Boolean(noteType) && getNoteTypeConfig(noteType).behavior === 'training';
+}
 
 function isListPaneOnlyType(noteType) {
-  return LIST_PANE_ONLY_TYPES.has(noteType);
+  return isTrainingBehaviorType(noteType);
 }
 
 /** Quotes list views that participate in list-pane (includes All Notes / null). */
@@ -408,10 +419,16 @@ function getStoredViewMode(noteType) {
   try {
     const stored = localStorage.getItem(`viewMode_${noteType || 'all'}`);
     if (stored === 'cards' || stored === 'list-pane') return stored;
-    if (noteType) return getNoteTypeDefaultDisplayMode(noteType);
+    if (noteType) {
+      const def = getNoteTypeDefaultDisplayMode(noteType);
+      if (def === 'calendar' || def === 'list') return 'list-pane';
+      return def;
+    }
     return 'cards';
   } catch {
-    return noteType ? getNoteTypeDefaultDisplayMode(noteType) : 'cards';
+    if (!noteType) return 'cards';
+    const def = getNoteTypeDefaultDisplayMode(noteType);
+    return (def === 'calendar' || def === 'list') ? 'list-pane' : def;
   }
 }
 
@@ -422,7 +439,7 @@ function saveViewMode(noteType, mode) {
   } catch {}
 }
 
-/** Header DISPLAY_MODE dropdown — All Notes and every type except Training. */
+/** Header DISPLAY_MODE dropdown — All Notes and every non-date-based type. */
 function hasDisplayModeToggle(noteType) {
   return !isListPaneOnlyType(noteType);
 }
@@ -2091,9 +2108,21 @@ function setupEventListeners() {
   if (displayModeSelect) {
     displayModeSelect.addEventListener('change', () => {
       const mode = displayModeSelect.value;
-      if (mode !== 'cards' && mode !== 'list-pane') return;
-      currentViewMode = mode;
-      saveViewMode(currentNoteTypeFilter, mode);
+      const isDiaryModeSelect = isDateBehaviorType(currentNoteTypeFilter)
+        && !isTrainingBehaviorType(currentNoteTypeFilter);
+
+      if (isDiaryModeSelect) {
+        if (mode !== 'cards' && mode !== 'calendar' && mode !== 'list') return;
+        currentViewMode = mode === 'cards' ? 'cards' : 'list-pane';
+        saveViewMode(currentNoteTypeFilter, currentViewMode);
+        if (mode === 'calendar' || mode === 'list') {
+          setTrainingSubMode(mode, currentNoteTypeFilter || 'training');
+        }
+      } else {
+        if (mode !== 'cards' && mode !== 'list-pane') return;
+        currentViewMode = mode;
+        saveViewMode(currentNoteTypeFilter, mode);
+      }
       updateViewModeToggle();
       loadQuotes();
     });
@@ -2103,7 +2132,7 @@ function setupEventListeners() {
     trainingSubModeSelect.addEventListener('change', () => {
       const mode = trainingSubModeSelect.value;
       if (mode !== 'calendar' && mode !== 'list') return;
-      setTrainingSubMode(mode);
+      setTrainingSubMode(mode, currentNoteTypeFilter || 'training');
       updateViewModeToggle();
       updateSourcesFilterVisibility();
       loadQuotes();
@@ -2573,7 +2602,7 @@ function updateBulkButtonVisibility() {
 // Wrapper for filterManager library
 function updateSourcesFilterVisibility() {
   updateSourcesFilterVisibilityLib2(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes);
-  if (currentNoteTypeFilter === 'training' && getTrainingSubMode() === 'calendar') {
+  if (isDateBehaviorType(currentNoteTypeFilter) && getTrainingSubMode(currentNoteTypeFilter) === 'calendar') {
     restoreTrainingDateFiltersToBar({ hide: true });
   }
 }
@@ -2584,6 +2613,8 @@ function updateViewModeToggle() {
   const supported = supportsListPaneView(currentNoteTypeFilter);
   const selectModeBtn = getElementByIdSafe('selectModeBtn');
   const isGallery = quotesList && quotesList.classList.contains('gallery-mode');
+  const isDiaryModeSelect = isDateBehaviorType(currentNoteTypeFilter)
+    && !isTrainingBehaviorType(currentNoteTypeFilter);
 
   if (supported) {
     currentViewMode = getStoredViewMode(currentNoteTypeFilter);
@@ -2631,13 +2662,28 @@ function updateViewModeToggle() {
   if (displayModeSelect) {
     const showToggle = hasDisplayModeToggle(currentNoteTypeFilter);
     displayModeSelect.style.display = showToggle ? '' : 'none';
-    if (showToggle) displayModeSelect.value = currentViewMode;
+    if (showToggle) {
+      if (isDiaryModeSelect) {
+        displayModeSelect.innerHTML = `
+          <option value="cards">⊞ Cards</option>
+          <option value="calendar">📅 Calendar</option>
+          <option value="list">☰ List</option>`;
+        displayModeSelect.value = currentViewMode === 'cards'
+          ? 'cards'
+          : getTrainingSubMode(currentNoteTypeFilter);
+      } else {
+        displayModeSelect.innerHTML = `
+          <option value="cards">⊞ Cards</option>
+          <option value="list-pane">☰ List</option>`;
+        displayModeSelect.value = currentViewMode;
+      }
+    }
   }
 
   if (trainingSubModeSelect) {
-    const showTrainingToggle = currentNoteTypeFilter === 'training';
+    const showTrainingToggle = isTrainingBehaviorType(currentNoteTypeFilter);
     trainingSubModeSelect.style.display = showTrainingToggle ? '' : 'none';
-    if (showTrainingToggle) trainingSubModeSelect.value = getTrainingSubMode();
+    if (showTrainingToggle) trainingSubModeSelect.value = getTrainingSubMode(currentNoteTypeFilter);
   }
 
   // Column count is irrelevant in list-pane layout
@@ -2655,6 +2701,7 @@ function updateFieldVisibility() {
   
   // Use library function for standard field visibility (author/source, training, etc.)
   updateModalFieldVisibility(noteType);
+  populateTrainingTypeDropdown(noteType);
   
   // Repopulate the generic sub-type dropdown whenever the note type changes
   populateGenericSubTypeDropdown(noteType);
@@ -3170,7 +3217,7 @@ async function handleSubmit(e) {
       } else {
         if (!wasEdit && savedId) {
           setPendingInitialNoteId(savedId);
-          if (currentNoteTypeFilter === 'training' && newNote?.note_date) {
+          if (isDateBehaviorType(currentNoteTypeFilter) && newNote?.note_date) {
             alignTrainingFiltersToDate(newNote.note_date);
           }
         }
@@ -3235,13 +3282,13 @@ function displayQuotes(quotes) {
 
   quoteCount.textContent = `(${quotes.length})`;
 
-  // In Training's list-pane view, the left column may be showing the calendar
+  // In date-based list-pane views, the left column may be showing the calendar
   // sub-view.  The calendar does its own month fetch, so we must still render
   // it even if the main list fetch returned zero notes.
   const calendarActive =
-    currentNoteTypeFilter === 'training' &&
+    isDateBehaviorType(currentNoteTypeFilter) &&
     currentViewMode === 'list-pane' &&
-    getTrainingSubMode() === 'calendar';
+    getTrainingSubMode(currentNoteTypeFilter) === 'calendar';
 
   if (quotes.length === 0 && !calendarActive) {
     // Show "empty" in quotesList, hide lpWrapper
@@ -3265,6 +3312,9 @@ function displayQuotes(quotes) {
       quotesList.style.removeProperty('display');
     }
     const currentSettings = getGlobalSettings();
+    const trainingSubTypes = isDateBehaviorType(currentNoteTypeFilter)
+      ? getTrainingTypes(currentNoteTypeFilter)
+      : [];
     // Preserve selection across reloads (e.g. after save)
     const prevSelectedId = resolveInitialNoteId(getLpSelectedNoteId());
     renderListPaneView(lpWrapper || quotesList, quotes, {
@@ -3273,6 +3323,8 @@ function displayQuotes(quotes) {
       openSourceModal,
       filterByTag,
       currentNoteTypeFilter,
+      isDateBehaviorType: isDateBehaviorType(currentNoteTypeFilter),
+      hasTrainingSubTypes: trainingSubTypes.length > 0,
       getTrainingTypes,
       getQuoteTypes,
       globalSettings: currentSettings,
@@ -4464,15 +4516,14 @@ function updatePaginationControls() {
   const paginationContainer = getElementByIdSafe("paginationControls");
   if (!paginationContainer) return;
 
-  // Training + Calendar sub-mode owns its own month navigation — pagination
+  // Date-based Calendar sub-mode owns its own month navigation — pagination
   // would be meaningless.  Hide the whole pagination section (not just its
   // contents) so no empty strip lingers below the calendar.
-  // Training + List sub-mode still needs pagination — a heavy-duty trainee
-  // easily has more notes than fit on one page.
+  // List sub-mode still needs pagination.
   if (
-    currentNoteTypeFilter === 'training' &&
+    isDateBehaviorType(currentNoteTypeFilter) &&
     currentViewMode === 'list-pane' &&
-    getTrainingSubMode() === 'calendar'
+    getTrainingSubMode(currentNoteTypeFilter) === 'calendar'
   ) {
     paginationContainer.innerHTML = '';
     paginationContainer.style.display = 'none';

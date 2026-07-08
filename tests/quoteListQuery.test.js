@@ -216,6 +216,26 @@ test("buildQuoteListQuery applies mode restriction and default updated sort when
   assert.deepEqual(result.params, [["quote", "note"], 20, 0]);
 });
 
+test("buildQuoteListQuery applies date subtype filters to custom note types", () => {
+  const result = buildQuoteListQuery(
+    {
+      note_type: "DNEVNIK",
+      training_types: "SLEEP",
+      dateFrom: "2026-07-01",
+      dateTo: "2026-07-31",
+      limit: "10",
+      offset: "0",
+    },
+    ["DNEVNIK"]
+  );
+
+  assert.match(result.query, /q\.note_type = \$1/);
+  assert.match(result.query, /q\.type = ANY\(\$2\)/);
+  assert.match(result.query, /q\.note_date >= \$3/);
+  assert.match(result.query, /q\.note_date <= \$4/);
+  assert.deepEqual(result.params, ["DNEVNIK", ["SLEEP"], "2026-07-01", "2026-07-31", 10, 0]);
+});
+
 test("buildBulkFilterQuery defaults missing filters to the active mode types", () => {
   const result = buildBulkFilterQuery(undefined, ["quote", "training"]);
 

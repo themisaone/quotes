@@ -51,6 +51,11 @@ export function getNoteTypeConfig(noteType) {
 
 // ───── Behavior helpers ─────
 
+export function isDateBehavior(noteType) {
+  const behavior = getNoteTypeConfig(noteType).behavior;
+  return behavior === 'training' || behavior === 'diary';
+}
+
 export function hasAuthorField(noteType) {
   return getNoteTypeConfig(noteType).behavior === 'quote';
 }
@@ -60,11 +65,12 @@ export function hasSourceField(noteType) {
 }
 
 export function hasDateField(noteType) {
-  return getNoteTypeConfig(noteType).behavior === 'training';
+  return isDateBehavior(noteType);
 }
 
 export function hasTrainingTypeField(noteType) {
-  return getNoteTypeConfig(noteType).behavior === 'training';
+  const config = getNoteTypeConfig(noteType);
+  return isDateBehavior(noteType) && Array.isArray(config.subTypes) && config.subTypes.length > 0;
 }
 
 // ───── Labels & titles ─────
@@ -81,6 +87,7 @@ export function getAttachmentLabel(noteType) {
   const config = getNoteTypeConfig(noteType);
   if (config.behavior === 'quote') return 'Quote Attachment';
   if (config.behavior === 'training') return 'Training Attachment';
+  if (config.behavior === 'diary') return 'Diary Attachment';
   return 'Attachment';
 }
 
@@ -148,6 +155,16 @@ export function updateModalFieldVisibility(noteType) {
   const trainingFields = getElementByIdSafe(CONTAINER_IDS.TRAINING_SPECIFIC_FIELDS, 'updateModalFieldVisibility');
   if (trainingFields) {
     trainingFields.style.display = hasDateField(noteType) ? 'flex' : 'none';
+  }
+  const trainingTypeFields = document.getElementById('trainingTypeFields');
+  if (trainingTypeFields) {
+    trainingTypeFields.style.display = hasTrainingTypeField(noteType) ? '' : 'none';
+    const label = trainingTypeFields.querySelector('label');
+    if (label) {
+      label.textContent = getNoteTypeConfig(noteType).behavior === 'training'
+        ? '🏋️ Training Type'
+        : '🏷️ Type';
+    }
   }
   const genericFields = document.getElementById('genericSpecificFields');
   if (genericFields) {

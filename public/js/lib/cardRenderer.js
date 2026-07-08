@@ -356,16 +356,14 @@ export function buildPaneMetaSections(
   const noteType = note.note_type || currentNoteTypeFilter || 'quote';
   const noteTypeBadge = getNoteTypeBadgeHtml(noteType, true, currentNoteTypeFilter);
 
+  const config = getNoteTypeConfig(noteType);
   let metadataHtml = '';
-  switch (noteType) {
-    case 'quote':
-      metadataHtml = buildQuoteMetadata(note, noteTypeBadge, translationBadge, getQuoteTypes);
-      break;
-    case 'training':
-      metadataHtml = buildTrainingMetadata(note, noteTypeBadge, translationBadge, getTrainingTypes);
-      break;
-    default:
-      metadataHtml = buildGenericMetadata(noteTypeBadge, translationBadge);
+  if (config.behavior === 'quote' || noteType === 'quote') {
+    metadataHtml = buildQuoteMetadata(note, noteTypeBadge, translationBadge, getQuoteTypes);
+  } else if (config.behavior === 'training' || config.behavior === 'diary' || noteType === 'training') {
+    metadataHtml = buildTrainingMetadata(note, noteTypeBadge, translationBadge, () => getTrainingTypes(noteType));
+  } else {
+    metadataHtml = buildGenericMetadata(noteTypeBadge, translationBadge);
   }
 
   return { commentHtml, metadataHtml, tagsHtml };
@@ -425,24 +423,22 @@ export function createQuoteCard(note, currentNoteTypeFilter, getTrainingTypes, g
   const noteType = note.note_type || 'quote';
   const noteTypeBadge = getNoteTypeBadgeHtml(noteType, true, currentNoteTypeFilter);
   
-  // Build metadata based on note type
+  // Build metadata based on note type behavior
+  const config = getNoteTypeConfig(noteType);
   let metadataContent = '';
-  switch (noteType) {
-    case 'quote':
-      metadataContent = buildQuoteMetadata(note, noteTypeBadge, translationBadge, getQuoteTypes);
-      break;
-    case 'training':
-      metadataContent = buildTrainingMetadata(note, noteTypeBadge, translationBadge, getTrainingTypes);
-      break;
-    default:
-      metadataContent = buildGenericMetadata(noteTypeBadge, translationBadge);
+  if (config.behavior === 'quote' || noteType === 'quote') {
+    metadataContent = buildQuoteMetadata(note, noteTypeBadge, translationBadge, getQuoteTypes);
+  } else if (config.behavior === 'training' || config.behavior === 'diary' || noteType === 'training') {
+    metadataContent = buildTrainingMetadata(note, noteTypeBadge, translationBadge, () => getTrainingTypes(noteType));
+  } else {
+    metadataContent = buildGenericMetadata(noteTypeBadge, translationBadge);
   }
   
   // Build attachment section
   const attachmentSection = buildAttachmentSection(note, imageUrl, imageFullUrl);
 
   // Return complete card HTML
-  const isTraining = noteType === 'training';
+  const isTraining = config.behavior === 'training' || config.behavior === 'diary' || noteType === 'training';
 
   const metaRow = `
                 <div class="quote-metadata-row${isTraining ? ' training-meta-top' : ''}">

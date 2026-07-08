@@ -292,7 +292,7 @@ function appendTrainingTypesFilter(state, filters) {
 
   const trainingTypeArray = filters.training_types.split(",").filter((type) => type);
   if (trainingTypeArray.length > 0) {
-    if (filters.note_type === "training") {
+    if (filters.note_type && filters.note_type !== "quote") {
       appendParamCondition(state, " AND q.type = ANY(?)", trainingTypeArray);
     } else {
       appendParamCondition(state, " AND (q.note_type != 'training' OR q.type = ANY(?))", trainingTypeArray);

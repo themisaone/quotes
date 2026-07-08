@@ -377,7 +377,7 @@ export function setupAddModal(noteType, currentNoteTypeFilter, elements, quillEd
       const genericSubTypeSelect = document.getElementById('genericSubType');
       if (behavior === 'quote' && sourceTypeSelect) {
         sourceTypeSelect.value = defaultSub.value;
-      } else if (behavior === 'training' && trainingTypeSelect) {
+      } else if ((behavior === 'training' || behavior === 'diary') && trainingTypeSelect) {
         trainingTypeSelect.value = defaultSub.value;
       } else if (genericSubTypeSelect) {
         genericSubTypeSelect.value = defaultSub.value;

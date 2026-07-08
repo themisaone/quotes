@@ -76,7 +76,7 @@ export function configurePaneEditor({ apiUrl, onNoteSaved, onDirtyChange } = {})
 export function isPaneEditorDirty() {
   if (!_uiDirty) return false;
   if (!_quill || _currentNoteId == null) return false;
-  return _normalizeComparable(_quill.root.innerHTML) !== _normalizeComparable(_baselineHtml);
+  return true;
 }
 
 export function getPaneEditorNoteId() {

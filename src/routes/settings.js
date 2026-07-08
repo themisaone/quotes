@@ -47,6 +47,18 @@ function createDefaultSettings() {
         core: true,
         defaultDisplayMode: "cards",
       },
+      {
+        value: "DNEVNIK",
+        label: "Dnevnik",
+        icon: "📌",
+        behavior: "diary",
+        core: true,
+        subTypes: [
+          { value: "SLEEP", label: "Sleep", icon: "🌙" },
+          { value: "ASSORTED", label: "Assorted", icon: "📝", isDefault: true },
+        ],
+        defaultDisplayMode: "calendar",
+      },
     ],
     downscaleQuoteImages: true,
     externalStorageThreshold: 1,

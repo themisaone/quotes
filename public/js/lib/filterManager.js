@@ -25,7 +25,7 @@
 
 import { clearSearchFields } from './searchManager.js';
 import { getElementByIdSafe } from '../constants.js';
-import { getNoteTypeConfig, hasGenericSubTypeField, getGenericSubTypes } from './noteTypes.js';
+import { getNoteTypeConfig, hasDateField, hasGenericSubTypeField, getGenericSubTypes } from './noteTypes.js';
 
 // ============= CONSTANTS =============
 
@@ -307,16 +307,19 @@ export function updateSourcesFilterVisibility(currentNoteTypeFilter, getQuoteTyp
   
   // Show training types only in the dedicated Training view. In All Notes the
   // subtype controls stay hidden to keep broad search simple.
-  const trainingInMode = !window._modeAllowedTypes || window._modeAllowedTypes.includes('training');
-  const showTrainingTypes = trainingInMode && currentNoteTypeFilter === 'training';
+  const dateBehavior = currentNoteTypeFilter !== null && hasDateField(currentNoteTypeFilter);
+  const trainingSubTypes = dateBehavior && typeof getTrainingTypes === 'function'
+    ? getTrainingTypes(currentNoteTypeFilter)
+    : [];
+  const showTrainingTypes = dateBehavior && trainingSubTypes.length > 0;
   setElementVisibility(ELEMENT_IDS.trainingTypesFilterContainer, showTrainingTypes);
   
   // Update the training types dropdown label based on view
-  updateTrainingTypesDropdownLabel(false);
+  updateTrainingTypesDropdownLabel(false, currentNoteTypeFilter);
   
   // Repopulate the training dropdown based on view
   if (showTrainingTypes && getQuoteTypes && getTrainingTypes) {
-    populateTrainingTypeFilterCheckboxes(getTrainingTypes);
+    populateTrainingTypeFilterCheckboxes(() => trainingSubTypes);
   }
 
   // Refresh compact dropdown labels. The old long summary spans are optional
@@ -324,7 +327,7 @@ export function updateSourcesFilterVisibility(currentNoteTypeFilter, getQuoteTyp
   const trainingSummaryEl = document.getElementById('trainingTypeSummary');
   const quoteSummaryEl    = document.getElementById('quoteSourcesSummary');
 
-  if (currentNoteTypeFilter === 'training') {
+  if (dateBehavior) {
     updateTrainingTypeSummary(false);
     if (trainingSummaryEl) trainingSummaryEl.style.display = 'none';
   } else {
@@ -345,8 +348,7 @@ export function updateSourcesFilterVisibility(currentNoteTypeFilter, getQuoteTyp
   setElementVisibility('searchSourceContainer', showAuthorSource);
 
   // Show/hide Year/Month filters for training behavior only (not all notes)
-  const trainingBehavior = currentNoteTypeFilter !== null && getNoteTypeConfig(currentNoteTypeFilter).behavior === 'training';
-  const showTrainingDateFilters = trainingBehavior;
+  const showTrainingDateFilters = dateBehavior;
   setElementVisibility('trainingYearContainer', showTrainingDateFilters);
   setElementVisibility('trainingMonthContainer', showTrainingDateFilters);
 
@@ -391,7 +393,7 @@ function updateSearchGridLayout(noteType) {
   const behavior = getNoteTypeConfig(noteType).behavior || 'generic';
   if (behavior === 'generic') {
     grid.classList.add('layout-notes');
-  } else if (behavior === 'training') {
+  } else if (behavior === 'training' || behavior === 'diary') {
     grid.classList.add('layout-training');
   } else if (behavior === 'quote') {
     grid.classList.add('layout-quote');
@@ -421,11 +423,14 @@ function updateSearchHeaderTitle(currentNoteTypeFilter) {
 /**
  * Update the training types dropdown label based on view
  */
-function updateTrainingTypesDropdownLabel(isAllNotesView) {
+function updateTrainingTypesDropdownLabel(isAllNotesView, currentNoteTypeFilter = null) {
   const label = document.getElementById('trainingTypesFilterLabel');
   if (!label) return;
 
-  label.textContent = isAllNotesView ? '📚 Types/Sources' : '🏋️ Training Types';
+  const behavior = currentNoteTypeFilter ? getNoteTypeConfig(currentNoteTypeFilter).behavior : null;
+  label.textContent = isAllNotesView
+    ? '📚 Types/Sources'
+    : (behavior === 'training' ? '🏋️ Training Types' : '🏷️ Types');
 }
 
 // ============= DROPDOWN HANDLERS =============

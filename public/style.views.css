@@ -260,6 +260,12 @@
   align-items: stretch;
 }
 
+/* Calendar mode keeps the calendar compact while the opened note grows to its
+ * natural height.  List mode still uses the standard stretched split layout. */
+.lp-layout-calendar {
+  align-items: start;
+}
+
 /* ── Left: list card ── */
 .lp-list {
   background: var(--surface);
@@ -579,6 +585,35 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.lp-layout-calendar .lp-pane {
+  align-self: start;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+.lp-layout-calendar .lp-pane-shell,
+.lp-layout-calendar .lp-pane-editor-wrap,
+.lp-layout-calendar #lpPaneQuill {
+  display: block;
+  flex: none !important;
+  height: auto !important;
+  max-height: none !important;
+  min-height: 0;
+  overflow: visible !important;
+}
+
+.lp-layout-calendar #lpPaneQuill .ql-container.ql-snow,
+.lp-layout-calendar #lpPaneQuill .ql-editor {
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+.lp-layout-calendar #lpPaneQuill .ql-editor {
+  min-height: 12rem !important;
 }
 .lp-layout-titled .lp-pane-empty {
   padding: 0.5rem;
@@ -1136,6 +1171,14 @@
 .tc-day-today {
   outline: 2px solid var(--accent, #3b82f6);
   outline-offset: -2px;
+}
+.tc-day-selected {
+  background: color-mix(in srgb, var(--link-color, #16dba5) 18%, transparent);
+  border-color: var(--link-color, #16dba5);
+  box-shadow: inset 0 0 0 2px var(--link-color, #16dba5);
+}
+.tc-day-selected.tc-day-today {
+  outline-offset: -5px;
 }
 
 .tc-day-num {
