@@ -85,14 +85,10 @@
   --settings-general-cols: minmax(0, 1fr) minmax(0, 1fr);
 }
 
-/* General tab: compact sections stacked left, colors top-right */
+/* General tab: compact sections align with the same top rhythm as other tabs. */
 .settings-general-top {
-  display: grid;
-  grid-template-columns: var(--settings-general-cols);
-  gap: var(--settings-general-gap);
-  align-items: start;
-  justify-items: stretch;
-  margin-top: 0.5rem;
+  display: block;
+  margin-top: 1.25rem;
 }
 
 #settingsTabGeneral > .settings-row {
@@ -101,8 +97,8 @@
 }
 
 .settings-general-compact-col {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: var(--settings-general-cols);
   gap: var(--settings-general-gap);
   min-width: 0;
   width: 100%;
@@ -116,21 +112,8 @@
   box-sizing: border-box;
 }
 
-.settings-general-colors-col {
-  min-width: 0;
-  width: 100%;
-}
-
-.settings-general-colors-col > .settings-section {
-  margin: 0;
-  min-width: 0;
-  width: 100%;
-  box-sizing: border-box;
-  overflow-x: auto;
-}
-
 @media (max-width: 1100px) {
-  .settings-general-top {
+  .settings-general-compact-col {
     grid-template-columns: 1fr;
   }
 }
@@ -289,6 +272,7 @@ details.settings-section-desc .settings-section-lead {
   color: var(--text-secondary);
   font-style: italic;
   margin-right: 2px;
+  flex: 1 0 100%;
 }
 
 .per-type-item {

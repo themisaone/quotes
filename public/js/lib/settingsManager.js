@@ -222,7 +222,7 @@ export function renderPerTypeOverrides(containerId, settingKey, globalKey, callb
   const noteTypes = globalSettings?.noteTypes || [];
   const globalVal = globalSettings?.[globalKey] === true;
 
-  container.innerHTML = '<span class="per-type-label">Per type:</span>';
+  container.innerHTML = `<span class="per-type-label">Per-type effective values (highlighted = override):</span>`;
 
   noteTypes.forEach(nt => {
     const override = nt.displaySettings?.[settingKey];
@@ -231,7 +231,9 @@ export function renderPerTypeOverrides(containerId, settingKey, globalKey, callb
 
     const lbl = document.createElement('label');
     lbl.className = 'per-type-item' + (isOverridden ? ' per-type-overridden' : '');
-    lbl.title = isOverridden ? `Override active (global default: ${globalVal})` : 'Same as global default';
+    lbl.title = isOverridden
+      ? `Override active: ${effectiveVal ? 'on' : 'off'} (default: ${globalVal ? 'on' : 'off'})`
+      : `Uses default: ${globalVal ? 'on' : 'off'}`;
     lbl.innerHTML = `<input type="checkbox" ${effectiveVal ? 'checked' : ''}><span>${nt.icon} ${nt.label}</span>`;
 
     const cb = lbl.querySelector('input');
@@ -239,8 +241,8 @@ export function renderPerTypeOverrides(containerId, settingKey, globalKey, callb
       await updateNoteTypeDisplaySetting(nt.value, settingKey, e.target.checked);
       lbl.classList.toggle('per-type-overridden', e.target.checked !== globalVal);
       lbl.title = e.target.checked !== globalVal
-        ? `Override active (global default: ${globalVal})`
-        : 'Same as global default';
+        ? `Override active: ${e.target.checked ? 'on' : 'off'} (default: ${globalVal ? 'on' : 'off'})`
+        : `Uses default: ${globalVal ? 'on' : 'off'}`;
       if (callbacks?.loadQuotes) callbacks.loadQuotes();
     });
 
@@ -278,7 +280,6 @@ async function migrateLocalStorageToFile() {
     localStorage.getItem('enableTagOperations') !== null ||
     localStorage.getItem('enableQuoteMetaSearches') !== null ||
     localStorage.getItem('displayQuotesByRealSize') !== null ||
-    localStorage.getItem('displayImageQuotesLong') !== null ||
     localStorage.getItem('showLongQuotesExpanded') !== null ||
     localStorage.getItem('displayScoreInCards') !== null ||
     localStorage.getItem('buttonColor') !== null;
@@ -320,10 +321,6 @@ async function migrateLocalStorageToFile() {
   
   if (localStorage.getItem('displayQuotesByRealSize') !== null) {
     migratedSettings.displayQuotesByRealSize = localStorage.getItem('displayQuotesByRealSize') === 'true';
-  }
-  
-  if (localStorage.getItem('displayImageQuotesLong') !== null) {
-    migratedSettings.displayImageQuotesLong = localStorage.getItem('displayImageQuotesLong') === 'true';
   }
   
   if (localStorage.getItem('showLongQuotesExpanded') !== null) {
@@ -388,7 +385,6 @@ function applySettingsToUI() {
     { id: 'enableTagOperations', setting: 'enableTagOperations' },
     { id: 'enableQuoteMetaSearches', setting: 'enableQuoteMetaSearches' },
     { id: 'displayQuotesByRealSize', setting: 'displayQuotesByRealSize' },
-    { id: 'displayImageQuotesLong', setting: 'displayImageQuotesLong' },
     { id: 'showLongQuotesExpanded', setting: 'showLongQuotesExpanded' },
     { id: 'displayScoreInCards', setting: 'displayScoreInCards' },
     { id: 'stretchImagesWhenEmpty', setting: 'stretchImagesWhenEmpty' },
@@ -1331,9 +1327,25 @@ export function toggleTagOperationsPanel(show) {
 // ============= SETTINGS INITIALIZATION =============
 
 const SETTINGS_OPTIONS_TAB_KEY = 'settingsOptionsTab';
-const VALID_SETTINGS_TABS = new Set(['general', 'data-management', 'services', 'maintenance', 'note-types']);
+const VALID_SETTINGS_TABS = new Set(['general', 'colors', 'data-management', 'services', 'maintenance', 'note-types']);
+
+function moveColorSettingsToTab() {
+  const colorsRow = document.getElementById('settingsColorsRow');
+  const colorSection = document.querySelector('.settings-section-colors');
+  if (!colorsRow || !colorSection || colorSection.parentElement === colorsRow) return;
+
+  colorSection.classList.add('settings-section-wide');
+  colorsRow.appendChild(colorSection);
+
+  const oldColumn = document.querySelector('.settings-general-colors-col');
+  if (oldColumn && !oldColumn.querySelector('.settings-section-colors')) {
+    oldColumn.remove();
+  }
+}
 
 function initializeSettingsTabs() {
+  moveColorSettingsToTab();
+
   const tabBtns = document.querySelectorAll('.settings-tab-btn[data-settings-tab]');
   const panels = document.querySelectorAll('.settings-tab-panel[data-settings-panel]');
   if (!tabBtns.length || !panels.length) return;
@@ -1382,7 +1394,6 @@ export function initializeSettings(callbacks = {}) {
   const enableTagOpsCheckbox = getElementByIdSafe('enableTagOperations');
   const enableQuoteMetaSearchesCheckbox = getElementByIdSafe('enableQuoteMetaSearches');
   const displayQuotesByRealSizeCheckbox = getElementByIdSafe('displayQuotesByRealSize');
-  const displayImageQuotesLongCheckbox = getElementByIdSafe('displayImageQuotesLong');
   const showLongQuotesExpandedCheckbox = getElementByIdSafe('showLongQuotesExpanded');
   const displayScoreInCardsCheckbox = getElementByIdSafe('displayScoreInCards');
   const downscaleQuoteImagesCheckbox = getElementByIdSafe('downscaleQuoteImages');
@@ -1560,18 +1571,6 @@ export function initializeSettings(callbacks = {}) {
       applyQuoteSizingMode(isEnabled);
       // Re-render per-type rows so override indicators update relative to new global
       renderPerTypeOverrides('perTypeOverrides-displayByRealSize', 'displayByRealSize', 'displayQuotesByRealSize', { loadQuotes });
-    });
-  }
-
-  // Display Image Notes Full Width setting
-  if (displayImageQuotesLongCheckbox) {
-    const imageLongEnabled = globalSettings?.displayImageQuotesLong === true;
-    displayImageQuotesLongCheckbox.checked = imageLongEnabled;
-
-    displayImageQuotesLongCheckbox.addEventListener('change', (e) => {
-      const isEnabled = e.target.checked;
-      updateSetting('displayImageQuotesLong', isEnabled);
-      if (loadQuotes) loadQuotes();
     });
   }
 

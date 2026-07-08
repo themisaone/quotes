@@ -73,7 +73,7 @@ import {
   getNoteTypeDefaultDisplayMode,
   initializeSettings as initializeSettingsLib,
   refreshSettingsForOptionsPanel
-} from './js/lib/settingsManager.js?v=20260626optiontabs1';
+} from './js/lib/settingsManager.js?v=20260708displaydefaults1';
 
 import {
   loadServicesPanel,
@@ -90,7 +90,7 @@ import {
   setupSourceModalHandlers
 } from './js/lib/sourceModal.js?v=20260512modalshownotes';
 
-import { initDedupSuspectsPanel } from './js/lib/dedupSuspectsPanel.js?v=20260510deduplayout';
+import { initDedupSuspectsPanel } from './js/lib/dedupSuspectsPanel.js?v=20260708noimagewide1';
 
 import {
   loadTags as loadTagsLib,
@@ -3359,13 +3359,6 @@ function displayQuotes(quotes) {
     : getDisplaySetting('displayByRealSize', currentNoteTypeFilter);
   applyQuoteSizingMode(realSizeEnabled);
 
-  const imageLongEnabled = currentSettings?.displayImageQuotesLong === true;
-  if (imageLongEnabled) {
-    document.querySelectorAll('.quote-card.has-image').forEach((card) => {
-      card.classList.add('expanded-card');
-    });
-  }
-
   // In "All notes" (currentNoteTypeFilter is null), resolve showLongExpanded per card
   // so that per-type overrides (e.g. training = false) are respected even in the mixed view.
   document.querySelectorAll('.quote-text.collapsible').forEach((quoteText) => {
@@ -6388,7 +6381,6 @@ document.addEventListener('DOMContentLoaded', () => {
     toggleCardExpand,
     getSelectionMode: () => selectionMode,
     toggleNoteSelection,
-    getGlobalSettings,
     openAuthorModal: (id, name) => {
       void openAuthorModalLib(id, name, null);
     },

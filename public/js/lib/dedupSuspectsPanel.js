@@ -14,7 +14,6 @@ import { escapeHtml } from './utils.js?v=20260703color1';
  * @param {function(HTMLElement): void} opts.toggleCardExpand
  * @param {function(): boolean} opts.getSelectionMode
  * @param {function(HTMLElement, string): void} opts.toggleNoteSelection
- * @param {function(): Object} opts.getGlobalSettings
  * @param {function(string, string): void} [opts.openAuthorModal]
  * @param {function(string, string, string): void} [opts.openSourceModal]
  */
@@ -27,7 +26,6 @@ export function initDedupSuspectsPanel(opts) {
     toggleCardExpand,
     getSelectionMode,
     toggleNoteSelection,
-    getGlobalSettings,
     openAuthorModal,
     openSourceModal,
   } = opts;
@@ -63,9 +61,6 @@ export function initDedupSuspectsPanel(opts) {
       return;
     }
 
-    const gs = getGlobalSettings() || {};
-    const imageLong = gs.displayImageQuotesLong === true;
-
     root.innerHTML = groups
       .map((g, gi) => {
         const notes = g.notes || [];
@@ -82,12 +77,6 @@ export function initDedupSuspectsPanel(opts) {
         </div>`;
       })
       .join('');
-
-    if (imageLong) {
-      root.querySelectorAll('.quote-card.has-image').forEach((c) => {
-        c.classList.add('expanded-card');
-      });
-    }
 
     root.querySelectorAll('.quote-card').forEach((card) => wireQuoteCard(card));
     root.querySelectorAll('.author-link').forEach((link) => {
