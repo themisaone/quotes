@@ -120,6 +120,89 @@ function syncModesForSettings(settings, {
   return modesData;
 }
 
+function mergeSubTypes(existingSubTypes, defaultSubTypes) {
+  let changed = !Array.isArray(existingSubTypes);
+  const subTypes = Array.isArray(existingSubTypes)
+    ? existingSubTypes.map((subType) => ({ ...subType }))
+    : [];
+
+  for (const defaultSubType of defaultSubTypes || []) {
+    const existing = subTypes.find((subType) => subType?.value === defaultSubType.value);
+    if (!existing) {
+      subTypes.push({ ...defaultSubType });
+      changed = true;
+      continue;
+    }
+
+    for (const key of ["label", "icon"]) {
+      if (existing[key] === undefined && defaultSubType[key] !== undefined) {
+        existing[key] = defaultSubType[key];
+        changed = true;
+      }
+    }
+  }
+
+  if (!subTypes.some((subType) => subType?.isDefault === true)) {
+    const defaultAssorted = subTypes.find((subType) => subType?.value === "ASSORTED");
+    if (defaultAssorted) {
+      defaultAssorted.isDefault = true;
+      changed = true;
+    }
+  }
+
+  return { subTypes, changed };
+}
+
+function normalizeSettingsForRuntime(settings, defaults = createDefaultSettings(), {
+  requiredTypeValues = [],
+} = {}) {
+  if (!settings || typeof settings !== "object" || !Array.isArray(settings.noteTypes)) {
+    return { settings, changed: false };
+  }
+
+  let changed = false;
+  const requiredTypes = new Set(requiredTypeValues);
+  const defaultDnevnik = defaults.noteTypes.find((type) => type.value === "DNEVNIK");
+  let currentDnevnik = settings.noteTypes.find((type) => type?.value === "DNEVNIK");
+
+  if (!currentDnevnik && defaultDnevnik && requiredTypes.has("DNEVNIK")) {
+    currentDnevnik = { ...defaultDnevnik };
+    settings.noteTypes.push(currentDnevnik);
+    changed = true;
+  }
+
+  if (defaultDnevnik && currentDnevnik) {
+    if (!currentDnevnik.behavior || currentDnevnik.behavior === "generic") {
+      currentDnevnik.behavior = defaultDnevnik.behavior;
+      changed = true;
+    }
+
+    if (currentDnevnik.behavior === "diary") {
+      const validDiaryDisplayModes = new Set(["calendar", "list", "cards"]);
+      if (!validDiaryDisplayModes.has(currentDnevnik.defaultDisplayMode)) {
+        currentDnevnik.defaultDisplayMode = defaultDnevnik.defaultDisplayMode;
+        changed = true;
+      }
+
+      const merged = mergeSubTypes(currentDnevnik.subTypes, defaultDnevnik.subTypes);
+      if (merged.changed) {
+        currentDnevnik.subTypes = merged.subTypes;
+        changed = true;
+      }
+    }
+  }
+
+  return { settings, changed };
+}
+
+function getModeTypeValues(modesFile) {
+  try {
+    return Object.values(loadModesFromFile(modesFile)).flat().filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
 async function cleanupStaleSubtypes(settings, pool, logger = console) {
   for (const nt of settings.noteTypes) {
     if (!Array.isArray(nt.subTypes) || nt.subTypes.length === 0) continue;
@@ -176,7 +259,15 @@ function registerSettingsRoutes(app, {
       const defaultSettings = createDefaultSettings();
       const settingsFile = getSettingsFile();
       if (fs.existsSync(settingsFile)) {
-        return res.json(JSON.parse(fs.readFileSync(settingsFile, "utf8")));
+        const parsed = JSON.parse(fs.readFileSync(settingsFile, "utf8"));
+        const normalized = normalizeSettingsForRuntime(parsed, defaultSettings, {
+          requiredTypeValues: getModeTypeValues(modesFile),
+        });
+        if (normalized.changed) {
+          fs.writeFileSync(settingsFile, JSON.stringify(normalized.settings, null, 2));
+          logger.log(`⚙️  Updated legacy runtime settings in ${settingsFile}`);
+        }
+        return res.json(normalized.settings);
       }
 
       const { vaultPath } = readLocalConfig();
@@ -226,11 +317,12 @@ function registerSettingsRoutes(app, {
       }
 
       const settingsFile = getSettingsFile();
+      const normalized = normalizeSettingsForRuntime(settings);
       fs.mkdirSync(path.dirname(settingsFile), { recursive: true });
-      fs.writeFileSync(settingsFile, JSON.stringify(settings, null, 2));
+      fs.writeFileSync(settingsFile, JSON.stringify(normalized.settings, null, 2));
 
       try {
-        syncModesForSettings(settings, {
+        syncModesForSettings(normalized.settings, {
           modesFile,
           modesState,
           activeModeName: getActiveModeName?.(),
@@ -241,12 +333,12 @@ function registerSettingsRoutes(app, {
       }
 
       try {
-        await cleanupStaleSubtypes(settings, pool, logger);
+        await cleanupStaleSubtypes(normalized.settings, pool, logger);
       } catch (cleanupErr) {
         logger.warn("⚠️  Could not clean up stale sub-types in notes:", cleanupErr.message);
       }
 
-      res.json({ success: true, settings });
+      res.json({ success: true, settings: normalized.settings });
     } catch (error) {
       logger.error("Error saving settings:", error);
       res.status(500).json({ error: "Failed to save settings" });
@@ -257,6 +349,7 @@ function registerSettingsRoutes(app, {
 module.exports = {
   createDefaultSettings,
   syncModesForSettings,
+  normalizeSettingsForRuntime,
   cleanupStaleSubtypes,
   registerSettingsRoutes,
 };

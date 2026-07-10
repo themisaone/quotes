@@ -7,6 +7,7 @@ const test = require("node:test");
 const {
   cleanupStaleSubtypes,
   createDefaultSettings,
+  normalizeSettingsForRuntime,
   registerSettingsRoutes,
 } = require("../src/routes/settings");
 
@@ -153,6 +154,84 @@ test("GET /api/settings falls back to default file when vault path is missing", 
   assert.equal(response.status, 200);
   assert.deepEqual(response.body, { noteTypes: [{ value: "fallback" }] });
   assert.equal(fs.existsSync(deps.getLocalConfig().vaultPath), false);
+});
+
+test("GET /api/settings upgrades legacy DNEVNIK runtime settings", async (t) => {
+  const deps = makeSettingsDeps(t);
+  const routes = makeRouteCollector(deps.options);
+  fs.writeFileSync(deps.defaultSettingsFile, JSON.stringify({
+    noteTypes: [
+      {
+        value: "DNEVNIK",
+        label: "Dnevnik",
+        icon: "📕",
+        behavior: "generic",
+        displaySettings: { showLongExpanded: true },
+      },
+    ],
+  }));
+
+  const response = await invoke(routes, { routePath: "/api/settings" });
+  const dnevnik = response.body.noteTypes.find((type) => type.value === "DNEVNIK");
+  const persisted = JSON.parse(fs.readFileSync(deps.defaultSettingsFile, "utf8"));
+  const persistedDnevnik = persisted.noteTypes.find((type) => type.value === "DNEVNIK");
+
+  assert.equal(response.status, 200);
+  assert.equal(dnevnik.behavior, "diary");
+  assert.equal(dnevnik.icon, "📕");
+  assert.equal(dnevnik.defaultDisplayMode, "calendar");
+  assert.deepEqual(dnevnik.displaySettings, { showLongExpanded: true });
+  assert.deepEqual(
+    dnevnik.subTypes.map((type) => [type.value, type.label, type.isDefault === true]),
+    [["SLEEP", "Sleep", false], ["ASSORTED", "Assorted", true]],
+  );
+  assert.equal(persistedDnevnik.behavior, "diary");
+});
+
+test("normalizeSettingsForRuntime preserves custom DNEVNIK fields while adding diary contract", () => {
+  const settings = {
+    noteTypes: [
+      {
+        value: "DNEVNIK",
+        label: "Journal",
+        icon: "📔",
+        behavior: "diary",
+        subTypes: [{ value: "SLEEP", icon: "💤", label: "Rest" }],
+      },
+    ],
+  };
+
+  const { settings: normalized, changed } = normalizeSettingsForRuntime(settings);
+  const dnevnik = normalized.noteTypes[0];
+
+  assert.equal(changed, true);
+  assert.equal(dnevnik.label, "Journal");
+  assert.equal(dnevnik.icon, "📔");
+  assert.deepEqual(dnevnik.subTypes[0], { value: "SLEEP", icon: "💤", label: "Rest" });
+  assert.equal(dnevnik.subTypes[1].value, "ASSORTED");
+  assert.equal(dnevnik.subTypes[1].isDefault, true);
+});
+
+test("GET /api/settings restores DNEVNIK when existing settings predate the mode", async (t) => {
+  const deps = makeSettingsDeps(t, {
+    modes: {
+      DEFAULT: ["quote"],
+      DNEVNIK: ["DNEVNIK"],
+      ALL: ["quote", "DNEVNIK"],
+    },
+  });
+  const routes = makeRouteCollector(deps.options);
+  fs.writeFileSync(deps.defaultSettingsFile, JSON.stringify({
+    noteTypes: [{ value: "quote", label: "Quotes", behavior: "quote" }],
+  }));
+
+  const response = await invoke(routes, { routePath: "/api/settings" });
+  const dnevnik = response.body.noteTypes.find((type) => type.value === "DNEVNIK");
+
+  assert.equal(response.status, 200);
+  assert.equal(dnevnik.behavior, "diary");
+  assert.equal(dnevnik.defaultDisplayMode, "calendar");
+  assert.deepEqual(dnevnik.subTypes.map((type) => type.value), ["SLEEP", "ASSORTED"]);
 });
 
 test("PUT /api/settings rejects invalid settings payloads", async (t) => {
