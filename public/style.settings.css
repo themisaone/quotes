@@ -247,11 +247,55 @@ details.settings-section-desc .settings-section-lead {
   cursor: pointer;
 }
 
+.setting-select-label {
+  flex-wrap: wrap;
+  justify-content: space-between;
+  cursor: default;
+}
+
+.settings-select {
+  height: var(--d-btn-height);
+  min-width: 11rem;
+  padding: 0 var(--d-pad-sm);
+  border: 1px solid var(--input-border, var(--border));
+  border-radius: var(--bradius-small, 6px);
+  background-color: var(--input-bg);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: var(--d-font-base);
+}
+
+.settings-select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.app-font-select {
+  flex: 0 1 18rem;
+  max-width: 100%;
+}
+
+.app-font-preview {
+  margin-top: 0.7rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--bradius-small, 6px);
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-size: 1.05rem;
+  line-height: 1.35;
+}
+
 .setting-description {
   margin: 0.5rem 0 0 2.25rem;
   font-size: 0.875rem;
   color: var(--text-secondary);
   line-height: 1.5;
+}
+
+.setting-select-description {
+  margin-left: 0;
 }
 
 /* Per-type override checkboxes row (under relevant display settings) */

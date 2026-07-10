@@ -35,7 +35,7 @@ import {
   renderPaneAttachments,
   resetPaneAttachments,
 } from './paneAttachments.js?v=20260605paneatt7';
-import { getNoteTypeDefaultDisplayMode } from './settingsManager.js?v=20260605optiontabs5';
+import { getNoteTypeDefaultDisplayMode } from './settingsManager.js?v=20260710fontselect3';
 
 // ─────────────────────────────────────────────────────────────
 // Internal state (reset on every renderListPaneView call)

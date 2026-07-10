@@ -19,6 +19,50 @@ import { escapeHtml } from './utils.js?v=20260703color1';
 
 let globalSettings = null;
 
+const DEFAULT_APP_FONT = 'system';
+const APP_FONT_OPTIONS = Object.freeze([
+  {
+    value: 'system',
+    label: 'System Sans (current)',
+    stack: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+  },
+  {
+    value: 'segoe',
+    label: 'Noto Sans / Segoe UI',
+    stack: '"Noto Sans", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif',
+  },
+  {
+    value: 'arial',
+    label: 'Liberation Sans / Arial',
+    stack: '"Liberation Sans", Arial, Helvetica, sans-serif',
+  },
+  {
+    value: 'verdana',
+    label: 'DejaVu Sans / Verdana',
+    stack: '"DejaVu Sans", Verdana, Geneva, sans-serif',
+  },
+  {
+    value: 'trebuchet',
+    label: 'Ubuntu / Trebuchet MS',
+    stack: 'Ubuntu, "Trebuchet MS", "Segoe UI", sans-serif',
+  },
+  {
+    value: 'georgia',
+    label: 'Noto Serif / Georgia',
+    stack: '"Noto Serif", Georgia, "Times New Roman", Times, serif',
+  },
+  {
+    value: 'times',
+    label: 'Liberation Serif / Times',
+    stack: '"Liberation Serif", "Times New Roman", Times, serif',
+  },
+  {
+    value: 'mono',
+    label: 'Monospace',
+    stack: '"SFMono-Regular", Consolas, "Liberation Mono", "Courier New", monospace',
+  },
+]);
+
 // ============= CORE SETTINGS =============
 
 /**
@@ -377,6 +421,13 @@ function applySettingsToUI() {
   // Apply compact mode
   if (globalSettings.compactMode) {
     document.body.classList.add('compact-mode');
+  }
+
+  const activeFont = applyAppFont(globalSettings.appFont || DEFAULT_APP_FONT);
+  const appFontSelect = getElementByIdSafe('appFontSelect', 'applyCoreSettings');
+  if (appFontSelect) {
+    populateAppFontSelect(appFontSelect);
+    appFontSelect.value = activeFont;
   }
   
   // Apply all checkbox settings
@@ -1002,6 +1053,34 @@ export function setupNoteTypeManagementListeners(rebuildMenuFn) {
   });
 }
 
+// ============= FONT MANAGEMENT =============
+
+function getAppFontOption(fontKey) {
+  return APP_FONT_OPTIONS.find((option) => option.value === fontKey) || APP_FONT_OPTIONS[0];
+}
+
+function populateAppFontSelect(select) {
+  if (!select || select.dataset.fontOptionsReady === 'true') return;
+
+  select.innerHTML = '';
+  APP_FONT_OPTIONS.forEach((font) => {
+    const option = document.createElement('option');
+    option.value = font.value;
+    option.textContent = font.label;
+    option.style.fontFamily = font.stack;
+    select.appendChild(option);
+  });
+  select.dataset.fontOptionsReady = 'true';
+}
+
+function applyAppFont(fontKey) {
+  const font = getAppFontOption(fontKey);
+  document.documentElement.style.setProperty('--app-font-family', font.stack);
+  const preview = document.getElementById('appFontPreview');
+  if (preview) preview.style.fontFamily = font.stack;
+  return font.value;
+}
+
 // ============= COLOR MANAGEMENT =============
 
 /**
@@ -1397,6 +1476,17 @@ export function initializeSettings(callbacks = {}) {
   const showLongQuotesExpandedCheckbox = getElementByIdSafe('showLongQuotesExpanded');
   const displayScoreInCardsCheckbox = getElementByIdSafe('displayScoreInCards');
   const downscaleQuoteImagesCheckbox = getElementByIdSafe('downscaleQuoteImages');
+  const appFontSelect = getElementByIdSafe('appFontSelect');
+
+  if (appFontSelect) {
+    populateAppFontSelect(appFontSelect);
+    appFontSelect.value = applyAppFont(globalSettings?.appFont || DEFAULT_APP_FONT);
+    appFontSelect.addEventListener('change', (e) => {
+      const fontKey = applyAppFont(e.target.value);
+      e.target.value = fontKey;
+      updateSetting('appFont', fontKey);
+    });
+  }
   
   // Tag Operations setting
   if (enableTagOpsCheckbox) {

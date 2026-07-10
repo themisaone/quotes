@@ -52,6 +52,7 @@
   --bradius: 8px; /* 12 */
   --bradius-medium: 8px; /* 10 */
   --bradius-small: 8px;
+  --app-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 
   /* ── Desktop size knobs — change these to rescale the desktop layout ──────
      Values are 10% smaller than the original "full" sizes.
@@ -87,10 +88,15 @@
 }
 
 body {
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
-    Arial, sans-serif;
+  font-family: var(--app-font-family);
   background: linear-gradient(135deg, #e8eef3 0%, #f0f4f8 50%, #e5ecf1 100%);
   color: var(--text-primary);
   line-height: 1.6;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
 }

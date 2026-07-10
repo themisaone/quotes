@@ -73,7 +73,7 @@ import {
   getNoteTypeDefaultDisplayMode,
   initializeSettings as initializeSettingsLib,
   refreshSettingsForOptionsPanel
-} from './js/lib/settingsManager.js?v=20260708displaydefaults1';
+} from './js/lib/settingsManager.js?v=20260710fontselect3';
 
 import {
   loadServicesPanel,

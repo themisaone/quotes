@@ -61,6 +61,7 @@ function createDefaultSettings() {
       },
     ],
     downscaleQuoteImages: true,
+    appFont: "system",
     externalStorageThreshold: 1,
     compactMode: false,
     enableTagOperations: true,

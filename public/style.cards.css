@@ -255,6 +255,7 @@
 
 .quote-text {
   flex: 1;
+  font-family: var(--app-font-family) !important;
   font-size: var(--d-font-lg);
   font-style: italic;
   color: var(--text-primary);
@@ -465,6 +466,11 @@
   padding-left: 1.5em;
 }
 
+.quote-text :not(pre):not(code),
+.ql-editor :not(pre):not(code) {
+  font-family: inherit !important;
+}
+
 /* Quill editor container */
 #quoteEditor {
   width: 100% !important; /* Match note field width */
@@ -479,7 +485,7 @@
 }
 
 .ql-container {
-  font-family: inherit;
+  font-family: var(--app-font-family) !important;
   font-size: 1rem;
   height: calc(6.4rem + 24px) !important; /* 4 lines + padding (toolbar is separate) */
   width: 100% !important;
@@ -542,6 +548,7 @@
 }
 
 .ql-editor {
+  font-family: var(--app-font-family) !important;
   min-height: 100% !important;
   max-height: 100% !important;
   height: 100% !important;
