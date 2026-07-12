@@ -1172,13 +1172,15 @@
 
 }
 
-/* List-pane on medium: Training 50/50; other types 30/70 (more pane for Quill) */
+/* List-pane on medium: list views use the tuned split below; calendar keeps
+   the older 50/50 split for a wider calendar grid. */
 @media (min-width: 768px) and (max-width: 1100px) {
-  .lp-layout {
-    grid-template-columns: 1fr 1fr;
-  }
+  .lp-layout,
   .lp-layout.lp-layout-titled {
-    grid-template-columns: 3fr 7fr;
+    grid-template-columns: 10fr 20fr;
+  }
+  .lp-layout.lp-layout-calendar {
+    grid-template-columns: 1fr 1fr;
   }
 }
 

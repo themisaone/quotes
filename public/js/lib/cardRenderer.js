@@ -503,7 +503,10 @@ export function createQuoteCard(note, currentNoteTypeFilter, getTrainingTypes, g
     </div>`;
   })();
 
-  const showNoTitle = globalSettings?.displayEmptyTitleInCard === true && noteType !== 'training';
+  const configuredNoteType = globalSettings?.noteTypes?.find(type => type.value === noteType);
+  const titleBehavior = configuredNoteType?.behavior || config.behavior;
+  const suppressEmptyTitle = titleBehavior === 'training' || titleBehavior === 'diary' || noteType === 'training';
+  const showNoTitle = globalSettings?.displayEmptyTitleInCard === true && !suppressEmptyTitle;
   const titleHtml = (note.note_title && (note.note_title !== 'No title' || showNoTitle))
     ? `<div class="card-note-title">${escapeHtml(note.note_title)}</div>`
     : '';

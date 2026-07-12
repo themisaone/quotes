@@ -38,7 +38,7 @@ import {
 
 import {
   createQuoteCard as createQuoteCardLib
-} from './js/lib/cardRenderer.js?v=20260605optiontabs7';
+} from './js/lib/cardRenderer.js?v=20260712emptytitle1';
 
 import {
   setupAddModal,
@@ -111,7 +111,7 @@ import {
   setCurrentPage as setLibCurrentPage,
   setQuotesPerPage,
   getQuotesPerPage
-} from './js/lib/displayManager.js?v=20260628searchscope1';
+} from './js/lib/displayManager.js?v=20260712emptytitle1';
 
 import {
   populateTypeFilterCheckboxes as populateTypeFilterCheckboxesLib,
@@ -187,18 +187,18 @@ import {
   setTrainingSubMode,
   getListPanePageSize,
   restoreTrainingDateFiltersToBar
-} from './js/lib/listPaneView.js?v=20260708calendarselect1';
+} from './js/lib/listPaneView.js?v=20260712paneautofocus2';
 import {
   configurePaneEditor,
   syncPaneTextToModalHidden,
   applyPaneSavedNote,
   getPaneEditorHtml,
   getPaneEditorNoteId,
-} from './js/lib/paneEditor.js?v=20260703nofullscreen1';
+} from './js/lib/paneEditor.js?v=20260712paneautofocus2';
 import {
   configurePaneAttachments,
   renderPaneAttachments,
-} from './js/lib/paneAttachments.js?v=20260605paneatt7';
+} from './js/lib/paneAttachments.js?v=20260712paneactions2';
 // They are kept as local functions due to tight coupling with app-specific state
 
 // ── Round-1 extracted modules (May 2026 split — see lib/README.md) ────────

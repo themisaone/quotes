@@ -18,6 +18,30 @@ let _pendingSavedNote = null;
 /** Explicit UI dirty flag — Quill HTML comparison alone is unreliable after save. */
 let _uiDirty = false;
 
+function _isCompactViewport() {
+  return typeof window !== 'undefined' && window.matchMedia
+    ? window.matchMedia('(max-width: 1100px)').matches
+    : typeof window !== 'undefined' && window.innerWidth <= 1100;
+}
+
+function _blurPaneEditorOnCompactViewport() {
+  if (!_quill || !_isCompactViewport()) return;
+
+  const blur = () => {
+    _quill.blur();
+    if (_quill.root?.contains(document.activeElement)) {
+      document.activeElement.blur();
+    }
+  };
+
+  blur();
+  if (typeof requestAnimationFrame === 'function') {
+    requestAnimationFrame(blur);
+  } else {
+    setTimeout(blur, 0);
+  }
+}
+
 function _isEmptyHtml(html) {
   const t = (html || '').trim();
   return !t || t === '<p><br></p>' || t === '<p></p>';
@@ -132,6 +156,7 @@ function _loadNoteIntoEditor(note, pane) {
   _setPaneContent(html);
   _baselineHtml = _quill ? _quill.root.innerHTML : html;
   _markEditorClean();
+  _blurPaneEditorOnCompactViewport();
 }
 
 function _wirePaneQuill() {
@@ -151,10 +176,25 @@ const PANE_SHELL_HTML = `
         <div class="lp-pane-title note-title-heading" id="lpPaneTitle"></div>
         <div class="lp-pane-title-actions">
           <span class="lp-pane-score-slot" id="lpPaneScore"></span>
-          <button type="button" class="lp-pane-attach-btn" id="lpPaneAddAttach">📎 Add attachment</button>
-          <button type="button" class="lp-pane-attach-btn" id="lpPaneEncryptAttach" title="Encrypt a file and attach it">🔒 Encrypt &amp; attach</button>
-          <button type="button" class="lp-pane-props-btn" id="lpPropsBtn" title="Tags, author, source, and other properties (not text or attachments)">⚙ Properties</button>
-          <button type="button" class="lp-pane-save-btn" id="lpSaveBtn" title="Save note text" disabled>💾 Save</button>
+          <button type="button" class="lp-pane-attach-btn" id="lpPaneAddAttach" title="Add an attachment" aria-label="Add an attachment">
+            <span class="lp-pane-btn-icon" aria-hidden="true">📎</span>
+            <span class="lp-pane-btn-label lp-pane-btn-label-full">Add attachment</span>
+            <span class="lp-pane-btn-label lp-pane-btn-label-short">Add</span>
+          </button>
+          <button type="button" class="lp-pane-attach-btn" id="lpPaneEncryptAttach" title="Encrypt a file and attach it" aria-label="Encrypt a file and attach it">
+            <span class="lp-pane-btn-icon" aria-hidden="true">🔒</span>
+            <span class="lp-pane-btn-label lp-pane-btn-label-full">Encrypt &amp; attach</span>
+            <span class="lp-pane-btn-label lp-pane-btn-label-short">Encrypt</span>
+          </button>
+          <button type="button" class="lp-pane-props-btn" id="lpPropsBtn" title="Tags, author, source, and other properties (not text or attachments)" aria-label="Properties">
+            <span class="lp-pane-btn-icon" aria-hidden="true">⚙</span>
+            <span class="lp-pane-btn-label lp-pane-btn-label-full">Properties</span>
+            <span class="lp-pane-btn-label lp-pane-btn-label-short">Props</span>
+          </button>
+          <button type="button" class="lp-pane-save-btn" id="lpSaveBtn" title="Save note text" aria-label="Save note text" disabled>
+            <span class="lp-pane-btn-icon" aria-hidden="true">💾</span>
+            <span class="lp-pane-btn-label">Save</span>
+          </button>
         </div>
       </div>
       <div class="lp-pane-meta" id="lpPaneMeta"></div>

@@ -66,6 +66,14 @@ function _openAttachment(att, noteId) {
   _callbacks.showFull?.(full, noteId, type);
 }
 
+function _setPaneActionLabel(btn, { icon, full, short }) {
+  btn.innerHTML = `
+    <span class="lp-pane-btn-icon" aria-hidden="true">${icon}</span>
+    <span class="lp-pane-btn-label lp-pane-btn-label-full">${full}</span>
+    <span class="lp-pane-btn-label lp-pane-btn-label-short">${short}</span>
+  `;
+}
+
 /** Upgrade older pane shells (preview strip, toolbar below title). */
 function _migrateAttachLayout(pane) {
   const section = pane.querySelector('#lpPaneAttachSection');
@@ -99,8 +107,23 @@ function _updateToolbar(pane) {
   const hasAny = _attachments.length > 0;
   const addBtn = pane.querySelector('#lpPaneAddAttach');
   if (addBtn) {
-    addBtn.textContent = hasAny ? '📎 Add more' : '📎 Add attachment';
+    _setPaneActionLabel(addBtn, {
+      icon: '📎',
+      full: hasAny ? 'Add more' : 'Add attachment',
+      short: 'Add',
+    });
     addBtn.title = hasAny ? 'Add another attachment' : 'Add an attachment';
+    addBtn.setAttribute('aria-label', addBtn.title);
+  }
+  const encBtn = pane.querySelector('#lpPaneEncryptAttach');
+  if (encBtn) {
+    _setPaneActionLabel(encBtn, {
+      icon: '🔒',
+      full: 'Encrypt & attach',
+      short: 'Encrypt',
+    });
+    encBtn.title = 'Encrypt a file and attach it';
+    encBtn.setAttribute('aria-label', encBtn.title);
   }
 }
 

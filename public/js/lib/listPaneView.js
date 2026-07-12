@@ -23,18 +23,18 @@ import {
   buildPaneMetaSections,
   buildPaneScoreHtml,
   buildListPaneRowMetaHtml,
-} from './cardRenderer.js?v=20260605optiontabs7';
+} from './cardRenderer.js?v=20260712emptytitle1';
 import {
   ensurePaneEditorShell,
   loadPaneNote,
   confirmLeavePaneEditor,
   flushPendingPaneNoteSaved,
   resetPaneEditor,
-} from './paneEditor.js?v=20260703nofullscreen1';
+} from './paneEditor.js?v=20260712paneautofocus2';
 import {
   renderPaneAttachments,
   resetPaneAttachments,
-} from './paneAttachments.js?v=20260605paneatt7';
+} from './paneAttachments.js?v=20260712paneactions2';
 import { getNoteTypeDefaultDisplayMode } from './settingsManager.js?v=20260710fontselect3';
 
 // ─────────────────────────────────────────────────────────────
@@ -168,15 +168,24 @@ function getQuoteLabel(sourceType, getQuoteTypes) {
   } catch { return sourceType; }
 }
 
-function listPaneTitle(note) {
+function usesDateBasedTitleRule(note, opts = {}) {
+  return opts.isDateBehaviorType === true
+    || opts.isTrainingBehaviorType === true
+    || opts.currentNoteTypeFilter === 'training'
+    || note?.note_type === 'training';
+}
+
+function listPaneTitle(note, opts = {}) {
   const t = (note.note_title || '').trim();
-  if (!t || t === 'No title') return 'No title';
+  if (!t || t === 'No title') {
+    return usesDateBasedTitleRule(note, opts) ? '' : 'No title';
+  }
   return t;
 }
 
 function buildTitledRowHtml(note, idx, isSelected, opts) {
   const selCls = isSelected ? ' lp-selected' : '';
-  const title = listPaneTitle(note);
+  const title = listPaneTitle(note, opts);
   const previewRaw = stripHtml(note.note_text);
   const previewHtml = previewRaw
     ? `<div class="lp-row-preview">${escapeHtml(previewRaw)}</div>`
@@ -314,7 +323,11 @@ function updatePaneNoteDisplay(pane, note) {
   if (!pane || !note) return;
 
   const titleEl = pane.querySelector('#lpPaneTitle');
-  if (titleEl) titleEl.textContent = listPaneTitle(note);
+  if (titleEl) {
+    const title = listPaneTitle(note, _opts);
+    titleEl.textContent = title;
+    titleEl.hidden = !title;
+  }
 
   const scoreEl = pane.querySelector('#lpPaneScore');
   if (scoreEl) {
