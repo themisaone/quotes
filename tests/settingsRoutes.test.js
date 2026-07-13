@@ -124,6 +124,7 @@ test("GET /api/settings creates default settings when none exist", async (t) => 
   assert.equal(response.status, 200);
   assert.equal(Array.isArray(response.body.noteTypes), true);
   assert.equal(response.body.appFont, "system");
+  assert.equal(response.body.displayQuotesMultipleAddButton, false);
   assert.equal(fs.existsSync(deps.defaultSettingsFile), true);
 });
 

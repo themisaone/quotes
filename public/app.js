@@ -73,7 +73,7 @@ import {
   getNoteTypeDefaultDisplayMode,
   initializeSettings as initializeSettingsLib,
   refreshSettingsForOptionsPanel
-} from './js/lib/settingsManager.js?v=20260710fontselect3';
+} from './js/lib/settingsManager.js?v=20260713bulkaddbutton1';
 
 import {
   loadServicesPanel,
@@ -187,7 +187,7 @@ import {
   setTrainingSubMode,
   getListPanePageSize,
   restoreTrainingDateFiltersToBar
-} from './js/lib/listPaneView.js?v=20260712paneautofocus2';
+} from './js/lib/listPaneView.js?v=20260713panenatural1';
 import {
   configurePaneEditor,
   syncPaneTextToModalHidden,
@@ -1255,13 +1255,11 @@ function applyModeMenuVisibility(allowedTypes) {
 
   const elRandom = document.getElementById('menuItemRandomQuote');
   const elRandomTeg = document.getElementById('menuItemRandomTegneserie');
-  const elUtilDiv = document.getElementById('menuDividerUtilities');
   const elUtilTitle = document.getElementById('menuTitleUtilities');
   const elUtilList = document.getElementById('menuListUtilities');
   if (elRandom) elRandom.style.display = hasQuotes ? '' : 'none';
   if (elRandomTeg) elRandomTeg.style.display = hasTegneserie ? '' : 'none';
   const utilsVisible = hasQuotes || hasTegneserie;
-  if (elUtilDiv) elUtilDiv.style.display = utilsVisible ? '' : 'none';
   if (elUtilTitle) elUtilTitle.style.display = utilsVisible ? '' : 'none';
   if (elUtilList) elUtilList.style.display = utilsVisible ? '' : 'none';
 
@@ -2588,10 +2586,11 @@ function updateAddButtonText() {
   updateAddButtonTextLib(currentNoteTypeFilter, updateSourcesFilterVisibility);
 }
 
-// Show "Add Multiple Quotes" only on the Quotes page
+// Show "Add Multiple Quotes" only on the Quotes page when explicitly enabled.
 function updateBulkButtonVisibility() {
   const isQuotePage = currentNoteTypeFilter === 'quote';
-  const d = isQuotePage ? '' : 'none';
+  const settings = getGlobalSettings() || globalSettings;
+  const d = isQuotePage && settings?.displayQuotesMultipleAddButton === true ? '' : 'none';
   const addBulkBtn = getElementByIdSafe('addBulkBtn');
   const addBulkBtnTablet = getElementByIdSafe('addBulkBtnTablet');
   if (addBulkBtn) addBulkBtn.style.display = d;
@@ -6207,6 +6206,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     rebuildNoteTypeMenu: generateNoteTypeMenu,
     renderQuoteTypesList,
     renderTrainingTypesList,
+    updateBulkButtonVisibility,
   });
   
   // Initialize quote types management UI (handled by initializeSettingsLib now)

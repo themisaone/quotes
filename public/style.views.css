@@ -257,11 +257,11 @@
   display: grid;
   grid-template-columns: 1fr 2fr;
   gap: 1rem;
-  align-items: stretch;
+  align-items: start;
 }
 
 /* Calendar mode keeps the calendar compact while the opened note grows to its
- * natural height.  List mode still uses the standard stretched split layout. */
+ * natural height. */
 .lp-layout-calendar {
   align-items: start;
 }
@@ -478,7 +478,7 @@
   --lp-titled-thumb-size: 80px;
   --lp-titled-row-min-height: calc(var(--lp-titled-thumb-size) + 1.3rem);
   --lp-list-min-rows: 12;
-  /* Floor height when filters return fewer than a full page — pane matches via syncTitledPaneHeight */
+  /* The row floor is set from the current rendered row count in listPaneView.js. */
   min-height: calc(var(--lp-list-min-rows) * var(--lp-titled-row-min-height));
 }
 .lp-row-titled {
@@ -566,9 +566,9 @@
   border-radius: 6px;
 }
 
-/* Titled layout: left column sets height; right pane matches and scrolls inside */
+/* Titled layout: pane can grow with long notes; left list keeps normal rows. */
 .lp-layout-titled .lp-pane {
-  overflow: hidden;
+  overflow: visible;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -585,6 +585,35 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.lp-layout:not(.lp-layout-calendar) .lp-pane {
+  align-self: start;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+.lp-layout:not(.lp-layout-calendar) .lp-pane-shell,
+.lp-layout:not(.lp-layout-calendar) .lp-pane-editor-wrap,
+.lp-layout:not(.lp-layout-calendar) #lpPaneQuill {
+  display: block;
+  flex: none !important;
+  height: auto !important;
+  max-height: none !important;
+  min-height: 0;
+  overflow: visible !important;
+}
+
+.lp-layout:not(.lp-layout-calendar) #lpPaneQuill .ql-container.ql-snow,
+.lp-layout:not(.lp-layout-calendar) #lpPaneQuill .ql-editor {
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+.lp-layout:not(.lp-layout-calendar) #lpPaneQuill .ql-editor {
+  min-height: 12rem !important;
 }
 
 .lp-layout-calendar .lp-pane {

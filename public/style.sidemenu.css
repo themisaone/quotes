@@ -107,6 +107,11 @@ html { scrollbar-width: thin; scrollbar-color: rgba(0, 0, 0, 0.2) transparent; }
   list-style: none;
 }
 
+#menuSepAllNotes {
+  margin-top: 0.35rem;
+  margin-bottom: 0.65rem;
+}
+
 /* Desktop: show full text with icons */
 .menu-icon {
   display: inline-block;
@@ -390,7 +395,7 @@ html { scrollbar-width: thin; scrollbar-color: rgba(0, 0, 0, 0.2) transparent; }
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.7);
   margin-bottom: var(--d-pad-base);
-  margin-top: var(--d-pad-sm);
+  margin-top: var(--d-pad-base);
   letter-spacing: 0.05em;
 }
 

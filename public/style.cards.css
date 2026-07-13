@@ -51,9 +51,11 @@
 }
 
 #quoteCount {
-  font-size: 1rem;
+  font-family: inherit;
+  font-size: inherit;
   color: var(--text-secondary);
-  font-weight: 400;
+  font-weight: inherit;
+  line-height: inherit;
 }
 
 .quotes-list {

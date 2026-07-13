@@ -435,6 +435,7 @@ function applySettingsToUI() {
     // Note: 'compactModeToggle' removed - feature deprecated, element doesn't exist in HTML
     { id: 'enableTagOperations', setting: 'enableTagOperations' },
     { id: 'enableQuoteMetaSearches', setting: 'enableQuoteMetaSearches' },
+    { id: 'displayQuotesMultipleAddButton', setting: 'displayQuotesMultipleAddButton' },
     { id: 'displayQuotesByRealSize', setting: 'displayQuotesByRealSize' },
     { id: 'showLongQuotesExpanded', setting: 'showLongQuotesExpanded' },
     { id: 'displayScoreInCards', setting: 'displayScoreInCards' },
@@ -1466,12 +1467,14 @@ export function initializeSettings(callbacks = {}) {
     populateTrainingTypeFilterCheckboxes,
     rebuildNoteTypeMenu,
     renderNoteTypesList: renderNoteTypesListCb,
+    updateBulkButtonVisibility,
   } = callbacks;
 
   initializeSettingsTabs();
 
   const enableTagOpsCheckbox = getElementByIdSafe('enableTagOperations');
   const enableQuoteMetaSearchesCheckbox = getElementByIdSafe('enableQuoteMetaSearches');
+  const displayQuotesMultipleAddButtonCheckbox = getElementByIdSafe('displayQuotesMultipleAddButton');
   const displayQuotesByRealSizeCheckbox = getElementByIdSafe('displayQuotesByRealSize');
   const showLongQuotesExpandedCheckbox = getElementByIdSafe('showLongQuotesExpanded');
   const displayScoreInCardsCheckbox = getElementByIdSafe('displayScoreInCards');
@@ -1645,6 +1648,18 @@ export function initializeSettings(callbacks = {}) {
       const isEnabled = e.target.checked;
       updateSetting('enableQuoteMetaSearches', isEnabled);
       toggleMetadataSearchSection(isEnabled);
+    });
+  }
+
+  // Quotes multiple-add button setting
+  if (displayQuotesMultipleAddButtonCheckbox) {
+    displayQuotesMultipleAddButtonCheckbox.checked = globalSettings?.displayQuotesMultipleAddButton === true;
+
+    displayQuotesMultipleAddButtonCheckbox.addEventListener('change', (e) => {
+      updateSetting('displayQuotesMultipleAddButton', e.target.checked);
+      if (typeof updateBulkButtonVisibility === 'function') {
+        updateBulkButtonVisibility();
+      }
     });
   }
   

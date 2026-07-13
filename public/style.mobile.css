@@ -1637,4 +1637,64 @@
   .lp-list.lp-list-calendar {
     max-height: none;
   }
+
+  .lp-layout,
+  .lp-layout > .lp-list,
+  .lp-layout > .lp-pane {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .lp-layout:not(.lp-layout-calendar) .lp-pane {
+    height: auto !important;
+    max-height: none !important;
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+  }
+
+  .lp-layout:not(.lp-layout-calendar) .lp-pane-shell,
+  .lp-layout:not(.lp-layout-calendar) .lp-pane-editor-wrap,
+  .lp-layout:not(.lp-layout-calendar) #lpPaneQuill {
+    display: block;
+    flex: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+  }
+
+  .lp-layout:not(.lp-layout-calendar) #lpPaneQuill .ql-toolbar.ql-snow,
+  .lp-layout:not(.lp-layout-calendar) #lpPaneQuill .ql-container.ql-snow,
+  .lp-layout:not(.lp-layout-calendar) #lpPaneQuill .ql-editor {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+  }
+
+  .lp-layout:not(.lp-layout-calendar) #lpPaneQuill .ql-toolbar.ql-snow {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    white-space: nowrap !important;
+  }
+
+  .lp-layout:not(.lp-layout-calendar) #lpPaneQuill .ql-container.ql-snow,
+  .lp-layout:not(.lp-layout-calendar) #lpPaneQuill .ql-editor {
+    overflow-y: visible !important;
+  }
+
+  .lp-layout:not(.lp-layout-calendar) #lpPaneQuill .ql-editor {
+    min-height: 12rem !important;
+    overflow-wrap: anywhere !important;
+  }
 }

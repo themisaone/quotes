@@ -66,6 +66,7 @@ function createDefaultSettings() {
     compactMode: false,
     enableTagOperations: true,
     enableQuoteMetaSearches: false,
+    displayQuotesMultipleAddButton: false,
     displayQuotesByRealSize: false,
     showLongQuotesExpanded: false,
     displayScoreInCards: false,

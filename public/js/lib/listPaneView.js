@@ -35,7 +35,7 @@ import {
   renderPaneAttachments,
   resetPaneAttachments,
 } from './paneAttachments.js?v=20260712paneactions2';
-import { getNoteTypeDefaultDisplayMode } from './settingsManager.js?v=20260710fontselect3';
+import { getNoteTypeDefaultDisplayMode } from './settingsManager.js?v=20260713bulkaddbutton1';
 
 // ─────────────────────────────────────────────────────────────
 // Internal state (reset on every renderListPaneView call)
@@ -226,14 +226,15 @@ function buildTitledRowHtml(note, idx, isSelected, opts) {
     </div>`;
 }
 
-/** Right pane height follows the left list column (titled list-pane layout). */
+/** Right pane keeps at least the left list height, but can grow with the note. */
 function syncTitledPaneHeight(container) {
   const list = container.querySelector('.lp-list-titled');
   const pane = container.querySelector('.lp-pane');
   if (!list || !pane) return;
   requestAnimationFrame(() => {
-    pane.style.height = `${list.offsetHeight}px`;
-    pane.style.maxHeight = `${list.offsetHeight}px`;
+    pane.style.height = '';
+    pane.style.maxHeight = '';
+    pane.style.minHeight = `${list.offsetHeight}px`;
   });
 }
 
@@ -558,7 +559,7 @@ export function renderListPaneView(container, notes, opts) {
 
   const list = container.querySelector('#lpList');
   if (useTitledLayout) {
-    list.style.setProperty('--lp-list-min-rows', String(LP_LIST_PAGE_SIZE));
+    list.style.setProperty('--lp-list-min-rows', String(Math.max(notes.length, 1)));
   }
 
   notes.forEach((note, idx) => {
