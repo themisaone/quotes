@@ -146,7 +146,7 @@ test("buildQuoteCountQuery includes list-only date and translation filters", () 
   ]);
 });
 
-test("buildQuoteListQuery preserves list filter order, training sort, and pagination", () => {
+test("buildQuoteListQuery preserves list filter order, date sort, and pagination", () => {
   const result = buildQuoteListQuery(
     {
       quote: "focus || calm",
@@ -175,8 +175,8 @@ test("buildQuoteListQuery preserves list filter order, training sort, and pagina
     ["quote", "training"]
   );
 
-  assert.match(result.query, /WITH tagged_quotes AS/);
-  assert.match(result.query, /SELECT tq\.\*/);
+  assert.match(result.query, /q\.note_date DESC NULLS LAST/);
+  assert.match(result.query, /q\.updated_at DESC/);
   assert.match(result.query, /q\.note_date = \$8/);
   assert.match(result.query, /q\.translation_group = \$13/);
   assert.match(result.query, /q\.note_type = \$14/);
@@ -206,6 +206,19 @@ test("buildQuoteListQuery preserves list filter order, training sort, and pagina
     10,
     20,
   ]);
+});
+
+test("buildQuoteListQuery sorts a configured diary type by its full note date", () => {
+  const result = buildQuoteListQuery(
+    { note_type: "DNEVNIK", limit: "20", offset: "0" },
+    ["training", "DNEVNIK"],
+    ["training", "DNEVNIK"]
+  );
+
+  assert.match(result.query, /q\.note_type = \$1/);
+  assert.match(result.query, /q\.note_date DESC NULLS LAST/);
+  assert.doesNotMatch(result.query, /EXTRACT\(DAY/);
+  assert.deepEqual(result.params, ["DNEVNIK", 20, 0]);
 });
 
 test("buildQuoteListQuery applies mode restriction and default updated sort when note type is absent", () => {

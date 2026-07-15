@@ -73,13 +73,6 @@ const sourceModalConfig = {
   onModalOpen(elements, entity) {
     console.log('🔍 Source modal opened, entity:', entity);
     
-    // First, ensure the attachment container is visible
-    const attachmentContainer = document.getElementById('sourceAttachmentContainer');
-    if (attachmentContainer) {
-      attachmentContainer.style.display = 'block';
-      console.log('📦 Attachment container set to visible');
-    }
-    
     // Update attachment panel visibility and clear button state
     try {
       const clearBtn = document.getElementById(BUTTON_IDS.CLEAR_SOURCE_IMAGE);
@@ -91,14 +84,9 @@ const sourceModalConfig = {
       console.warn('Could not update clear button:', e);
     }
     
-    // Call the global toggle function if it exists
-    // Give it a moment for the DOM to update
-    setTimeout(() => {
-      if (window.toggleSourceAttachmentPanel) {
-        console.log('🔄 Calling toggleSourceAttachmentPanel');
-        window.toggleSourceAttachmentPanel();
-      }
-    }, 50);
+    if (window.toggleSourceAttachmentPanel) {
+      window.toggleSourceAttachmentPanel();
+    }
 
     const showNotesBtn = document.getElementById('sourceModalShowNotesBtn');
     if (showNotesBtn) {

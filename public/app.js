@@ -3722,66 +3722,30 @@ function clearSourceImage() {
   toggleSourceAttachmentPanel(); // Update panel state
 }
 
-// Toggle Author Attachment Panel
+// Keep the author image action and preview in sync with the selected image.
 function toggleAuthorAttachmentPanel() {
   if (!authorAttachmentContainer || !toggleAuthorAttachmentBtn) return;
-  
-  const hasImage = authorImagePreview && authorImagePreview.querySelector('img');
-  const isOpen = authorAttachmentContainer.style.display !== 'none';
-  
-  console.log('🔄 toggleAuthorAttachmentPanel:', { 
-    hasImage: !!hasImage, 
-    isOpen,
-    containerDisplay: authorAttachmentContainer.style.display,
-    previewHasClass: authorImagePreview?.classList.contains('has-image')
-  });
-  
-  if (hasImage) {
-    // If image exists, keep panel open and hide toggle button
-    authorAttachmentContainer.style.display = 'block';
-    toggleAuthorAttachmentBtn.style.display = 'none';
-    console.log('✅ Image exists - panel open, button hidden');
-  } else {
-    // If no image, toggle panel and show/update button
-    if (isOpen) {
-      authorAttachmentContainer.style.display = 'none';
-      toggleAuthorAttachmentBtn.textContent = '▶';
-      toggleAuthorAttachmentBtn.title = 'Show author picture';
-      console.log('📦 No image, panel was open - closing it');
-    } else {
-      authorAttachmentContainer.style.display = 'block';
-      toggleAuthorAttachmentBtn.textContent = '◀';
-      toggleAuthorAttachmentBtn.title = 'Hide author picture';
-      console.log('📦 No image, panel was closed - opening it');
-    }
-    toggleAuthorAttachmentBtn.style.display = 'block';
-  }
+
+  const hasImage = Boolean(authorImagePreview?.querySelector('img'));
+  authorAttachmentContainer.style.display = hasImage ? 'block' : 'none';
+  toggleAuthorAttachmentBtn.style.display = 'inline-flex';
+  toggleAuthorAttachmentBtn.textContent = hasImage ? '🖼 Change image' : '🖼 Add image';
+  toggleAuthorAttachmentBtn.title = hasImage
+    ? 'Choose a different author image'
+    : 'Choose an author image';
 }
 
-// Toggle Source Attachment Panel
+// Keep the source image action and preview in sync with the selected image.
 function toggleSourceAttachmentPanel() {
   if (!sourceAttachmentContainer || !toggleSourceAttachmentBtn) return;
-  
-  const hasImage = sourceImagePreview && sourceImagePreview.querySelector('img');
-  const isOpen = sourceAttachmentContainer.style.display !== 'none';
-  
-  if (hasImage) {
-    // If image exists, keep panel open and hide toggle button
-    sourceAttachmentContainer.style.display = 'block';
-    toggleSourceAttachmentBtn.style.display = 'none';
-  } else {
-    // If no image, toggle panel and show/update button
-    if (isOpen) {
-      sourceAttachmentContainer.style.display = 'none';
-      toggleSourceAttachmentBtn.textContent = '▶';
-      toggleSourceAttachmentBtn.title = 'Show source cover';
-    } else {
-      sourceAttachmentContainer.style.display = 'block';
-      toggleSourceAttachmentBtn.textContent = '◀';
-      toggleSourceAttachmentBtn.title = 'Hide source cover';
-    }
-    toggleSourceAttachmentBtn.style.display = 'block';
-  }
+
+  const hasImage = Boolean(sourceImagePreview?.querySelector('img'));
+  sourceAttachmentContainer.style.display = hasImage ? 'block' : 'none';
+  toggleSourceAttachmentBtn.style.display = 'inline-flex';
+  toggleSourceAttachmentBtn.textContent = hasImage ? '🖼 Change image' : '🖼 Add image';
+  toggleSourceAttachmentBtn.title = hasImage
+    ? 'Choose a different source image'
+    : 'Choose a source image';
 }
 
 // ============= AUTHOR/SOURCE EDIT MODALS =============
@@ -3825,10 +3789,16 @@ clearSourceImageBtn.addEventListener("click", clearSourceImage);
 
 // Toggle button handlers
 if (toggleAuthorAttachmentBtn) {
-  toggleAuthorAttachmentBtn.addEventListener("click", toggleAuthorAttachmentPanel);
+  toggleAuthorAttachmentBtn.addEventListener("click", () => {
+    authorImageFile.value = '';
+    authorImageFile.click();
+  });
 }
 if (toggleSourceAttachmentBtn) {
-  toggleSourceAttachmentBtn.addEventListener("click", toggleSourceAttachmentPanel);
+  toggleSourceAttachmentBtn.addEventListener("click", () => {
+    sourceImageFile.value = '';
+    sourceImageFile.click();
+  });
 }
 
 // Click on preview to open file dialog (no full-size view for author/source)

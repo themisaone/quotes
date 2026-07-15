@@ -237,6 +237,193 @@
   transform: scale(1.05);
 }
 
+/* Author image: explicit action beside the name, preview only when populated. */
+#authorModal .author-modal-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+#authorModal .author-modal-fields {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  gap: 1rem;
+  width: min(72ch, 70vw);
+  min-width: 0;
+}
+
+#authorModal .author-name-group,
+#authorModal .author-description-group {
+  margin-bottom: 0 !important;
+}
+
+#authorModal .author-name-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+}
+
+#authorModal .author-name-label-row label {
+  margin-bottom: 0;
+}
+
+#authorModal .author-description-group {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+#authorModal #authorDescription {
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+  height: 204px;
+  resize: vertical;
+}
+
+#authorModal .author-image-panel {
+  flex: 0 0 auto;
+  max-width: 220px;
+}
+
+#authorModal .author-image-preview-wrap {
+  position: relative;
+}
+
+#authorModal #authorImagePreview {
+  width: auto;
+  max-width: 220px;
+  min-height: 0;
+  height: auto;
+  max-height: 360px;
+  margin: 0;
+  border: 0;
+  background: transparent;
+}
+
+#authorModal #authorImagePreview img {
+  max-width: 220px;
+  max-height: 360px;
+  border-radius: 6px;
+  object-fit: contain;
+}
+
+#authorModal .form-actions {
+  margin-top: var(--d-pad-md);
+}
+
+/* Source cover follows the same image/field layout as the Author modal. */
+#sourceModal .source-modal-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+#sourceModal .source-modal-fields {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 1rem;
+  width: min(48ch, 70vw);
+  min-width: 0;
+}
+
+#sourceModal .source-name-group,
+#sourceModal .source-type-group {
+  margin-bottom: 0 !important;
+}
+
+#sourceModal .source-name-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+}
+
+#sourceModal .source-name-label-row label {
+  margin-bottom: 0;
+}
+
+#sourceModal #sourceName,
+#sourceModal #sourceTypeEdit {
+  width: min(32ch, 100%);
+  max-width: 32ch;
+  box-sizing: border-box;
+}
+
+#sourceModal .source-image-panel {
+  flex: 0 0 auto;
+  max-width: 220px;
+}
+
+#sourceModal .source-image-preview-wrap {
+  position: relative;
+}
+
+#sourceModal #sourceImagePreview {
+  width: auto;
+  max-width: 220px;
+  min-height: 0;
+  height: auto;
+  max-height: 360px;
+  margin: 0;
+  border: 0;
+  background: transparent;
+}
+
+#sourceModal #sourceImagePreview img {
+  max-width: 220px;
+  max-height: 360px;
+  border-radius: 6px;
+  object-fit: contain;
+}
+
+#sourceModal .form-actions {
+  margin-top: var(--d-pad-md);
+}
+
+@media (max-width: 767px) {
+  #authorModal .modal-content {
+    width: calc(100vw - 2rem);
+    min-width: 0;
+  }
+
+  #authorModal .author-name-label-row,
+  #authorModal .author-modal-fields,
+  #authorModal #authorDescription {
+    width: 100%;
+  }
+
+  #authorModal .author-modal-layout {
+    flex-direction: column;
+  }
+
+  #authorModal .form-actions {
+    margin-top: 1.5rem;
+  }
+
+  #sourceModal .modal-content {
+    width: calc(100vw - 2rem);
+    min-width: 0;
+  }
+
+  #sourceModal .source-modal-fields,
+  #sourceModal .source-name-label-row {
+    width: 100%;
+  }
+
+  #sourceModal .source-modal-layout {
+    flex-direction: column;
+  }
+
+  #sourceModal .form-actions {
+    margin-top: 1.5rem;
+  }
+}
+
 /* Attachment toggle button — lives in the label row alongside Note text */
 .btn-attach-toggle {
   height: var(--d-btn-height);

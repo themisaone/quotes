@@ -487,51 +487,12 @@ function appendBulkAnySearch(state, searchQuery) {
   state.paramCounter = newParamCounter;
 }
 
-function appendPaginationAndSort(state, filters) {
-  if (filters.note_type === "training") {
-    state.query = `
-        WITH tagged_quotes AS (
-          ${state.query}
-        ),
-        year_tags AS (
-          SELECT qt.note_id, t.name as year_tag
-          FROM note_tags qt
-          JOIN tags t ON qt.tag_id = t.id
-          WHERE t.name ~ '^[0-9]{4}$'
-        ),
-        month_tags AS (
-          SELECT qt.note_id, t.name as month_tag,
-            CASE t.name
-              WHEN 'January' THEN 1
-              WHEN 'February' THEN 2
-              WHEN 'March' THEN 3
-              WHEN 'April' THEN 4
-              WHEN 'May' THEN 5
-              WHEN 'June' THEN 6
-              WHEN 'July' THEN 7
-              WHEN 'August' THEN 8
-              WHEN 'September' THEN 9
-              WHEN 'October' THEN 10
-              WHEN 'November' THEN 11
-              WHEN 'December' THEN 12
-            END as month_order
-          FROM note_tags qt
-          JOIN tags t ON qt.tag_id = t.id
-          WHERE t.name IN ('January','February','March','April','May','June','July','August','September','October','November','December')
-        )
-        SELECT tq.*
-        FROM tagged_quotes tq
-        LEFT JOIN year_tags yt ON tq.id = yt.note_id
-        LEFT JOIN month_tags mt ON tq.id = mt.note_id
-        ORDER BY 
-          yt.year_tag DESC NULLS LAST,
-          CASE WHEN mt.month_tag IS NULL THEN 0 ELSE 1 END,
-          mt.month_order DESC,
-          CASE WHEN tq.note_date IS NULL THEN 0 ELSE 1 END,
-          EXTRACT(DAY FROM tq.note_date) DESC,
-          tq.updated_at DESC
-        LIMIT $${state.paramCounter} OFFSET $${state.paramCounter + 1}
-      `;
+function appendPaginationAndSort(state, filters, dateBasedNoteTypes = ["training"]) {
+  if (dateBasedNoteTypes.includes(filters.note_type)) {
+    state.query += ` ORDER BY
+      q.note_date DESC NULLS LAST,
+      q.updated_at DESC
+      LIMIT $${state.paramCounter} OFFSET $${state.paramCounter + 1}`;
   } else {
     state.query += ` ORDER BY q.updated_at DESC LIMIT $${state.paramCounter} OFFSET $${state.paramCounter + 1}`;
   }
@@ -571,7 +532,7 @@ function buildQuoteCountQuery(filters, allowedTypes) {
   };
 }
 
-function buildQuoteListQuery(filters, allowedTypes) {
+function buildQuoteListQuery(filters, allowedTypes, dateBasedNoteTypes = ["training"]) {
   const state = createState(`
       SELECT DISTINCT q.*, 
              a.name as author_name, a.image as author_image,
@@ -598,7 +559,7 @@ function buildQuoteListQuery(filters, allowedTypes) {
   appendGenericSubTypesFilter(state, filters);
   appendYearMonthTagFilters(state, filters);
   appendDateRangeFilters(state, filters);
-  appendPaginationAndSort(state, filters);
+  appendPaginationAndSort(state, filters, dateBasedNoteTypes);
 
   return {
     query: state.query,

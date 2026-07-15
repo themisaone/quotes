@@ -21,7 +21,7 @@ const { registerPaletteRoutes } = require("./routes/palettes");
 const { registerPdfExportRoutes } = require("./routes/pdfExport");
 const { registerQuoteBulkRoutes } = require("./routes/quoteBulk");
 const { registerQuoteRoutes } = require("./routes/quotes");
-const { registerSettingsRoutes } = require("./routes/settings");
+const { createDefaultSettings, registerSettingsRoutes } = require("./routes/settings");
 const { registerSourceRoutes } = require("./routes/sources");
 const { registerTagRoutes } = require("./routes/tags");
 const { createUploadMiddleware, registerUploadRoutes } = require("./routes/uploads");
@@ -78,6 +78,20 @@ function getSettingsFile() {
 function getPalettesDir() {
   const { vaultPath } = readLocalConfig();
   return vaultPath ? path.join(vaultPath, 'palettes') : DEFAULT_PALETTES_DIR;
+}
+
+function getDateBasedNoteTypes() {
+  let settings;
+  try {
+    settings = JSON.parse(fs.readFileSync(getSettingsFile(), "utf8"));
+  } catch {
+    settings = createDefaultSettings();
+  }
+
+  return (Array.isArray(settings.noteTypes) ? settings.noteTypes : [])
+    .filter((noteType) => noteType?.behavior === "training" || noteType?.behavior === "diary")
+    .map((noteType) => noteType.value)
+    .filter(Boolean);
 }
 
 // Ensure local config dir exists
@@ -273,6 +287,7 @@ registerQuoteRoutes(app, {
   pool,
   fileStorage,
   getAllowedTypes: () => _allowedTypes,
+  getDateBasedNoteTypes,
   getModeName: () => _modeName,
   getAttachmentsForNotes,
   applyAttachments,

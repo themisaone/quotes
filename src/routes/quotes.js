@@ -30,6 +30,7 @@ function registerQuoteRoutes(app, {
   pool,
   fileStorage,
   getAllowedTypes,
+  getDateBasedNoteTypes,
   getModeName,
   getAttachmentsForNotes,
   applyAttachments,
@@ -53,6 +54,13 @@ function registerQuoteRoutes(app, {
 
   function currentAllowedTypes() {
     return typeof getAllowedTypes === "function" ? getAllowedTypes() : getAllowedTypes;
+  }
+
+  function currentDateBasedNoteTypes() {
+    const configuredTypes = typeof getDateBasedNoteTypes === "function"
+      ? getDateBasedNoteTypes()
+      : getDateBasedNoteTypes;
+    return Array.isArray(configuredTypes) ? configuredTypes : ["training"];
   }
 
   function currentModeName() {
@@ -171,7 +179,11 @@ function registerQuoteRoutes(app, {
   // Get all quotes with optional filtering (with author and source details)
   app.get("/api/quotes", async (req, res) => {
     try {
-      const listQuery = buildQuoteListQuery(req.query, currentAllowedTypes());
+      const listQuery = buildQuoteListQuery(
+        req.query,
+        currentAllowedTypes(),
+        currentDateBasedNoteTypes()
+      );
       const result = await pool.query(listQuery.query, listQuery.params);
 
       if (result.rows.length === 0) {

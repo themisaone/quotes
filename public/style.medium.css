@@ -170,6 +170,13 @@
     max-height: 92vh !important;
   }
 
+  /* Sources only need two compact fields; don't inherit the generic 75vw width. */
+  #sourceModal .modal-content {
+    width: min(550px, calc(100vw - 2rem)) !important;
+    min-width: min(550px, calc(100vw - 2rem)) !important;
+    max-width: calc(100vw - 2rem) !important;
+  }
+
   .modal-header {
     padding: var(--m-pad-xs) var(--m-pad-md) !important;
   }

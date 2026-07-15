@@ -61,13 +61,6 @@ const authorModalConfig = {
   onModalOpen(elements, entity) {
     console.log('🔍 Author modal opened, entity:', entity);
     
-    // First, ensure the attachment container is visible
-    const attachmentContainer = document.getElementById('authorAttachmentContainer');
-    if (attachmentContainer) {
-      attachmentContainer.style.display = 'block';
-      console.log('📦 Attachment container set to visible');
-    }
-    
     // Update attachment panel visibility and clear button state
     try {
       const clearBtn = document.getElementById(BUTTON_IDS.CLEAR_AUTHOR_IMAGE);
@@ -79,14 +72,9 @@ const authorModalConfig = {
       console.warn('Could not update clear button:', e);
     }
     
-    // Call the global toggle function if it exists
-    // Give it a moment for the DOM to update
-    setTimeout(() => {
-      if (window.toggleAuthorAttachmentPanel) {
-        console.log('🔄 Calling toggleAuthorAttachmentPanel');
-        window.toggleAuthorAttachmentPanel();
-      }
-    }, 50);
+    if (window.toggleAuthorAttachmentPanel) {
+      window.toggleAuthorAttachmentPanel();
+    }
 
     const showNotesBtn = document.getElementById('authorModalShowNotesBtn');
     if (showNotesBtn) {

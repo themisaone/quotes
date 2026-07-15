@@ -102,7 +102,8 @@ async function makeSqliteQuoteRoutes(t) {
   const routes = makeRouteCollector({
     pool,
     fileStorage,
-    getAllowedTypes: () => ["quote", "note", "historical", "training"],
+    getAllowedTypes: () => ["quote", "note", "historical", "training", "DNEVNIK"],
+    getDateBasedNoteTypes: () => ["training", "DNEVNIK"],
     getModeName: () => "TEST",
     getAttachmentsForNotes: attachmentHelpers.getAttachmentsForNotes,
     applyAttachments: attachmentHelpers.applyAttachments,
@@ -117,6 +118,32 @@ async function makeSqliteQuoteRoutes(t) {
 
   return { pool, routes };
 }
+
+test("SQLite diary lists sort by note date instead of update time", async (t) => {
+  const { pool, routes } = await makeSqliteQuoteRoutes(t);
+
+  await pool.query(
+    `INSERT INTO notes (note_text, note_type, note_date, updated_at)
+     VALUES ($1, $2, $3, $4), ($5, $6, $7, $8), ($9, $10, $11, $12)`,
+    [
+      "July 12", "DNEVNIK", "2026-07-12", "2026-07-15 12:00:00",
+      "July 13", "DNEVNIK", "2026-07-13", "2026-07-14 12:00:00",
+      "July 8", "DNEVNIK", "2026-07-08", "2026-07-16 12:00:00",
+    ]
+  );
+
+  const response = await invoke(routes, {
+    routePath: "/api/quotes",
+    query: { note_type: "DNEVNIK", limit: "20", offset: "0" },
+  });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(response.body.map((note) => note.note_date), [
+    "2026-07-13",
+    "2026-07-12",
+    "2026-07-08",
+  ]);
+});
 
 test("SQLite quote routes support basic CRUD with normalized tags", async (t) => {
   const { pool, routes } = await makeSqliteQuoteRoutes(t);

@@ -96,6 +96,7 @@ function makeBaseOptions(overrides = {}) {
       },
     },
     getAllowedTypes: () => ["quote", "note"],
+    getDateBasedNoteTypes: () => ["training", "DNEVNIK"],
     getModeName: () => "DEFAULT",
     async getAttachmentsForNotes() {
       return new Map();
@@ -218,6 +219,20 @@ test("GET /api/quotes returns an empty array without enrichment work", async () 
   assert.equal(response.status, 200);
   assert.deepEqual(response.body, []);
   assert.equal(attachmentCalls, 0);
+});
+
+test("GET /api/quotes uses configured date-based types for sorting", async () => {
+  const options = makeBaseOptions();
+  const routes = makeRouteCollector(options);
+
+  const response = await invoke(routes, {
+    routePath: "/api/quotes",
+    query: { note_type: "DNEVNIK", limit: "20", offset: "0" },
+  });
+
+  assert.equal(response.status, 200);
+  assert.match(options.calls[0].sql, /q\.note_date DESC NULLS LAST/);
+  assert.deepEqual(options.calls[0].params, ["DNEVNIK", 20, 0]);
 });
 
 test("GET /api/quotes enriches rows with tags and attachments", async () => {
