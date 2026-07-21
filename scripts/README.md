@@ -18,6 +18,8 @@ Run **database** scripts from the **repository root** so `.env` and `require('..
 | `cleanup-duplicate-attachments.js` | Legacy: null `thumbnail` for non-image rows where `thumbnail` = `attachment_full` (duplicate base64). | `node scripts/cleanup-duplicate-attachments.js` / `--apply` | `pg`, `dotenv` |
 | `generate-pdf-thumbnails.js` | PDF → JPEG thumb via Ghostscript `gs`. | `node scripts/generate-pdf-thumbnails.js` / `[--dry-run] [--limit N]` | `gs`, `pg`, `../src/db`, `fileStorage` |
 | `generate-video-thumbnails.js` | Video → JPEG thumb via `ffmpeg`. | `node scripts/generate-video-thumbnails.js` / `[--dry-run] [--limit N]` | `ffmpeg`, `ffprobe`, `pg`, `db`, `fileStorage` |
+| `migrate-entity-images-to-vault.js` | Move author/source `image` base64 from DB to `attachments/authors/` and `attachments/sources/`. | `node scripts/migrate-entity-images-to-vault.js --dry-run` / `--apply` | `../src/entityImageStorage`, `../src/db` |
+| `fetch-source-cover.js` | Fetch a BOOK source cover from Open Library and store it in `sources.image`. Uses the same DB as the running app (`.env` / `DB_BACKEND`). | `node scripts/fetch-source-cover.js --id 125` / `--title "1Q84" --author "Haruki Murakami"` (`--dry-run`) | `../src/bookCoverFetch`, `../src/db`, `sharp` |
 
 **Archival CSS splitters:** see **`scripts/done-once/README.md`**.  
 **Re-runnable housekeeping** (H2 → `note_title`, month/year training tags): see **`scripts/safe-housekeeping/README.md`**.

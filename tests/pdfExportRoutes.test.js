@@ -7,6 +7,7 @@ const test = require("node:test");
 const {
   generatePdfHtml,
   groupQuotesByAuthor,
+  prepareQuotesForPdf,
   registerPdfExportRoutes,
 } = require("../src/routes/pdfExport");
 
@@ -234,6 +235,35 @@ test("generatePdfHtml uses grouped quote layout and flat mixed-note layout", () 
   assert.doesNotMatch(mixedHtml, /<div class="author-section">/);
   assert.match(mixedHtml, /Mixed notes/);
   assert.match(mixedHtml, /Timeline/);
+});
+
+test("prepareQuotesForPdf embeds vault-backed author and source images", async () => {
+  const calls = [];
+  const quotes = [{
+    note_type: "quote",
+    author_image: "file:authors/1.jpg:image/jpeg",
+    source_image: "file:sources/2.jpg:image/jpeg",
+  }];
+  const images = {
+    "file:authors/1.jpg:image/jpeg": "data:image/jpeg;base64,author",
+    "file:sources/2.jpg:image/jpeg": "data:image/jpeg;base64,source",
+  };
+
+  await prepareQuotesForPdf(quotes, {
+    fileStorage: {
+      retrieveFromStorage(value) {
+        calls.push(value);
+        return images[value] || null;
+      },
+    },
+  });
+
+  assert.equal(quotes[0].author_image, images["file:authors/1.jpg:image/jpeg"]);
+  assert.equal(quotes[0].source_image, images["file:sources/2.jpg:image/jpeg"]);
+  assert.deepEqual(calls, [
+    "file:authors/1.jpg:image/jpeg",
+    "file:sources/2.jpg:image/jpeg",
+  ]);
 });
 
 test("POST /api/export/pdf closes the browser when PDF rendering fails", async (t) => {

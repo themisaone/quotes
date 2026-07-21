@@ -11,8 +11,10 @@
  * - entityModal.js for modal management
  */
 
-import { createEntityModalManager } from './entityModal.js';
+import { createEntityModalManager } from './entityModal.js?v=20260721entityimages1';
+import { displayImage } from './attachments.js?v=20260720pastesource1';
 import { getElementByIdSafe, BUTTON_IDS } from '../constants.js';
+import { API_URL } from './api.js';
 
 // ============= CONFIGURATION =============
 
@@ -60,7 +62,7 @@ const sourceModalConfig = {
   // Populate type dropdown when modal opens (after settings are loaded)
   onBeforeOpen(data, callbacks) {
     const typeSelect = getElementByIdSafe('sourceTypeEdit', 'onBeforeOpen');
-    
+
     if (typeSelect && callbacks.getQuoteTypes) {
       const quoteTypes = callbacks.getQuoteTypes();
       typeSelect.innerHTML = quoteTypes
@@ -72,6 +74,13 @@ const sourceModalConfig = {
   // Called after modal is opened and populated
   onModalOpen(elements, entity) {
     console.log('🔍 Source modal opened, entity:', entity);
+
+    const fetchCoverBtn = document.getElementById(BUTTON_IDS.FETCH_SOURCE_COVER_BTN);
+    const typeSelect = getElementByIdSafe('sourceTypeEdit', 'onModalOpen');
+    const sourceType = typeSelect?.value || entity.type || 'BOOK';
+    if (fetchCoverBtn) {
+      fetchCoverBtn.style.display = sourceType === 'BOOK' ? 'inline-flex' : 'none';
+    }
     
     // Update attachment panel visibility and clear button state
     try {
@@ -99,6 +108,60 @@ const sourceModalConfig = {
 // ============= MODAL MANAGER =============
 
 const sourceModalManager = createEntityModalManager(sourceModalConfig);
+
+async function fetchSourceCover(sourceId, callbacks = {}) {
+  const fetchCoverBtn = getElementByIdSafe(BUTTON_IDS.FETCH_SOURCE_COVER_BTN, 'fetchSourceCover');
+  const imagePreview = getElementByIdSafe('sourceImagePreview', 'fetchSourceCover');
+  const clearBtn = getElementByIdSafe(BUTTON_IDS.CLEAR_SOURCE_IMAGE, 'fetchSourceCover');
+  const authorInput = window.prompt(
+    'Author name for cover lookup (leave blank to use the most common author on linked notes):',
+    ''
+  );
+
+  if (authorInput === null) {
+    return;
+  }
+
+  const originalLabel = fetchCoverBtn?.textContent;
+  if (fetchCoverBtn) {
+    fetchCoverBtn.disabled = true;
+    fetchCoverBtn.textContent = '⏳ Fetching...';
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/sources/${sourceId}/fetch-cover`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ author: authorInput.trim() }),
+    });
+    const payload = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(payload.error || 'Failed to fetch book cover');
+    }
+
+    window.currentSourceImage = payload.source.image;
+    if (imagePreview) {
+      displayImage(imagePreview, payload.source.image);
+    }
+    if (clearBtn) {
+      clearBtn.style.display = payload.source.image ? 'flex' : 'none';
+    }
+    if (window.toggleSourceAttachmentPanel) {
+      window.toggleSourceAttachmentPanel();
+    }
+
+    callbacks.onSaved?.(payload.source);
+    alert(`Cover downloaded for "${payload.match.title}" (${payload.authorUsed}) via ${payload.match.source || 'openlibrary'}.`);
+  } catch (error) {
+    alert(error.message || 'Failed to fetch book cover');
+  } finally {
+    if (fetchCoverBtn) {
+      fetchCoverBtn.disabled = false;
+      fetchCoverBtn.textContent = originalLabel || '⬇ Download cover';
+    }
+  }
+}
 
 // ============= EXPORTED FUNCTIONS =============
 
@@ -128,6 +191,25 @@ export function setupSourceModalHandlers(callbacks = {}) {
   };
 
   sourceModalManager.setupHandlers(genericCallbacks);
+
+  const fetchCoverBtn = getElementByIdSafe(BUTTON_IDS.FETCH_SOURCE_COVER_BTN, 'setupSourceModalHandlers');
+  if (fetchCoverBtn && !fetchCoverBtn.dataset.boundFetchCover) {
+    fetchCoverBtn.dataset.boundFetchCover = '1';
+    fetchCoverBtn.addEventListener('click', async () => {
+      const sourceId = getElementByIdSafe('sourceId', 'fetchSourceCoverClick')?.value;
+      if (!sourceId) return;
+      await fetchSourceCover(sourceId, { onSaved: callbacks.onSourceSaved });
+    });
+  }
+
+  const typeSelect = getElementByIdSafe('sourceTypeEdit', 'setupSourceModalHandlers');
+  if (typeSelect && !typeSelect.dataset.boundFetchCoverToggle) {
+    typeSelect.dataset.boundFetchCoverToggle = '1';
+    typeSelect.addEventListener('change', () => {
+      if (!fetchCoverBtn) return;
+      fetchCoverBtn.style.display = typeSelect.value === 'BOOK' ? 'inline-flex' : 'none';
+    });
+  }
 
   const showNotesBtn = getElementByIdSafe('sourceModalShowNotesBtn', 'setupSourceModalHandlers');
   if (showNotesBtn && !showNotesBtn.dataset.boundShowNotes) {

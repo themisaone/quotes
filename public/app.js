@@ -20,7 +20,7 @@ import {
   displayAttachmentPreview as displayAttachmentPreviewLib,
   downscaleAndMoveToDb as downscaleAndMoveToDbLib,
   resizeImage as resizeImageLib
-} from './js/lib/attachments.js?v=20260318l';
+} from './js/lib/attachments.js?v=20260720pastesource1';
 
 import {
   getNoteTypeConfig,
@@ -83,12 +83,12 @@ import {
 import {
   openAuthorModal as openAuthorModalLib,
   setupAuthorModalHandlers
-} from './js/lib/authorModal.js?v=20260512modalshownotes';
+} from './js/lib/authorModal.js?v=20260721entityimages1';
 
 import {
   openSourceModal as openSourceModalLib,
   setupSourceModalHandlers
-} from './js/lib/sourceModal.js?v=20260512modalshownotes';
+} from './js/lib/sourceModal.js?v=20260721entityimages1';
 
 import { initDedupSuspectsPanel } from './js/lib/dedupSuspectsPanel.js?v=20260708noimagewide1';
 
@@ -149,7 +149,7 @@ import {
   initializeQuillEditor,
   handleFormSubmit as handleFormSubmitLib,
   deleteQuote as deleteQuoteLib
-} from './js/lib/quoteEditor.js?v=20260703nofullscreen1';
+} from './js/lib/quoteEditor.js?v=20260721entityimages1';
 
 import {
   initializeBulkImport,
@@ -217,7 +217,7 @@ import {
   loadSources,
   displayAuthors,
   displaySources
-} from './js/lib/entityListPage.js?v=20260704sourceby1';
+} from './js/lib/entityListPage.js?v=20260721entityimages1';
 
 // ============= CONSTANTS =============
 // Same origin as the page (correct when port is omitted, e.g. http://localhost or reverse proxy)
@@ -3723,16 +3723,22 @@ function clearSourceImage() {
 }
 
 // Keep the author image action and preview in sync with the selected image.
+function isEntityModalOpen(modal) {
+  if (!modal) return false;
+  return modal.style.display === "block" || getComputedStyle(modal).display !== "none";
+}
+
 function toggleAuthorAttachmentPanel() {
   if (!authorAttachmentContainer || !toggleAuthorAttachmentBtn) return;
 
   const hasImage = Boolean(authorImagePreview?.querySelector('img'));
-  authorAttachmentContainer.style.display = hasImage ? 'block' : 'none';
+  const modalOpen = isEntityModalOpen(authorModal);
+  authorAttachmentContainer.style.display = (hasImage || modalOpen) ? 'block' : 'none';
   toggleAuthorAttachmentBtn.style.display = 'inline-flex';
   toggleAuthorAttachmentBtn.textContent = hasImage ? '🖼 Change image' : '🖼 Add image';
   toggleAuthorAttachmentBtn.title = hasImage
-    ? 'Choose a different author image'
-    : 'Choose an author image';
+    ? 'Choose a different author image (or paste with Ctrl+V)'
+    : 'Choose an author image (or paste with Ctrl+V)';
 }
 
 // Keep the source image action and preview in sync with the selected image.
@@ -3740,12 +3746,13 @@ function toggleSourceAttachmentPanel() {
   if (!sourceAttachmentContainer || !toggleSourceAttachmentBtn) return;
 
   const hasImage = Boolean(sourceImagePreview?.querySelector('img'));
-  sourceAttachmentContainer.style.display = hasImage ? 'block' : 'none';
+  const modalOpen = isEntityModalOpen(sourceModal);
+  sourceAttachmentContainer.style.display = (hasImage || modalOpen) ? 'block' : 'none';
   toggleSourceAttachmentBtn.style.display = 'inline-flex';
   toggleSourceAttachmentBtn.textContent = hasImage ? '🖼 Change image' : '🖼 Add image';
   toggleSourceAttachmentBtn.title = hasImage
-    ? 'Choose a different source image'
-    : 'Choose a source image';
+    ? 'Choose a different source image (or paste with Ctrl+V)'
+    : 'Choose a source image (or paste with Ctrl+V)';
 }
 
 // ============= AUTHOR/SOURCE EDIT MODALS =============
@@ -3820,11 +3827,23 @@ sourceImagePreview.addEventListener("click", () => {
   // If image exists, do nothing (user must use X button to remove it first)
 });
 
-// Paste image functionality
+// Paste image functionality (capture phase so inputs don't swallow image paste)
+function bindEntityModalPaste(modal, type) {
+  if (!modal || modal.dataset.pasteBound) return;
+  modal.dataset.pasteBound = type;
+  modal.addEventListener("paste", (e) => {
+    if (!isEntityModalOpen(modal)) return;
+    handlePaste(e, type);
+  }, true);
+}
+
+bindEntityModalPaste(authorModal, "author");
+bindEntityModalPaste(sourceModal, "source");
+
 document.addEventListener("paste", (e) => {
-  if (authorModal.style.display === "block") {
+  if (isEntityModalOpen(authorModal)) {
     handlePaste(e, "author");
-  } else if (sourceModal.style.display === "block") {
+  } else if (isEntityModalOpen(sourceModal)) {
     handlePaste(e, "source");
   }
 });

@@ -119,11 +119,13 @@ Tags are scoped to a note type. A note of type `quote` can only have `quote`-typ
 
 ## Authors & Sources
 
-Authors and sources are entities — each has a name, optional image, and is linked to notes by foreign key.
+Authors and sources are entities — each has a name, optional image, and is linked to notes by foreign key. Images are stored in the vault under `attachments/authors/` and `attachments/sources/` (DB holds a `file:…` reference). Existing base64 images still work until migrated with `node scripts/migrate-entity-images-to-vault.js --apply`. JSON backup embeds these small images for portability; import writes them into the destination vault and stores new destination-local `file:…` references.
 
-**Author modal:** click an author name in a card or in the Authors page to open. Shows all linked notes count, editable name/image, delete if unused.
+**Author modal:** click an author name in a card or in the Authors page to open. Shows all linked notes count, editable name/image, delete if unused. Image: click the preview, choose a file, or **paste (Ctrl+V)**.
 
-**Source modal:** same pattern. Source has an additional sub-type field (BOOK, MOVIE, PODCAST, etc.) driven by the source types list in settings.
+**Source modal:** same pattern. Source has an additional sub-type field (BOOK, MOVIE, PODCAST, etc.) driven by the source types list in settings. Image: click the preview, choose a file, paste (Ctrl+V), or use **⬇ Download cover** for books.
+
+**Book cover download (BOOK sources only):** **⬇ Download cover** looks up a cover using the source title plus an author name. Leave the author prompt blank to use the most common author on linked notes. The server tries Open Library first, then [Norli](https://www.norli.no) for Norwegian editions, resizes the image (max 300px), writes it under `attachments/sources/`, and stores only its `file:…` reference in `sources.image`. CLI: `node scripts/fetch-source-cover.js --id <id>` (see `scripts/README.md`).
 
 ---
 

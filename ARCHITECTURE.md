@@ -64,7 +64,9 @@ Options has a dedicated **Maintenance** tab for vault health, duplicate inspecti
 
 Vault routes live in `src/routes/vault.js`. `GET /api/vault/info` reports attachment counts, settings metadata, and palette paths. `POST /api/vault/validate` checks writability with a unique temporary test file so it does not overwrite an existing `.write-test` file. `POST /api/vault/move` copies the current attachment tree to a requested destination, reports per-file copy errors, and rejects destinations inside the source directory to avoid recursive self-copying.
 
-Author and source route registration lives in `src/routes/authors.js` and `src/routes/sources.js`. Shared helper logic lives in `src/entityPayload.js` and `src/entityQueries.js`. Image payload helpers preserve `image: null` as an explicit clear operation, fall back to the legacy `thumbnail` field, and validate image payloads before author/source update routes open a DB transaction. Query/response helpers keep list SQL, dynamic update SQL, merge responses, and delete messages testable. Author/source 404 paths roll back open transactions before returning. Author/source updates with no updatable fields return `400` instead of issuing invalid SQL.
+Author and source route registration lives in `src/routes/authors.js` and `src/routes/sources.js`. Shared helper logic lives in `src/entityPayload.js`, `src/entityQueries.js`, and `src/entityImageStorage.js`. Author/source images are resized in the browser, then saved on save as vault files under `attachments/authors/<id>.jpg` and `attachments/sources/<id>.jpg` with DB values like `file:sources/125.jpg:image/jpeg`. Legacy base64 rows still render; migrate them with `scripts/migrate-entity-images-to-vault.js --apply`. JSON export always embeds these small entity images; JSON import materializes embedded images under the destination entity IDs and records fresh vault references. Image payload helpers preserve `image: null` as an explicit clear operation, fall back to the legacy `thumbnail` field, and validate image payloads before author/source update routes open a DB transaction.
+
+Book cover lookup for BOOK sources lives in `src/bookCoverFetch.js`. It tries [Open Library](https://openlibrary.org) first, then falls back to Norli's public Magento GraphQL API (`checkout.norli.no/graphql`) for Norwegian editions. Covers are resized with `sharp` to JPEG data URLs (max 300px). `POST /api/sources/:id/fetch-cover` accepts optional `{ author }` in the body; when omitted, the route uses the most common linked author from `notes`. The handler writes directly to `sources.image` and returns match metadata including `source` (`openlibrary` or `norli`). CLI equivalent: `scripts/fetch-source-cover.js`.
 
 Tag browse, create, rename, delete, and bulk-add routes live in `src/routes/tags.js`. Route-level validation trims tag names before DB work, avoids opening transactions for invalid rename/bulk-add requests, and rolls back missing-tag/source-tag paths before returning. Tag delete now only performs the delete transaction; the previous unused remaining-tag query loop had no side effects and was removed.
 
@@ -115,7 +117,8 @@ Run `npm test` to execute the Node-native test suite (`node --test tests/*.test.
 - `src/routes/quoteBulk.js` quote bulk ID/count/tag/group/sub-type/duplicate/split/delete behavior with fake pool/client objects, including attachment copy/delete cleanup around transaction commit and rollback
 - `src/routes/quotes.js` quote read/create/update/delete/translation/merge behavior with fake pool/client and enrichment dependencies, including attachment cleanup around rollback and commit
 - `src/routes/settings.js` settings file, vault-path, mode-sync, and stale sub-type behavior
-- `src/routes/sources.js` source list/get/create/update/delete behavior with fake pool/client objects
+- `src/bookCoverFetch.js` Open Library search/scoring, cover download, and JPEG resize helpers
+- `src/routes/sources.js` source list/get/create/update/delete/fetch-cover behavior with fake pool/client objects
 - `src/routes/tags.js` tag browse/create/rename/delete/bulk-add behavior and transaction early-return paths
 - `src/routes/uploads.js` direct upload response formatting, MIME fallback, route registration, and WAV transcode fallback behavior
 - `src/routes/vault.js` vault info summaries, directory stats, validation, and attachment-tree copy behavior
@@ -387,6 +390,7 @@ Gallery and list-pane are mutually exclusive (gallery always uses the card grid)
 | `src/server.js` | Express startup, static serving, vault initialization, and route registration |
 | `src/attachmentFolders.js` | Canonical attachment folder mapping and validation |
 | `src/attachmentRehome.js` | Attachment folder drift planner and apply helper |
+| `src/bookCoverFetch.js` | Open Library book cover search, download, and resize |
 | `src/entityPayload.js` | Author/source image payload selection and validation |
 | `src/entityQueries.js` | Author/source SQL builders and response helpers |
 | `src/exportImportHelpers.js` | JSON export/import helper behavior |

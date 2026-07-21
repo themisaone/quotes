@@ -467,9 +467,24 @@ async function enrichNoteAttachmentsForPdf(note, deps = {}) {
   note.pdf_attachments = list;
 }
 
+function resolveEntityImageForPdf(value, deps = {}, cache = new Map()) {
+  if (!value) return null;
+  if (cache.has(value)) return cache.get(value);
+
+  const resolved = deps.fileStorage.retrieveFromStorage(value);
+  const image = resolved && String(resolved).startsWith("data:image/")
+    ? resolved
+    : null;
+  cache.set(value, image);
+  return image;
+}
+
 async function prepareQuotesForPdf(quotes, deps = {}) {
+  const entityImageCache = new Map();
   for (const note of quotes) {
     if (!note) continue;
+    note.author_image = resolveEntityImageForPdf(note.author_image, deps, entityImageCache);
+    note.source_image = resolveEntityImageForPdf(note.source_image, deps, entityImageCache);
     if (note.note_type === "tegneserie") {
       const big = await resolveImageForPdf(note.attachment_full, 1024, deps);
       if (big) note.pdf_full_image = big;
@@ -754,6 +769,7 @@ module.exports = {
   getPdfPageMargins,
   groupQuotesByAuthor,
   prepareQuotesForPdf,
+  resolveEntityImageForPdf,
   registerPdfExportRoutes,
   renderPdfBuffer,
   shouldUseGroupedPdfLayout,

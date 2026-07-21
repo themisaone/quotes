@@ -1,13 +1,35 @@
 const assert = require("node:assert/strict");
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
 const test = require("node:test");
 
+const PNG_DATA_URL =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+
+const fileStorage = require("../src/fileStorage");
 const { registerSourceRoutes } = require("../src/routes/sources");
+
+let tmpAttachmentsRoot;
+
+test.beforeEach(() => {
+  tmpAttachmentsRoot = fs.mkdtempSync(path.join(os.tmpdir(), "source-route-test-"));
+  fileStorage.setAttachmentsDirAbsolute(path.join(tmpAttachmentsRoot, "attachments"));
+});
+
+test.afterEach(() => {
+  if (tmpAttachmentsRoot) {
+    fs.rmSync(tmpAttachmentsRoot, { recursive: true, force: true });
+    tmpAttachmentsRoot = null;
+  }
+  fileStorage.setAttachmentsDirAbsolute(null);
+});
 
 const silentLogger = {
   error() {},
 };
 
-function makeRouteCollector(pool) {
+function makeRouteCollector(pool, options = {}) {
   const routes = new Map();
   const app = {
     get(routePath, handler) {
@@ -24,7 +46,7 @@ function makeRouteCollector(pool) {
     },
   };
 
-  registerSourceRoutes(app, { pool, logger: silentLogger });
+  registerSourceRoutes(app, { pool, logger: silentLogger, ...options });
   return routes;
 }
 
@@ -93,7 +115,13 @@ test("POST /api/sources requires a name and trims inserts", async () => {
   const pool = {
     async query(sql, params) {
       calls.push({ sql, params });
-      return { rows: [{ id: 1, name: params[0], image: params[1], type: params[2] }] };
+      if (sql.includes("INSERT INTO sources")) {
+        return { rows: [{ id: 1, name: params[0], image: params[1] || "", type: params[2] }] };
+      }
+      if (sql.startsWith("UPDATE sources SET image")) {
+        return { rows: [{ id: 1, name: "Dune", image: params[0], type: "BOOK" }] };
+      }
+      return { rows: [] };
     },
   };
   const routes = makeRouteCollector(pool);
@@ -106,19 +134,17 @@ test("POST /api/sources requires a name and trims inserts", async () => {
   const created = await invoke(routes, {
     method: "POST",
     routePath: "/api/sources",
-    body: { name: " Dune ", thumbnail: "data:image/png;base64,abc", type: "BOOK" },
+    body: { name: " Dune ", thumbnail: PNG_DATA_URL, type: "BOOK" },
   });
 
   assert.equal(invalid.status, 400);
   assert.deepEqual(invalid.body, { error: "Source name is required" });
   assert.equal(created.status, 201);
-  assert.deepEqual(created.body, {
-    id: 1,
-    name: "Dune",
-    image: "data:image/png;base64,abc",
-    type: "BOOK",
-  });
-  assert.deepEqual(calls[0].params, ["Dune", "data:image/png;base64,abc", "BOOK"]);
+  assert.equal(created.body.id, 1);
+  assert.equal(created.body.name, "Dune");
+  assert.equal(created.body.type, "BOOK");
+  assert.match(created.body.image, /^file:sources\/1\.png:image\/png$/);
+  assert.deepEqual(calls[0].params, ["Dune", "", "BOOK"]);
 });
 
 test("PUT /api/sources/:id rejects invalid image payloads before connecting", async () => {
@@ -285,4 +311,81 @@ test("DELETE /api/sources/:id guards linked notes and deletes unused sources", a
   assert.deepEqual(guarded.body, { error: "Cannot delete source with existing quotes" });
   assert.equal(deleted.status, 200);
   assert.deepEqual(deleted.body, { message: "Source deleted successfully" });
+});
+
+test("POST /api/sources/:id/fetch-cover stores cover and returns match metadata", async () => {
+  const calls = [];
+  const pool = {
+    async query(sql, params) {
+      calls.push({ sql, params });
+      if (sql.includes("FROM sources WHERE id = $1") && sql.startsWith("SELECT id, name, image, type")) {
+        return { rows: [{ id: 356, name: "1Q84", image: "", type: "BOOK" }] };
+      }
+      if (sql.includes("FROM notes q")) {
+        return { rows: [{ name: "Haruki Murakami" }] };
+      }
+      if (sql.startsWith("UPDATE sources SET image")) {
+        return {
+          rows: [{
+            id: 356,
+            name: "1Q84",
+            image: params[0],
+            type: "BOOK",
+          }],
+        };
+      }
+      return { rows: [] };
+    },
+  };
+
+  const routes = makeRouteCollector(pool, {
+    fetchBookCover: async () => ({
+      dataUrl: PNG_DATA_URL.replace("image/png", "image/jpeg"),
+      match: {
+        title: "1Q84",
+        authors: ["Haruki Murakami"],
+        coverUrl: "https://covers.openlibrary.org/b/id/11153243-L.jpg",
+      },
+    }),
+  });
+
+  const response = await invoke(routes, {
+    method: "POST",
+    routePath: "/api/sources/:id/fetch-cover",
+    params: { id: "356" },
+    body: {},
+  });
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body.authorUsed, "Haruki Murakami");
+  assert.match(response.body.source.image, /^file:sources\/356\.jpg:image\/jpeg$/);
+  assert.equal(response.body.match.title, "1Q84");
+});
+
+test("POST /api/sources/:id/fetch-cover returns 404 when Open Library has no match", async () => {
+  const pool = {
+    async query(sql) {
+      if (sql.includes("FROM sources WHERE id = $1")) {
+        return { rows: [{ id: 1, name: "Missing", image: "", type: "BOOK" }] };
+      }
+      if (sql.includes("FROM notes q")) {
+        return { rows: [{ name: "Nobody" }] };
+      }
+      return { rows: [] };
+    },
+  };
+
+  const routes = makeRouteCollector(pool, {
+    fetchBookCover: async () => null,
+  });
+
+  const response = await invoke(routes, {
+    method: "POST",
+    routePath: "/api/sources/:id/fetch-cover",
+    params: { id: "1" },
+    body: { author: "Nobody" },
+  });
+
+  assert.equal(response.status, 404);
+  assert.match(response.body.error, /No cover found/);
 });

@@ -121,7 +121,7 @@ async function invoke(routes, { method = "GET", routePath, query = {}, body = {}
   return res;
 }
 
-async function makeSqliteExportImportRoutes(t) {
+async function makeSqliteExportImportRoutes(t, options = {}) {
   const dir = makeTempDir(t);
   const attachmentsDir = path.join(dir, "attachments");
   const settingsFile = path.join(dir, "settings.json");
@@ -137,7 +137,9 @@ async function makeSqliteExportImportRoutes(t) {
     settingsFile,
     routes: makeRouteCollector({
       pool,
-      fileStorage: makeFileStorage(attachmentsDir),
+      fileStorage: options.fileStorageFactory
+        ? options.fileStorageFactory(attachmentsDir)
+        : makeFileStorage(attachmentsDir),
       getSettingsFile: () => settingsFile,
     }),
   };
@@ -314,6 +316,61 @@ test("SQLite JSON import creates authors, sources, tags, notes, and note tags", 
     attachment_type: "pdf",
     filename: "import.pdf",
   }]);
+});
+
+test("SQLite JSON import writes embedded entity images to destination vault folders", async (t) => {
+  const makeVaultStorage = (attachmentsDir) => ({
+    isFilePath(value) {
+      return typeof value === "string" && value.startsWith("file:");
+    },
+    parseFilePath(value) {
+      const parts = value.split(":");
+      return { path: parts[1], mimeType: parts[2] || "application/octet-stream" };
+    },
+    getAttachmentsDir() {
+      return attachmentsDir;
+    },
+    processForStorage(value, folder, id) {
+      if (!value) return null;
+      if (value.startsWith("file:")) return value;
+      const match = value.match(/^data:(image\/([^;]+));base64,(.+)$/);
+      assert.ok(match, "expected an embedded image data URL");
+      const ext = match[2] === "jpeg" ? "jpg" : match[2];
+      const relativePath = `${folder}/${id}.${ext}`;
+      const fullPath = path.join(attachmentsDir, relativePath);
+      fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+      fs.writeFileSync(fullPath, Buffer.from(match[3], "base64"));
+      return `file:${relativePath}:${match[1]}`;
+    },
+    deleteAttachment() {},
+  });
+  const { attachmentsDir, pool, routes } = await makeSqliteExportImportRoutes(t, {
+    fileStorageFactory: makeVaultStorage,
+  });
+
+  const res = await invoke(routes, {
+    method: "POST",
+    routePath: "/api/import/json",
+    body: {
+      data: {
+        authors: [{ name: "Ada", image: "data:image/jpeg;base64,YXV0aG9y" }],
+        sources: [{ name: "Notebook", type: "BOOK", image: "data:image/png;base64,c291cmNl" }],
+        tags: [],
+        quotes: [],
+      },
+      options: {},
+    },
+  });
+
+  assert.equal(res.statusCode, 200);
+  const authors = await pool.query("SELECT id, image FROM authors WHERE name = $1", ["Ada"]);
+  const sources = await pool.query("SELECT id, image FROM sources WHERE name = $1", ["Notebook"]);
+  const author = authors.rows[0];
+  const source = sources.rows[0];
+  assert.equal(author.image, `file:authors/${author.id}.jpg:image/jpeg`);
+  assert.equal(source.image, `file:sources/${source.id}.png:image/png`);
+  assert.equal(fs.readFileSync(path.join(attachmentsDir, "authors", `${author.id}.jpg`), "utf8"), "author");
+  assert.equal(fs.readFileSync(path.join(attachmentsDir, "sources", `${source.id}.png`), "utf8"), "source");
 });
 
 test("SQLite JSON import rejects notes whose type is not configured or defined in the backup", async (t) => {

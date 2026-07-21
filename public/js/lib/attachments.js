@@ -441,7 +441,8 @@ export async function readAttachmentFile(file, type, state, callbacks, folder = 
  * @returns {Promise<Object>} Processed image data
  */
 export async function readImageFile(file, type, state, callbacks) {
-  if (!file.type.match("image.*")) {
+  const mimeType = file?.type || "";
+  if (mimeType && !mimeType.match("image.*")) {
     alert("Please select an image file");
     return Promise.reject("Not an image file");
   }
@@ -526,13 +527,19 @@ export async function readImageFile(file, type, state, callbacks) {
  * @param {Object} callbacks - Callbacks for processing
  */
 export function handlePasteEvent(e, type, state, callbacks) {
-  const items = e.clipboardData.items;
+  const items = e.clipboardData?.items;
+  if (!items) return;
 
   for (let i = 0; i < items.length; i++) {
     if (items[i].type.indexOf("image") !== -1) {
       e.preventDefault();
+      e.stopPropagation();
       const blob = items[i].getAsFile();
-      readImageFile(blob, type, state, callbacks);
+      const mimeType = items[i].type || blob?.type || "image/png";
+      const file = blob?.type
+        ? blob
+        : new File([blob], "pasted-image.png", { type: mimeType });
+      readImageFile(file, type, state, callbacks);
       break;
     }
   }

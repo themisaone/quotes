@@ -343,6 +343,14 @@
   width: 100%;
 }
 
+#sourceModal .source-name-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 #sourceModal .source-name-label-row label {
   margin-bottom: 0;
 }

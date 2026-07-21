@@ -168,6 +168,7 @@ export const BUTTON_IDS = {
   TOGGLE_ATTACHMENT_BTN: 'toggleAttachmentBtn',
   TOGGLE_AUTHOR_ATTACHMENT_BTN: 'toggleAuthorAttachmentBtn',
   TOGGLE_SOURCE_ATTACHMENT_BTN: 'toggleSourceAttachmentBtn',
+  FETCH_SOURCE_COVER_BTN: 'fetchSourceCoverBtn',
   
   // Pagination (dynamic, but base IDs)
   PREV_PAGE_BTN: 'prevPageBtn',

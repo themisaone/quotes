@@ -1,7 +1,29 @@
 const assert = require("node:assert/strict");
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
 const test = require("node:test");
 
+const PNG_DATA_URL =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+
+const fileStorage = require("../src/fileStorage");
 const { registerAuthorRoutes } = require("../src/routes/authors");
+
+let tmpAttachmentsRoot;
+
+test.beforeEach(() => {
+  tmpAttachmentsRoot = fs.mkdtempSync(path.join(os.tmpdir(), "author-route-test-"));
+  fileStorage.setAttachmentsDirAbsolute(path.join(tmpAttachmentsRoot, "attachments"));
+});
+
+test.afterEach(() => {
+  if (tmpAttachmentsRoot) {
+    fs.rmSync(tmpAttachmentsRoot, { recursive: true, force: true });
+    tmpAttachmentsRoot = null;
+  }
+  fileStorage.setAttachmentsDirAbsolute(null);
+});
 
 const silentLogger = {
   error() {},
@@ -92,7 +114,13 @@ test("POST /api/authors requires a name and trims inserts", async () => {
   const pool = {
     async query(sql, params) {
       calls.push({ sql, params });
-      return { rows: [{ id: 1, name: params[0], image: params[1] }] };
+      if (sql.includes("INSERT INTO authors")) {
+        return { rows: [{ id: 1, name: params[0], image: params[1] || "" }] };
+      }
+      if (sql.startsWith("UPDATE authors SET image")) {
+        return { rows: [{ id: 1, name: "Ada", image: params[0] }] };
+      }
+      return { rows: [] };
     },
   };
   const routes = makeRouteCollector(pool);
@@ -105,18 +133,16 @@ test("POST /api/authors requires a name and trims inserts", async () => {
   const created = await invoke(routes, {
     method: "POST",
     routePath: "/api/authors",
-    body: { name: " Ada ", thumbnail: "data:image/png;base64,abc" },
+    body: { name: " Ada ", thumbnail: PNG_DATA_URL },
   });
 
   assert.equal(invalid.status, 400);
   assert.deepEqual(invalid.body, { error: "Author name is required" });
   assert.equal(created.status, 201);
-  assert.deepEqual(created.body, {
-    id: 1,
-    name: "Ada",
-    image: "data:image/png;base64,abc",
-  });
-  assert.deepEqual(calls[0].params, ["Ada", "data:image/png;base64,abc"]);
+  assert.equal(created.body.id, 1);
+  assert.equal(created.body.name, "Ada");
+  assert.match(created.body.image, /^file:authors\/1\.png:image\/png$/);
+  assert.deepEqual(calls[0].params, ["Ada", ""]);
 });
 
 test("PUT /api/authors/:id rejects invalid image payloads before connecting", async () => {

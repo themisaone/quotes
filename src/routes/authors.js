@@ -3,6 +3,10 @@ const {
   pickEntityImagePayload,
 } = require("../entityPayload");
 const {
+  deleteEntityImageFile,
+  resolveEntityImageUpdate,
+} = require("../entityImageStorage");
+const {
   buildAuthorMergeResponse,
   buildAuthorUpdateQuery,
   buildAuthorUpdateResponse,
@@ -54,9 +58,14 @@ function registerAuthorRoutes(app, { pool, logger = console }) {
   app.post("/api/authors", async (req, res) => {
     try {
       const { name, thumbnail = "" } = req.body;
+      const imageInput = pickEntityImagePayload(req.body);
+      const imagePayload = imageInput !== undefined ? imageInput : thumbnail;
 
       if (!name) {
         return res.status(400).json({ error: "Author name is required" });
+      }
+      if (!isValidEntityImagePayload(imagePayload)) {
+        return res.status(400).json({ error: "Invalid image format" });
       }
 
       const result = await pool.query(
@@ -64,10 +73,27 @@ function registerAuthorRoutes(app, { pool, logger = console }) {
        VALUES ($1, $2) 
        ON CONFLICT (name) DO UPDATE SET image = COALESCE(NULLIF($2, ''), authors.image)
        RETURNING *`,
-        [name.trim(), thumbnail]
+        [name.trim(), ""]
       );
 
-      res.status(201).json(result.rows[0]);
+      let author = result.rows[0];
+      if (imagePayload) {
+        const storedImage = resolveEntityImageUpdate(
+          author.image,
+          imagePayload,
+          "authors",
+          author.id
+        );
+        if (storedImage !== undefined) {
+          const updated = await pool.query(
+            "UPDATE authors SET image = $1 WHERE id = $2 RETURNING *",
+            [storedImage, author.id]
+          );
+          author = updated.rows[0];
+        }
+      }
+
+      res.status(201).json(author);
     } catch (error) {
       logger.error("Error creating author:", error);
       res.status(500).json({ error: "Failed to create author" });
@@ -99,6 +125,7 @@ function registerAuthorRoutes(app, { pool, logger = console }) {
       }
 
       const oldName = authorCheck.rows[0].name;
+      const oldImage = authorCheck.rows[0].image;
 
       if (name && name.trim() !== oldName) {
         const trimmedName = name.trim();
@@ -113,6 +140,7 @@ function registerAuthorRoutes(app, { pool, logger = console }) {
             "UPDATE notes SET author_id = $1 WHERE author_id = $2",
             [targetAuthorId, id]
           );
+          deleteEntityImageFile(authorCheck.rows[0].image);
           await client.query("DELETE FROM authors WHERE id = $1", [id]);
           await client.query("COMMIT");
 
@@ -123,11 +151,13 @@ function registerAuthorRoutes(app, { pool, logger = console }) {
         }
       }
 
+      const storedImage = resolveEntityImageUpdate(oldImage, thumbnail, "authors", id);
+
       const { query, params, updateFields } = buildAuthorUpdateQuery({
         id,
         name,
         description,
-        image: thumbnail,
+        image: storedImage,
       });
       if (updateFields.length === 0) {
         await client.query("ROLLBACK");
@@ -174,6 +204,8 @@ function registerAuthorRoutes(app, { pool, logger = console }) {
       if (result.rows.length === 0) {
         return res.status(404).json({ error: "Author not found" });
       }
+
+      deleteEntityImageFile(result.rows[0].image);
 
       res.json(buildEntityDeleteSuccessMessage("author"));
     } catch (error) {

@@ -18,6 +18,8 @@
 //     showFetchError: window.showFetchError,
 //   });
 
+import { resolveAttachmentUrl } from './utils.js?v=20260703color1';
+
 let _deps = {
   escapeHtml: (s) => String(s),
   getApiUrl: () => '/api',
@@ -147,10 +149,13 @@ export function displayAuthors(authors) {
     .map((author) => {
       const n = parseInt(author.quote_count, 10) || 0;
       const name = escapeHtml(author.name);
+      const imageUrl = author.image
+        ? escapeHtml(resolveAttachmentUrl(author.image))
+        : '';
       return `
         <div class="card author-card" data-id="${author.id}" data-name="${name}" data-count="${n}">
             <div class="card-image">
-                ${author.image ? `<img src="${author.image}" alt="${name}">` : '✍️'}
+                ${imageUrl ? `<img src="${imageUrl}" alt="${name}">` : '✍️'}
             </div>
             <div class="card-name">
                 <a href="#" class="card-name-action card-filter-author" data-name="${name}">
@@ -255,13 +260,16 @@ export function displaySources(sources) {
       const n = parseInt(source.quote_count, 10) || 0;
       const name = escapeHtml(source.name);
       const type = escapeHtml(source.type || 'BOOK');
+      const imageUrl = source.image
+        ? escapeHtml(resolveAttachmentUrl(source.image))
+        : '';
       const authorName = source.primary_author_name
         ? escapeHtml(source.primary_author_name)
         : '';
       return `
         <div class="card source-card" data-id="${source.id}" data-name="${name}" data-type="${type}" data-count="${n}">
             <div class="card-image">
-                ${source.image ? `<img src="${source.image}" alt="${name}">` : typeIcon}
+                ${imageUrl ? `<img src="${imageUrl}" alt="${name}">` : typeIcon}
             </div>
             <div class="card-name">
                 <a href="#" class="card-name-action card-filter-source" data-name="${name}">

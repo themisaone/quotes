@@ -14,7 +14,9 @@ function pickEntityImagePayload(body = {}) {
 }
 
 function isValidEntityImagePayload(value) {
-  return value == null || value === "" || String(value).startsWith("data:");
+  if (value == null || value === "") return true;
+  const text = String(value);
+  return text.startsWith("data:") || text.startsWith("file:");
 }
 
 module.exports = {

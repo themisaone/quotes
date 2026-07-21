@@ -40,6 +40,7 @@ test("isValidEntityImagePayload allows empty clears and data URLs only", () => {
   assert.equal(isValidEntityImagePayload(null), true);
   assert.equal(isValidEntityImagePayload(""), true);
   assert.equal(isValidEntityImagePayload("data:image/png;base64,abc"), true);
+  assert.equal(isValidEntityImagePayload("file:sources/125.jpg:image/jpeg"), true);
   assert.equal(isValidEntityImagePayload("http://example.test/image.png"), false);
   assert.equal(isValidEntityImagePayload({ src: "data:image/png;base64,abc" }), false);
 });

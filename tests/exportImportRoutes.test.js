@@ -193,6 +193,47 @@ test("GET /api/export/json streams an empty filtered backup", async (t) => {
   assert.deepEqual(calls.find((call) => /FROM notes q/.test(call.sql)).params, [0, 200, "quote"]);
 });
 
+test("GET /api/export/json embeds vault-backed author and source images", async (t) => {
+  const dir = withTempDir(t);
+  fs.mkdirSync(path.join(dir, "authors"), { recursive: true });
+  fs.mkdirSync(path.join(dir, "sources"), { recursive: true });
+  fs.writeFileSync(path.join(dir, "authors", "1.jpg"), Buffer.from("author-image"));
+  fs.writeFileSync(path.join(dir, "sources", "2.png"), Buffer.from("source-image"));
+  const settingsFile = makeSettingsFile(t, dir, { externalStorageThreshold: 1 });
+  const pool = {
+    async query(sql) {
+      if (sql === "SELECT * FROM authors ORDER BY id") {
+        return { rows: [{ id: 1, name: "Ada", image: "file:authors/1.jpg:image/jpeg" }] };
+      }
+      if (sql === "SELECT * FROM sources ORDER BY id") {
+        return { rows: [{ id: 2, name: "Notebook", image: "file:sources/2.png:image/png" }] };
+      }
+      if (sql === "SELECT * FROM tags    ORDER BY id") return { rows: [] };
+      if (/SELECT COUNT\(\*\)/.test(sql)) return { rows: [{ count: "0" }] };
+      if (/FROM notes q/.test(sql)) return { rows: [] };
+      return { rows: [] };
+    },
+  };
+  const routes = makeRouteCollector({
+    pool,
+    fileStorage: makeFileStorage(dir),
+    getSettingsFile: () => settingsFile,
+  });
+
+  const res = await invoke(routes, { routePath: "/api/export/json" });
+  const parsed = JSON.parse(res.chunks.join(""));
+
+  assert.equal(
+    parsed.data.authors[0].image,
+    `data:image/jpeg;base64,${Buffer.from("author-image").toString("base64")}`,
+  );
+  assert.equal(
+    parsed.data.sources[0].image,
+    `data:image/png;base64,${Buffer.from("source-image").toString("base64")}`,
+  );
+  assert.equal(parsed.data._bigFilesCount, 0);
+});
+
 test("GET /api/export/json tracks big files for report and info endpoints", async (t) => {
   const dir = withTempDir(t);
   const noteDir = path.join(dir, "note");

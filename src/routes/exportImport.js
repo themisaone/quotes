@@ -316,12 +316,34 @@ function registerExportImportRoutes(app, {
         quotes: quoteCount,
       };
 
+      // Entity images are intentionally small (the browser resizes them to
+      // 300px). Always embed them so a JSON backup remains portable even
+      // though the live DB stores only vault file references.
+      const exportedAuthors = authorsResult.rows.map((author) => ({
+        ...author,
+        image: resolveAttachmentForExport(
+          author.image,
+          author.id,
+          lastExportBigFiles,
+          Number.POSITIVE_INFINITY,
+        ),
+      }));
+      const exportedSources = sourcesResult.rows.map((source) => ({
+        ...source,
+        image: resolveAttachmentForExport(
+          source.image,
+          source.id,
+          lastExportBigFiles,
+          Number.POSITIVE_INFINITY,
+        ),
+      }));
+
       await writeExportChunk(res, '{"version":"2.0"');
       await writeExportChunk(res, `,"exportedAt":${JSON.stringify(new Date().toISOString())}`);
       await writeExportChunk(res, `,"noteTypeFilter":${JSON.stringify(note_type || "all")}`);
       await writeExportChunk(res, `,"counts":${JSON.stringify(counts)}`);
-      await writeExportChunk(res, `,"data":{"authors":${JSON.stringify(authorsResult.rows)}`);
-      await writeExportChunk(res, `,"sources":${JSON.stringify(sourcesResult.rows)}`);
+      await writeExportChunk(res, `,"data":{"authors":${JSON.stringify(exportedAuthors)}`);
+      await writeExportChunk(res, `,"sources":${JSON.stringify(exportedSources)}`);
       await writeExportChunk(res, `,"tags":${JSON.stringify(tagsResult.rows)}`);
       await writeExportChunk(res, `,"noteTypes":${JSON.stringify(noteTypesForExport)}`);
       await writeExportChunk(res, ',"quotes":[');
@@ -498,6 +520,7 @@ function registerExportImportRoutes(app, {
   app.post("/api/import/json", async (req, res) => {
     const client = await pool.connect();
     const importedAttachmentRefs = new Set();
+    const replacedEntityImageRefs = new Set();
     let committed = false;
 
     try {
@@ -531,15 +554,30 @@ function registerExportImportRoutes(app, {
       const authorDesc = (author) => author.description ?? "";
       const sourceImage = (source) => source.image ?? source.thumbnail ?? "";
 
+      const storeEntityImage = (value, folder, entityId, refs) => {
+        const stored = fileStorage.processForStorage(
+          value,
+          folder,
+          entityId,
+          "",
+          0,
+          true,
+        );
+        trackNewFileRef(refs, stored, value);
+        return stored;
+      };
+
       for (const author of data.authors) {
+        const entityImageRefs = new Set();
+        const replacedRefs = new Set();
         await client.query("SAVEPOINT import_author");
         try {
           if (options?.replaceExisting) {
             const existing = await client.query(
-              "SELECT id FROM authors WHERE name = $1",
+              "SELECT id, image FROM authors WHERE name = $1",
               [author.name],
             );
-            await client.query(
+            const upserted = await client.query(
               `INSERT INTO authors (name, image, description) 
                VALUES ($1, $2, $3) 
                ON CONFLICT (name) DO UPDATE 
@@ -547,6 +585,16 @@ function registerExportImportRoutes(app, {
                RETURNING id`,
               [author.name, authorImage(author), authorDesc(author)],
             );
+            const entityId = upserted.rows[0].id;
+            const storedImage = storeEntityImage(
+              authorImage(author),
+              "authors",
+              entityId,
+              entityImageRefs,
+            );
+            await client.query("UPDATE authors SET image = $1 WHERE id = $2", [storedImage, entityId]);
+            const oldImage = existing.rows[0]?.image;
+            if (isFileReference(oldImage) && oldImage !== storedImage) replacedRefs.add(oldImage);
             if (existing.rows.length > 0) {
               stats.authors.updated++;
             } else {
@@ -560,29 +608,46 @@ function registerExportImportRoutes(app, {
             if (existing.rows.length > 0) {
               stats.authors.skipped++;
             } else {
-              await client.query(
-                "INSERT INTO authors (name, image, description) VALUES ($1, $2, $3)",
+              const inserted = await client.query(
+                "INSERT INTO authors (name, image, description) VALUES ($1, $2, $3) RETURNING id",
                 [author.name, authorImage(author), authorDesc(author)],
               );
+              const entityId = inserted.rows[0].id;
+              const storedImage = storeEntityImage(
+                authorImage(author),
+                "authors",
+                entityId,
+                entityImageRefs,
+              );
+              await client.query("UPDATE authors SET image = $1 WHERE id = $2", [storedImage, entityId]);
               stats.authors.created++;
             }
           }
           await client.query("RELEASE SAVEPOINT import_author");
+          for (const ref of entityImageRefs) importedAttachmentRefs.add(ref);
+          for (const ref of replacedRefs) replacedEntityImageRefs.add(ref);
         } catch (error) {
           await client.query("ROLLBACK TO SAVEPOINT import_author");
+          deleteAttachmentRefs(entityImageRefs, {
+            fileStorage,
+            logger,
+            label: "import-author rollback",
+          });
           stats.errors.push(`Author "${author.name}": ${error.message}`);
         }
       }
 
       for (const source of data.sources) {
+        const entityImageRefs = new Set();
+        const replacedRefs = new Set();
         await client.query("SAVEPOINT import_source");
         try {
           if (options?.replaceExisting) {
             const existing = await client.query(
-              "SELECT id FROM sources WHERE name = $1",
+              "SELECT id, image FROM sources WHERE name = $1",
               [source.name],
             );
-            await client.query(
+            const upserted = await client.query(
               `INSERT INTO sources (name, type, image) 
                VALUES ($1, $2, $3) 
                ON CONFLICT (name) DO UPDATE 
@@ -590,6 +655,16 @@ function registerExportImportRoutes(app, {
                RETURNING id`,
               [source.name, source.type, sourceImage(source)],
             );
+            const entityId = upserted.rows[0].id;
+            const storedImage = storeEntityImage(
+              sourceImage(source),
+              "sources",
+              entityId,
+              entityImageRefs,
+            );
+            await client.query("UPDATE sources SET image = $1 WHERE id = $2", [storedImage, entityId]);
+            const oldImage = existing.rows[0]?.image;
+            if (isFileReference(oldImage) && oldImage !== storedImage) replacedRefs.add(oldImage);
             if (existing.rows.length > 0) {
               stats.sources.updated++;
             } else {
@@ -603,16 +678,31 @@ function registerExportImportRoutes(app, {
             if (existing.rows.length > 0) {
               stats.sources.skipped++;
             } else {
-              await client.query(
-                "INSERT INTO sources (name, type, image) VALUES ($1, $2, $3)",
+              const inserted = await client.query(
+                "INSERT INTO sources (name, type, image) VALUES ($1, $2, $3) RETURNING id",
                 [source.name, source.type, sourceImage(source)],
               );
+              const entityId = inserted.rows[0].id;
+              const storedImage = storeEntityImage(
+                sourceImage(source),
+                "sources",
+                entityId,
+                entityImageRefs,
+              );
+              await client.query("UPDATE sources SET image = $1 WHERE id = $2", [storedImage, entityId]);
               stats.sources.created++;
             }
           }
           await client.query("RELEASE SAVEPOINT import_source");
+          for (const ref of entityImageRefs) importedAttachmentRefs.add(ref);
+          for (const ref of replacedRefs) replacedEntityImageRefs.add(ref);
         } catch (error) {
           await client.query("ROLLBACK TO SAVEPOINT import_source");
+          deleteAttachmentRefs(entityImageRefs, {
+            fileStorage,
+            logger,
+            label: "import-source rollback",
+          });
           stats.errors.push(`Source "${source.name}": ${error.message}`);
         }
       }
@@ -909,6 +999,11 @@ function registerExportImportRoutes(app, {
       await syncNotesIdSequence(client);
       await client.query("COMMIT");
       committed = true;
+      deleteAttachmentRefs(replacedEntityImageRefs, {
+        fileStorage,
+        logger,
+        label: "import replaced entity image",
+      });
 
       const noteTypesAdded = [];
       const warnings = [];

@@ -19,7 +19,7 @@
  */
 
 import { API_URL } from './api.js';
-import { displayImage, clearImagePreview } from './attachments.js';
+import { displayImage, clearImagePreview } from './attachments.js?v=20260720pastesource1';
 import { getElementByIdSafe } from '../constants.js';
 import { showConfirm } from './confirmDialog.js';
 
