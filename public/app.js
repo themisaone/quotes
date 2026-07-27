@@ -48,13 +48,14 @@ import {
 import {
   exportToPdf as exportToPdfLib,
   exportToJson as exportToJsonLib,
+  createFullBackupRequest,
   handleImportFile as handleImportFileLib,
   resetImportModal,
   pruneUnusedEntitiesRequest,
   rehomeAttachmentsRequest,
   vaultHealthCheckRequest,
   runtimeInfoRequest,
-} from './js/lib/dataManager.js?v=20260626datamgmt1';
+} from './js/lib/dataManager.js?v=20260727fullbackup1';
 
 import {
   loadSettings,
@@ -1634,6 +1635,11 @@ function setupEventListeners() {
   const dataExportPdfBtn = getElementByIdSafe("dataExportPdfBtn");
   if (dataExportPdfBtn) {
     dataExportPdfBtn.addEventListener("click", exportDataManagementPdf);
+  }
+
+  const createFullBackupBtn = getElementByIdSafe("createFullBackupBtn");
+  if (createFullBackupBtn) {
+    createFullBackupBtn.addEventListener("click", createFullBackupFromSettings);
   }
 
   // Import JSON button
@@ -4995,6 +5001,74 @@ async function exportDataManagementJson() {
     currentNoteTypeFilter: getDataManagementExportScope(),
     exportBtn: getElementByIdSafe("dataExportJsonBtn"),
   });
+}
+
+function formatBackupBytes(value) {
+  const bytes = Number(value);
+  if (!Number.isFinite(bytes) || bytes < 0) return "unknown size";
+  const units = ["bytes", "KB", "MB", "GB", "TB"];
+  let amount = bytes;
+  let unitIndex = 0;
+  while (amount >= 1024 && unitIndex < units.length - 1) {
+    amount /= 1024;
+    unitIndex += 1;
+  }
+  return `${amount.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
+}
+
+function showFullBackupResult({ message, archivePath = "", isError = false }) {
+  const result = getElementByIdSafe("fullBackupResult", "showFullBackupResult");
+  if (!result) return;
+  result.replaceChildren();
+  result.classList.add("is-visible");
+  result.classList.toggle("backup-result-error", isError);
+  result.classList.toggle("backup-result-success", !isError && Boolean(archivePath));
+
+  const messageElement = document.createElement("strong");
+  messageElement.textContent = message;
+  result.appendChild(messageElement);
+  if (archivePath) {
+    const pathLine = document.createElement("div");
+    pathLine.append("Saved at: ");
+    const code = document.createElement("code");
+    code.textContent = archivePath;
+    pathLine.appendChild(code);
+    result.appendChild(pathLine);
+  }
+}
+
+async function createFullBackupFromSettings() {
+  const confirmed = await showConfirm(
+    "Create a complete server-side backup now? It contains the database, all attachment files, settings, and palettes. Large vaults may take several minutes.",
+    { icon: "🛡️", title: "Create full backup", confirmLabel: "Create Backup" },
+  );
+  if (!confirmed) return;
+
+  const button = getElementByIdSafe("createFullBackupBtn", "createFullBackupFromSettings");
+  const originalText = button?.textContent;
+  if (button) {
+    button.disabled = true;
+    button.textContent = "⏳ Creating full backup…";
+  }
+  showFullBackupResult({ message: "Backup in progress. Keep this tab open…" });
+
+  try {
+    const result = await createFullBackupRequest();
+    showFullBackupResult({
+      message:
+        `Backup created: ${formatBackupBytes(result.archiveBytes)}, ` +
+        `${result.attachmentFiles || 0} attachment files, ${result.backend || "database"} snapshot.`,
+      archivePath: result.archivePath,
+    });
+  } catch (error) {
+    console.error("Full backup error:", error);
+    showFullBackupResult({ message: `Backup failed: ${error.message}`, isError: true });
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = originalText;
+    }
+  }
 }
 
 async function handleImportFile(event) {

@@ -203,7 +203,7 @@ async function createFullBackup(options, {
     logger.log(
       `${attachmentStats.fileCount} attachment files, ${(archiveBytes / 1024 / 1024).toFixed(1)} MB archive`,
     );
-    return { archivePath, manifest };
+    return { archivePath, archiveBytes, manifest };
   } finally {
     if (fs.existsSync(temporaryArchive)) fs.rmSync(temporaryArchive, { force: true });
     fs.rmSync(workDir, { recursive: true, force: true });

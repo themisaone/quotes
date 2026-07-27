@@ -14,6 +14,7 @@ const instanceManager = require("./instanceManager");
 const { registerDbAttachmentExportRoutes } = require("./routes/dbAttachmentExport");
 const { registerDedupRoutes } = require("./routes/dedup");
 const { registerExportImportRoutes } = require("./routes/exportImport");
+const { registerFullBackupRoutes } = require("./routes/fullBackup");
 const { registerInstanceRoutes } = require("./routes/instances");
 const { registerMaintenanceRoutes } = require("./routes/maintenance");
 const { registerModeRoutes } = require("./routes/mode");
@@ -26,6 +27,7 @@ const { registerSourceRoutes } = require("./routes/sources");
 const { registerTagRoutes } = require("./routes/tags");
 const { createUploadMiddleware, registerUploadRoutes } = require("./routes/uploads");
 const { registerVaultRoutes } = require("./routes/vault");
+const { createFullBackup } = require("../scripts/full-backup");
 const {
   loadModesFromFile,
   resolveInitialMode,
@@ -332,6 +334,11 @@ registerExportImportRoutes(app, {
   fileStorage,
   getSettingsFile,
   fsImpl: fs,
+});
+
+// ============= FULL DATABASE + ATTACHMENTS BACKUP =============
+registerFullBackupRoutes(app, {
+  createBackup: createFullBackup,
 });
 
 // ============= EXPORT DB ATTACHMENTS =============

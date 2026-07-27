@@ -1148,6 +1148,33 @@ details.settings-section-desc .settings-section-lead {
   background-size: 0.875rem 0.875rem;
 }
 
+.full-backup-restore-note {
+  margin-top: 0.85rem;
+  padding: 0.75rem;
+  border-left: 3px solid var(--warning-color, #d97706);
+  border-radius: var(--bradius-small);
+  background: rgba(217, 119, 6, 0.08);
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.full-backup-restore-note strong {
+  color: var(--text-primary);
+}
+
+.full-backup-restore-note code {
+  overflow-wrap: anywhere;
+}
+
+.maintenance-result.backup-result-success {
+  border-color: var(--success-color, #16a34a);
+}
+
+.maintenance-result.backup-result-error {
+  border-color: var(--danger-color, #dc2626);
+}
+
 @media (max-width: 767px) {
   .data-management-actions {
     align-items: stretch;

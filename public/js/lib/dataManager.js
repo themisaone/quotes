@@ -542,6 +542,27 @@ export async function exportToJson(config) {
 }
 
 /**
+ * Ask the server to create a complete database + attachment archive.
+ * The archive stays on the server because it may be many gigabytes.
+ */
+export async function createFullBackupRequest() {
+  const response = await fetch(`${API_URL}/backup/full`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error(
+        "Full backup API not found (404). Restart the backend so it loads the latest server code.",
+      );
+    }
+    throw new Error(data.error || `Full backup failed (${response.status})`);
+  }
+  return data;
+}
+
+/**
  * Inspect or remove authors, sources, and tags that have no linked notes.
  */
 export async function pruneUnusedEntitiesRequest({ dryRun = true } = {}) {
