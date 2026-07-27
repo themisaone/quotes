@@ -31,6 +31,7 @@ function registerQuoteRoutes(app, {
   fileStorage,
   getAllowedTypes,
   getDateBasedNoteTypes,
+  getNoteTypeBehavior,
   getModeName,
   getAttachmentsForNotes,
   applyAttachments,
@@ -65,6 +66,13 @@ function registerQuoteRoutes(app, {
 
   function currentModeName() {
     return typeof getModeName === "function" ? getModeName() : getModeName;
+  }
+
+  function noteTypeHasAuthorSource(noteType) {
+    const behavior = typeof getNoteTypeBehavior === "function"
+      ? getNoteTypeBehavior(noteType)
+      : (noteType === "quote" ? "quote" : "generic");
+    return behavior === "quote";
   }
 
   async function rollbackQuietly(client, label) {
@@ -351,13 +359,18 @@ function registerQuoteRoutes(app, {
         );
       }
 
-      const authorId = await getOrCreateQuoteAuthorId(author, client);
-      const sourceId = await getOrCreateQuoteSourceId({
-        source,
-        sourceType,
-        client,
-        updateTypeOnConflict: true,
-      });
+      const keepAuthorSource = noteTypeHasAuthorSource(note_type);
+      const authorId = keepAuthorSource
+        ? await getOrCreateQuoteAuthorId(author, client)
+        : null;
+      const sourceId = keepAuthorSource
+        ? await getOrCreateQuoteSourceId({
+          source,
+          sourceType,
+          client,
+          updateTypeOnConflict: true,
+        })
+        : null;
 
       const result = await client.query(
         `INSERT INTO notes (note_text, note_title, author_id, source_id, comment, type, score, note_type, note_date, translation_group) 
@@ -475,18 +488,6 @@ function registerQuoteRoutes(app, {
         storageThresholdMB = 1,
       } = req.body;
 
-      const authorId = author !== undefined
-        ? await getOrCreateQuoteAuthorId(author, client)
-        : null;
-      const newSourceId = source !== undefined
-        ? await getOrCreateQuoteSourceId({
-          source,
-          sourceType: sourceType || "BOOK",
-          client,
-          updateTypeOnConflict: false,
-        })
-        : null;
-
       const existingRow = await client.query(
         `SELECT thumbnail, attachment_full, note_type FROM notes WHERE id = $1`,
         [id]
@@ -497,6 +498,20 @@ function registerQuoteRoutes(app, {
         requestedNoteType: note_type,
         existingNoteType: existingRow.rows[0]?.note_type,
       });
+      const keepAuthorSource = noteTypeHasAuthorSource(effectiveNoteType);
+      const authorProvided = keepAuthorSource ? author !== undefined : true;
+      const sourceProvided = keepAuthorSource ? source !== undefined : true;
+      const authorId = keepAuthorSource && author !== undefined
+        ? await getOrCreateQuoteAuthorId(author, client)
+        : null;
+      const newSourceId = keepAuthorSource && source !== undefined
+        ? await getOrCreateQuoteSourceId({
+          source,
+          sourceType: sourceType || "BOOK",
+          client,
+          updateTypeOnConflict: false,
+        })
+        : null;
 
       const updateFields = [];
       const params = [];
@@ -513,9 +528,9 @@ function registerQuoteRoutes(app, {
       const scalarFields = buildQuoteScalarUpdateFields({
         noteText: note_text,
         noteTitle: note_title,
-        authorProvided: author !== undefined,
+        authorProvided,
         authorId,
-        sourceProvided: source !== undefined,
+        sourceProvided,
         sourceId: newSourceId,
         comment,
         score,

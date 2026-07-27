@@ -97,6 +97,7 @@ function makeBaseOptions(overrides = {}) {
     },
     getAllowedTypes: () => ["quote", "note"],
     getDateBasedNoteTypes: () => ["training", "DNEVNIK"],
+    getNoteTypeBehavior: (noteType) => noteType === "quote" ? "quote" : "generic",
     getModeName: () => "DEFAULT",
     async getAttachmentsForNotes() {
       return new Map();
@@ -598,6 +599,41 @@ test("POST /api/quotes creates a note and returns enriched response", async () =
   assert.equal(client.released, true);
 });
 
+test("POST /api/quotes discards quote-only author and source fields for generic notes", async () => {
+  const client = makeClient((sql) => {
+    if (/INSERT INTO notes/.test(sql)) return { rows: [{ id: 102 }] };
+    return { rows: [], rowCount: 1 };
+  });
+  const options = makeBaseOptions();
+  options.pool = {
+    async connect() {
+      return client;
+    },
+    async query() {
+      return { rows: [{ id: 102, note_type: "historical" }] };
+    },
+  };
+  const routes = makeRouteCollector(options);
+
+  const response = await invoke(routes, {
+    method: "POST",
+    routePath: "/api/quotes",
+    body: {
+      note_text: "historical entry",
+      note_type: "historical",
+      author: "stale author",
+      source: "stale source",
+      sourceType: "LYRICS",
+    },
+  });
+
+  assert.equal(response.status, 201);
+  assert.equal(client.calls.some((call) => /INSERT INTO authors|INSERT INTO sources/.test(call.sql)), false);
+  const insert = client.calls.find((call) => /INSERT INTO notes/.test(call.sql));
+  assert.equal(insert.params[2], null);
+  assert.equal(insert.params[3], null);
+});
+
 test("POST /api/quotes deletes newly stored attachment files when creation rolls back", async () => {
   const client = makeClient((sql) => {
     if (/INSERT INTO notes/.test(sql)) return { rows: [{ id: 101 }] };
@@ -676,10 +712,46 @@ test("PUT /api/quotes/:id rolls back when the update target is missing", async (
   assert.deepEqual(client.calls.map((call) => call.sql), [
     "BEGIN",
     "SELECT thumbnail, attachment_full, note_type FROM notes WHERE id = $1",
-    "UPDATE notes SET note_text = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *",
+    "UPDATE notes SET note_text = $1, author_id = $2, source_id = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4 RETURNING *",
     "ROLLBACK",
   ]);
+  const update = client.calls.find((call) => /UPDATE notes SET/.test(call.sql));
+  assert.deepEqual(update.params, ["updated", null, null, "55"]);
   assert.equal(client.released, true);
+});
+
+test("PUT /api/quotes/:id clears quote-only links when changing to a generic note type", async () => {
+  const client = makeClient((sql) => {
+    if (/SELECT thumbnail/.test(sql)) {
+      return { rows: [{ thumbnail: null, attachment_full: null, note_type: "quote" }] };
+    }
+    if (/UPDATE notes SET/.test(sql)) return { rows: [] };
+    return { rows: [], rowCount: 1 };
+  });
+  const options = makeBaseOptions({
+    pool: {
+      async connect() {
+        return client;
+      },
+    },
+  });
+  const routes = makeRouteCollector(options);
+
+  await invoke(routes, {
+    method: "PUT",
+    routePath: "/api/quotes/:id",
+    params: { id: "7260" },
+    body: {
+      note_type: "historical",
+      author: "Remove this author",
+      source: "Remove this source",
+    },
+  });
+
+  assert.equal(client.calls.some((call) => /INSERT INTO authors|INSERT INTO sources/.test(call.sql)), false);
+  const update = client.calls.find((call) => /UPDATE notes SET/.test(call.sql));
+  assert.match(update.sql, /author_id = \$1, source_id = \$2, note_type = \$3/);
+  assert.deepEqual(update.params, [null, null, "historical", "7260"]);
 });
 
 test("PUT /api/quotes/:id deletes newly stored attachments when update target disappears", async () => {

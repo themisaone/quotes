@@ -94,6 +94,19 @@ function getDateBasedNoteTypes() {
     .filter(Boolean);
 }
 
+function getNoteTypeBehavior(noteType) {
+  let settings;
+  try {
+    settings = JSON.parse(fs.readFileSync(getSettingsFile(), "utf8"));
+  } catch {
+    settings = createDefaultSettings();
+  }
+
+  const configured = (Array.isArray(settings.noteTypes) ? settings.noteTypes : [])
+    .find((candidate) => candidate?.value === noteType);
+  return configured?.behavior || "generic";
+}
+
 // Ensure local config dir exists
 fs.mkdirSync(path.dirname(LOCAL_FILE), { recursive: true });
 
@@ -288,6 +301,7 @@ registerQuoteRoutes(app, {
   fileStorage,
   getAllowedTypes: () => _allowedTypes,
   getDateBasedNoteTypes,
+  getNoteTypeBehavior,
   getModeName: () => _modeName,
   getAttachmentsForNotes,
   applyAttachments,

@@ -13,6 +13,8 @@
     "package-sqlite": "node scripts/make-sqlite-package.js",
     "split-backup": "node scripts/split-json-backup.js",
     "import-backup-parts": "node scripts/import-json-backup-parts.js",
+    "backup": "node scripts/full-backup.js",
+    "restore": "node scripts/full-restore.js",
     "default": "node scripts/run-mode.js DEFAULT",
     "all": "node scripts/run-mode.js ALL",
     "quotes": "node scripts/run-mode.js QUOTES",

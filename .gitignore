@@ -9,6 +9,7 @@ docker-compose.override.yml
 
 # External attachments (large files stored outside DB)
 attachments/
+backups/
 
 config/local.sqlite.json
 config/local.postgres.json

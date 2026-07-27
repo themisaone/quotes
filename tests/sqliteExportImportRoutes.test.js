@@ -318,6 +318,46 @@ test("SQLite JSON import creates authors, sources, tags, notes, and note tags", 
   }]);
 });
 
+test("SQLite JSON import does not restore quote-only links on generic notes", async (t) => {
+  const { pool, routes } = await makeSqliteExportImportRoutes(t);
+
+  const res = await invoke(routes, {
+    method: "POST",
+    routePath: "/api/import/json",
+    body: {
+      data: {
+        authors: [{ name: "Legacy author" }],
+        sources: [{ name: "Legacy source", type: "BOOK" }],
+        tags: [],
+        quotes: [{
+          id: 7260,
+          note_text: "Historical entry",
+          author_name: "Legacy author",
+          source_name: "Legacy source",
+          note_type: "historical",
+          type: null,
+          created_at: "2026-06-20 12:00:00",
+          updated_at: "2026-06-20 12:00:00",
+        }],
+      },
+      options: {},
+    },
+  });
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.success, true, JSON.stringify(res.body));
+  assert.deepEqual(res.body.stats.errors, []);
+  const imported = await pool.query(
+    "SELECT note_type, author_id, source_id FROM notes WHERE id = $1",
+    [7260],
+  );
+  assert.deepEqual(imported.rows, [{
+    note_type: "historical",
+    author_id: null,
+    source_id: null,
+  }]);
+});
+
 test("SQLite JSON import writes embedded entity images to destination vault folders", async (t) => {
   const makeVaultStorage = (attachmentsDir) => ({
     isFilePath(value) {

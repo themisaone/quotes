@@ -129,7 +129,7 @@ import {
   initializeSearchHandlers,
   registerGlobalSearchFunctions,
   clearSearchFields
-} from './js/lib/searchManager.js?v=20260614searchany1';
+} from './js/lib/searchManager.js?v=20260721entityfilter1';
 
 import {
   initializeAutocomplete,
@@ -149,7 +149,7 @@ import {
   initializeQuillEditor,
   handleFormSubmit as handleFormSubmitLib,
   deleteQuote as deleteQuoteLib
-} from './js/lib/quoteEditor.js?v=20260721entityimages1';
+} from './js/lib/quoteEditor.js?v=20260721entitynormalize1';
 
 import {
   initializeBulkImport,
@@ -2501,6 +2501,7 @@ function setupEventListeners() {
       currentPage = page;
       setLibCurrentPage(page);
     },
+    setNoteTypeFilter: (noteType) => window.setNoteTypeFilter?.(noteType),
     switchView
   });
   
@@ -4657,6 +4658,8 @@ window.setNoteTypeFilter = function(noteType) {
   updateMainTitle?.();
   updateSourcesFilterVisibility?.();
   syncNoteTypeFilterDropdowns();
+  saveCurrentView();
+  updateUrlHash();
 };
 
 // Authors / Sources list pages are now in lib/entityListPage.js (initialised below).

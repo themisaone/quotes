@@ -253,6 +253,7 @@ function _readGroupInput(noteType) {
 export function collectFormData(state) {
   const noteType = getElementValue(MODAL_IDS.NOTE_TYPE_SELECT);
   const behavior = getNoteTypeConfig(noteType).behavior;
+  const hasQuoteEntities = behavior === 'quote';
   const isDateBehavior = hasDateField(noteType);
   const usesDateSubtype = isDateBehavior && Array.from(document.getElementById(MODAL_IDS.TRAINING_TYPE_SELECT)?.options || [])
     .some((option) => option.value);
@@ -267,16 +268,16 @@ export function collectFormData(state) {
   return {
     note_text: getElementValue(MODAL_IDS.QUOTE_TEXT),
     note_title: (document.getElementById('noteTitle')?.value?.trim() || null),
-    author: getElementValue(MODAL_IDS.AUTHOR_INPUT),
-    source: getElementValue(MODAL_IDS.SOURCE_INPUT),
-    sourceType: usesDateSubtype
-      ? getElementValue(MODAL_IDS.TRAINING_TYPE_SELECT)
-      : (hasGenericSubTypeField(noteType)
-          ? getElementValue('genericSubType')
-          : (isDateBehavior
-              ? null
-              : (getElementValue(MODAL_IDS.SOURCE_TYPE_SELECT) || "ASSORTED"))),
-    sourceId: window.currentSourceId || null,
+    author: hasQuoteEntities ? getElementValue(MODAL_IDS.AUTHOR_INPUT) : '',
+    source: hasQuoteEntities ? getElementValue(MODAL_IDS.SOURCE_INPUT) : '',
+    sourceType: hasQuoteEntities
+      ? (getElementValue(MODAL_IDS.SOURCE_TYPE_SELECT) || "ASSORTED")
+      : (usesDateSubtype
+          ? getElementValue(MODAL_IDS.TRAINING_TYPE_SELECT)
+          : (hasGenericSubTypeField(noteType)
+              ? getElementValue('genericSubType')
+              : null)),
+    sourceId: hasQuoteEntities ? (window.currentSourceId || null) : null,
     tags: getElementValue(MODAL_IDS.TAG_INPUT),
     comment: getElementValue(MODAL_IDS.COMMENT_INPUT),
     score: document.querySelector('input[name="quoteScore"]:checked')?.value || "0",

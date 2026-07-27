@@ -753,14 +753,20 @@ function registerExportImportRoutes(app, {
       }
 
       const storageThresholdMB = options?.storageThresholdMB || 1;
+      const noteTypeBehaviors = new Map(
+        readSettingsOrDefault({ fsImpl, getSettingsFile }).noteTypes
+          .map((noteType) => [noteType?.value, noteType?.behavior || "generic"]),
+      );
       await syncNotesIdSequence(client);
 
       for (const note of data.quotes) {
         const noteAttachmentRefs = new Set();
         await client.query("SAVEPOINT import_note");
         try {
+          const noteType = note.note_type || "quote";
+          const supportsAuthorSource = noteTypeBehaviors.get(noteType) === "quote";
           let authorId = null;
-          if (note.author_name) {
+          if (supportsAuthorSource && note.author_name) {
             const authorResult = await client.query(
               "SELECT id FROM authors WHERE name = $1",
               [note.author_name],
@@ -771,7 +777,7 @@ function registerExportImportRoutes(app, {
           }
 
           let sourceId = null;
-          if (note.source_name) {
+          if (supportsAuthorSource && note.source_name) {
             const sourceResult = await client.query(
               "SELECT id FROM sources WHERE name = $1",
               [note.source_name],
@@ -804,7 +810,6 @@ function registerExportImportRoutes(app, {
             }
 
             let quoteId;
-            const noteType = note.note_type || "quote";
 
             const importNoteTitle =
               note.note_title !== undefined &&

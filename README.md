@@ -224,6 +224,37 @@ quotes/
 
 ---
 
+## Full Backup and Restore
+
+The JSON export is the portable, merge-friendly format. For disaster recovery,
+use the full backup command instead. It creates one checksummed `.tar.gz` with:
+
+- an online snapshot of the complete PostgreSQL or SQLite database;
+- the full active `attachments/` directory, including entity images;
+- active `settings.json` and palettes;
+- a manifest with file sizes and SHA-256 checksums.
+
+```bash
+# Safe while the app is running
+npm run backup
+
+# Verify a backup and show its restore targets; does not change data
+npm run restore -- backups/note-archive-full-DATE.tar.gz
+
+# Stop every app instance first, then restore
+npm run restore -- backups/note-archive-full-DATE.tar.gz --apply
+```
+
+The commands read the active backend and paths from `.env` and
+`config/local.json`; `--backend`, `--sqlite-path`, `--attachments`, and
+`--vault` can override them. PostgreSQL needs `pg_dump`/`psql`, and its target
+database must already exist. Restore keeps the previous SQLite database and
+attachment directory beside the targets as `.before-restore-DATE`. Credentials,
+machine-local paths, and application source are intentionally not placed in the
+data archive.
+
+---
+
 ## Sharing with a Colleague
 
 See `DOCKER.md` for full instructions. Short version:

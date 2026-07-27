@@ -223,8 +223,14 @@ function setupTextSearchInputs() {
  * @param {string} filterValue - Value to set in the filter field
  * @param {string} logContext - Context for logging (e.g., "author", "source")
  */
-function applyFilterAndSwitchView(viewName, filterFieldId, filterValue, logContext) {
+function applyFilterAndSwitchView(viewName, filterFieldId, filterValue, logContext, noteType = null) {
   console.log(`Filtering by ${logContext}:`, filterValue);
+
+  // Author and Source belong to quote-behavior notes. Do not inherit the
+  // note-type filter that happened to be active before opening the entity page.
+  if (noteType && callbacks.setNoteTypeFilter) {
+    callbacks.setNoteTypeFilter(noteType);
+  }
 
   // Reset pagination before loading so the list is page 1.
   if (callbacks.setCurrentPage) {
@@ -258,7 +264,7 @@ function applyFilterAndSwitchView(viewName, filterFieldId, filterValue, logConte
  * @param {string} authorName - Author name to filter by
  */
 export function filterByAuthor(authorName) {
-  applyFilterAndSwitchView("quotes", "searchAuthor", authorName, "author");
+  applyFilterAndSwitchView("quotes", "searchAuthor", authorName, "author", "quote");
 }
 
 /**
@@ -266,7 +272,7 @@ export function filterByAuthor(authorName) {
  * @param {string} sourceName - Source name to filter by
  */
 export function filterBySource(sourceName) {
-  applyFilterAndSwitchView("quotes", "searchSource", sourceName, "source");
+  applyFilterAndSwitchView("quotes", "searchSource", sourceName, "source", "quote");
 }
 
 /**
@@ -385,7 +391,7 @@ function setupSearchCollapse() {
 
 /**
  * Initialize all search-related event handlers
- * @param {Object} callbacks - { loadQuotes, loadTotalCount, setCurrentPage, switchView }
+ * @param {Object} callbacks - { loadQuotes, loadTotalCount, setCurrentPage, setNoteTypeFilter, switchView }
  */
 export function initializeSearchHandlers(callbacksParam) {
   callbacks = callbacksParam;
