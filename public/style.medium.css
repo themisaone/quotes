@@ -999,7 +999,7 @@
   }
   /* Dropdown panel */
   .type-filter-dropdown {
-    min-width: 220px !important;
+    min-width: 190px !important;
     padding: var(--m-pad-xs) 0 !important;
   }
   /* Each checkbox row inside the dropdown */
@@ -1013,8 +1013,12 @@
   /* Select All / Clear All action buttons */
   .type-action-btn {
     font-size: var(--m-font-sm) !important;
+    height: 1.65rem !important;
+    min-height: 1.65rem !important;
+    max-height: 1.65rem !important;
     padding: var(--m-pad-xs) var(--m-pad-sm) !important;
     gap: var(--m-pad-xs) !important;
+    line-height: 1.2 !important;
   }
   .type-action-btn .type-icon {
     font-size: var(--m-font-base) !important;

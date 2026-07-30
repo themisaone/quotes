@@ -69,6 +69,9 @@
 }
 
 .sources-type-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   flex: 0 0 auto;
   margin-left: auto;
 }
@@ -78,7 +81,7 @@
 }
 
 .sources-type-filter .type-filter-toggle {
-  min-width: 10.5rem;
+  min-width: 8rem;
 }
 
 .entity-sort-select {
@@ -208,6 +211,7 @@
   flex: 1 1 18rem;
   min-width: 0;
   margin-left: 0;
+  margin-right: 0.35rem;
 }
 
 .search-any-field label {
@@ -346,6 +350,14 @@
   min-width: 0;
 }
 
+.type-filter-field-label {
+  color: var(--text-secondary);
+  font-size: var(--m-font-base);
+  font-weight: 500;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
 /* The dropdown block inside the header doesn't need the grid-cell layout it
    had when it lived in .search-grid — keep it compact.
    Size to content (the label text + arrow) so the button doesn't stretch
@@ -401,7 +413,7 @@
 /* Dropdown panel opens downward from the button, not from the label */
 .search-grid-dropdown .type-filter-dropdown {
   top: 100%;
-  min-width: 260px;
+  min-width: 210px;
 }
 
 .quote-type-filter {
@@ -570,8 +582,8 @@
   border-radius: 8px;
   box-shadow: var(--shadow-lg);
   z-index: 100;
-  min-width: 260px;
-  padding: 0.5rem 0;
+  min-width: 210px;
+  padding: 0.35rem 0;
 }
 
 .type-filter-dropdown.show {
@@ -591,8 +603,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
+  height: 1.75rem !important;
+  min-height: 1.75rem !important;
+  max-height: 1.75rem !important;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
   flex: 1;
   background: none;
   border: none;
@@ -600,6 +615,7 @@
   transition: background 0.2s;
   font-size: 1rem;
   font-weight: 500;
+  line-height: 1.2;
   color: var(--text-primary);
 }
 
@@ -608,12 +624,12 @@
 }
 
 .type-action-btn .type-icon {
-  font-size: 1.1rem;
+  font-size: 0.95rem;
 }
 
 .type-action-separator {
   width: 1px;
-  height: 24px;
+  height: 18px;
   background: var(--border);
   flex-shrink: 0;
 }
@@ -857,9 +873,9 @@ h2 {
 
 /* ── Active filter highlight: inputs/selects that currently filter ── */
 .search-item input[type="text"]:not(:placeholder-shown) {
-  background-color: #fffde7;
-  border-color: #f0b429;
-  color: #1e293b;
+  # background-color: #a8a8a8;
+  border-color: var(--primary-color);
+  color: var(--link-color);
 }
 
 /* Note ID field uses inline styles so needs !important */

@@ -784,6 +784,7 @@
     width: 100% !important;
     max-width: 100% !important;
     margin-left: 0 !important;
+    margin-right: 0 !important;
     padding-left: 0 !important;
   }
 
@@ -840,7 +841,8 @@
 
   .search-header-subtype .type-filter-dropdown-container {
     flex: 1 1 auto !important;
-    width: 100% !important;
+    width: auto !important;
+    min-width: 0 !important;
   }
 
   .search-header-subtype .type-filter-toggle {
@@ -1031,6 +1033,10 @@
     flex: 0 0 auto !important;
     min-width: 3.25rem !important;
     align-self: center !important;
+  }
+
+  .type-filter-field-label {
+    font-size: 0.72rem !important;
   }
 
   .search-header-subtype .type-filter-dropdown .type-filter-option {

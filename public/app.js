@@ -122,7 +122,7 @@ import {
   clearFilters as clearFiltersLib,
   updateSourcesFilterVisibility as updateSourcesFilterVisibilityLib2,
   initializeFilterHandlers
-} from './js/lib/filterManager.js?v=20260628searchscope1';
+} from './js/lib/filterManager.js?v=20260730filtercompact1';
 
 import {
   filterByAuthor as filterByAuthorLib,
@@ -2365,9 +2365,9 @@ function setupEventListeners() {
     const label = document.getElementById("sourceTypeFilterLabel");
     if (!label) return;
     if (checked.length === checkboxes.length) {
-      label.textContent = "📋 All sources";
+      label.textContent = "All";
     } else if (checked.length === 0) {
-      label.textContent = "📋 No sources";
+      label.textContent = "None";
     } else if (checked.length === 1) {
       const row = checked[0].closest(".type-filter-option");
       const icon = row?.querySelector(".type-icon")?.textContent?.trim() || "📋";

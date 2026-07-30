@@ -134,12 +134,13 @@ function renderTypeSummary(summaryEl, checkboxSelector) {
   summaryEl.innerHTML = '(' + parts.join('') + ')';
 }
 
-function formatToggleSummary(checkboxSelector, { all, selected }) {
+function formatToggleSummary(checkboxSelector, { all, none = all, selected }) {
   const checkboxes = [...document.querySelectorAll(checkboxSelector)];
   if (checkboxes.length === 0) return all;
 
   const checked = checkboxes.filter(cb => cb.checked);
-  if (checked.length === 0 || checked.length === checkboxes.length) return all;
+  if (checked.length === 0) return none;
+  if (checked.length === checkboxes.length) return all;
   return selected(checked.length);
 }
 
@@ -164,8 +165,9 @@ export function updateTrainingTypeSummary(isAllNotes = false) {
     : SELECTORS.trainingTypeCheckbox;
   renderTypeSummary(document.getElementById('trainingTypeSummary'), selector);
   updateToggleLabel('trainingTypesFilterLabel', selector, {
-    all: '🏋️ All types',
-    selected: (count) => `🏋️ ${count} selected`,
+    all: 'All',
+    none: 'None',
+    selected: (count) => `${count} selected`,
   });
 }
 
@@ -176,8 +178,9 @@ export function updateQuoteSourcesSummary() {
   const selector = SELECTORS.quoteTypeOptions + ' input[type="checkbox"]';
   renderTypeSummary(document.getElementById('quoteSourcesSummary'), selector);
   updateToggleLabel('quoteSourcesFilterLabel', selector, {
-    all: '📋 All sources',
-    selected: (count) => `📋 ${count} selected`,
+    all: 'All',
+    none: 'None',
+    selected: (count) => `${count} selected`,
   });
 }
 
@@ -250,8 +253,9 @@ export function populateGenericSubTypeFilterCheckboxes(subTypes) {
 export function updateGenericSubTypeSummary() {
   renderTypeSummary(document.getElementById('genericSubTypeSummary'), SELECTORS.genericSubTypeCheckbox);
   updateToggleLabel('genericSubTypesFilterLabel', SELECTORS.genericSubTypeCheckbox, {
-    all: '🏷️ All types',
-    selected: (count) => `🏷️ ${count} selected`,
+    all: 'All',
+    none: 'None',
+    selected: (count) => `${count} selected`,
   });
 }
 
