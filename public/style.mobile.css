@@ -186,7 +186,7 @@
   .select-action-bar .sab-right {
     justify-content: flex-start;
   }
-  .select-action-bar .sab-count {
+  .select-action-bar .sab-selection-count {
     margin-right: 0;
   }
   .select-action-bar .sab-tagop {
@@ -1199,10 +1199,17 @@
     font-size: 0.7rem !important;
     gap: 0.3rem !important;
   }
+
+  .results-counts {
+    font-size: 0.7rem !important;
+    gap: 0.3rem !important;
+  }
   
   .quote-counts #filteredQuotesCount,
   .quote-counts #typeQuotesCount,
-  .quote-counts #totalQuotesCount {
+  .quote-counts #totalQuotesCount,
+  .results-count-badge,
+  .select-action-bar .sab-count {
     padding: 0.2rem 0.4rem !important;
     font-size: 0.75rem !important;
     border-radius: 4px !important;
@@ -1543,6 +1550,13 @@
     box-sizing: border-box !important;
     flex-wrap: wrap !important;
     padding-left: 0 !important;
+  }
+
+  .metadata-filter-noteid-fields .search-input-clear-wrap {
+    width: auto !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
   }
 
   .metadata-filter-noteid-input {

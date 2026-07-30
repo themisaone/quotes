@@ -1206,12 +1206,6 @@ function applyCancelColor(color) {
  */
 function applyActiveCounterColor(color) {
   document.documentElement.style.setProperty('--active-counter-color', color);
-  const counters = document.querySelectorAll(
-    '#filteredQuotesCount, #filteredAuthorsCount, #filteredSourcesCount, #filteredTagsCount'
-  );
-  counters.forEach(counter => {
-    counter.style.backgroundColor = color;
-  });
 }
 
 /**
@@ -1219,12 +1213,6 @@ function applyActiveCounterColor(color) {
  */
 function applyTotalCounterColor(color) {
   document.documentElement.style.setProperty('--total-counter-color', color);
-  const counters = document.querySelectorAll(
-    '#totalQuotesCount, #totalAuthorsCount, #totalSourcesCount, #totalTagsCount'
-  );
-  counters.forEach(counter => {
-    counter.style.backgroundColor = color;
-  });
 }
 
 /**

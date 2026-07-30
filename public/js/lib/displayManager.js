@@ -297,7 +297,7 @@ export function displayQuotes(quotes, currentNoteTypeFilter, getQuoteTypes, getT
   const quoteCount = getElementByIdSafe('quoteCount', 'displayQuotes');
   
   if (quoteCount) {
-    quoteCount.textContent = `(${quotes.length})`;
+    quoteCount.textContent = String(quotes.length);
   }
 
   if (!quotesList) {

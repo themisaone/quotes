@@ -214,6 +214,32 @@ function setupTextSearchInputs() {
   });
 }
 
+/**
+ * Set up the in-field button that clears only its associated search input.
+ * Dispatching an input event keeps debounce, autocomplete, and active-filter
+ * styling on the same path as a manual edit.
+ */
+function setupSearchFieldClearButtons() {
+  document.querySelectorAll('.search-field-clear[data-clear-target]').forEach(button => {
+    const input = getElementByIdSafe(button.dataset.clearTarget, 'setupSearchFieldClearButtons');
+    if (!input) return;
+
+    const syncVisibility = () => {
+      button.classList.toggle('is-visible', input.value.length > 0);
+    };
+
+    input.addEventListener('input', syncVisibility);
+    button.addEventListener('mousedown', event => event.preventDefault());
+    button.addEventListener('click', () => {
+      if (!input.value) return;
+      input.value = '';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.focus();
+    });
+    syncVisibility();
+  });
+}
+
 // ============= FILTER BY HELPERS =============
 
 /**
@@ -397,6 +423,7 @@ export function initializeSearchHandlers(callbacksParam) {
   callbacks = callbacksParam;
   
   setupTextSearchInputs();
+  setupSearchFieldClearButtons();
   setupSearchCollapse();
   setupYearFilter();
   setupMonthFilter();

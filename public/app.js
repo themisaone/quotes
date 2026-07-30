@@ -4,7 +4,7 @@ import {
   updateUrlHash as updateUrlHashLib,
   updateActiveMenuState as updateActiveMenuStateLib,
   updatePageTitle as updatePageTitleLib
-} from './js/lib/viewManager.js?v=20260629mobiletitle1';
+} from './js/lib/viewManager.js?v=20260730statictotal1';
 
 import {
   escapeHtml,
@@ -74,7 +74,7 @@ import {
   getNoteTypeDefaultDisplayMode,
   initializeSettings as initializeSettingsLib,
   refreshSettingsForOptionsPanel
-} from './js/lib/settingsManager.js?v=20260713bulkaddbutton1';
+} from './js/lib/settingsManager.js?v=20260730countervars1';
 
 import {
   loadServicesPanel,
@@ -130,7 +130,7 @@ import {
   initializeSearchHandlers,
   registerGlobalSearchFunctions,
   clearSearchFields
-} from './js/lib/searchManager.js?v=20260721entityfilter1';
+} from './js/lib/searchManager.js?v=20260730fieldclear2';
 
 import {
   initializeAutocomplete,
@@ -3286,7 +3286,7 @@ function displayQuotes(quotes) {
     currentViewMode = 'cards';
   }
 
-  quoteCount.textContent = `(${quotes.length})`;
+  quoteCount.textContent = String(quotes.length);
 
   // In date-based list-pane views, the left column may be showing the calendar
   // sub-view.  The calendar does its own month fetch, so we must still render
@@ -5271,8 +5271,7 @@ function updateSelectActionBar() {
   // note — until then selection-mode is silent (just a visual state on the
   // Latest header button + per-card checkboxes).
   bar.style.display = (selectionMode && count > 0) ? 'flex' : 'none';
-  if (label) label.textContent = `${count} selected`;
-  // if (label) label.textContent = `${count} note${count === 1 ? '' : 's'} selected`;
+  if (label) label.textContent = String(count);
 
   // Keep the hidden legacy selection-bar counter in sync for any stray reader.
   const legacyCount = document.getElementById('selectionCount');

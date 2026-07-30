@@ -85,8 +85,11 @@ body.selection-mode .quote-card::after {
   min-width: 0;
 }
 
-/* Count badge (X notes selected) → pinned left. */
-.select-action-bar .sab-count {
+/* Selected label + count badge → pinned left. */
+.select-action-bar .sab-selection-count {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--d-gap-sm);
   flex: 0 0 auto;
   margin-right: auto;
 }
@@ -140,16 +143,6 @@ body.selection-mode .quote-card::after {
 }
 .select-action-bar .btn-sab:first-of-type {
   margin-left: 0;
-}
-
-.select-action-bar .sab-count {
-  font-weight: 700;
-  padding: 4px 10px;
-  background: var(--active-counter-color);
-  color: white;
-  border-radius: 12px;
-  font-size: var(--d-font-xs);
-  white-space: nowrap;
 }
 
 .select-action-bar .btn-sab {

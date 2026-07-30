@@ -43,6 +43,17 @@
   display: none;
 }
 
+.results-counts {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--d-gap-sm);
+  font-size: var(--d-font-base);
+}
+
+.results-count-label {
+  white-space: nowrap;
+}
+
 .quotes-section-actions {
   display: flex;
   align-items: center;
@@ -52,10 +63,6 @@
 
 #quoteCount {
   font-family: inherit;
-  font-size: inherit;
-  color: var(--text-secondary);
-  font-weight: inherit;
-  line-height: inherit;
 }
 
 .quotes-list {

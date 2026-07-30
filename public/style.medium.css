@@ -638,7 +638,9 @@
   }
 
   /* Counter badges */
-  .quote-counts {
+  .quote-counts,
+  .results-counts,
+  .select-action-bar .sab-selection-count {
     font-size: var(--m-font-sm);
   }
 
@@ -650,7 +652,9 @@
   .quote-counts #filteredSourcesCount,
   .quote-counts #totalSourcesCount,
   .quote-counts #filteredTagsCount,
-  .quote-counts #totalTagsCount {
+  .quote-counts #totalTagsCount,
+  .results-count-badge,
+  .select-action-bar .sab-count {
     font-size: var(--m-font-base);
     padding: 0.25rem 0.55rem;
   }
@@ -780,8 +784,8 @@
     grid-template-columns: minmax(0, 3fr) minmax(0, 3fr) minmax(0, 1.4fr) auto !important;
     gap: 0.5rem 0.75rem !important;
   }
-  .search-grid #searchAuthorContainer { grid-column: 1 / span 2 !important; }
-  .search-grid #searchSourceContainer { grid-column: 3 / span 2 !important; }
+  .search-grid #searchAuthorContainer { grid-column: 1 !important; }
+  .search-grid #searchSourceContainer { grid-column: 2 !important; }
   .search-item {
     gap: 0.35rem !important;
   }
