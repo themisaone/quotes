@@ -112,7 +112,7 @@ import {
   setCurrentPage as setLibCurrentPage,
   setQuotesPerPage,
   getQuotesPerPage
-} from './js/lib/displayManager.js?v=20260712emptytitle1';
+} from './js/lib/displayManager.js?v=20260730allnotestotal1';
 
 import {
   populateTypeFilterCheckboxes as populateTypeFilterCheckboxesLib,
@@ -243,7 +243,7 @@ const BASE_DOCUMENT_TITLE = document.title || 'Note Archive';
 function backendDisplayName(value) {
   const backend = String(value || '').trim().toLowerCase();
   if (backend === 'sqlite') return 'SQLite';
-  if (backend === 'postgres') return 'Postgres';
+  if (backend === 'postgres') return 'PostgreSQL';
   return 'Unknown';
 }
 
@@ -261,7 +261,7 @@ function renderBackendIndicator(info) {
   }
 
   if (indicator) {
-    indicator.textContent = `DB: ${label}`;
+    indicator.textContent = label;
     indicator.dataset.backend = backend || 'unknown';
     indicator.title = titleParts.join('\n');
   }

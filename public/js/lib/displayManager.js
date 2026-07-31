@@ -275,10 +275,12 @@ export async function loadTotalCount(currentNoteTypeFilter, getQuoteTypes, getTr
     
     const response = await fetchWithRetry(`${API_URL}/quotes/count?${params.toString()}`);
     const data = await response.json();
+    const grandTotal = data.grandTotal ?? 0;
+    const headerTotal = currentNoteTypeFilter ? (data.typeTotal ?? 0) : grandTotal;
     
-    if (totalCountElement) totalCountElement.textContent = data.grandTotal || 0;
-    if (typeCountElement) typeCountElement.textContent = data.typeTotal || 0;
-    if (filteredCountElement) filteredCountElement.textContent = data.count || 0;
+    if (totalCountElement) totalCountElement.textContent = grandTotal;
+    if (typeCountElement) typeCountElement.textContent = headerTotal;
+    if (filteredCountElement) filteredCountElement.textContent = data.count ?? 0;
 
 
   } catch (error) {

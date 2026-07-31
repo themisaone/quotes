@@ -12,20 +12,20 @@
          The same ?v= cache-buster must be on every link so reloads pick
          up changes together. -->
     <link rel="stylesheet" href="style.css?v=20260710fontselect3" />
-    <link rel="stylesheet" href="style.sidemenu.css?v=20260713menusep1" />
-    <link rel="stylesheet" href="style.search.css?v=20260730filtercompact3" />
+    <link rel="stylesheet" href="style.sidemenu.css?v=20260730desktopheaderalign1" />
+    <link rel="stylesheet" href="style.search.css?v=20260730headercountalign1" />
     <link rel="stylesheet" href="style.buttons.css?v=20260626noback1" />
     <link rel="stylesheet" href="style.modal.css?v=20260704trainingdate1" />
-    <link rel="stylesheet" href="style.cards.css?v=20260730resultcounts1" />
+    <link rel="stylesheet" href="style.cards.css?v=20260730resultshadow1" />
     <link rel="stylesheet" href="style.selection.css?v=20260730sharedcounts1" />
     <link rel="stylesheet" href="style.attachments.css?v=20260720fetchcover1" />
     <link rel="stylesheet" href="style.entities.css?v=20260704entitycontrols1" />
-    <link rel="stylesheet" href="style.settings.css?v=20260727fullbackup1" />
+    <link rel="stylesheet" href="style.settings.css?v=20260730backendsettings1" />
     <link rel="stylesheet" href="style.dialogs.css?v=20260625runtime1" />
     <link rel="stylesheet" href="style.views.css?v=20260713panenatural1" />
     <link rel="stylesheet" href="style.mobile.css?v=20260730filterlabels2" />
     <link rel="stylesheet" href="style.small.css?v=20260704entitysearch2" />
-    <link rel="stylesheet" href="style.medium.css?v=20260730filtercompact2" />
+    <link rel="stylesheet" href="style.medium.css?v=20260730menurowheight1" />
     <!-- Font Awesome for dice icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <!-- Quill Editor -->
@@ -145,7 +145,12 @@
             <div class="side-menu-header">
               <div class="side-menu-brand">
                 <h2 class="side-menu-title">📦 Note Archive</h2>
-                <span id="backendIndicator" class="backend-indicator" title="Database backend">DB: …</span>
+                <div class="backend-status" aria-label="Archive total">
+                  <div class="backend-status-row">
+                    <span class="backend-status-label">Notes total:</span>
+                    <span id="totalQuotesCount" class="quote-count-grand-total">0</span>
+                  </div>
+                </div>
               </div>
               <button id="sideMenuToggle" class="menu-toggle-btn" title="Toggle menu" aria-label="Toggle menu">&#9664;</button>
             </div>
@@ -289,10 +294,8 @@
               <h1>
                 <span id="mainTitleIcon">💬</span> <span id="mainTitleText">All Misa's Notes</span>
                 <span class="quote-counts" id="quotesQuoteCounts">
-                  <span class="quote-count-sep">- Total:</span>
+                  <span class="quote-count-sep"> - Total:</span>
                   <span id="typeQuotesCount">0</span>
-                  <span class="quote-count-sep quote-count-grand-sep" aria-hidden="true"> - Notes Total:</span>
-                  <span id="totalQuotesCount" class="quote-count-grand-total">0</span>
                 </span>
               </h1>
               <div class="header-actions">
@@ -349,7 +352,7 @@
                 <div class="search-header-subtype" style="display: none;">
                   <!-- Quote Sources dropdown -->
                   <div class="search-item search-grid-dropdown" id="quoteSourcesFilterContainer">
-                    <span class="type-filter-field-label">Sources</span>
+                    <span class="type-filter-field-label">📚 Sources</span>
                     <div class="type-filter-dropdown-container">
                       <button type="button" id="typeFilterToggle" class="type-filter-toggle">
                         <span id="quoteSourcesFilterLabel" class="type-filter-toggle-label">All</span>
@@ -377,7 +380,7 @@
 
                   <!-- Training Types dropdown -->
                   <div class="search-item search-grid-dropdown" id="trainingTypesFilterContainer" style="display: none;">
-                    <span class="type-filter-field-label">Types</span>
+                    <span class="type-filter-field-label">🏷️ Types</span>
                     <div class="type-filter-dropdown-container">
                       <button type="button" id="trainingTypeFilterToggle" class="type-filter-toggle">
                         <span id="trainingTypesFilterLabel" class="type-filter-toggle-label">All</span>
@@ -405,7 +408,7 @@
 
                   <!-- Generic sub-type filter — shown when current type has sub-types -->
                   <div class="search-item search-grid-dropdown" id="genericSubTypesFilterContainer" style="display: none;">
-                    <span class="type-filter-field-label">Types</span>
+                    <span class="type-filter-field-label">🏷️ Types</span>
                     <div class="type-filter-dropdown-container">
                       <button type="button" id="genericSubTypeFilterToggle" class="type-filter-toggle">
                         <span id="genericSubTypesFilterLabel" class="type-filter-toggle-label">All</span>
@@ -676,9 +679,9 @@
                 <h2>
                   <span class="results-title-long">⏳ Search results</span><span class="results-title-short">⏳ Results</span>
                   <span class="results-counts">
-                    <span class="quote-count-sep results-count-label">- On page:</span>
+                    <span class="quote-count-sep results-count-label"> - On page:</span>
                     <span id="quoteCount" class="results-count-badge">0</span>
-                    <span class="quote-count-sep results-count-label">- Filtered:</span>
+                    <span class="quote-count-sep results-count-label"> - Total found:</span>
                     <span id="filteredQuotesCount" class="results-count-badge results-count-filtered">0</span>
                   </span>
                 </h2>
@@ -840,7 +843,7 @@
                   
                   <!-- Source Type Filter -->
                   <div class="sources-type-filter search-grid-dropdown">
-                    <span class="type-filter-field-label">Types</span>
+                    <span class="type-filter-field-label">🏷️ Types</span>
                     <div class="type-filter-dropdown-container">
                       <button type="button" id="sourceTypeFilterToggle" class="type-filter-toggle">
                         <span id="sourceTypeFilterLabel" class="type-filter-toggle-label">All</span>
@@ -1097,6 +1100,20 @@
                 <p class="setting-description setting-select-description">Uses fonts already installed on this device.</p>
                 <div id="appFontPreview" class="app-font-preview">Aa Bb Cc 123 — The quick brown fox</div>
               </div>
+              </div>
+            </div>
+
+            <div class="settings-section settings-system-info">
+              <div class="settings-section-header">
+                <span class="settings-section-heading">ℹ️ System Information</span>
+              </div>
+              <div class="settings-section-body">
+                <dl class="settings-info-list">
+                  <div class="settings-info-pair">
+                    <dt>Database backend:</dt>
+                    <dd id="backendIndicator" title="Database backend">…</dd>
+                  </div>
+                </dl>
               </div>
             </div>
 
@@ -2386,6 +2403,6 @@ Quote number three..."
     <!-- Quill Editor Script -->
     <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
     <script type="module" src="js/lib/confirmDialog.js"></script>
-    <script type="module" src="app.js?v=20260730filtercompact1"></script>
+    <script type="module" src="app.js?v=20260730allnotestotal1"></script>
   </body>
 </html>

@@ -668,7 +668,18 @@
   display: flex;
   align-items: center;
   gap: var(--d-gap-sm);
-  font-size: var(--d-font-base);
+  font-size: var(--d-font-md);
+}
+
+#quotesQuoteCounts {
+  margin-left: calc(var(--d-gap-sm) * -1);
+}
+
+#quotesQuoteCounts .quote-count-sep {
+  display: inline-flex;
+  align-items: center;
+  align-self: stretch;
+  line-height: 1;
 }
 
 .quote-counts.quote-counts--single-type .quote-count-grand-sep,
@@ -694,6 +705,7 @@ body.mode-single-type #quotesQuoteCounts .quote-count-grand-total {
 .quote-counts #totalSourcesCount,
 .quote-counts #filteredTagsCount,
 .quote-counts #totalTagsCount,
+.backend-status #totalQuotesCount,
 .results-count-badge,
 .select-action-bar .sab-count {
   color: white;
@@ -719,7 +731,18 @@ body.mode-single-type #quotesQuoteCounts .quote-count-grand-total {
 .quote-counts #totalQuotesCount,
 .quote-counts #totalAuthorsCount,
 .quote-counts #totalSourcesCount,
-.quote-counts #totalTagsCount     { background: var(--total-counter-color); }
+.quote-counts #totalTagsCount,
+.backend-status #totalQuotesCount { background: var(--total-counter-color); }
+
+.backend-status #totalQuotesCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: start;
+  box-sizing: border-box;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
 
 .header-actions {
   display: flex;

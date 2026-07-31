@@ -58,7 +58,7 @@
   :root {
     /* Typography */
     --m-font-xs:    0.75rem;   /* tag pills (.tag) AND menu section titles */
-    --m-font-sm:    0.9rem;   /* meny, secondary text, labels, strips */
+    --m-font-sm:    0.8rem;   /* meny, secondary text, labels, strips */
     --m-font-base:  0.75rem;   /* main ...body / card text, inputs - MISA */
     --m-font-md:    0.75rem;   /* button text, minor headings - MISA, can be biger than base */
     --m-font-meny-top:    1.1rem;   /* meny top title - MISA */
@@ -68,7 +68,7 @@
     --m-font-tts:   0.7rem;  /* filter-type-summary line (training types / quote sources) */
 
     /* Spacing */
-    --m-pad-xs:     0.40rem;   /* strip padding, tight gaps */
+    --m-pad-xs:     0.20rem;   /* strip padding, tight gaps */
     --m-pad-sm:     0.65rem;   /* modal header, small elements - MISA */
     --m-pad-base:   0.65rem;   /* form-group gap, card gap */
     --m-pad-md:     0.65rem;   /* modal body padding */
@@ -94,9 +94,10 @@
 
   /* Side menu: slightly narrower on medium screens */
   :root {
-    --side-menu-width: 210px;
+    --side-menu-width: 220px;
   }
   .side-menu {
+    --menu-row-min-height: 2rem;
     display: flex !important;
     flex-direction: column;
     padding: var(--m-pad-xl) var(--m-pad-base) !important;
@@ -111,6 +112,26 @@
      scale. */
   .side-menu-header {
     margin-bottom: var(--m-pad-sm);
+  }
+  .menu-toggle-btn,
+  .menu-toggle-btn:hover,
+  .menu-toggle-btn:focus {
+    appearance: none;
+    background: transparent !important;
+    box-shadow: none !important;
+    font-size: 0;
+  }
+  .menu-toggle-btn::before {
+    content: "";
+    width: 0;
+    height: 0;
+    border-top: 0.44rem solid transparent;
+    border-right: 0.62rem solid currentColor;
+    border-bottom: 0.44rem solid transparent;
+  }
+  .side-menu.menu-collapsed .menu-toggle-btn::before {
+    border-right: 0;
+    border-left: 0.62rem solid currentColor;
   }
   .side-menu.menu-collapsed {
     padding: var(--m-pad-sm) 0.2rem !important;
@@ -132,6 +153,10 @@
   .menu-item {
     font-size: var(--m-font-sm) !important;
     padding: var(--m-pad-xs) var(--m-pad-sm) !important;
+  }
+  .backend-status-label,
+  .backend-indicator {
+    font-size: var(--m-font-sm) !important;
   }
   .note-type-filter-li.has-subtags > .note-type-row > .menu-item {
     padding-right: 2.45rem !important;
@@ -581,6 +606,7 @@
   header {
     margin-bottom: 0.75rem !important;
     padding-bottom: 1rem !important;
+    border-bottom-width: 1px !important;
   }
   
   /* Show only tablet-specific button text */
@@ -602,7 +628,7 @@
   }
   
   .side-menu-title {
-    font-size: 1.1rem;
+    font-size: var(--m-font-meny-top) !important;
     margin-bottom: 1.25rem;
   }
   
@@ -616,9 +642,12 @@
     line-height: 1.2;
   }
   
-  .menu-divider {
+  .side-menu > .menu-divider {
     display: block !important;
+    width: 100%;
     height: 1px;
+    min-height: 1px;
+    flex: 0 0 1px;
     margin: 0.8rem 0;
   }
   
@@ -634,7 +663,7 @@
   }
 
   h1 {
-    font-size: var(--m-font-2xl);
+    font-size: var(--m-font-meny-top) !important;
   }
 
   /* Counter badges */
@@ -653,6 +682,7 @@
   .quote-counts #totalSourcesCount,
   .quote-counts #filteredTagsCount,
   .quote-counts #totalTagsCount,
+  .backend-status #totalQuotesCount,
   .results-count-badge,
   .select-action-bar .sab-count {
     font-size: var(--m-font-base);
@@ -743,7 +773,7 @@
     padding: 0 !important;
     margin-bottom: 1rem !important;
     border-radius: 0 !important;
-    border-bottom: 2px solid var(--border) !important;
+    border-bottom: 1px solid var(--border) !important;
     background: transparent !important;
   }
 
@@ -841,7 +871,7 @@
     margin: 0 0 1rem 0 !important;
     border-radius: 0 !important;
     border: none !important;
-    box-shadow: var(--shadow) !important;
+    box-shadow: none !important;
   }
 
   .quotes-section h2,
@@ -914,6 +944,10 @@
     margin: 0 !important;
     padding: var(--m-card-pad) !important;
     font-size: var(--m-font-base) !important;
+  }
+
+  .quotes-list .quote-card {
+    border-width: 1px !important;
   }
 
   .quote-card.has-image {
