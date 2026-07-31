@@ -15,6 +15,7 @@
 .side-menu {
   --menu-row-min-height: 2.35rem;
   --menu-icon-slot: 1.15rem;
+  --menu-expand-control-width: 2.65rem;
   width: var(--side-menu-width);
   background: linear-gradient(135deg, #2c3e50 0%, #34495e 50%, #3d566e 100%);
   border-right: 1px solid #1a252f;
@@ -89,6 +90,11 @@ html { scrollbar-width: thin; scrollbar-color: rgba(0, 0, 0, 0.2) transparent; }
   gap: 0.35rem;
 }
 
+.menu-item,
+.menu-sub-item {
+  line-height: 1.2;
+}
+
 .menu-item:hover {
   background: rgba(255, 255, 255, 0.15);
   color: white;
@@ -148,7 +154,7 @@ html { scrollbar-width: thin; scrollbar-color: rgba(0, 0, 0, 0.2) transparent; }
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  padding: 0 0.1rem;
+  padding: 0;
 }
 .side-menu-brand {
   display: flex;
@@ -192,7 +198,7 @@ html { scrollbar-width: thin; scrollbar-color: rgba(0, 0, 0, 0.2) transparent; }
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 22px;
+  width: var(--menu-expand-control-width);
   height: 22px;
   padding: 0;
   background: transparent;
@@ -200,9 +206,22 @@ html { scrollbar-width: thin; scrollbar-color: rgba(0, 0, 0, 0.2) transparent; }
   border-radius: 3px;
   color: rgba(255, 255, 255, 0.75);
   cursor: pointer;
-  font-size: 0.8rem;
+  font-size: 0;
   line-height: 1;
   transition: background 0.15s, color 0.15s;
+}
+.menu-toggle-btn::before,
+.note-type-expand-btn::before {
+  content: "";
+  width: 0;
+  height: 0;
+  border-top: 0.44rem solid transparent;
+  border-bottom: 0.44rem solid transparent;
+  border-left: 0.62rem solid currentColor;
+  transition: transform 0.18s ease;
+}
+.side-menu:not(.menu-collapsed) .menu-toggle-btn::before {
+  transform: rotate(180deg);
 }
 .menu-toggle-btn:hover {
   background: rgba(255, 255, 255, 0.15);
@@ -336,7 +355,7 @@ html { scrollbar-width: thin; scrollbar-color: rgba(0, 0, 0, 0.2) transparent; }
   color: white;
 }
 .menu-sub-item::before {
-  content: "🏷";
+  content: "🏷️";
   font-size: 0.7em;
   color: #c58a52;
   opacity: 1;
@@ -350,7 +369,7 @@ html { scrollbar-width: thin; scrollbar-color: rgba(0, 0, 0, 0.2) transparent; }
   top: 0;
   right: 0;
   bottom: 0;
-  width: 2.65rem;
+  width: var(--menu-expand-control-width);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -372,15 +391,6 @@ html { scrollbar-width: thin; scrollbar-color: rgba(0, 0, 0, 0.2) transparent; }
 .note-type-expand-btn.open {
   color: rgba(255,255,255,0.95);
   text-shadow: 0 0 3px rgba(255, 255, 255, 0.5);
-}
-.note-type-expand-btn::before {
-  content: "";
-  width: 0;
-  height: 0;
-  border-top: 0.44rem solid transparent;
-  border-bottom: 0.44rem solid transparent;
-  border-left: 0.62rem solid currentColor;
-  transition: transform 0.18s ease;
 }
 .note-type-expand-btn.open::before {
   transform: rotate(90deg);

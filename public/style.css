@@ -40,7 +40,7 @@
   --border: #e2e8f0;
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.1);
-  --side-menu-width: 280px;
+  --side-menu-width: 320px;
   --tag-color: #2d6a4f;
   --active-counter-color: #a92323;
   --total-counter-color: #047857;
@@ -93,6 +93,7 @@ body {
   background: linear-gradient(135deg, #e8eef3 0%, #f0f4f8 50%, #e5ecf1 100%);
   color: var(--text-primary);
   line-height: 1.6;
+  border-top: 1px solid var(--border);
 }
 
 button,
