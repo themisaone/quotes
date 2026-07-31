@@ -32,6 +32,7 @@
   --background: #f8fafc;
   --surface: #ffffff;
   --card-hover-bg: #f0fff4;
+  --list-row-hover-bg: color-mix(in srgb, var(--primary-color) 10%, var(--surface));
   --input-bg: #ffffff;
   --input-border: #e2e8f0;
   --text-primary: #1e293b;

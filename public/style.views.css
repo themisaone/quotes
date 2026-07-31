@@ -10,7 +10,7 @@
    LIST-PANE VIEW
    ============================================================ */
 
-/* Display mode (header) and column count (search results toolbar) */
+/* Combined results-view selector (legacy class names remain for compatibility). */
 .display-mode-select,
 .column-count-select {
   height: var(--d-btn-height);
@@ -134,6 +134,10 @@
   background: var(--total-counter-color);
   color: white;
   border-color: var(--total-counter-color);
+}
+
+.quotes-section-actions .compact-select[data-select-id="columnCountSelect"] {
+  min-width: 10.5rem;
 }
 
 @media (min-width: 768px) {
@@ -385,17 +389,20 @@
   user-select: none;
   background: var(--surface);
 }
-.lp-row:hover {
-  background: var(--card-hover-bg);
+.lp-row:not(.lp-selected):hover {
+  background: var(--list-row-hover-bg);
 }
-.lp-row.lp-selected {
-  background: color-mix(in srgb, var(--primary-color) 22%, var(--surface));
+.lp-row.lp-selected,
+.lp-row.lp-selected:hover {
+  background: var(--card-hover-bg);
   color: var(--text-primary);
 }
 .lp-row.lp-selected .lp-row-meta,
-.lp-row.lp-selected .lp-row-preview,
 .lp-row.lp-selected .lp-row-date {
   color: var(--link-color);
+}
+.lp-row.lp-selected .lp-row-preview {
+  color: var(--text-primary);
 }
 
 .lp-row-main { min-width: 0; }
@@ -455,7 +462,7 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   line-clamp: 2;
-  white-space: normal;
+  white-space: pre-line;
   overflow: hidden;
   line-height: 1.35;
 }

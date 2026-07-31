@@ -11,7 +11,7 @@
          See ARCHITECTURE.md "CSS File Layout".
          The same ?v= cache-buster must be on every link so reloads pick
          up changes together. -->
-    <link rel="stylesheet" href="style.css?v=20260710fontselect3" />
+    <link rel="stylesheet" href="style.css?v=20260731listrowcolors1" />
     <link rel="stylesheet" href="style.sidemenu.css?v=20260730desktopheaderalign1" />
     <link rel="stylesheet" href="style.search.css?v=20260730headercountalign1" />
     <link rel="stylesheet" href="style.buttons.css?v=20260626noback1" />
@@ -22,10 +22,10 @@
     <link rel="stylesheet" href="style.entities.css?v=20260704entitycontrols1" />
     <link rel="stylesheet" href="style.settings.css?v=20260730backendsettings1" />
     <link rel="stylesheet" href="style.dialogs.css?v=20260625runtime1" />
-    <link rel="stylesheet" href="style.views.css?v=20260713panenatural1" />
+    <link rel="stylesheet" href="style.views.css?v=20260731selectedtext1" />
     <link rel="stylesheet" href="style.mobile.css?v=20260730filterlabels2" />
     <link rel="stylesheet" href="style.small.css?v=20260704entitysearch2" />
-    <link rel="stylesheet" href="style.medium.css?v=20260730menurowheight1" />
+    <link rel="stylesheet" href="style.medium.css?v=20260731combinedview1" />
     <!-- Font Awesome for dice icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <!-- Quill Editor -->
@@ -299,14 +299,6 @@
                 </span>
               </h1>
               <div class="header-actions">
-                <select id="trainingSubModeSelect" class="display-mode-select" title="Training view" style="display: none;">
-                  <option value="calendar">📅 Calendar</option>
-                  <option value="list">📋 List</option>
-                </select>
-                <select id="displayModeSelect" class="display-mode-select" title="Display mode" style="display: none;">
-                  <option value="cards">⊞ Cards</option>
-                  <option value="list-pane">☰ List</option>
-                </select>
                 <!-- Desktop buttons (long text) -->
                 <button id="addBulkBtn" class="btn btn-bulk desktop-text">
                   + Add Multiple Quotes
@@ -481,7 +473,7 @@
                 </div>
                 <!-- Clear button sits at the end of row 1 -->
                 <div class="search-item search-clear-item">
-                  <button id="clearBtn" class="btn btn-primary search-clear-btn">Clear All</button>
+                  <button id="clearBtn" class="btn btn-add search-clear-btn">Clear All</button>
                 </div>
 
                 <!-- Row 2 (Quote / All Notes only): Author | Source -->
@@ -695,12 +687,13 @@
                     ☑ Select
                   </button>
                   <button id="mergeGroupBtn" class="btn-merge-group" style="display:none;" onclick="openMergeModalFromGroup()" title="Merge all notes in this group">🔀 Merge group</button>
-                  <select id="columnCountSelect" class="column-count-select" title="Number of columns">
-                    <option value="1">⬜ 1</option>
-                    <option value="2" selected>⬜⬜ 2</option>
-                    <option value="3">⬜⬜⬜ 3</option>
-                    <option value="4">⬜⬜⬜⬜ 4</option>
+                  <select id="columnCountSelect" class="column-count-select results-view-select" title="Results view" aria-label="Results view">
+                    <option value="1">▦ Cards · 1 column</option>
+                    <option value="2" selected>▦ Cards · 2 columns</option>
+                    <option value="3">▦ Cards · 3 columns</option>
+                    <option value="4">▦ Cards · 4 columns</option>
                     <option value="gallery">🖼 Gallery</option>
+                    <option value="list-pane">☰ List</option>
                   </select>
                 </div>
               </div>
@@ -2403,6 +2396,6 @@ Quote number three..."
     <!-- Quill Editor Script -->
     <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
     <script type="module" src="js/lib/confirmDialog.js"></script>
-    <script type="module" src="app.js?v=20260730allnotestotal1"></script>
+    <script type="module" src="app.js?v=20260731listlinebreaks1"></script>
   </body>
 </html>

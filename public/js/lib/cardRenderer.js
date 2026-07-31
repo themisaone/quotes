@@ -168,7 +168,8 @@ function buildTrainingMetadata(note, noteTypeBadge, translationBadge, getTrainin
   // Format date
   const dateStr = formatTrainingDate(note.note_date);
   
-  const trainingTypeStr = sourceType && sourceType !== 'ASSORTED' 
+  const showSourceType = sourceType && (sourceType !== 'ASSORTED' || note.note_type === 'DNEVNIK');
+  const trainingTypeStr = showSourceType
     ? `<span class="type-icon-badge">${trainingIcon}</span> ${trainingLabel}` 
     : '';
   
@@ -191,11 +192,42 @@ function buildTrainingMetadata(note, noteTypeBadge, translationBadge, getTrainin
   return `<div class="meta-item">${noteTypeBadge}${translationBadge}</div>`;
 }
 
+function buildDiaryTypeMetadata(note, noteTypeBadge, translationBadge, getTrainingTypes) {
+  const sourceType = note.source_type || '';
+  if (!sourceType) return `<div class="meta-item">${noteTypeBadge}${translationBadge}</div>`;
+
+  let trainingTypes = [];
+  try {
+    trainingTypes = getTrainingTypes();
+  } catch (error) {
+    console.error('Error getting diary types in cardRenderer:', error);
+  }
+
+  const { icon, label } = getTrainingIconAndLabel(sourceType, trainingTypes);
+  return `<div class="meta-item">${noteTypeBadge}${translationBadge}<span class="type-icon-badge">${icon}</span> <span class="meta-value">${escapeHtml(label)}</span></div>`;
+}
+
+function buildDiaryDateMetadata(note) {
+  const dateStr = formatTrainingDate(note.note_date);
+  return dateStr
+    ? `<div class="meta-item"><span class="meta-value"><span class="type-icon-badge">📅</span> ${dateStr}</span></div>`
+    : '';
+}
+
 /**
  * Build metadata section for generic note types (note, puzzle, historical)
  */
-function buildGenericMetadata(noteTypeBadge, translationBadge) {
-  return `<div class="meta-item">${noteTypeBadge}${translationBadge}</div>`;
+function buildGenericMetadata(note, noteTypeBadge, translationBadge, showSubType = false) {
+  let subTypeHtml = '';
+  if (showSubType && note.source_type) {
+    const subTypes = getGenericSubTypes(note.note_type);
+    const found = subTypes.find((type) => type.value === note.source_type);
+    const icon = found?.icon || '📝';
+    const label = found?.label || note.source_type;
+    subTypeHtml = `<span class="type-icon-badge">${icon}</span> <span class="meta-value">${escapeHtml(label)}</span>`;
+  }
+
+  return `<div class="meta-item">${noteTypeBadge}${translationBadge}${subTypeHtml}</div>`;
 }
 
 const FILE_ICONS  = { pdf: '📄', video: '🎬', document: '📎', encrypted: '🔒' };
@@ -363,7 +395,12 @@ export function buildPaneMetaSections(
   } else if (config.behavior === 'training' || config.behavior === 'diary' || noteType === 'training') {
     metadataHtml = buildTrainingMetadata(note, noteTypeBadge, translationBadge, () => getTrainingTypes(noteType));
   } else {
-    metadataHtml = buildGenericMetadata(noteTypeBadge, translationBadge);
+    metadataHtml = buildGenericMetadata(
+      note,
+      noteTypeBadge,
+      translationBadge,
+      noteType === 'job' || noteType === 'tegneserie',
+    );
   }
 
   return { commentHtml, metadataHtml, tagsHtml };
@@ -373,6 +410,10 @@ export function buildPaneMetaSections(
 export function buildListPaneRowMetaHtml(note, currentNoteTypeFilter, getTrainingTypes, getQuoteTypes) {
   const noteType = note.note_type || currentNoteTypeFilter || 'note';
   const config = getNoteTypeConfig(noteType);
+
+  // Quote sources and Job sub-types belong in the right detail pane, not in
+  // compact list-pane rows.
+  if (noteType === 'quote' || noteType === 'job' || noteType === 'tegneserie') return '';
 
   if (config.behavior === 'quote' || note.author_name || note.source_name) {
     return buildQuoteMetadata(note, '', '', getQuoteTypes);
@@ -425,23 +466,40 @@ export function createQuoteCard(note, currentNoteTypeFilter, getTrainingTypes, g
   
   // Build metadata based on note type behavior
   const config = getNoteTypeConfig(noteType);
+  const isDiary = config.behavior === 'diary';
   let metadataContent = '';
   if (config.behavior === 'quote' || noteType === 'quote') {
     metadataContent = buildQuoteMetadata(note, noteTypeBadge, translationBadge, getQuoteTypes);
-  } else if (config.behavior === 'training' || config.behavior === 'diary' || noteType === 'training') {
+  } else if (isDiary) {
+    metadataContent = buildDiaryTypeMetadata(
+      note,
+      noteTypeBadge,
+      translationBadge,
+      () => getTrainingTypes(noteType),
+    );
+  } else if (config.behavior === 'training' || noteType === 'training') {
     metadataContent = buildTrainingMetadata(note, noteTypeBadge, translationBadge, () => getTrainingTypes(noteType));
   } else {
-    metadataContent = buildGenericMetadata(noteTypeBadge, translationBadge);
+    metadataContent = buildGenericMetadata(
+      note,
+      noteTypeBadge,
+      translationBadge,
+      noteType === 'job',
+    );
   }
   
   // Build attachment section
   const attachmentSection = buildAttachmentSection(note, imageUrl, imageFullUrl);
 
   // Return complete card HTML
-  const isTraining = config.behavior === 'training' || config.behavior === 'diary' || noteType === 'training';
+  const showMetadataBeforeContent = config.behavior === 'training' || noteType === 'training';
+  const diaryDateContent = isDiary ? buildDiaryDateMetadata(note) : '';
+  const diaryDateRow = diaryDateContent
+    ? `<div class="quote-metadata-row training-meta-top"><div class="quote-metadata-left">${diaryDateContent}</div></div>`
+    : '';
 
   const metaRow = `
-                <div class="quote-metadata-row${isTraining ? ' training-meta-top' : ''}">
+                <div class="quote-metadata-row${showMetadataBeforeContent ? ' training-meta-top' : ''}">
                     <div class="quote-metadata-left">
                         ${metadataContent}
                     </div>
@@ -516,8 +574,11 @@ export function createQuoteCard(note, currentNoteTypeFilter, getTrainingTypes, g
             ${galleryThumbHtml}
             <div class="quote-card-content">
                 ${titleHtml}
-                ${isTraining ? metaRow + '<div class="quote-separator"></div>' + topSection
-                             : topSection + '<div class="quote-separator"></div>' + metaRow}
+                ${isDiary
+                  ? `${diaryDateRow}${diaryDateRow ? '<div class="quote-separator"></div>' : ''}${topSection}<div class="quote-separator"></div>${metaRow}`
+                  : showMetadataBeforeContent
+                  ? metaRow + '<div class="quote-separator"></div>' + topSection
+                  : topSection + '<div class="quote-separator"></div>' + metaRow}
             </div>
         </div>
     `;

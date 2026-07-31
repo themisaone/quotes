@@ -23,7 +23,7 @@ import {
   buildPaneMetaSections,
   buildPaneScoreHtml,
   buildListPaneRowMetaHtml,
-} from './cardRenderer.js?v=20260712emptytitle1';
+} from './cardRenderer.js?v=20260731listmetadata2';
 import {
   ensurePaneEditorShell,
   loadPaneNote,
@@ -99,7 +99,20 @@ function stripHtml(html) {
   if (!html) return '';
   const tmp = document.createElement('div');
   tmp.innerHTML = html;
-  return (tmp.textContent || tmp.innerText || '').replace(/\s+/g, ' ').trim();
+
+  tmp.querySelectorAll('br').forEach((element) => {
+    element.replaceWith('\n');
+  });
+  tmp.querySelectorAll('p, div, li, blockquote, h1, h2, h3, h4, h5, h6, pre').forEach((element) => {
+    element.after('\n');
+  });
+
+  return (tmp.textContent || '')
+    .replace(/\r\n?/g, '\n')
+    .replace(/[^\S\n]+/g, ' ')
+    .replace(/ *\n */g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
 
 function formatTrainingDate(dateString) {
@@ -188,7 +201,7 @@ function buildTitledRowHtml(note, idx, isSelected, opts) {
   const title = listPaneTitle(note, opts);
   const previewRaw = stripHtml(note.note_text);
   const previewHtml = previewRaw
-    ? `<div class="lp-row-preview">${escapeHtml(previewRaw)}</div>`
+    ? `<div class="lp-row-preview lp-row-preview-multiline">${escapeHtml(previewRaw)}</div>`
     : '';
 
   const scoreHtml = buildPaneScoreHtml(note);
@@ -253,7 +266,9 @@ function buildRowHtml(note, idx, isSelected, opts) {
   let headerHtml = '';
   if (useDateBasedLayout) {
     const dateStr  = formatTrainingDate(note.note_date);
-    const typeStr  = getTrainingLabel(note.source_type, () => getTrainingTypes(noteType));
+    const typeStr  = noteType === 'DNEVNIK'
+      ? ''
+      : getTrainingLabel(note.source_type, () => getTrainingTypes(noteType));
     headerHtml = `
       ${dateStr ? `<span class="lp-row-date">${escapeHtml(dateStr)}</span>` : ''}
       ${typeStr ? `<span class="lp-row-badge">${typeStr}</span>` : ''}`;
@@ -284,7 +299,7 @@ function buildRowHtml(note, idx, isSelected, opts) {
     <div class="lp-row${selCls}" data-lp-idx="${idx}" data-lp-id="${note.id}">
       <div class="lp-row-main">
         <div class="lp-row-header">${headerHtml}</div>
-        <div class="lp-row-preview">${escapeHtml(preview)}</div>
+        <div class="lp-row-preview lp-row-preview-multiline">${escapeHtml(preview)}</div>
       </div>
       ${thumbHtml}
     </div>`;

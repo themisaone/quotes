@@ -38,7 +38,7 @@ import {
 
 import {
   createQuoteCard as createQuoteCardLib
-} from './js/lib/cardRenderer.js?v=20260712emptytitle1';
+} from './js/lib/cardRenderer.js?v=20260731listmetadata2';
 
 import {
   setupAddModal,
@@ -188,7 +188,7 @@ import {
   setTrainingSubMode,
   getListPanePageSize,
   restoreTrainingDateFiltersToBar
-} from './js/lib/listPaneView.js?v=20260713panenatural1';
+} from './js/lib/listPaneView.js?v=20260731diaryleftmeta1';
 import {
   configurePaneEditor,
   syncPaneTextToModalHidden,
@@ -200,6 +200,10 @@ import {
   configurePaneAttachments,
   renderPaneAttachments,
 } from './js/lib/paneAttachments.js?v=20260712paneactions2';
+import {
+  buildResultsViewOptions,
+  getResultsViewScreen,
+} from './js/lib/viewSelector.js?v=20260731combinedview1';
 // They are kept as local functions due to tight coupling with app-specific state
 
 // ── Round-1 extracted modules (May 2026 split — see lib/README.md) ────────
@@ -390,6 +394,8 @@ let currentNoteTypeFilter = null; // null = show all types
 // View mode: 'cards' | 'list-pane'
 // Persisted in localStorage per note type so each type remembers its preference.
 let currentViewMode = 'cards';
+const COLUMN_KEY = 'quotesColumnCount';
+let applyGalleryModeForView = null;
 
 // Training stays list-pane only (Calendar/List). Diary is date-based too, but
 // it can use Cards, Calendar, or List.
@@ -438,11 +444,6 @@ function saveViewMode(noteType, mode) {
   try {
     localStorage.setItem(`viewMode_${noteType || 'all'}`, mode);
   } catch {}
-}
-
-/** Header DISPLAY_MODE dropdown — All Notes and every non-date-based type. */
-function hasDisplayModeToggle(noteType) {
-  return !isListPaneOnlyType(noteType);
 }
 
 window.currentNoteTypeFilter = currentNoteTypeFilter;
@@ -594,8 +595,6 @@ const quotesList = getElementByIdSafe("quotesList");
 const lpWrapper = getElementByIdSafe("lpWrapper");   // dedicated container for list-pane view
 const quoteCount = getElementByIdSafe("quoteCount");
 const columnCountSelect = getElementByIdSafe("columnCountSelect");
-const displayModeSelect = getElementByIdSafe("displayModeSelect");
-const trainingSubModeSelect = getElementByIdSafe("trainingSubModeSelect");
 const modalTitle = getElementByIdSafe("modalTitle");
 
 const compactSelectFacades = new WeakMap();
@@ -715,7 +714,45 @@ function initCompactSelectFacade(select) {
 }
 
 function initCompactToolbarSelects() {
-  [displayModeSelect, trainingSubModeSelect, columnCountSelect].forEach(initCompactSelectFacade);
+  initCompactSelectFacade(columnCountSelect);
+}
+
+function syncResultsViewSelectOptions() {
+  if (!columnCountSelect) return;
+
+  const screen = getResultsViewScreen((query) => window.matchMedia(query));
+  const specs = buildResultsViewOptions({
+    screen,
+    isDateType: isDateBehaviorType(currentNoteTypeFilter),
+    isTrainingType: isTrainingBehaviorType(currentNoteTypeFilter),
+  });
+  const availableValues = new Set(specs.map(({ value }) => value));
+
+  columnCountSelect.replaceChildren(...specs.map(({ value, label }) => {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = label;
+    return option;
+  }));
+
+  let selectedValue;
+  if (quotesList?.classList.contains('gallery-mode') && availableValues.has('gallery')) {
+    selectedValue = 'gallery';
+  } else if (currentViewMode === 'list-pane') {
+    selectedValue = isDateBehaviorType(currentNoteTypeFilter)
+      ? getTrainingSubMode(currentNoteTypeFilter)
+      : 'list-pane';
+  } else {
+    const savedCardLayout = localStorage.getItem(COLUMN_KEY) || '2';
+    selectedValue = availableValues.has(savedCardLayout)
+      ? savedCardLayout
+      : (availableValues.has('2') ? '2' : specs[0]?.value);
+  }
+
+  columnCountSelect.value = availableValues.has(selectedValue)
+    ? selectedValue
+    : (specs[0]?.value || '');
+  syncCompactSelectFacade(columnCountSelect);
 }
 
 const mobileBottomSelectFacades = new WeakMap();
@@ -2108,168 +2145,79 @@ function setupEventListeners() {
       _syncImageTypeFilterState();
     }
   }
-
-  if (displayModeSelect) {
-    displayModeSelect.addEventListener('change', () => {
-      const mode = displayModeSelect.value;
-      const isDiaryModeSelect = isDateBehaviorType(currentNoteTypeFilter)
-        && !isTrainingBehaviorType(currentNoteTypeFilter);
-
-      if (isDiaryModeSelect) {
-        if (mode !== 'cards' && mode !== 'calendar' && mode !== 'list') return;
-        currentViewMode = mode === 'cards' ? 'cards' : 'list-pane';
-        saveViewMode(currentNoteTypeFilter, currentViewMode);
-        if (mode === 'calendar' || mode === 'list') {
-          setTrainingSubMode(mode, currentNoteTypeFilter || 'training');
-        }
-      } else {
-        if (mode !== 'cards' && mode !== 'list-pane') return;
-        currentViewMode = mode;
-        saveViewMode(currentNoteTypeFilter, mode);
-      }
-      updateViewModeToggle();
-      loadQuotes();
-    });
-  }
-
-  if (trainingSubModeSelect) {
-    trainingSubModeSelect.addEventListener('change', () => {
-      const mode = trainingSubModeSelect.value;
-      if (mode !== 'calendar' && mode !== 'list') return;
-      setTrainingSubMode(mode, currentNoteTypeFilter || 'training');
-      updateViewModeToggle();
-      updateSourcesFilterVisibility();
-      loadQuotes();
-    });
-  }
+  applyGalleryModeForView = applyGalleryMode;
 
   if (columnCountSelect) {
-    const COLUMN_KEY = 'quotesColumnCount';
-
-    /** Ensure all column options exist (older sessions may have .remove()'d them). */
-    function ensureColumnCountOptions() {
-      const specs = [
-        ['1', '⬜ 1'],
-        ['2', '⬜⬜ 2'],
-        ['3', '⬜⬜⬜ 3'],
-        ['4', '⬜⬜⬜⬜ 4'],
-        ['gallery', '🖼 Gallery'],
-      ];
-      for (const [value, label] of specs) {
-        if (!columnCountSelect.querySelector(`option[value="${CSS.escape(value)}"]`)) {
-          const opt = document.createElement('option');
-          opt.value = value;
-          opt.textContent = label;
-          columnCountSelect.appendChild(opt);
-        }
+    const syncResponsiveViewOptions = () => {
+      syncResultsViewSelectOptions();
+      if (
+        currentViewMode === 'cards'
+        && !quotesList?.classList.contains('gallery-mode')
+        && /^[1-4]$/.test(columnCountSelect.value)
+      ) {
+        document.documentElement.style.setProperty('--card-column-count', columnCountSelect.value);
       }
-      // Keep canonical order regardless of append order above
-      for (const [value] of specs) {
-        const opt = columnCountSelect.querySelector(`option[value="${CSS.escape(value)}"]`);
-        if (opt) columnCountSelect.appendChild(opt);
-      }
-    }
+    };
 
-    function setColumnCountOptionLabels(isSmallScreen) {
-      const labels = isSmallScreen
-        ? new Map([
-            ['1', '⬜ 1'],
-            ['2', '▦ Cards'],
-            ['3', '⬜⬜⬜ 3'],
-            ['4', '⬜⬜⬜⬜ 4'],
-            ['gallery', '🖼 Gallery'],
-          ])
-        : new Map([
-            ['1', '⬜ 1'],
-            ['2', '⬜⬜ 2'],
-            ['3', '⬜⬜⬜ 3'],
-            ['4', '⬜⬜⬜⬜ 4'],
-            ['gallery', '🖼 Gallery'],
-          ]);
+    syncResponsiveViewOptions();
+    window.matchMedia('(max-width: 767px)').addEventListener('change', syncResponsiveViewOptions);
+    window.matchMedia('(min-width: 768px) and (max-width: 1100px)').addEventListener('change', syncResponsiveViewOptions);
 
-      for (const [value, label] of labels) {
-        const opt = columnCountSelect.querySelector(`option[value="${CSS.escape(value)}"]`);
-        if (opt && opt.textContent !== label) opt.textContent = label;
+    const saved = localStorage.getItem(COLUMN_KEY) || '2';
+    const availableValues = new Set(Array.from(columnCountSelect.options, (option) => option.value));
+    if (saved === 'gallery' && availableValues.has('gallery') && getStoredViewMode(currentNoteTypeFilter) === 'cards') {
+      document.documentElement.style.setProperty('--card-column-count', '4');
+      applyGalleryMode(true);
+    } else {
+      const initialColumns = availableValues.has(saved) && /^[1-4]$/.test(saved)
+        ? saved
+        : (availableValues.has('2') ? '2' : '1');
+      if (availableValues.has(initialColumns)) {
+        columnCountSelect.value = initialColumns;
+        document.documentElement.style.setProperty('--card-column-count', initialColumns);
       }
     }
 
-    /** Phone: Cards/Gallery; medium/tablet: 2/3/Gallery; desktop: full set. */
-    function syncColumnCountOptions() {
-      ensureColumnCountOptions();
-      const isSmallScreen = window.matchMedia('(max-width: 767px)').matches;
-      const isMediumScreen = window.matchMedia('(min-width: 768px) and (max-width: 1100px)').matches;
-      const allowedInSmall = new Set(['2', 'gallery']);
-      const allowedInMedium = new Set(['2', '3', 'gallery']);
-      setColumnCountOptionLabels(isSmallScreen);
-      Array.from(columnCountSelect.options).forEach((opt) => {
-        const hide =
-          (isSmallScreen && !allowedInSmall.has(opt.value)) ||
-          (isMediumScreen && !allowedInMedium.has(opt.value));
-        opt.hidden = hide;
-        opt.disabled = hide;
-      });
-
-      const validValues = Array.from(columnCountSelect.options)
-        .filter((o) => !o.hidden && !o.disabled)
-        .map((o) => o.value);
-
-      if (!validValues.includes(columnCountSelect.value)) {
-        const fallback = validValues.includes('2') ? '2' : validValues[0];
-        columnCountSelect.value = fallback;
-        localStorage.setItem(COLUMN_KEY, fallback);
-        if (fallback === 'gallery') {
-          document.documentElement.style.setProperty('--card-column-count', '4');
-          applyGalleryMode(true);
-        } else {
-          applyGalleryMode(false);
-          document.documentElement.style.setProperty('--card-column-count', fallback);
-        }
-      }
-      syncCompactSelectFacade(columnCountSelect);
-    }
-
-    syncColumnCountOptions();
-    window.matchMedia('(max-width: 767px)').addEventListener('change', syncColumnCountOptions);
-    window.matchMedia('(min-width: 768px) and (max-width: 1100px)').addEventListener('change', syncColumnCountOptions);
-
-    // Sanitize saved value against options visible on this screen width.
-    const validValues = Array.from(columnCountSelect.options)
-      .filter((o) => !o.hidden && !o.disabled)
-      .map((o) => o.value);
-    let saved = localStorage.getItem(COLUMN_KEY);
-    if (saved && !validValues.includes(saved)) {
-      saved = '2';
-      localStorage.setItem(COLUMN_KEY, saved);
-    }
-
-    if (saved) {
-      columnCountSelect.value = saved;
-      if (saved === 'gallery') {
-        document.documentElement.style.setProperty('--card-column-count', '4');
-        applyGalleryMode(true); // sets filters + page size before the first loadQuotes fires
-      } else {
-        document.documentElement.style.setProperty('--card-column-count', saved);
-      }
-    }
     columnCountSelect.addEventListener('change', () => {
-      const val = columnCountSelect.value;
-      if (val === 'gallery') {
+      const value = columnCountSelect.value;
+      const wasGallery = _galleryActive;
+      const wasListPane = currentViewMode === 'list-pane';
+
+      if (/^[1-4]$/.test(value)) {
+        if (wasGallery) applyGalleryMode(false);
+        currentViewMode = 'cards';
+        saveViewMode(currentNoteTypeFilter, 'cards');
+        document.documentElement.style.setProperty('--card-column-count', value);
+        localStorage.setItem(COLUMN_KEY, value);
+        updateViewModeToggle();
+        if (wasGallery || wasListPane) loadQuotes();
+      } else if (value === 'gallery') {
+        currentViewMode = 'cards';
+        saveViewMode(currentNoteTypeFilter, 'cards');
         document.documentElement.style.setProperty('--card-column-count', '4');
         applyGalleryMode(true);
-        localStorage.setItem(COLUMN_KEY, val);
+        localStorage.setItem(COLUMN_KEY, value);
+        updateViewModeToggle();
         loadQuotes();
-        loadTotalCount();
+      } else if (value === 'list-pane') {
+        if (wasGallery) applyGalleryMode(false);
+        currentViewMode = 'list-pane';
+        saveViewMode(currentNoteTypeFilter, 'list-pane');
+        updateViewModeToggle();
+        loadQuotes();
+      } else if (value === 'calendar' || value === 'list') {
+        if (wasGallery) applyGalleryMode(false);
+        currentViewMode = 'list-pane';
+        saveViewMode(currentNoteTypeFilter, 'list-pane');
+        setTrainingSubMode(value, currentNoteTypeFilter || 'training');
+        updateViewModeToggle();
+        updateSourcesFilterVisibility();
+        loadQuotes();
       } else {
-        const wasGallery = _galleryActive;
-        applyGalleryMode(false);
-        document.documentElement.style.setProperty('--card-column-count', val);
-        localStorage.setItem(COLUMN_KEY, val);
-        if (wasGallery) {
-          loadQuotes();
-          loadTotalCount();
-        }
-        // Plain column change (1↔2↔3↔4): CSS variable update is instant, no reload needed
+        return;
       }
+
+      syncResultsViewSelectOptions();
     });
   }
 
@@ -2618,12 +2566,27 @@ function updateSourcesFilterVisibility() {
 function updateViewModeToggle() {
   const supported = supportsListPaneView(currentNoteTypeFilter);
   const selectModeBtn = getElementByIdSafe('selectModeBtn');
-  const isGallery = quotesList && quotesList.classList.contains('gallery-mode');
-  const isDiaryModeSelect = isDateBehaviorType(currentNoteTypeFilter)
-    && !isTrainingBehaviorType(currentNoteTypeFilter);
+  let isGallery = Boolean(quotesList?.classList.contains('gallery-mode'));
 
   if (supported) {
     currentViewMode = getStoredViewMode(currentNoteTypeFilter);
+    const galleryAllowed = !isTrainingBehaviorType(currentNoteTypeFilter);
+    const galleryPreferred = localStorage.getItem(COLUMN_KEY) === 'gallery';
+
+    if (!galleryAllowed && isGallery && applyGalleryModeForView) {
+      applyGalleryModeForView(false);
+      isGallery = false;
+    } else if (
+      galleryAllowed
+      && currentViewMode === 'cards'
+      && galleryPreferred
+      && !isGallery
+      && applyGalleryModeForView
+    ) {
+      document.documentElement.style.setProperty('--card-column-count', '4');
+      applyGalleryModeForView(true);
+      isGallery = true;
+    }
 
     if (!isGallery) {
       // Gallery manages its own page size — don't overwrite it
@@ -2665,40 +2628,7 @@ function updateViewModeToggle() {
     if (lpWrapper) lpWrapper.style.display = 'none';
   }
 
-  if (displayModeSelect) {
-    const showToggle = hasDisplayModeToggle(currentNoteTypeFilter);
-    displayModeSelect.style.display = showToggle ? '' : 'none';
-    if (showToggle) {
-      if (isDiaryModeSelect) {
-        displayModeSelect.innerHTML = `
-          <option value="cards">⊞ Cards</option>
-          <option value="calendar">📅 Calendar</option>
-          <option value="list">☰ List</option>`;
-        displayModeSelect.value = currentViewMode === 'cards'
-          ? 'cards'
-          : getTrainingSubMode(currentNoteTypeFilter);
-      } else {
-        displayModeSelect.innerHTML = `
-          <option value="cards">⊞ Cards</option>
-          <option value="list-pane">☰ List</option>`;
-        displayModeSelect.value = currentViewMode;
-      }
-    }
-  }
-
-  if (trainingSubModeSelect) {
-    const showTrainingToggle = isTrainingBehaviorType(currentNoteTypeFilter);
-    trainingSubModeSelect.style.display = showTrainingToggle ? '' : 'none';
-    if (showTrainingToggle) trainingSubModeSelect.value = getTrainingSubMode(currentNoteTypeFilter);
-  }
-
-  // Column count is irrelevant in list-pane layout
-  if (columnCountSelect) {
-    const hideColumns = supported && currentViewMode === 'list-pane' && !isGallery;
-    columnCountSelect.style.display = hideColumns ? 'none' : '';
-  }
-
-  [displayModeSelect, trainingSubModeSelect, columnCountSelect].forEach(syncCompactSelectFacade);
+  syncResultsViewSelectOptions();
 }
 
 // Wrapper with app-specific additions

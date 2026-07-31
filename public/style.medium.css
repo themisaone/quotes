@@ -757,6 +757,10 @@
     line-height: 1.15 !important;
   }
 
+  .quotes-section-actions .compact-select[data-select-id="columnCountSelect"] {
+    min-width: 6.35rem !important;
+  }
+
   .btn-icon {
     padding: var(--m-pad-xs);
     font-size: var(--m-font-lg);

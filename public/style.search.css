@@ -210,8 +210,8 @@
 .search-any-field {
   flex: 1 1 18rem;
   min-width: 0;
-  margin-left: 0;
-  margin-right: 0.35rem;
+  margin-left: 0.5rem;
+  margin-right: 0.8rem;
 }
 
 .search-any-field label {
@@ -235,6 +235,8 @@
   position: relative;
   flex: 1 1 auto;
   min-width: 0;
+  margin-left: 0.5rem;
+  margin-right: 0.8rem;
 }
 
 .search-section .search-item .search-input-clear-wrap > input,
@@ -384,6 +386,7 @@
   position: relative;
   flex: 1;
   min-width: 0;
+  margin-left: 0.5rem;
 }
 /* Toggle button now carries its own label (see .type-filter-toggle-label)
    so we size it to content and place the label-left / arrow-right. */
