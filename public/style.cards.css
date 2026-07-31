@@ -43,11 +43,28 @@
   display: none;
 }
 
+.results-search-only.results-search-only-hidden {
+  display: none !important;
+}
+
+.quotes-section-header .results-search-only.results-search-only-hidden {
+  display: none !important;
+}
+
 .results-counts {
   display: inline-flex;
   align-items: center;
-  gap: var(--d-gap-sm);
+  gap: var(--d-gap-base);
   font-size: var(--d-font-md);
+}
+
+.quotes-section-header h2 .results-counts {
+  font-size: inherit !important;
+}
+
+.results-counts .results-count-label {
+  color: inherit;
+  font-weight: inherit;
 }
 
 .results-count-label {

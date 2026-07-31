@@ -112,7 +112,7 @@ import {
   setCurrentPage as setLibCurrentPage,
   setQuotesPerPage,
   getQuotesPerPage
-} from './js/lib/displayManager.js?v=20260730allnotestotal1';
+} from './js/lib/displayManager.js?v=20260731resultsummary5';
 
 import {
   populateTypeFilterCheckboxes as populateTypeFilterCheckboxesLib,

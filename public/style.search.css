@@ -675,7 +675,7 @@
 }
 
 #quotesQuoteCounts {
-  margin-left: calc(var(--d-gap-sm) * -1);
+  margin-left: calc(var(--d-gap-base) * 0.1);
 }
 
 #quotesQuoteCounts .quote-count-sep {

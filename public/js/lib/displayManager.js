@@ -27,6 +27,7 @@ import {
   getCheckedValues
 } from '../constants.js';
 import { getNoteTypeConfig, hasDateField, hasGenericSubTypeField } from './noteTypes.js';
+import { updateResultsSummary } from './resultSummary.js?v=20260731resultsummary5';
 
 // ============= MODULE STATE =============
 
@@ -246,6 +247,7 @@ export async function loadQuotes(currentNoteTypeFilter, getQuoteTypes, getTraini
   
   try {
     const params = buildQuotesParams(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes, globalSettings);
+    updateResultsSummary(params);
     const response = await fetchWithRetry(`${API_URL}/quotes?${params.toString()}`);
     const quotes = await response.json();
     currentQuotesData = quotes;
@@ -272,6 +274,7 @@ export async function loadTotalCount(currentNoteTypeFilter, getQuoteTypes, getTr
   
   try {
     const params = buildQuotesParams(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes, globalSettings);
+    updateResultsSummary(params);
     
     const response = await fetchWithRetry(`${API_URL}/quotes/count?${params.toString()}`);
     const data = await response.json();

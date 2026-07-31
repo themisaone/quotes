@@ -15,11 +15,11 @@
          The same ?v= cache-buster must be on every link so reloads pick
          up changes together. -->
     <link rel="stylesheet" href="style.css?v=20260731listrowcolors1" />
-    <link rel="stylesheet" href="style.sidemenu.css?v=20260731sidebararrows1" />
+    <link rel="stylesheet" href="style.sidemenu.css?v=20260731headeralign1" />
     <link rel="stylesheet" href="style.search.css?v=20260730headercountalign1" />
     <link rel="stylesheet" href="style.buttons.css?v=20260626noback1" />
     <link rel="stylesheet" href="style.modal.css?v=20260704trainingdate1" />
-    <link rel="stylesheet" href="style.cards.css?v=20260730resultshadow1" />
+    <link rel="stylesheet" href="style.cards.css?v=20260731resultsummary5" />
     <link rel="stylesheet" href="style.selection.css?v=20260730sharedcounts1" />
     <link rel="stylesheet" href="style.attachments.css?v=20260720fetchcover1" />
     <link rel="stylesheet" href="style.entities.css?v=20260704entitycontrols1" />
@@ -28,7 +28,7 @@
     <link rel="stylesheet" href="style.views.css?v=20260731selectedtext1" />
     <link rel="stylesheet" href="style.mobile.css?v=20260730filterlabels2" />
     <link rel="stylesheet" href="style.small.css?v=20260704entitysearch2" />
-    <link rel="stylesheet" href="style.medium.css?v=20260731sidebararrows1" />
+    <link rel="stylesheet" href="style.medium.css?v=20260731headeralign1" />
     <!-- Font Awesome for dice icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <!-- Quill Editor -->
@@ -147,13 +147,13 @@
         <nav class="side-menu">
             <div class="side-menu-header">
               <div class="side-menu-brand">
-                <h2 class="side-menu-title">📦 Note Archive</h2>
-                <div class="backend-status" aria-label="Archive total">
-                  <div class="backend-status-row">
-                    <span class="backend-status-label">Notes total:</span>
+                <h2 class="side-menu-title">
+                  <span class="side-menu-title-icon">📦</span>
+                  <span class="side-menu-title-text">MJ Note</span>
+                  <span class="quote-counts side-menu-title-counts" aria-label="Archive total">
                     <span id="totalQuotesCount" class="quote-count-grand-total">0</span>
-                  </div>
-                </div>
+                  </span>
+                </h2>
               </div>
               <button id="sideMenuToggle" class="menu-toggle-btn" title="Toggle menu" aria-label="Toggle menu">&#9664;</button>
             </div>
@@ -297,7 +297,6 @@
               <h1>
                 <span id="mainTitleIcon">💬</span> <span id="mainTitleText">All Misa's Notes</span>
                 <span class="quote-counts" id="quotesQuoteCounts">
-                  <span class="quote-count-sep"> - Total:</span>
                   <span id="typeQuotesCount">0</span>
                 </span>
               </h1>
@@ -672,12 +671,11 @@
             <div class="quotes-section">
               <div class="quotes-section-header">
                 <h2>
-                  <span class="results-title-long">⏳ Search results</span><span class="results-title-short">⏳ Results</span>
                   <span class="results-counts">
-                    <span class="quote-count-sep results-count-label"> - On page:</span>
+                    <span id="onPageCountLabel" class="quote-count-sep results-count-label">⏳ Displayed</span>
                     <span id="quoteCount" class="results-count-badge">0</span>
-                    <span class="quote-count-sep results-count-label"> - Total found:</span>
-                    <span id="filteredQuotesCount" class="results-count-badge results-count-filtered">0</span>
+                    <span class="quote-count-sep results-count-label results-search-only results-search-only-hidden">Found</span>
+                    <span id="filteredQuotesCount" class="results-count-badge results-count-filtered results-search-only results-search-only-hidden">0</span>
                   </span>
                 </h2>
                 <div class="quotes-section-actions">
@@ -2399,6 +2397,6 @@ Quote number three..."
     <!-- Quill Editor Script -->
     <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
     <script type="module" src="js/lib/confirmDialog.js"></script>
-    <script type="module" src="app.js?v=20260731listlinebreaks1"></script>
+    <script type="module" src="app.js?v=20260731resultsummary5"></script>
   </body>
 </html>

@@ -637,7 +637,7 @@
     height: 1px;
     min-height: 1px;
     flex: 0 0 1px;
-    margin: 0.8rem 0;
+    margin: 0.3rem 0 0.8rem;
   }
   
   .modal-header {
