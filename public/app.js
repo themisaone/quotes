@@ -242,7 +242,7 @@ window.showFetchError = function showFetchError(message) {
   _fetchErrorTimer = setTimeout(() => { banner.style.display = 'none'; }, 12000);
 }
 
-const BASE_DOCUMENT_TITLE = document.title || 'Note Archive';
+const BASE_DOCUMENT_TITLE = document.title || 'M-Note';
 
 function backendDisplayName(value) {
   const backend = String(value || '').trim().toLowerCase();

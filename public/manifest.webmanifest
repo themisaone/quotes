@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "Note Archive",
-  "short_name": "Note Archive",
-  "description": "Search and manage the Note Archive.",
+  "name": "M-Note",
+  "short_name": "M-Note",
+  "description": "Search and manage M-Note.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

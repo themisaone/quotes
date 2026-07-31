@@ -899,21 +899,15 @@ h2 {
 
 /* ── Active filter highlight: inputs/selects that currently filter ── */
 .search-item input[type="text"]:not(:placeholder-shown) {
-  # background-color: #a8a8a8;
-  border-color: var(--primary-color);
-  color: var(--link-color);
+  background-color: var(--card-hover-bg);
 }
 
-/* Note ID field uses inline styles so needs !important */
+/* Note ID sits outside .search-item, so it needs its own populated rule. */
 #searchNoteId:not(:placeholder-shown) {
-  background-color: #fffde7 !important;
-  border-color: #f0b429 !important;
-  color: #1e293b !important;
+  background-color: var(--card-hover-bg) !important;
 }
 
 /* Year / Month selects: class added by JS when a value is selected */
 .training-date-select.filter-active {
-  background-color: #fffde7;
-  border-color: #f0b429;
-  color: #1e293b;
+  background-color: var(--card-hover-bg);
 }

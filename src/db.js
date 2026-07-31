@@ -21,7 +21,7 @@ function formatStartupError(error) {
       `Database: ${error.dbPath}`,
       `Locked by process: ${error.pid}`,
       "",
-      "Stop the running Note Archive service that uses this SQLite file, then start this one again.",
+      "Stop the running M-Note service that uses this SQLite file, then start this one again.",
       "If you are sure no service is running, remove the stale lock file:",
       `  ${error.lockPath}`,
       "",

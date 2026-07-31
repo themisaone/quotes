@@ -4,10 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#1b1d21" />
-    <title>Note Archive</title>
+    <title>M-Note</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <link rel="apple-touch-icon" href="app-icon-192.png?v=20260731appicon1" />
-    <link rel="manifest" href="manifest.webmanifest?v=20260731appicon1" />
+    <link rel="manifest" href="manifest.webmanifest?v=20260731appname1" />
     <!-- Stylesheet load order matters and mirrors the original cascade.
          Feature files come first (in original-line order), then responsive
          overlays: broad mobile, then extra-small phones, then medium width.
@@ -16,7 +16,7 @@
          up changes together. -->
     <link rel="stylesheet" href="style.css?v=20260731listrowcolors1" />
     <link rel="stylesheet" href="style.sidemenu.css?v=20260731headeralign1" />
-    <link rel="stylesheet" href="style.search.css?v=20260730headercountalign1" />
+    <link rel="stylesheet" href="style.search.css?v=20260731activefieldbg1" />
     <link rel="stylesheet" href="style.buttons.css?v=20260626noback1" />
     <link rel="stylesheet" href="style.modal.css?v=20260704trainingdate1" />
     <link rel="stylesheet" href="style.cards.css?v=20260731resultsummary5" />
@@ -148,8 +148,7 @@
             <div class="side-menu-header">
               <div class="side-menu-brand">
                 <h2 class="side-menu-title">
-                  <span class="side-menu-title-icon">📦</span>
-                  <span class="side-menu-title-text">MJ Note</span>
+                  <span class="side-menu-title-text">📦 M-Note</span>
                   <span class="quote-counts side-menu-title-counts" aria-label="Archive total">
                     <span id="totalQuotesCount" class="quote-count-grand-total">0</span>
                   </span>
@@ -1560,7 +1559,7 @@
                 </div>
                 <div class="full-backup-restore-note">
                   <strong>Restore is intentionally command-line only.</strong>
-                  First stop every running Note Archive instance. Run
+                  First stop every running M-Note instance. Run
                   <code>npm run restore -- &lt;backup.tar.gz&gt;</code> to verify and inspect the archive.
                   Add <code>--apply</code> only when you intend to replace current data with the backup;
                   changes made after that backup will no longer be active.
@@ -2397,6 +2396,6 @@ Quote number three..."
     <!-- Quill Editor Script -->
     <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
     <script type="module" src="js/lib/confirmDialog.js"></script>
-    <script type="module" src="app.js?v=20260731resultsummary5"></script>
+    <script type="module" src="app.js?v=20260731appname1"></script>
   </body>
 </html>
