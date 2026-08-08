@@ -53,7 +53,7 @@
   border-radius: 6px;
   background: var(--primary-color);
   color: var(--text-primary);
-  font-size: 0.85rem;
+  font-size: var(--d-font-md);
   font-weight: 500;
   line-height: 1;
   cursor: pointer;
@@ -259,7 +259,7 @@
 /* Outer wrapper — two independent cards side by side */
 .lp-layout {
   display: grid;
-  grid-template-columns: 1fr 2fr;
+  grid-template-columns: 2fr 5fr;
   gap: 1rem;
   align-items: start;
 }

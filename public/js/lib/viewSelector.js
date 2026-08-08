@@ -1,16 +1,16 @@
 const CARD_LAYOUTS = {
   small: [
-    { value: '2', label: '▦ Cards' },
+    { value: '2', label: '🎫 Cards' },
   ],
   medium: [
-    { value: '2', label: '▦ Cards · 2' },
-    { value: '3', label: '▦ Cards · 3' },
+    { value: '2', label: '🎫 Cards · 2' },
+    { value: '3', label: '🎫 Cards · 3' },
   ],
   desktop: [
-    { value: '1', label: '▦ Cards · 1 col' },
-    { value: '2', label: '▦ Cards · 2 cols' },
-    { value: '3', label: '▦ Cards · 3 cols' },
-    { value: '4', label: '▦ Cards · 4 cols' },
+    { value: '1', label: '🎫 Cards · 1 col' },
+    { value: '2', label: '🎫 Cards · 2 cols' },
+    { value: '3', label: '🎫 Cards · 3 cols' },
+    { value: '4', label: '🎫 Cards · 4 cols' },
   ],
 };
 
@@ -26,7 +26,7 @@ export function buildResultsViewOptions({
   if (isTrainingType) {
     return [
       { value: 'calendar', label: '📅 Calendar' },
-      { value: 'list', label: '☰ List' },
+      { value: 'list', label: '📋 List' },
     ];
   }
 
@@ -34,15 +34,15 @@ export function buildResultsViewOptions({
   const listChoices = isDateType
     ? [
         { value: 'calendar', label: '📅 Calendar' },
-        { value: 'list', label: '☰ List' },
+        { value: 'list', label: '📋 List' },
       ]
     : [
-        { value: 'list-pane', label: '☰ List' },
+        { value: 'list-pane', label: '📋 List' },
       ];
 
   return [
     ...cardLayouts,
-    { value: 'gallery', label: '🖼 Gallery' },
+    { value: 'gallery', label: '🎨 Gallery' },
     ...listChoices,
   ];
 }

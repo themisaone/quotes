@@ -151,7 +151,7 @@ body.selection-mode .quote-card::after {
   padding: var(--d-pad-base) var(--d-pad-xl);
   border: none;
   border-radius: var(--bradius-small);
-  font-size: var(--d-font-base);
+  font-size: var(--d-font-md);
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
