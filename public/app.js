@@ -591,7 +591,11 @@ const closeModal = document.querySelector(".close");
 const cancelBtn = getElementByIdSafe("cancelBtn");
 const toggleQuoteModalMaximizeBtn = getElementByIdSafe("toggleQuoteModalMaximize");
 const toggleTextLaneBtn = getElementByIdSafe("toggleTextLaneBtn");
+const togglePropertiesLaneBtn = getElementByIdSafe("togglePropertiesLaneBtn");
 let textLaneExpanded = false;
+let propertiesLaneHidden = false;
+let modalLaneRowHeightPx = 0;
+let modalContentMinHeightPx = 0;
 const quotesList = getElementByIdSafe("quotesList");
 const lpWrapper = getElementByIdSafe("lpWrapper");   // dedicated container for list-pane view
 const quoteCount = getElementByIdSafe("quoteCount");
@@ -1615,11 +1619,27 @@ function setupEventListeners() {
       }
     });
   }
+  if (togglePropertiesLaneBtn) {
+    togglePropertiesLaneBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      togglePropertiesLane();
+      const shouldReleaseFocus = e.detail > 0 ||
+        (window.matchMedia && window.matchMedia('(hover: none), (pointer: coarse)').matches);
+      if (shouldReleaseFocus) {
+        e.currentTarget.blur();
+      }
+    });
+  }
   quoteForm.addEventListener("submit", handleSubmit);
   const noteTitleEl = document.getElementById('noteTitle');
   if (noteTitleEl) {
     noteTitleEl.addEventListener('input', syncNoteTitleHeight);
   }
+  window.addEventListener('resize', () => {
+    if (quoteModal?.style.display === 'block') {
+      syncModalLaneLayout();
+    }
+  });
   clearBtn.addEventListener("click", clearFilters);
   
   // Delete quote button in modal
@@ -2794,46 +2814,106 @@ function clearModalLaneSyncedHeights() {
   if (imageLane) imageLane.style.minHeight = '';
 }
 
+function isMediumModalViewport() {
+  return window.innerWidth >= 768 && window.innerWidth <= 1100;
+}
+
+function isSideBySideModalLayout() {
+  return window.innerWidth >= 768 && !quoteModal?.classList.contains('modal-properties-only');
+}
+
+function isDesktopModalViewport() {
+  return window.innerWidth > 1100;
+}
+
+function captureModalHeightsBeforePropsHide() {
+  const propsLane = document.querySelector('#quoteModal .quote-modal-lane-properties');
+  const content = document.querySelector('#quoteModal .modal-content');
+  if (propsLane?.offsetHeight > 0) {
+    modalLaneRowHeightPx = propsLane.offsetHeight;
+  }
+  if (content?.offsetHeight > 0) {
+    modalContentMinHeightPx = content.offsetHeight;
+  }
+}
+
+function clearModalStoredHeights() {
+  modalLaneRowHeightPx = 0;
+  modalContentMinHeightPx = 0;
+}
+
 function syncModalMinHeight() {
   const content = document.querySelector('#quoteModal .modal-content');
   const propsLane = document.querySelector('#quoteModal .quote-modal-lane-properties');
   const textLane = document.querySelector('#quoteModal .quote-modal-lane-text');
   const imageLane = document.querySelector('#quoteModal .quote-modal-lane-image');
-  if (!content || content.classList.contains('modal-expanded')) return;
+  if (!content) return;
 
-  const isWideLayout =
-    window.innerWidth > 1100 &&
-    !quoteModal?.classList.contains('modal-properties-only');
+  const isMedium = isMediumModalViewport();
+  const isSideBySide = isSideBySideModalLayout();
+
+  if (content.classList.contains('modal-expanded') && !isMedium) return;
 
   const showTextLane = textLane && !textLane.classList.contains('hidden');
   const showImageLane = imageLane && !imageLane.classList.contains('hidden');
 
   content.style.minHeight = '';
+  if (isMedium) {
+    content.style.height = showTextLane ? '' : 'auto';
+  }
   clearModalLaneSyncedHeights();
   const wasCompact = content.classList.contains('modal-lanes-compact');
-  content.classList.toggle('modal-lanes-compact', isWideLayout && !showTextLane);
+  content.classList.toggle('modal-lanes-compact', isSideBySide && !showTextLane);
   if (wasCompact && !content.classList.contains('modal-lanes-compact')) {
     const titleEl = document.getElementById('noteTitle');
     if (titleEl) titleEl.style.removeProperty('height');
   }
 
-  if (isWideLayout && propsLane) {
+  const showPropertiesLane = !showTextLane || !propertiesLaneHidden;
+  if (isSideBySide && showPropertiesLane && propsLane && !propertiesLaneHidden) {
     const propsHeight = propsLane.offsetHeight;
     if (propsHeight > 0) {
+      modalLaneRowHeightPx = propsHeight;
       if (showTextLane && textLane) {
         textLane.style.minHeight = `${propsHeight}px`;
-      } else if (!showTextLane && showImageLane && imageLane) {
+      }
+      if (showImageLane && imageLane) {
         imageLane.style.minHeight = `${propsHeight}px`;
+      }
+    }
+  } else if (isSideBySide && showTextLane && propertiesLaneHidden) {
+    const rowHeight = modalLaneRowHeightPx
+      || Math.max(textLane?.offsetHeight || 0, imageLane?.offsetHeight || 0);
+    if (rowHeight > 0) {
+      if (showTextLane && textLane) {
+        textLane.style.minHeight = `${rowHeight}px`;
+      }
+      if (showImageLane && imageLane) {
+        imageLane.style.minHeight = `${rowHeight}px`;
       }
     }
   }
 
-  const naturalHeight = content.scrollHeight;
-  const capPx = Math.floor(window.innerHeight * 0.9);
-  const floorPx = content.classList.contains('modal-lanes-compact') ? 0 : 320;
-  content.style.minHeight = floorPx
-    ? `${Math.min(Math.max(naturalHeight, floorPx), capPx)}px`
-    : `${Math.min(naturalHeight, capPx)}px`;
+  if (isMedium) {
+    if (!showTextLane) {
+      content.style.minHeight = '';
+    }
+  } else if (!content.classList.contains('modal-expanded')) {
+    const capPx = Math.floor(window.innerHeight * 0.9);
+    const floorPx = content.classList.contains('modal-lanes-compact') ? 0 : 320;
+    if (propertiesLaneHidden && modalContentMinHeightPx > 0 && isDesktopModalViewport()) {
+      content.style.minHeight = `${Math.min(modalContentMinHeightPx, capPx)}px`;
+    } else {
+      const naturalHeight = content.scrollHeight;
+      const computed = floorPx
+        ? Math.min(Math.max(naturalHeight, floorPx), capPx)
+        : Math.min(naturalHeight, capPx);
+      if (!propertiesLaneHidden && computed > 0) {
+        modalContentMinHeightPx = computed;
+      }
+      content.style.minHeight = computed ? `${computed}px` : '';
+    }
+  }
   scheduleNoteTitleHeightSync();
 }
 
@@ -2841,11 +2921,18 @@ function syncModalLaneLayout() {
   const modal = quoteModal;
   if (!modal || modal.classList.contains('modal-properties-only')) return;
 
+  if (!isSideBySideModalLayout() && propertiesLaneHidden) {
+    propertiesLaneHidden = false;
+  }
+
   const imageLane = modal.querySelector('.quote-modal-lane-image');
   const textLane = modal.querySelector('.quote-modal-lane-text');
+  const propertiesLane = modal.querySelector('.quote-modal-lane-properties');
   const hasAttachment = modal.classList.contains('has-attachment');
   const hasText = !isModalTextEmpty();
   const showTextLane = textLaneExpanded || hasText;
+  const showPropertiesLane = !showTextLane || !propertiesLaneHidden;
+  const showPropsToggle = showTextLane && isSideBySideModalLayout();
 
   if (imageLane) {
     imageLane.classList.toggle('hidden', !hasAttachment);
@@ -2853,9 +2940,23 @@ function syncModalLaneLayout() {
   if (textLane) {
     textLane.classList.toggle('hidden', !showTextLane);
   }
+  if (propertiesLane) {
+    propertiesLane.classList.toggle('hidden', !showPropertiesLane);
+  }
   if (toggleTextLaneBtn) {
     toggleTextLaneBtn.classList.toggle('hidden', showTextLane);
     toggleTextLaneBtn.setAttribute('aria-hidden', showTextLane ? 'true' : 'false');
+  }
+  if (togglePropertiesLaneBtn) {
+    togglePropertiesLaneBtn.classList.toggle('hidden', !showPropsToggle);
+    togglePropertiesLaneBtn.disabled = !showPropsToggle;
+    togglePropertiesLaneBtn.textContent = propertiesLaneHidden
+      ? 'Show properties'
+      : 'Hide properties';
+    togglePropertiesLaneBtn.title = propertiesLaneHidden
+      ? 'Show properties panel'
+      : 'Hide properties panel';
+    togglePropertiesLaneBtn.setAttribute('aria-hidden', showPropsToggle ? 'false' : 'true');
   }
 
   requestAnimationFrame(() => {
@@ -2863,8 +2964,18 @@ function syncModalLaneLayout() {
   });
 }
 
+function togglePropertiesLane() {
+  if (!isSideBySideModalLayout()) return;
+  if (!propertiesLaneHidden) {
+    captureModalHeightsBeforePropsHide();
+  }
+  propertiesLaneHidden = !propertiesLaneHidden;
+  syncModalLaneLayout();
+}
+
 function toggleTextLane() {
   textLaneExpanded = true;
+  propertiesLaneHidden = false;
   const titleEl = document.getElementById('noteTitle');
   if (titleEl) titleEl.style.removeProperty('height');
   syncModalLaneLayout();
@@ -3029,6 +3140,7 @@ function openEditModal(quote, options = {}) {
   // Update attachment panel visibility
   updateAttachmentPanelVisibility();
   textLaneExpanded = propertiesOnly ? false : !isModalTextEmpty();
+  propertiesLaneHidden = false;
   syncModalLaneLayout();
   ensureQuoteModalViewportLayout({ propertiesOnly });
 
@@ -3044,6 +3156,8 @@ function closeQuoteModal() {
   quoteModal.classList.remove('has-attachment');
   quoteModal.classList.remove('attach-picker-open');
   textLaneExpanded = false;
+  propertiesLaneHidden = false;
+  clearModalStoredHeights();
   setQuoteModalMaximized(false);
   const modalContent = document.querySelector('#quoteModal .modal-content');
   if (modalContent) {

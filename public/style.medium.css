@@ -210,32 +210,138 @@
     }
   }
 
-  /* Three-lane layout needs full viewport on medium screens */
-  #quoteModal .modal-content {
-    width: min(98vw, calc(100vw - 0.5rem)) !important;
+  /*
+   * Medium: narrower properties lane (300px max); full viewport when text is shown.
+   * Compact (no text): shrink modal like desktop — see .modal-lanes-compact rules below.
+   */
+  #quoteModal .quote-modal-lanes {
+    grid-template-columns: minmax(160px, 220px) minmax(0, 1fr) minmax(260px, 300px) !important;
+  }
+
+  #quoteModal .quote-modal-lanes:not(:has(.quote-modal-lane-image:not(.hidden))) {
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 300px) !important;
+  }
+
+  #quoteModal .quote-modal-lanes:not(:has(.quote-modal-lane-text:not(.hidden))) {
+    grid-template-columns: minmax(160px, 220px) minmax(260px, 300px) !important;
+  }
+
+  #quoteModal .quote-modal-lanes:not(:has(.quote-modal-lane-image:not(.hidden))):not(:has(.quote-modal-lane-text:not(.hidden))) {
+    grid-template-columns: minmax(260px, 300px) !important;
+  }
+
+  #quoteModal .quote-modal-lanes:has(.quote-modal-lane-properties.hidden):has(.quote-modal-lane-text:not(.hidden)):has(.quote-modal-lane-image:not(.hidden)) {
+    grid-template-columns: minmax(160px, 220px) minmax(0, 1fr) !important;
+  }
+
+  #quoteModal .quote-modal-lanes:has(.quote-modal-lane-properties.hidden):has(.quote-modal-lane-text:not(.hidden)):not(:has(.quote-modal-lane-image:not(.hidden))) {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  /* Tighter label spacing in properties — desktop uses 1rem */
+  #quoteModal .quote-modal-prop-field > label {
+    padding-top: 0.5rem;
+  }
+
+  #quoteModal .quote-modal-details-content > .quote-modal-prop-field:first-child > label {
+    padding-top: 0;
+  }
+
+  #quoteModal .quote-modal-score-row + .quote-modal-prop-field > label {
+    padding-top: 0.3rem;
+  }
+
+  #quoteModal .quote-modal-score-row {
+    margin-bottom: 0.05rem;
+  }
+
+  #quoteModal .quote-modal-lane-properties .quote-modal-lane-body {
+    padding: 0.45rem 0.45rem;
+  }
+
+  #quoteModal .quote-modal-prop-field {
+    margin-bottom: 0.25rem;
+  }
+
+  #quoteModal .modal-content.modal-lanes-compact .quote-modal-lanes:not(:has(.quote-modal-lane-text:not(.hidden))):not(:has(.quote-modal-lane-image.hidden)) {
+    grid-template-columns: 220px 300px !important;
+  }
+
+  #quoteModal .modal-content.modal-lanes-compact .quote-modal-lanes:not(:has(.quote-modal-lane-text:not(.hidden))):has(.quote-modal-lane-image.hidden) {
+    grid-template-columns: 300px !important;
+  }
+
+  /*
+   * Full-height modal: cap with 100svh so Chrome mobile URL bar does not
+   * cover the header or Save strip (layout viewport 98vh was too tall).
+   */
+  #quoteModal .modal-content:not(.modal-lanes-compact),
+  #quoteModal .modal-content.modal-wide:not(.modal-lanes-compact),
+  #quoteModal .modal-content.modal-expanded:not(.modal-lanes-compact) {
+    --quote-modal-vh-inset: calc(1rem + env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px));
+    width: calc(100vw - 0.5rem) !important;
     max-width: calc(100vw - 0.5rem) !important;
-    height: min(98vh, calc(100vh - 0.5rem)) !important;
-    max-height: min(98vh, calc(100vh - 0.5rem)) !important;
+    height: calc(100vh - var(--quote-modal-vh-inset)) !important;
+    max-height: calc(100vh - var(--quote-modal-vh-inset)) !important;
   }
 
   @supports (height: 100svh) {
-    #quoteModal .modal-content {
-      height: min(98svh, calc(100svh - 0.5rem)) !important;
-      max-height: min(98svh, calc(100svh - 0.5rem)) !important;
+    #quoteModal .modal-content:not(.modal-lanes-compact),
+    #quoteModal .modal-content.modal-wide:not(.modal-lanes-compact),
+    #quoteModal .modal-content.modal-expanded:not(.modal-lanes-compact) {
+      height: calc(100svh - var(--quote-modal-vh-inset)) !important;
+      max-height: calc(100svh - var(--quote-modal-vh-inset)) !important;
     }
   }
 
+  #quoteModal .modal-content.modal-lanes-compact {
+    --quote-compact-image: 220px;
+    --quote-compact-props: 300px;
+    --quote-compact-pad: calc(2 * var(--d-pad-md) + 4px);
+    --quote-compact-gap: 0.65rem;
+    --quote-modal-vh-inset: calc(1rem + env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px));
+    width: min(calc(var(--quote-compact-image) + var(--quote-compact-props) + var(--quote-compact-gap) + var(--quote-compact-pad)), calc(100vw - 0.5rem)) !important;
+    max-width: min(calc(var(--quote-compact-image) + var(--quote-compact-props) + var(--quote-compact-gap) + var(--quote-compact-pad)), calc(100vw - 0.5rem)) !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: calc(100vh - var(--quote-modal-vh-inset)) !important;
+  }
+
+  @supports (height: 100svh) {
+    #quoteModal .modal-content.modal-lanes-compact {
+      max-height: calc(100svh - var(--quote-modal-vh-inset)) !important;
+    }
+  }
+
+  #quoteModal .modal-content.modal-lanes-compact:has(.quote-modal-lane-image.hidden) {
+    width: min(calc(var(--quote-compact-props) + var(--quote-compact-pad)), calc(100vw - 0.5rem)) !important;
+    max-width: min(calc(var(--quote-compact-props) + var(--quote-compact-pad)), calc(100vw - 0.5rem)) !important;
+  }
+
   @supports (height: 100dvh) {
-    #quoteModal .modal-content {
-      height: min(98dvh, calc(100dvh - 0.5rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))) !important;
-      max-height: min(98dvh, calc(100dvh - 0.5rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))) !important;
+    #quoteModal .modal-content:not(.modal-lanes-compact) {
+      height: min(
+        calc(100dvh - var(--quote-modal-vh-inset)),
+        calc(100svh - var(--quote-modal-vh-inset))
+      ) !important;
+      max-height: min(
+        calc(100dvh - var(--quote-modal-vh-inset)),
+        calc(100svh - var(--quote-modal-vh-inset))
+      ) !important;
     }
   }
 
   @media (orientation: portrait) {
-    #quoteModal .modal-content {
-      width: min(95vw, calc(100vw - 1rem)) !important;
+    #quoteModal .modal-content:not(.modal-lanes-compact),
+    #quoteModal .modal-content.modal-wide:not(.modal-lanes-compact),
+    #quoteModal .modal-content.modal-expanded:not(.modal-lanes-compact) {
+      width: calc(100vw - 1rem) !important;
       max-width: calc(100vw - 1rem) !important;
+    }
+
+    #quoteModal .modal-content.modal-lanes-compact {
+      width: min(calc(var(--quote-compact-image) + var(--quote-compact-props) + var(--quote-compact-gap) + var(--quote-compact-pad)), calc(100vw - 1rem)) !important;
+      max-width: min(calc(var(--quote-compact-image) + var(--quote-compact-props) + var(--quote-compact-gap) + var(--quote-compact-pad)), calc(100vw - 1rem)) !important;
     }
 
     #quoteModal .modal-header {
@@ -279,23 +385,30 @@
     }
 
     #quoteModal .modal-content.modal-expanded {
+      --quote-modal-vh-inset: calc(1rem + env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px));
       width: min(95vw, calc(100vw - 1rem)) !important;
       max-width: calc(100vw - 1rem) !important;
-      height: min(96vh, calc(100vh - 0.75rem)) !important;
-      max-height: min(96vh, calc(100vh - 0.75rem)) !important;
+      height: calc(100vh - var(--quote-modal-vh-inset)) !important;
+      max-height: calc(100vh - var(--quote-modal-vh-inset)) !important;
     }
 
     @supports (height: 100svh) {
       #quoteModal .modal-content.modal-expanded {
-        height: min(96svh, calc(100svh - 0.75rem)) !important;
-        max-height: min(96svh, calc(100svh - 0.75rem)) !important;
+        height: calc(100svh - var(--quote-modal-vh-inset)) !important;
+        max-height: calc(100svh - var(--quote-modal-vh-inset)) !important;
       }
     }
 
     @supports (height: 100dvh) {
       #quoteModal .modal-content.modal-expanded {
-        height: min(96dvh, calc(100dvh - 0.75rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))) !important;
-        max-height: min(96dvh, calc(100dvh - 0.75rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))) !important;
+        height: min(
+          calc(100dvh - var(--quote-modal-vh-inset)),
+          calc(100svh - var(--quote-modal-vh-inset))
+        ) !important;
+        max-height: min(
+          calc(100dvh - var(--quote-modal-vh-inset)),
+          calc(100svh - var(--quote-modal-vh-inset))
+        ) !important;
       }
     }
   }

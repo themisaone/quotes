@@ -78,12 +78,12 @@ Cards are displayed in a grid (1, 2, or 3 columns depending on screen width). Th
 Opens for both creating and editing notes. Fields shown depend on `note_type` behavior.
 
 **Three-lane layout (wide / medium screens):**
-- **Action row** (above lanes): **Add attachment** (becomes **Add more** when attachments exist), **Encrypt & attach**, and **Add text** (hidden when the note already has text).
+- **Action row** (above lanes): **Add attachment** (becomes **Add more** when attachments exist), **Encrypt & attach**, **Add text** (hidden when the note already has text), and **Hide properties** / **Show properties** (right-aligned; toggles the properties lane when the text lane is visible on wide/medium layouts — hidden when there is no text lane; desktop keeps modal height when toggling).
 - **Image lane:** shown only when an attachment exists — preview + multi-attachment strip when 2+.
 - **Text lane:** shown when the note has body text, when adding a new note, or after **Add text** — Quill toolbar at the **bottom** of the editor.
 - **Properties lane (right):** score dice (all note types; label and dice on one row), comment, tags, and type-specific fields — each with label **above** the field (comment and group use full column width).
 
-On **medium and phone screens (≤1100px)** the modal uses nearly the full viewport and the lanes **stack vertically**: Image → Text → Properties. On **wide desktop (>1100px)** the three lanes sit side by side.
+On **medium screens (768–1100px)** lanes sit **side by side** with a **narrower properties column (300px max)** and **tighter field label spacing (0.5rem; 0.3rem after Score)**. With text visible the modal uses **full viewport width** and height capped to **100svh** so mobile browser chrome does not cover the header or Save strip. Without text it **shrinks** like desktop compact mode until **Add text** expands it. **Hide properties** widens the text lane on both medium and wide desktop. On **phone (≤767px)** lanes **stack vertically**: Image → Text → Properties. On **wide desktop (>1100px)** the three lanes also sit side by side (compact width when text is hidden applies here only).
 
 **Common fields:**
 - Note type selector (in modal header)

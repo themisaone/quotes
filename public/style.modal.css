@@ -339,28 +339,9 @@
 }
 
 /*
- * Compact mode = text lane hidden (class toggled in app.js syncModalMinHeight).
- * Width is fixed from lane columns below — never fit-content (title/metadata must wrap inside).
+ * Compact mode = text lane hidden on wide desktop only (>1100px; see app.js).
+ * Width + lane column rules live inside @media (min-width: 1101px) below.
  */
-/*
- * Compact width = same lane sizes as full mode (image max 220px, properties max 360px).
- * Using column minimums (160+310) squeezed the attachment lane — modal must fit the maxes.
- */
-#quoteModal .modal-content.modal-wide.modal-lanes-compact:not(.modal-expanded) {
-  --quote-compact-image: 220px;
-  --quote-compact-props: 360px;
-  --quote-compact-pad: calc(2 * var(--d-pad-md) + 4px);
-  --quote-compact-gap: 0.65rem;
-  width: min(calc(var(--quote-compact-image) + var(--quote-compact-props) + var(--quote-compact-gap) + var(--quote-compact-pad)), 94vw) !important;
-  max-width: min(calc(var(--quote-compact-image) + var(--quote-compact-props) + var(--quote-compact-gap) + var(--quote-compact-pad)), 94vw) !important;
-  min-width: 0 !important;
-}
-
-#quoteModal .modal-content.modal-wide.modal-lanes-compact:not(.modal-expanded):has(.quote-modal-lane-image.hidden) {
-  width: min(calc(var(--quote-compact-props) + var(--quote-compact-pad)), 94vw) !important;
-  max-width: min(calc(var(--quote-compact-props) + var(--quote-compact-pad)), 94vw) !important;
-}
-
 #quoteModal .modal-content.modal-lanes-compact .modal-header,
 #quoteModal .modal-content.modal-lanes-compact .modal-body,
 #quoteModal .modal-content.modal-lanes-compact #quoteForm {
@@ -401,27 +382,26 @@
 }
 
 @media (min-width: 1101px) {
+  /* Compact width = same lane sizes as full mode (image 220px, properties 360px) */
+  #quoteModal .modal-content.modal-wide.modal-lanes-compact:not(.modal-expanded) {
+    --quote-compact-image: 220px;
+    --quote-compact-props: 360px;
+    --quote-compact-pad: calc(2 * var(--d-pad-md) + 4px);
+    --quote-compact-gap: 0.65rem;
+    width: min(calc(var(--quote-compact-image) + var(--quote-compact-props) + var(--quote-compact-gap) + var(--quote-compact-pad)), 94vw) !important;
+    max-width: min(calc(var(--quote-compact-image) + var(--quote-compact-props) + var(--quote-compact-gap) + var(--quote-compact-pad)), 94vw) !important;
+    min-width: 0 !important;
+  }
+
+  #quoteModal .modal-content.modal-wide.modal-lanes-compact:not(.modal-expanded):has(.quote-modal-lane-image.hidden) {
+    width: min(calc(var(--quote-compact-props) + var(--quote-compact-pad)), 94vw) !important;
+    max-width: min(calc(var(--quote-compact-props) + var(--quote-compact-pad)), 94vw) !important;
+  }
+
   #quoteModal .modal-content.modal-wide:not(.modal-expanded) {
     height: auto;
     min-height: 0;
     max-height: 90vh;
-  }
-
-  #quoteModal .quote-modal-lane-properties {
-    align-self: start;
-  }
-
-  #quoteModal .quote-modal-lane-image {
-    align-self: start;
-  }
-
-  /* Attachment-only beside properties: stretch lane so border runs full height */
-  #quoteModal .modal-content.modal-lanes-compact .quote-modal-lane-image {
-    align-self: stretch;
-  }
-
-  #quoteModal .modal-content.modal-lanes-compact .quote-modal-lane-image .quote-modal-lane-body {
-    flex: 1 1 auto;
   }
 
   #quoteModal .modal-content.modal-wide:not(.modal-expanded) .modal-body,
@@ -600,6 +580,15 @@
   display: none !important;
 }
 
+#quoteModal .quote-modal-props-toggle {
+  margin-left: auto;
+}
+
+#quoteModal .quote-modal-props-toggle:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .quote-modal-actions .quote-attach-picker-actions {
   display: none;
   flex: 1 1 100%;
@@ -652,7 +641,15 @@
   margin-bottom: 0.3rem;
 }
 
-@media (min-width: 1101px) {
+/* Side-by-side lanes: medium (768px+) and desktop */
+@media (min-width: 768px) {
+  /* Stretch every visible lane so borders share one full row height */
+  #quoteModal .quote-modal-lane-properties,
+  #quoteModal .quote-modal-lane-image:not(.hidden),
+  #quoteModal .quote-modal-lane-text:not(.hidden) {
+    align-self: stretch;
+  }
+
   #quoteModal .quote-modal-lanes {
     grid-template-columns: minmax(160px, 220px) minmax(0, 1fr) minmax(310px, 360px);
     align-items: stretch;
@@ -670,6 +667,17 @@
     grid-template-columns: minmax(310px, 360px);
   }
 
+  /* Properties hidden — text lane expands into the freed column */
+  #quoteModal .quote-modal-lanes:has(.quote-modal-lane-properties.hidden):has(.quote-modal-lane-text:not(.hidden)):has(.quote-modal-lane-image:not(.hidden)) {
+    grid-template-columns: minmax(160px, 220px) minmax(0, 1fr);
+  }
+
+  #quoteModal .quote-modal-lanes:has(.quote-modal-lane-properties.hidden):has(.quote-modal-lane-text:not(.hidden)):not(:has(.quote-modal-lane-image:not(.hidden))) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (min-width: 1101px) {
   /* Compact: fixed lane widths matching full-mode column maximums */
   #quoteModal .modal-content.modal-lanes-compact .quote-modal-lanes:not(:has(.quote-modal-lane-text:not(.hidden))):not(:has(.quote-modal-lane-image.hidden)) {
     grid-template-columns: var(--quote-compact-image, 220px) var(--quote-compact-props, 360px);
@@ -1444,8 +1452,10 @@ textarea {
   box-sizing: border-box;
 }
 
-@media (max-width: 1100px) {
+/* Phone only: stack lanes vertically */
+@media (max-width: 767px) {
   #quoteModal .quote-modal-lanes {
+    display: grid !important;
     grid-template-columns: 1fr !important;
     grid-auto-flow: row !important;
     gap: 0.55rem !important;
@@ -1532,6 +1542,7 @@ textarea {
     background: var(--surface);
     color: var(--text-primary);
     font-size: 0.82rem;
+    font-weight: 500;
     line-height: 1.1;
     white-space: nowrap;
     cursor: pointer;
