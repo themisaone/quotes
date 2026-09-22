@@ -1280,7 +1280,7 @@ function applyWordWrap(enabled, chars) {
       .ql-editor {
         max-width: 100% !important;
         width: 100% !important;
-        white-space: pre-wrap !important;
+        white-space: normal !important;
         box-sizing: border-box !important;
       }
       .ql-editor > *,
@@ -1318,7 +1318,7 @@ function applyWordWrap(enabled, chars) {
       .ql-editor {
         max-width: 100% !important;
         width: 100% !important;
-        white-space: pre-wrap !important;
+        white-space: normal !important;
       }
       .ql-editor > *,
       .quote-text > * {

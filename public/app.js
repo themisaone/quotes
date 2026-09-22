@@ -150,7 +150,7 @@ import {
   initializeQuillEditor,
   handleFormSubmit as handleFormSubmitLib,
   deleteQuote as deleteQuoteLib
-} from './js/lib/quoteEditor.js?v=20260721entitynormalize1';
+} from './js/lib/quoteEditor.js?v=20260920paste4';
 
 import {
   initializeBulkImport,

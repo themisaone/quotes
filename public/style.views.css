@@ -262,6 +262,9 @@
   grid-template-columns: 2fr 5fr;
   gap: 1rem;
   align-items: start;
+  --lp-band-pad-top: 0.9rem;
+  --lp-band-pad-x: 0.9rem;
+  --lp-band-pad-bottom: 0.75rem;
 }
 
 /* Calendar mode keeps the calendar compact while the opened note grows to its
@@ -281,9 +284,6 @@
 
 /* Shared header band height — list column header + pane Prev/Next row */
 .lp-layout-titled {
-  --lp-band-pad-top: 0.9rem;
-  --lp-band-pad-x: 0.9rem;
-  --lp-band-pad-bottom: 0.75rem;
   align-items: start;
 }
 
@@ -577,9 +577,6 @@
 .lp-layout-titled .lp-pane {
   overflow: visible;
   min-height: 0;
-  display: flex;
-  flex-direction: column;
-  padding: 0;
 }
 
 /* ── Right: pane (inline editor) ── */
@@ -588,7 +585,7 @@
   border-radius: var(--bradius);
   box-shadow: var(--shadow);
   border: 2px solid var(--border);
-  padding: 0.5rem;
+  padding: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -603,6 +600,7 @@
 
 .lp-layout:not(.lp-layout-calendar) .lp-pane-shell,
 .lp-layout:not(.lp-layout-calendar) .lp-pane-editor-wrap,
+.lp-layout:not(.lp-layout-calendar) .lp-pane-editor-wrap > .quill-editor-shell,
 .lp-layout:not(.lp-layout-calendar) #lpPaneQuill {
   display: block;
   flex: none !important;
@@ -632,6 +630,7 @@
 
 .lp-layout-calendar .lp-pane-shell,
 .lp-layout-calendar .lp-pane-editor-wrap,
+.lp-layout-calendar .lp-pane-editor-wrap > .quill-editor-shell,
 .lp-layout-calendar #lpPaneQuill {
   display: block;
   flex: none !important;
@@ -651,11 +650,8 @@
 .lp-layout-calendar #lpPaneQuill .ql-editor {
   min-height: 12rem !important;
 }
-.lp-layout-titled .lp-pane-empty {
-  padding: 0.5rem;
-}
-
 .lp-pane-empty {
+  padding: 0.5rem;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -697,8 +693,8 @@
 
 .lp-pane-info {
   flex-shrink: 0;
-  margin-bottom: 0.65rem;
-  padding: var(--lp-band-pad-top, 0.4rem) var(--lp-band-pad-x, 0.2rem) 0.6rem;
+  margin-bottom: 0;
+  padding: var(--lp-band-pad-top) var(--lp-band-pad-x) var(--lp-band-pad-bottom);
   border-bottom: 1px solid var(--border);
 }
 .lp-pane-title-row {
@@ -707,7 +703,8 @@
   justify-content: space-between;
   gap: 0.5rem 0.75rem;
   flex-wrap: wrap;
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.85rem;
+  margin-top: 0.35rem;
 }
 .lp-pane-title.note-title-heading {
   flex: 1 1 18rem;
@@ -923,29 +920,19 @@
   flex-direction: column;
   overflow: hidden;
 }
-#lpPaneQuill {
+.lp-pane-editor-wrap > .quill-editor-shell {
   flex: 1 1 auto;
   min-height: 0;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
-  background: var(--input-bg);
-  box-sizing: border-box;
+  border-left: none;
+  border-right: none;
+  border-radius: 0;
 }
-#lpPaneQuill .ql-toolbar.ql-snow {
-  flex-shrink: 0;
-}
-#lpPaneQuill .ql-container.ql-snow {
+#lpPaneQuill.ql-container.ql-snow {
   flex: 1 1 auto;
   min-height: 0;
   height: auto !important; /* override cards.css fixed ~4-line height */
   overflow-y: auto !important;
   font-size: var(--d-font-base);
-  border-bottom-left-radius: 8px;
-  border-bottom-right-radius: 8px;
 }
 #lpPaneQuill .ql-editor {
   min-height: 100% !important;

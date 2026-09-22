@@ -20,6 +20,7 @@ import { MODAL_IDS, getElementByIdSafe, getElementValue } from '../constants.js'
 import { downscaleImage } from './attachments.js?v=20260720pastesource1';
 import { getNoteTypeConfig, hasDateField, hasGenericSubTypeField } from './noteTypes.js';
 import { showConfirm } from './confirmDialog.js';
+import { escapeHtml } from './utils.js?v=20260703color1';
 
 // ============= CONSTANTS =============
 
@@ -128,6 +129,242 @@ async function _insertInlineImageFor(quill, base64) {
   }
 }
 
+function _ensureQuillEditorShell(container, toolbar) {
+  if (!container || !toolbar || container.parentElement?.classList.contains('quill-editor-shell')) {
+    return container.parentElement?.classList.contains('quill-editor-shell')
+      ? container.parentElement
+      : null;
+  }
+
+  const parent = container.parentElement;
+  if (!parent) return null;
+
+  const shell = document.createElement('div');
+  shell.className = 'quill-editor-shell';
+  if (container.id) shell.dataset.quillHost = container.id;
+
+  for (const prop of ['height', 'minHeight', 'maxHeight']) {
+    if (container.style[prop]) {
+      shell.style[prop] = container.style[prop];
+      container.style[prop] = '';
+    }
+  }
+
+  parent.insertBefore(shell, container);
+  shell.appendChild(container);
+  shell.appendChild(toolbar);
+  return shell;
+}
+
+/** Quill snow theme inserts the toolbar as a sibling before the editor container. */
+export function moveQuillToolbarToBottom(hostEl) {
+  if (!hostEl) return;
+
+  const container = hostEl.classList.contains('ql-container')
+    ? hostEl
+    : hostEl.querySelector(':scope > .ql-container');
+  if (!container) return;
+
+  let toolbar = container.previousElementSibling;
+  if (!toolbar?.classList.contains('ql-toolbar')) {
+    toolbar = container.parentElement?.querySelector(':scope > .ql-toolbar') || null;
+  }
+  if (!toolbar || toolbar === container) return;
+
+  if (toolbar.compareDocumentPosition(container) & Node.DOCUMENT_POSITION_FOLLOWING) {
+    container.after(toolbar);
+  }
+
+  _ensureQuillEditorShell(container, toolbar);
+}
+
+function _isEmptyPasteBlock(el) {
+  if (!el || !/^(P|DIV)$/i.test(el.tagName)) return false;
+  return !el.textContent.trim() && !el.querySelector('img');
+}
+
+function _isContentPasteBlock(el) {
+  if (!el || !/^(P|DIV)$/i.test(el.tagName)) return false;
+  return !!el.textContent.trim() || !!el.querySelector('img');
+}
+
+/** Remove empty blocks copied between every line; keep isolated stanza gaps. */
+function _removeSpuriousEmptyBlocks(body) {
+  const children = [...body.children];
+  const contentCount = children.filter(_isContentPasteBlock).length;
+  const emptyCount = children.filter(_isEmptyPasteBlock).length;
+  if (contentCount >= 2 && emptyCount >= contentCount - 1) {
+    children.filter(_isEmptyPasteBlock).forEach((el) => el.remove());
+  }
+}
+
+/** Strip browser clipboard wrappers; keep paragraph markup Quill understands. */
+function _sanitizePasteHtml(rawHtml) {
+  if (!rawHtml) return '';
+  const doc = new DOMParser().parseFromString(rawHtml, 'text/html');
+  const body = doc.body;
+  _removeSpuriousEmptyBlocks(body);
+  return (body.innerHTML || '')
+    .replace(/<!--StartFragment-->/gi, '')
+    .replace(/<!--EndFragment-->/gi, '')
+    .trim();
+}
+
+/**
+ * Plain text from copy often has blank lines between every Quill paragraph.
+ * Collapse that pattern but keep a stanza gap (one blank line between groups).
+ */
+function _plainTextToQuillHtml(text) {
+  let normalized = (text || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n+$/, '');
+
+  let wasCopyArtifact = false;
+  const nonEmptyLines = normalized.split('\n').filter((line) => line.length > 0).length;
+  const doubleNewlineCount = (normalized.match(/\n\n/g) || []).length;
+  if (doubleNewlineCount >= nonEmptyLines - 1 && doubleNewlineCount > 0) {
+    normalized = normalized.replace(/\n\n/g, '\n');
+    wasCopyArtifact = true;
+  }
+
+  if (wasCopyArtifact) {
+    return normalized.split('\n')
+      .filter((line) => line.length > 0)
+      .map((line) => `<p>${escapeHtml(line)}</p>`)
+      .join('');
+  }
+
+  const stanzas = normalized.split(/\n{2,}/);
+  return stanzas.map((stanza) => {
+    const lines = stanza.split('\n').filter((line) => line.length > 0);
+    if (lines.length === 0) return '';
+    if (lines.length === 1) return `<p>${escapeHtml(lines[0])}</p>`;
+    return `<p>${lines.map((line) => escapeHtml(line)).join('<br>')}</p>`;
+  }).join('');
+}
+
+function _buildPasteHtml(html, plain) {
+  const htmlText = html?.trim() ?? '';
+  if (htmlText) {
+    const sanitized = _sanitizePasteHtml(htmlText);
+    if (sanitized) return sanitized;
+  }
+  const plainText = plain ?? '';
+  if (plainText) return _plainTextToQuillHtml(plainText);
+  return '';
+}
+
+function _cleanupEditorAfterPaste(quill) {
+  _removeSpuriousEmptyBlocks(quill.root);
+  const last = quill.root.lastElementChild;
+  if (last && _isEmptyPasteBlock(last) && quill.root.querySelectorAll('p,div').length > 1) {
+    last.remove();
+  }
+}
+
+function _insertPasteHtml(quill, pasteHtml) {
+  const range = quill.getSelection(true);
+  const index = range ? range.index : Math.max(0, quill.getLength() - 1);
+  const length = range ? range.length : 0;
+  if (length) {
+    quill.deleteText(index, length, 'user');
+  }
+  quill.clipboard.dangerouslyPasteHTML(index, pasteHtml, 'user');
+  _cleanupEditorAfterPaste(quill);
+}
+
+function _patchQuillCopy(quill) {
+  if (!quill || quill.root._misaCopyPatched) return;
+  quill.root._misaCopyPatched = true;
+
+  quill.root.addEventListener('copy', (e) => {
+    if (!quill.isEnabled()) return;
+    const range = quill.getSelection();
+    if (!range || range.length === 0) return;
+
+    const plain = quill.getText(range.index, range.length).replace(/\n+$/, '');
+
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    const domRange = sel.getRangeAt(0);
+    const wrapper = document.createElement('div');
+    wrapper.appendChild(domRange.cloneContents());
+    _removeSpuriousEmptyBlocks(wrapper);
+    const html = wrapper.innerHTML.trim();
+    if (!plain && !html) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+    e.clipboardData.setData('text/plain', plain);
+    if (html) {
+      e.clipboardData.setData('text/html', html);
+    }
+  }, true);
+}
+
+function _pasteTextIntoQuill(quill, e) {
+  if (e.defaultPrevented) return false;
+
+  const cd = e.clipboardData;
+  if (!cd) return false;
+
+  for (const item of cd.items || []) {
+    if (item.type.startsWith('image/')) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      const file = item.getAsFile();
+      if (file) {
+        _readFileAsBase64(file).then((base64) => _insertInlineImageFor(quill, base64));
+      }
+      return true;
+    }
+  }
+
+  const plain = cd.getData('text/plain') ?? '';
+  const html = cd.getData('text/html')?.trim() ?? '';
+  if (!plain && !html) return false;
+
+  const pasteHtml = _buildPasteHtml(html, plain);
+  if (!pasteHtml) return false;
+
+  e.preventDefault();
+  e.stopPropagation();
+  e.stopImmediatePropagation();
+  _insertPasteHtml(quill, pasteHtml);
+  return true;
+}
+
+let _globalQuillClipboardInstalled = false;
+
+function _installGlobalQuillPasteGuard() {
+  if (_globalQuillClipboardInstalled) return;
+  _globalQuillClipboardInstalled = true;
+
+  document.addEventListener('paste', (e) => {
+    const editorEl = e.target?.closest?.('.ql-editor');
+    if (!editorEl) return;
+    const quill = Quill.find(editorEl);
+    if (!quill?.isEnabled()) return;
+    _pasteTextIntoQuill(quill, e);
+  }, true);
+}
+
+function _patchQuillClipboard(quill) {
+  if (!quill) return;
+  _installGlobalQuillPasteGuard();
+  if (!quill.root._misaPastePatched) {
+    quill.root._misaPastePatched = true;
+    quill.root.addEventListener('paste', (e) => {
+      if (!quill.isEnabled()) return;
+      _pasteTextIntoQuill(quill, e);
+    }, true);
+  }
+  _patchQuillCopy(quill);
+}
+
+/** Ensure paste/copy normalization is active (e.g. after recovering an existing instance). */
+export function ensureQuillPasteHandler(quill) {
+  if (quill) _patchQuillClipboard(quill);
+}
+
 function _wireQuillInstance(quill, hiddenInputId, { onTextChange } = {}) {
   quill.on('text-change', (delta, oldDelta, source) => {
     const html = quill.root.innerHTML;
@@ -150,18 +387,7 @@ function _wireQuillInstance(quill, hiddenInputId, { onTextChange } = {}) {
     input.click();
   });
 
-  quill.root.addEventListener('paste', async (e) => {
-    const items = e.clipboardData?.items;
-    if (!items) return;
-    for (const item of items) {
-      if (item.type.startsWith('image/')) {
-        e.preventDefault();
-        const base64 = await _readFileAsBase64(item.getAsFile());
-        await _insertInlineImageFor(quill, base64);
-        break;
-      }
-    }
-  });
+  _patchQuillClipboard(quill);
 }
 
 // ============= QUILL EDITOR INITIALIZATION =============
@@ -175,11 +401,17 @@ export function createQuillEditor(editorSelector, hiddenInputId = 'quoteText', o
     return null;
   }
 
-  const quill = new Quill(editorSelector, {
+  const hostEl = document.querySelector(editorSelector);
+  const quill = new Quill(hostEl, {
     theme: 'snow',
-    modules: { toolbar: QUILL_TOOLBAR_CONFIG },
+    modules: {
+      toolbar: QUILL_TOOLBAR_CONFIG,
+      // pre-wrap + matchVisual inserts extra blank lines when pasting copied editor text
+      clipboard: { matchVisual: false },
+    },
     placeholder: options.placeholder || QUILL_PLACEHOLDER,
   });
+  moveQuillToolbarToBottom(hostEl);
   _wireQuillInstance(quill, hiddenInputId, options);
   return quill;
 }

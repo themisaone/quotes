@@ -3,7 +3,7 @@
  */
 
 import { normalizeTextColors } from './utils.js?v=20260703color1';
-import { createQuillEditor } from './quoteEditor.js?v=20260703nofullscreen1';
+import { createQuillEditor, ensureQuillPasteHandler, moveQuillToolbarToBottom } from './quoteEditor.js?v=20260920paste4';
 import { showUnsavedChangesConfirm } from './confirmDialog.js';
 
 let _apiUrl = '';
@@ -60,7 +60,12 @@ function _recoverQuillFromDom(pane) {
   const host = pane?.querySelector('#lpPaneQuill');
   if (!host || typeof Quill === 'undefined') return null;
   try {
-    return Quill.find(host) || null;
+    const quill = Quill.find(host) || null;
+    if (quill) {
+      moveQuillToolbarToBottom(host);
+      ensureQuillPasteHandler(quill);
+    }
+    return quill;
   } catch {
     return null;
   }
