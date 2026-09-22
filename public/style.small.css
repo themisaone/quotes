@@ -216,7 +216,7 @@
     margin-bottom: 0.15rem !important;
   }
 
-  #quoteModal .quote-editor-group {
+  #quoteModal .quote-modal-lanes {
     margin-bottom: 0.32rem !important;
   }
 
@@ -239,18 +239,8 @@
     box-shadow: var(--shadow-lg) !important;
   }
 
-  #quoteModal .modal-content.modal-expanded .quote-editor-toolbar {
-    flex: 0 0 auto !important;
-    position: relative !important;
-    z-index: 1 !important;
-  }
-
   #quoteModal .modal-content.modal-expanded #quoteEditor {
     min-height: 7rem !important;
-  }
-
-  #quoteModal .modal-content.modal-expanded:has(#quoteDetailsSection:not([open])) #quoteEditor {
-    min-height: 12rem !important;
   }
 
   #quoteModal .form-row,
@@ -277,8 +267,8 @@
   }
 
   #quoteModal #quoteForm,
-  #quoteModal .quote-editor-group,
-  #quoteModal .quote-editor-body,
+  #quoteModal .quote-modal-lanes,
+  #quoteModal .quote-modal-lane,
   #quoteModal .quote-modal-editor-col,
   #quoteModal #quoteEditor,
   #quoteModal .ql-toolbar.ql-snow,
@@ -293,29 +283,23 @@
     width: 100% !important;
     font-size: 1.6rem !important;
     line-height: 1.16 !important;
-    padding-top: 0.05rem !important;
-    padding-bottom: 0.22rem !important;
+    padding: 0 !important;
   }
 
-  #quoteModal .quote-editor-toolbar {
-    flex-wrap: wrap !important;
-    align-items: flex-start !important;
+  #quoteModal .quote-modal-lane-head {
     gap: 0.22rem !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
   }
 
-  #quoteModal .quote-editor-toolbar > div:first-child {
-    flex: 1 1 100% !important;
-    min-width: 0 !important;
-    max-width: 100% !important;
-    flex-wrap: wrap !important;
+  #quoteModal .quote-modal-actions {
     gap: 0.28rem !important;
   }
 
-  #quoteModal .score-radio-group {
-    flex: 1 1 100% !important;
-    max-width: 100% !important;
+  #quoteModal .quote-modal-actions .btn-attach-toggle {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  #quoteModal .quote-modal-lane-properties .score-radio-group {
     overflow-x: auto !important;
     gap: 0.16rem !important;
     padding-bottom: 0.05rem !important;
@@ -403,7 +387,11 @@
     line-height: 1 !important;
   }
 
-  #quoteModal .modal-body .quote-modal-field-row #addTagBtn.quote-modal-inline-action {
-    min-width: 5.7rem !important;
+  #quoteModal .modal-body .quote-modal-field-row .quote-modal-inline-action.btn.btn-primary {
+    flex: 0 0 3.55rem !important;
+    width: 3.55rem !important;
+    min-width: 3.55rem !important;
+    max-width: 3.55rem !important;
+    padding: 0 0.35rem !important;
   }
 }

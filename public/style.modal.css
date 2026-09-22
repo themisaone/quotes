@@ -334,20 +334,101 @@
 }
 
 .modal-wide {
-  max-width: 1100px !important;
+  width: min(1420px, 94vw) !important;
+  max-width: min(1420px, 94vw) !important;
+}
+
+/*
+ * Compact mode = text lane hidden (class toggled in app.js syncModalMinHeight).
+ * Width is fixed from lane columns below — never fit-content (title/metadata must wrap inside).
+ */
+/*
+ * Compact width = same lane sizes as full mode (image max 220px, properties max 360px).
+ * Using column minimums (160+310) squeezed the attachment lane — modal must fit the maxes.
+ */
+#quoteModal .modal-content.modal-wide.modal-lanes-compact:not(.modal-expanded) {
+  --quote-compact-image: 220px;
+  --quote-compact-props: 360px;
+  --quote-compact-pad: calc(2 * var(--d-pad-md) + 4px);
+  --quote-compact-gap: 0.65rem;
+  width: min(calc(var(--quote-compact-image) + var(--quote-compact-props) + var(--quote-compact-gap) + var(--quote-compact-pad)), 94vw) !important;
+  max-width: min(calc(var(--quote-compact-image) + var(--quote-compact-props) + var(--quote-compact-gap) + var(--quote-compact-pad)), 94vw) !important;
+  min-width: 0 !important;
+}
+
+#quoteModal .modal-content.modal-wide.modal-lanes-compact:not(.modal-expanded):has(.quote-modal-lane-image.hidden) {
+  width: min(calc(var(--quote-compact-props) + var(--quote-compact-pad)), 94vw) !important;
+  max-width: min(calc(var(--quote-compact-props) + var(--quote-compact-pad)), 94vw) !important;
+}
+
+#quoteModal .modal-content.modal-lanes-compact .modal-header,
+#quoteModal .modal-content.modal-lanes-compact .modal-body,
+#quoteModal .modal-content.modal-lanes-compact #quoteForm {
+  min-width: 0;
+  max-width: 100%;
+}
+
+#quoteModal .modal-content.modal-lanes-compact .modal-header {
+  flex-wrap: wrap;
+  row-gap: 0.35rem;
+  align-items: center;
+}
+
+#quoteModal .modal-content.modal-lanes-compact .modal-header-left {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: visible;
+}
+
+#quoteModal .modal-content.modal-lanes-compact .quote-metadata-header {
+  flex: 1 1 100% !important;
+  order: 5;
+  white-space: normal !important;
+  word-break: break-word;
+  overflow: visible !important;
+  text-overflow: unset !important;
+  max-width: 100% !important;
+  margin-left: 0 !important;
+  padding-right: 0 !important;
+  line-height: 1.4;
+}
+
+#quoteModal .modal-content.modal-lanes-compact #noteTitle {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 @media (min-width: 1101px) {
   #quoteModal .modal-content.modal-wide:not(.modal-expanded) {
-    height: min(820px, 90vh);
-    max-height: min(820px, 90vh);
+    height: auto;
+    min-height: 0;
+    max-height: 90vh;
+  }
+
+  #quoteModal .quote-modal-lane-properties {
+    align-self: start;
+  }
+
+  #quoteModal .quote-modal-lane-image {
+    align-self: start;
+  }
+
+  /* Attachment-only beside properties: stretch lane so border runs full height */
+  #quoteModal .modal-content.modal-lanes-compact .quote-modal-lane-image {
+    align-self: stretch;
+  }
+
+  #quoteModal .modal-content.modal-lanes-compact .quote-modal-lane-image .quote-modal-lane-body {
+    flex: 1 1 auto;
   }
 
   #quoteModal .modal-content.modal-wide:not(.modal-expanded) .modal-body,
   #quoteModal .modal-content.modal-wide:not(.modal-expanded) #quoteForm,
-  #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-editor-group,
-  #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-editor-body,
-  #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-modal-editor-split,
+  #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-modal-lanes,
+  #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-modal-lane,
+  #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-modal-lane-body,
   #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-modal-editor-col,
   #quoteModal .modal-content.modal-wide:not(.modal-expanded) #quoteEditor {
     min-height: 0;
@@ -355,8 +436,8 @@
 
   #quoteModal .modal-content.modal-wide:not(.modal-expanded) .modal-body,
   #quoteModal .modal-content.modal-wide:not(.modal-expanded) #quoteForm,
-  #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-editor-group,
-  #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-editor-body,
+  #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-modal-lane-text,
+  #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-modal-text-body:not(.hidden),
   #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-modal-editor-col,
   #quoteModal .modal-content.modal-wide:not(.modal-expanded) #quoteEditor {
     display: flex;
@@ -364,28 +445,22 @@
   }
 
   #quoteModal .modal-content.modal-wide:not(.modal-expanded) #quoteForm,
-  #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-editor-group,
-  #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-editor-body,
-  #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-modal-editor-split,
+  #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-modal-lanes,
+  #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-modal-lane-text,
+  #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-modal-text-body:not(.hidden),
   #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-modal-editor-col,
   #quoteModal .modal-content.modal-wide:not(.modal-expanded) #quoteEditor {
     flex: 1 1 auto;
   }
 
-  #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-modal-editor-split {
-    align-items: stretch;
-  }
-
-  #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-editor-toolbar,
   #quoteModal .modal-content.modal-wide:not(.modal-expanded) #quoteEditor .ql-toolbar,
-  #quoteModal .modal-content.modal-wide:not(.modal-expanded) #quoteDetailsSection,
   #quoteModal .modal-content.modal-wide:not(.modal-expanded) .form-actions {
     flex: 0 0 auto;
   }
 
   #quoteModal .modal-content.modal-wide:not(.modal-expanded) #quoteEditor {
     height: auto !important;
-    min-height: 240px;
+    min-height: 0;
   }
 
   #quoteModal .modal-content.modal-wide:not(.modal-expanded) #quoteEditor .ql-container {
@@ -401,7 +476,7 @@
 }
 
 #quoteModal .modal-content.modal-expanded {
-  width: min(1600px, 96vw);
+  width: min(1700px, 96vw);
   max-width: 96vw !important;
   max-height: 96vh;
   height: 96vh;
@@ -409,9 +484,9 @@
 
 #quoteModal .modal-content.modal-expanded .modal-body,
 #quoteModal .modal-content.modal-expanded #quoteForm,
-#quoteModal .modal-content.modal-expanded .quote-editor-group,
-#quoteModal .modal-content.modal-expanded .quote-editor-body,
-#quoteModal .modal-content.modal-expanded .quote-modal-editor-split,
+#quoteModal .modal-content.modal-expanded .quote-modal-lanes,
+#quoteModal .modal-content.modal-expanded .quote-modal-lane,
+#quoteModal .modal-content.modal-expanded .quote-modal-lane-body,
 #quoteModal .modal-content.modal-expanded .quote-modal-editor-col,
 #quoteModal .modal-content.modal-expanded #quoteEditor {
   min-height: 0;
@@ -419,8 +494,8 @@
 
 #quoteModal .modal-content.modal-expanded .modal-body,
 #quoteModal .modal-content.modal-expanded #quoteForm,
-#quoteModal .modal-content.modal-expanded .quote-editor-group,
-#quoteModal .modal-content.modal-expanded .quote-editor-body,
+#quoteModal .modal-content.modal-expanded .quote-modal-lane-text,
+#quoteModal .modal-content.modal-expanded .quote-modal-text-body:not(.hidden),
 #quoteModal .modal-content.modal-expanded .quote-modal-editor-col,
 #quoteModal .modal-content.modal-expanded #quoteEditor {
   display: flex;
@@ -428,16 +503,12 @@
 }
 
 #quoteModal .modal-content.modal-expanded #quoteForm,
-#quoteModal .modal-content.modal-expanded .quote-editor-group,
-#quoteModal .modal-content.modal-expanded .quote-editor-body,
-#quoteModal .modal-content.modal-expanded .quote-modal-editor-split,
+#quoteModal .modal-content.modal-expanded .quote-modal-lanes,
+#quoteModal .modal-content.modal-expanded .quote-modal-lane-text,
+#quoteModal .modal-content.modal-expanded .quote-modal-text-body:not(.hidden),
 #quoteModal .modal-content.modal-expanded .quote-modal-editor-col,
 #quoteModal .modal-content.modal-expanded #quoteEditor {
   flex: 1 1 auto;
-}
-
-#quoteModal .modal-content.modal-expanded .quote-modal-editor-split {
-  align-items: stretch;
 }
 
 #quoteModal .modal-content.modal-expanded #quoteEditor {
@@ -495,7 +566,7 @@
   margin-bottom: var(--d-pad-xl);
 }
 
-/* List-pane Properties modal: hide editor body; keep score toolbar row */
+/* List-pane Properties modal: image + text lanes hidden */
 #quoteModal.modal-properties-only .modal-content {
   height: auto !important;
   min-height: 0 !important;
@@ -503,45 +574,378 @@
 }
 #quoteModal.modal-properties-only .modal-body,
 #quoteModal.modal-properties-only #quoteForm,
-#quoteModal.modal-properties-only .quote-editor-group {
+#quoteModal.modal-properties-only .quote-modal-lanes {
   flex: 0 1 auto !important;
 }
-#quoteModal.modal-properties-only .quote-editor-body {
+#quoteModal.modal-properties-only .quote-modal-actions,
+#quoteModal.modal-properties-only .quote-modal-lane-image,
+#quoteModal.modal-properties-only .quote-modal-lane-text {
   display: none !important;
 }
-#quoteModal.modal-properties-only .quote-editor-toolbar > div:first-child {
+#quoteModal.modal-properties-only .quote-modal-lanes {
+  grid-template-columns: 1fr !important;
+}
+
+/* Shared action row — Add attachment / Encrypt / Add text */
+.quote-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.25rem;
+  margin-bottom: 0.45rem;
+}
+
+.quote-modal-actions .btn-attach-toggle.hidden {
   display: none !important;
 }
-#quoteModal.modal-properties-only .quote-editor-toolbar {
-  justify-content: flex-end;
-  margin-bottom: 0;
-  padding-bottom: 0.5rem;
+
+.quote-modal-actions .quote-attach-picker-actions {
+  display: none;
+  flex: 1 1 100%;
+  gap: 0.35rem;
+}
+
+#quoteModal.attach-picker-open .quote-modal-actions .quote-attach-picker-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.quote-modal-lane.hidden {
+  display: none !important;
+}
+#quoteModal .quote-modal-title-group {
+  margin: 0 0 0.3rem !important;
+  padding-bottom: 0.35rem;
   border-bottom: 1px solid var(--border);
 }
+
+#quoteModal .quote-modal-title-group #noteTitle {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  line-height: 1.15;
+  min-height: 0;
+  overflow: hidden;
+  vertical-align: top;
+}
+
 #quoteModal.modal-properties-only .form-group:has(#noteTitle) #noteTitle {
   border-bottom: none;
   padding-bottom: 0.15rem;
 }
-#quoteModal.modal-properties-only .form-row.form-row-with-separator {
-  border-top: none;
-  padding-top: 0.75rem;
-}
 
-.quote-editor-group {
+/* Three-lane note editor layout — stacked by default; side-by-side on wide desktop */
+.quote-modal-lanes {
+  display: grid !important;
+  grid-template-columns: 1fr;
+  grid-auto-rows: auto;
+  grid-auto-flow: row;
+  gap: 0.65rem;
+  align-items: stretch;
   width: 100%;
   max-width: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
+  margin-bottom: 0.3rem;
 }
 
-#quoteModal .quote-editor-toolbar {
-  padding: var(--lp-band-pad-top, 0.3rem) var(--lp-band-pad-x, 0) 0.5rem;
+@media (min-width: 1101px) {
+  #quoteModal .quote-modal-lanes {
+    grid-template-columns: minmax(160px, 220px) minmax(0, 1fr) minmax(310px, 360px);
+    align-items: stretch;
+  }
+
+  #quoteModal .quote-modal-lanes:not(:has(.quote-modal-lane-image:not(.hidden))) {
+    grid-template-columns: minmax(0, 1fr) minmax(310px, 360px);
+  }
+
+  #quoteModal .quote-modal-lanes:not(:has(.quote-modal-lane-text:not(.hidden))) {
+    grid-template-columns: minmax(160px, 220px) minmax(310px, 360px);
+  }
+
+  #quoteModal .quote-modal-lanes:not(:has(.quote-modal-lane-image:not(.hidden))):not(:has(.quote-modal-lane-text:not(.hidden))) {
+    grid-template-columns: minmax(310px, 360px);
+  }
+
+  /* Compact: fixed lane widths matching full-mode column maximums */
+  #quoteModal .modal-content.modal-lanes-compact .quote-modal-lanes:not(:has(.quote-modal-lane-text:not(.hidden))):not(:has(.quote-modal-lane-image.hidden)) {
+    grid-template-columns: var(--quote-compact-image, 220px) var(--quote-compact-props, 360px);
+  }
+
+  #quoteModal .modal-content.modal-lanes-compact .quote-modal-lanes:not(:has(.quote-modal-lane-text:not(.hidden))):has(.quote-modal-lane-image.hidden) {
+    grid-template-columns: var(--quote-compact-props, 360px);
+  }
 }
 
-#quoteModal .quote-editor-toolbar label[for="quoteText"] {
-  margin-right: 0.25rem;
+.quote-modal-lane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  overflow: hidden;
 }
 
-#quoteModal .quote-editor-group {
-  margin-bottom: var(--d-pad-md);
+.quote-modal-lane-image .quote-modal-lane-body,
+.quote-modal-lane-text .quote-modal-lane-body,
+.quote-modal-lane-properties .quote-modal-lane-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.quote-modal-lane-image .quote-modal-lane-body {
+  padding: 0.45rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+  justify-content: flex-start;
+}
+
+#quoteModal .quote-modal-lane-image #attachmentContainer:not(.hidden) {
+  width: 100%;
+  max-width: 100%;
+  margin-right: 0;
+}
+
+#quoteModal .quote-modal-lane-image .image-preview-vertical {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+#quoteModal .quote-modal-lane-image .image-preview-vertical:not(.has-image) {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+#quoteModal .quote-modal-lane-image .image-preview-vertical img {
+  max-width: 100% !important;
+}
+
+#quoteModal .quote-modal-lane-image .modal-att-strip {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.quote-modal-lane-text .quote-modal-lane-body {
+  padding: 0;
+  overflow: hidden;
+}
+
+.quote-modal-lane-properties .quote-modal-lane-body {
+  padding: 0.55rem 0.5rem;
+  overflow-y: auto;
+}
+
+#quoteModal .quote-modal-lane-image .image-preview-vertical img {
+  border: none !important;
+}
+
+#quoteModal .quote-modal-lane-text .quote-modal-editor-col {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+}
+
+#quoteModal .quote-modal-lane-text .quill-editor-shell {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  border: none !important;
+  border-radius: 0 !important;
+}
+
+#quoteModal .quote-modal-lane-text .quill-editor-shell .ql-toolbar.ql-snow {
+  border: none !important;
+  border-top: 1px solid var(--border) !important;
+}
+
+#quoteModal .quote-modal-lane-text .quill-editor-shell .ql-container.ql-snow {
+  flex: 1 1 auto;
+  min-height: 0;
+  border: none !important;
+}
+
+.quote-modal-lane-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  padding: 0.35rem 0.5rem;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.quote-modal-lane-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  min-width: 0;
+}
+
+.quote-modal-lane-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0.45rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.quote-modal-lane-body.hidden {
+  display: none !important;
+}
+
+.quote-modal-image-body:not(:has(#attachmentContainer:not(.hidden))) {
+  min-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.quote-modal-lane-image #attachmentContainer.quote-modal-attachment-col {
+  width: 100%;
+  max-width: 100%;
+  flex-shrink: 0;
+  transition: opacity 0.2s ease;
+}
+
+.quote-modal-attachment-preview-wrap {
+  position: relative;
+}
+
+.quote-modal-editor-col {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+#quoteModal #quoteEditor,
+#quoteModal .quote-modal-editor-col > .quill-editor-shell {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+#quoteModal .quote-modal-editor-col > .quill-editor-shell > .ql-container.ql-snow {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto !important;
+  overflow-y: auto;
+  order: 1;
+}
+
+#quoteModal .quote-modal-editor-col > .quill-editor-shell > .ql-toolbar.ql-snow {
+  flex: 0 0 auto;
+  order: 2;
+  border-top: 1px solid var(--border);
+  border-bottom: none;
+}
+
+.quote-modal-prop-field {
+  margin-bottom: 0.35rem;
+}
+
+.quote-modal-prop-field:last-child {
+  margin-bottom: 0;
+}
+
+.quote-modal-prop-field > label {
+  display: block;
+  margin-bottom: 0.25rem;
+  padding-top: 1rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.quote-modal-details-content > .quote-modal-prop-field:first-child > label {
+  padding-top: 0;
+}
+
+.quote-modal-prop-input-row {
+  display: flex;
+  gap: 0.35rem;
+  align-items: stretch;
+  width: 100%;
+  min-width: 0;
+}
+
+.quote-modal-prop-input-row .autocomplete-wrapper {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.quote-modal-prop-input-row .autocomplete-wrapper input[type="text"] {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.quote-modal-prop-input-row .autocomplete-suggestions {
+  left: 0;
+  right: 0;
+}
+
+.quote-modal-selected-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.45rem;
+}
+
+.quote-modal-type-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+#quoteModal .quote-modal-lane-properties .score-radio-group {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 0.2rem;
+}
+
+#quoteModal .quote-modal-score-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.55rem;
+  margin-bottom: 0.15rem;
+}
+
+#quoteModal .quote-modal-score-row > label {
+  padding-top: 0;
+  margin-bottom: 0;
+  flex: 0 0 auto;
+}
+
+#quoteModal .quote-modal-score-row .score-radio-group {
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-wrap: nowrap;
+}
+
+#quoteModal .quote-modal-prop-field > input[type="text"],
+#quoteModal .quote-modal-prop-field > select,
+#quoteModal .quote-modal-prop-field > textarea {
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .modal-content .form-group:last-of-type {
@@ -710,6 +1114,8 @@ label {
   display: flex;
   align-items: stretch;
   gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
 }
 
 .training-date-input-row #noteDate {
@@ -1021,11 +1427,13 @@ textarea {
 }
 
 #quoteModal .quote-modal-inline-action.btn.btn-primary {
-  flex: 0 0 auto;
-  min-width: 4.4rem;
+  flex: 0 0 3.55rem;
+  width: 3.55rem;
+  min-width: 3.55rem;
+  max-width: 3.55rem;
   height: var(--d-btn-height);
   min-height: var(--d-btn-height);
-  padding: 0 0.75rem;
+  padding: 0 0.35rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1036,35 +1444,19 @@ textarea {
   box-sizing: border-box;
 }
 
-#quoteModal #addTagBtn.quote-modal-inline-action {
-  min-width: 6.2rem;
-}
+@media (max-width: 1100px) {
+  #quoteModal .quote-modal-lanes {
+    grid-template-columns: 1fr !important;
+    grid-auto-flow: row !important;
+    gap: 0.55rem !important;
+  }
 
-/* Attachment preview + Quill — horizontal in #quoteModal (see index.html) */
-.quote-modal-editor-split {
-  display: flex;
-  flex-direction: row;
-  gap: 0;
-  align-items: flex-start;
-  margin-top: 0;
-}
-
-.quote-attach-picker-actions {
-  display: none;
+  #quoteModal .quote-modal-lane-text .quote-modal-text-body:not(.hidden) {
+    min-height: 10rem;
+  }
 }
 
 @media (max-width: 767px) {
-  #quoteModal .quote-modal-editor-split {
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 0.65rem !important;
-  }
-
-  /* No dead gap between toolbar and Quill when attachment strip is collapsed */
-  #quoteModal .quote-modal-editor-split:has(#attachmentContainer.hidden) {
-    gap: 0 !important;
-  }
-
   /* Title field: modest bump over desktop 1.8rem on narrow viewports */
   #quoteModal #noteTitle {
     font-size: 1.92rem !important;
@@ -1072,7 +1464,7 @@ textarea {
     padding-bottom: 0.3rem !important;
   }
 
-  #quoteModal #attachmentContainer.quote-modal-attachment-col {
+  #quoteModal .quote-modal-lane-image #attachmentContainer.quote-modal-attachment-col {
     max-width: 100% !important;
     width: 100% !important;
   }
@@ -1126,24 +1518,9 @@ textarea {
     max-width: 100% !important;
   }
 
-  #quoteModal .quote-details-section {
-    margin-top: 0.2rem;
-    padding-top: 0;
-  }
-
-  #quoteModal .quote-details-summary {
-    min-height: 0;
-  }
-
-  #quoteModal .quote-details-summary-hint {
-    display: none;
-  }
-
-  #quoteModal .quote-attach-picker-actions {
+  #quoteModal.attach-picker-open .quote-modal-actions .quote-attach-picker-actions {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.35rem;
-    margin-top: 0.45rem;
   }
 
   #quoteModal .quote-attach-picker-btn {
@@ -1174,6 +1551,10 @@ textarea {
   margin: var(--d-pad-xl) calc(-1 * var(--d-pad-md)) calc(-1 * var(--d-pad-md)) calc(-1 * var(--d-pad-md));
   padding: var(--d-pad-md);
   border-radius: 0 0 12px 12px;
+}
+
+#quoteModal .form-actions {
+  margin-top: 0.45rem;
 }
 
 /* Author modal - white cancel button */

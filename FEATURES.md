@@ -77,22 +77,23 @@ Cards are displayed in a grid (1, 2, or 3 columns depending on screen width). Th
 
 Opens for both creating and editing notes. Fields shown depend on `note_type` behavior.
 
+**Three-lane layout (wide / medium screens):**
+- **Action row** (above lanes): **Add attachment** (becomes **Add more** when attachments exist), **Encrypt & attach**, and **Add text** (hidden when the note already has text).
+- **Image lane:** shown only when an attachment exists — preview + multi-attachment strip when 2+.
+- **Text lane:** shown when the note has body text, when adding a new note, or after **Add text** — Quill toolbar at the **bottom** of the editor.
+- **Properties lane (right):** score dice (all note types; label and dice on one row), comment, tags, and type-specific fields — each with label **above** the field (comment and group use full column width).
+
+On **medium and phone screens (≤1100px)** the modal uses nearly the full viewport and the lanes **stack vertically**: Image → Text → Properties. On **wide desktop (>1100px)** the three lanes sit side by side.
+
 **Common fields:**
-- Note type selector (changes which other fields are visible)
-- Main text editor (Quill rich-text)
-- Tags (autocomplete, comma-separated, multi-language supported)
-- Comment / side-notes field
-- Attachment panel
+- Note type selector (in modal header)
+- Title (optional, full width above lanes)
 
-**Quote fields:**
-- Author (autocomplete → author entity)
-- Source (autocomplete → source entity)
-- Source sub-type (book, movie, etc.)
-- Score (numeric)
+**Quote properties:** Author, Source, Source sub-type
 
-**Training fields:**
-- Date picker (Norwegian format dd.mm.yyyy internally)
-- Training sub-type (dropdown from settings)
+**Score:** Available for all note types (optional 1–6 dice, or “-” for none)
+
+**Training properties:** Date picker (Norwegian dd.mm.yyyy), Training sub-type, Group
 
 **Attachment panel:**
 - Shows current attachment with preview

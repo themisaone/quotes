@@ -150,7 +150,7 @@ import {
   initializeQuillEditor,
   handleFormSubmit as handleFormSubmitLib,
   deleteQuote as deleteQuoteLib
-} from './js/lib/quoteEditor.js?v=20260721entitynormalize1';
+} from './js/lib/quoteEditor.js?v=20260922toolbar2';
 
 import {
   initializeBulkImport,
@@ -590,7 +590,8 @@ const addQuoteBtn = getElementByIdSafe("addQuoteBtn");
 const closeModal = document.querySelector(".close");
 const cancelBtn = getElementByIdSafe("cancelBtn");
 const toggleQuoteModalMaximizeBtn = getElementByIdSafe("toggleQuoteModalMaximize");
-const toggleQuoteDetailsBtn = getElementByIdSafe("toggleQuoteDetailsBtn");
+const toggleTextLaneBtn = getElementByIdSafe("toggleTextLaneBtn");
+let textLaneExpanded = false;
 const quotesList = getElementByIdSafe("quotesList");
 const lpWrapper = getElementByIdSafe("lpWrapper");   // dedicated container for list-pane view
 const quoteCount = getElementByIdSafe("quoteCount");
@@ -1468,6 +1469,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   
   // Initialize Quill editor using library
   quillEditor = initializeQuillEditor();
+  if (quillEditor) {
+    quillEditor.on('text-change', () => syncModalLaneLayout());
+  }
   configurePaneEditor({
     apiUrl: API_URL,
     // Text-only pane save: refresh list row only — do not touch editor/baseline
@@ -1600,13 +1604,10 @@ function setupEventListeners() {
       toggleQuoteModalMaximized();
     });
   }
-  if (toggleQuoteDetailsBtn) {
-    toggleQuoteDetailsBtn.addEventListener("click", (e) => {
+  if (toggleTextLaneBtn) {
+    toggleTextLaneBtn.addEventListener("click", (e) => {
       e.preventDefault();
-      const details = document.getElementById('quoteDetailsSection');
-      if (!details) return;
-      details.open = !details.open;
-      syncQuoteDetailsToggle();
+      toggleTextLane();
       const shouldReleaseFocus = e.detail > 0 ||
         (window.matchMedia && window.matchMedia('(hover: none), (pointer: coarse)').matches);
       if (shouldReleaseFocus) {
@@ -1615,6 +1616,10 @@ function setupEventListeners() {
     });
   }
   quoteForm.addEventListener("submit", handleSubmit);
+  const noteTitleEl = document.getElementById('noteTitle');
+  if (noteTitleEl) {
+    noteTitleEl.addEventListener('input', syncNoteTitleHeight);
+  }
   clearBtn.addEventListener("click", clearFilters);
   
   // Delete quote button in modal
@@ -2653,6 +2658,7 @@ function updateFieldVisibility() {
   }
 
   syncNoteModalEntityShowButtons();
+  syncModalLaneLayout();
 }
 
 function syncNoteModalEntityShowButtons() {
@@ -2732,17 +2738,9 @@ function isMediumPortraitModalViewport() {
     : window.innerWidth >= 700 && window.innerWidth <= 1100 && window.innerHeight > window.innerWidth;
 }
 
-function canUseQuoteModalMaximize() {
-  return !isCompactModalViewport() || isMediumPortraitModalViewport();
-}
-
 function setQuoteModalMaximized(enabled) {
   const content = document.querySelector('#quoteModal .modal-content');
   if (!content) return;
-
-  if (enabled && !canUseQuoteModalMaximize()) {
-    enabled = false;
-  }
 
   content.classList.toggle('modal-expanded', Boolean(enabled));
   if (toggleQuoteModalMaximizeBtn) {
@@ -2759,22 +2757,129 @@ function toggleQuoteModalMaximized() {
   setQuoteModalMaximized(!content?.classList.contains('modal-expanded'));
 }
 
-function syncQuoteDetailsToggle() {
-  const details = document.getElementById('quoteDetailsSection');
-  if (!details || !toggleQuoteDetailsBtn) return;
-
-  const isOpen = details.open;
-  toggleQuoteDetailsBtn.classList.toggle('active', isOpen);
-  toggleQuoteDetailsBtn.title = isOpen ? 'Hide details' : 'Show details';
-  toggleQuoteDetailsBtn.setAttribute('aria-label', toggleQuoteDetailsBtn.title);
-  toggleQuoteDetailsBtn.setAttribute('aria-pressed', String(isOpen));
+function isModalTextEmpty() {
+  if (quillEditor) {
+    if ((quillEditor.getText() || '').trim()) return false;
+    const html = (quillEditor.root?.innerHTML || '').trim();
+    return !html || html === '<p><br></p>' || html === '<p></p>';
+  }
+  const hidden = getElementByIdSafe('quoteText');
+  const raw = (hidden?.value || '').trim();
+  return !raw || raw === '<p><br></p>' || raw === '<p></p>';
 }
 
-function setQuoteDetailsDefault({ forceOpen = false } = {}) {
-  const details = document.getElementById('quoteDetailsSection');
-  if (!details) return;
-  details.open = forceOpen || !isSmallModalViewport();
-  syncQuoteDetailsToggle();
+function syncNoteTitleHeight() {
+  const titleEl = document.getElementById('noteTitle');
+  if (!titleEl || titleEl.tagName !== 'TEXTAREA') return;
+  titleEl.style.removeProperty('height');
+  titleEl.style.height = '0';
+  titleEl.style.height = `${titleEl.scrollHeight}px`;
+}
+
+function scheduleNoteTitleHeightSync() {
+  syncNoteTitleHeight();
+  requestAnimationFrame(() => {
+    syncNoteTitleHeight();
+    requestAnimationFrame(() => {
+      syncNoteTitleHeight();
+      setTimeout(syncNoteTitleHeight, 50);
+    });
+  });
+}
+
+function clearModalLaneSyncedHeights() {
+  const textLane = document.querySelector('#quoteModal .quote-modal-lane-text');
+  const imageLane = document.querySelector('#quoteModal .quote-modal-lane-image');
+  if (textLane) textLane.style.minHeight = '';
+  if (imageLane) imageLane.style.minHeight = '';
+}
+
+function syncModalMinHeight() {
+  const content = document.querySelector('#quoteModal .modal-content');
+  const propsLane = document.querySelector('#quoteModal .quote-modal-lane-properties');
+  const textLane = document.querySelector('#quoteModal .quote-modal-lane-text');
+  const imageLane = document.querySelector('#quoteModal .quote-modal-lane-image');
+  if (!content || content.classList.contains('modal-expanded')) return;
+
+  const isWideLayout =
+    window.innerWidth > 1100 &&
+    !quoteModal?.classList.contains('modal-properties-only');
+
+  const showTextLane = textLane && !textLane.classList.contains('hidden');
+  const showImageLane = imageLane && !imageLane.classList.contains('hidden');
+
+  content.style.minHeight = '';
+  clearModalLaneSyncedHeights();
+  const wasCompact = content.classList.contains('modal-lanes-compact');
+  content.classList.toggle('modal-lanes-compact', isWideLayout && !showTextLane);
+  if (wasCompact && !content.classList.contains('modal-lanes-compact')) {
+    const titleEl = document.getElementById('noteTitle');
+    if (titleEl) titleEl.style.removeProperty('height');
+  }
+
+  if (isWideLayout && propsLane) {
+    const propsHeight = propsLane.offsetHeight;
+    if (propsHeight > 0) {
+      if (showTextLane && textLane) {
+        textLane.style.minHeight = `${propsHeight}px`;
+      } else if (!showTextLane && showImageLane && imageLane) {
+        imageLane.style.minHeight = `${propsHeight}px`;
+      }
+    }
+  }
+
+  const naturalHeight = content.scrollHeight;
+  const capPx = Math.floor(window.innerHeight * 0.9);
+  const floorPx = content.classList.contains('modal-lanes-compact') ? 0 : 320;
+  content.style.minHeight = floorPx
+    ? `${Math.min(Math.max(naturalHeight, floorPx), capPx)}px`
+    : `${Math.min(naturalHeight, capPx)}px`;
+  scheduleNoteTitleHeightSync();
+}
+
+function syncModalLaneLayout() {
+  const modal = quoteModal;
+  if (!modal || modal.classList.contains('modal-properties-only')) return;
+
+  const imageLane = modal.querySelector('.quote-modal-lane-image');
+  const textLane = modal.querySelector('.quote-modal-lane-text');
+  const hasAttachment = modal.classList.contains('has-attachment');
+  const hasText = !isModalTextEmpty();
+  const showTextLane = textLaneExpanded || hasText;
+
+  if (imageLane) {
+    imageLane.classList.toggle('hidden', !hasAttachment);
+  }
+  if (textLane) {
+    textLane.classList.toggle('hidden', !showTextLane);
+  }
+  if (toggleTextLaneBtn) {
+    toggleTextLaneBtn.classList.toggle('hidden', showTextLane);
+    toggleTextLaneBtn.setAttribute('aria-hidden', showTextLane ? 'true' : 'false');
+  }
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => syncModalMinHeight());
+  });
+}
+
+function toggleTextLane() {
+  textLaneExpanded = true;
+  const titleEl = document.getElementById('noteTitle');
+  if (titleEl) titleEl.style.removeProperty('height');
+  syncModalLaneLayout();
+  setTimeout(() => {
+    scheduleNoteTitleHeightSync();
+    if (quillEditor) quillEditor.focus();
+  }, 50);
+}
+
+function ensureQuoteModalViewportLayout({ propertiesOnly = false } = {}) {
+  if (propertiesOnly) {
+    setQuoteModalMaximized(false);
+    return;
+  }
+  setQuoteModalMaximized(isCompactModalViewport());
 }
 
 function openAddModal() {
@@ -2828,14 +2933,16 @@ function openAddModal() {
   
   // Update attachment panel visibility based on state
   updateAttachmentPanelVisibility();
-  setQuoteDetailsDefault();
+  textLaneExpanded = true;
+  syncModalLaneLayout();
+  ensureQuoteModalViewportLayout();
   
   // Show modal
   quoteModal.style.display = "block";
   
   // Set focus to Quote text editor after modal is displayed
   setTimeout(() => {
-    if (quillEditor) {
+    if (quillEditor && textLaneExpanded) {
       quillEditor.focus();
     }
   }, 100); // Small delay to ensure modal is fully rendered
@@ -2921,18 +3028,29 @@ function openEditModal(quote, options = {}) {
   
   // Update attachment panel visibility
   updateAttachmentPanelVisibility();
-  setQuoteDetailsDefault({ forceOpen: propertiesOnly });
+  textLaneExpanded = propertiesOnly ? false : !isModalTextEmpty();
+  syncModalLaneLayout();
+  ensureQuoteModalViewportLayout({ propertiesOnly });
 
 
   // Show modal
   quoteModal.style.display = "block";
+  setTimeout(() => syncModalLaneLayout(), 0);
 }
 
 function closeQuoteModal() {
   quoteModal.style.display = "none";
   quoteModal.classList.remove('modal-properties-only');
   quoteModal.classList.remove('has-attachment');
+  quoteModal.classList.remove('attach-picker-open');
+  textLaneExpanded = false;
   setQuoteModalMaximized(false);
+  const modalContent = document.querySelector('#quoteModal .modal-content');
+  if (modalContent) {
+    modalContent.style.minHeight = '';
+    modalContent.classList.remove('modal-lanes-compact');
+  }
+  clearModalLaneSyncedHeights();
   quoteForm.reset();
   editingQuoteId = null;
   currentQuoteImage = "";
@@ -3972,6 +4090,7 @@ function renderModalAttachmentStrip(note) {
   if (!atts || atts.length <= 1) {
     strip.style.display = 'none';
     strip.innerHTML = '';
+    syncModalLaneLayout();
     return;
   }
 
@@ -4000,6 +4119,7 @@ function renderModalAttachmentStrip(note) {
       selectModalAttachment(idx);
     });
   });
+  syncModalLaneLayout();
 }
 
 async function selectModalAttachment(idx) {
@@ -6089,7 +6209,6 @@ function updateAttachmentPanelVisibility() {
 
   const hasAttachment = currentQuoteImage || currentQuoteImageFull;
 
-  // Panel is always shown once the user opens it or has an attachment
   toggleBtn.disabled = false;
 
   const modal = document.getElementById('quoteModal');
@@ -6097,6 +6216,7 @@ function updateAttachmentPanelVisibility() {
   if (hasAttachment) {
     container.classList.remove('hidden');
     modal?.classList.add('has-attachment');
+    modal?.classList.remove('attach-picker-open');
     const pendingCount = pendingExtraAttachments.length;
     const extra = pendingCount > 0 ? ` (+${pendingCount})` : '';
     toggleBtn.textContent = `📎 Add more${extra}`;
@@ -6105,8 +6225,10 @@ function updateAttachmentPanelVisibility() {
     container.classList.add('hidden');
     modal?.classList.remove('has-attachment');
     toggleBtn.textContent = '📎 Add attachment';
-    toggleBtn.title = 'Show attachment panel';
+    toggleBtn.title = 'Add an attachment';
   }
+
+  syncModalLaneLayout();
 }
 
 // Toggle attachment panel
@@ -6121,11 +6243,7 @@ function toggleAttachmentPanel() {
   // bypassing the first-attachment routing in quoteImageFile.change.
   if (hasAttachment) {
     if (isSmallViewport()) {
-      container.classList.remove('hidden');
-      document.getElementById('quoteAttachPickerActions')?.scrollIntoView({
-        block: 'nearest',
-        behavior: 'smooth',
-      });
+      quoteModal?.classList.toggle('attach-picker-open');
       return;
     }
 
@@ -6154,17 +6272,13 @@ function toggleAttachmentPanel() {
     return;
   }
 
-  // No attachment yet — toggle the attachment panel open/closed
-  const isHidden = container.classList.contains('hidden');
-  if (isHidden) {
-    container.classList.remove('hidden');
-    toggleBtn.textContent = hasAttachment ? '📎 Attachment' : '📎 Hide';
-    toggleBtn.title = 'Hide attachment panel';
-  } else {
-    container.classList.add('hidden');
-    toggleBtn.textContent = '📎 Add attachment';
-    toggleBtn.title = 'Show attachment panel';
+  // No attachment yet — pick a file (or show mobile picker row); no empty attachment lane
+  if (isSmallViewport()) {
+    quoteModal?.classList.toggle('attach-picker-open');
+    return;
   }
+
+  quoteImageFile?.click();
 }
 
 // Update image indicator in modal

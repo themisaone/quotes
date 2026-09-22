@@ -339,11 +339,17 @@
 #noteTitle {
   width: 100%;
   border: none;
-  border-bottom: 1px solid var(--border);
   background: transparent;
-  padding: 0.1rem 0 0.5rem;
+  padding: 0;
   outline: none;
   font-family: inherit;
+  resize: none;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+#quoteModal #noteTitle {
+  border-bottom: none;
 }
 
 #quoteForm .form-group:has(#noteTitle) {
@@ -497,17 +503,41 @@
   font-family: inherit !important;
 }
 
-/* Quill editor container */
-#quoteEditor {
-  width: 100% !important; /* Match note field width */
-  min-width: auto !important;
+/* Quill editor — outer frame wraps container + bottom toolbar */
+.quill-editor-shell {
+  display: flex;
+  flex-direction: column;
+  width: 100% !important;
+  min-width: 0;
   max-width: 100% !important;
-  height: calc(18.4rem + 42px + 24px) !important; /* 4 lines (6.4rem) + toolbar (42px) + padding (24px) */
+  box-sizing: border-box;
   border: 1px solid var(--border);
   border-radius: 8px;
-  overflow: hidden; /* Prevent container from expanding */
-  box-sizing: border-box;
+  overflow: hidden;
   background: var(--input-bg);
+}
+
+.quill-editor-shell[data-quill-host="quoteEditor"] {
+  height: calc(18.4rem + 42px + 24px) !important; /* 4 lines + toolbar + padding */
+}
+
+.quill-editor-shell .ql-container.ql-snow {
+  flex: 1 1 auto;
+  min-height: 0;
+  border: none !important;
+  border-radius: 0 !important;
+}
+
+.quill-editor-shell .ql-toolbar.ql-snow {
+  border: none !important;
+  border-top: 1px solid var(--border) !important;
+  border-radius: 0 !important;
+}
+
+#quoteModal .quote-modal-editor-col > .quill-editor-shell {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto !important;
 }
 
 .ql-container {
@@ -520,8 +550,7 @@
 
 .ql-toolbar.ql-snow {
   padding: 4px 8px !important;
-  border-top-left-radius: 8px;
-  border-top-right-radius: 8px;
+  flex-shrink: 0;
   /* Follow palette */
   background: var(--input-bg) !important;
   border-color: var(--border) !important;
@@ -549,6 +578,14 @@
   fill: var(--primary-color) !important;
 }
 
+/* Picker dropdown panel (Heading, Font, Size selectors) — open upward above bottom toolbar */
+.ql-toolbar.ql-snow .ql-picker.ql-expanded .ql-picker-options {
+  top: auto !important;
+  bottom: 100% !important;
+  margin-top: 0 !important;
+  margin-bottom: -1px !important;
+}
+
 /* Picker dropdown panel (Heading, Font, Size selectors) */
 .ql-toolbar.ql-snow .ql-picker-options {
   background: var(--surface) !important;
@@ -569,8 +606,14 @@
 
 .ql-container.ql-snow {
   border-color: var(--border) !important;
-  border-bottom-left-radius: 8px;
-  border-bottom-right-radius: 8px;
+}
+
+.ql-editor p,
+.ql-editor ol,
+.ql-editor ul,
+.ql-editor pre {
+  margin: 0;
+  padding: 0;
 }
 
 .ql-editor {
@@ -584,7 +627,7 @@
   overflow-x: hidden;
   overflow-wrap: break-word;
   word-wrap: break-word;
-  white-space: pre-wrap; /* Preserve line breaks and wrap text */
+  white-space: normal;
   font-size: 1rem !important;
   line-height: 1.6 !important;
   box-sizing: border-box;
