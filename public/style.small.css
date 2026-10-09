@@ -290,13 +290,13 @@
     gap: 0.22rem !important;
   }
 
-  #quoteModal .quote-modal-actions {
-    gap: 0.28rem !important;
+  #quoteModal .quote-modal-commands-btn {
+    min-width: 6.5rem !important;
+    font-size: 0.75rem !important;
   }
 
-  #quoteModal .quote-modal-actions .btn-attach-toggle {
-    flex: 1 1 auto;
-    min-width: 0;
+  #quoteModal .quote-modal-commands-menu {
+    max-width: min(16rem, calc(100vw - 1.5rem)) !important;
   }
 
   #quoteModal .quote-modal-lane-properties .score-radio-group {

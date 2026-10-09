@@ -343,25 +343,29 @@
  * Width + lane column rules live inside @media (min-width: 1101px) below.
  */
 #quoteModal .modal-content.modal-lanes-compact .modal-header,
+#quoteModal.modal-properties-only .modal-header,
 #quoteModal .modal-content.modal-lanes-compact .modal-body,
 #quoteModal .modal-content.modal-lanes-compact #quoteForm {
   min-width: 0;
   max-width: 100%;
 }
 
-#quoteModal .modal-content.modal-lanes-compact .modal-header {
+#quoteModal .modal-content.modal-lanes-compact .modal-header,
+#quoteModal.modal-properties-only .modal-header {
   flex-wrap: wrap;
   row-gap: 0.35rem;
   align-items: center;
 }
 
-#quoteModal .modal-content.modal-lanes-compact .modal-header-left {
+#quoteModal .modal-content.modal-lanes-compact .modal-header-left,
+#quoteModal.modal-properties-only .modal-header-left {
   flex: 1 1 auto;
   min-width: 0;
   overflow: visible;
 }
 
-#quoteModal .modal-content.modal-lanes-compact .quote-metadata-header {
+#quoteModal .modal-content.modal-lanes-compact .quote-metadata-header,
+#quoteModal.modal-properties-only .quote-metadata-header {
   flex: 1 1 100% !important;
   order: 5;
   white-space: normal !important;
@@ -546,63 +550,201 @@
   margin-bottom: var(--d-pad-xl);
 }
 
-/* List-pane Properties modal: image + text lanes hidden */
-#quoteModal.modal-properties-only .modal-content {
-  height: auto !important;
-  min-height: 0 !important;
-  max-height: min(820px, 90vh) !important;
+/*
+ * List-pane Properties modal — 560px wide; footer below the properties lane.
+ * Desktop: natural height (room on screen). Medium: lane scrolls (see style.medium.css).
+ */
+#quoteModal.modal-properties-only .modal-content,
+#quoteModal.modal-properties-only .modal-content.modal-wide {
+  --quote-props-only-w: min(35rem, 94vw);
+  width: var(--quote-props-only-w) !important;
+  max-width: var(--quote-props-only-w) !important;
+  min-width: 0;
+  overflow: hidden;
 }
-#quoteModal.modal-properties-only .modal-body,
-#quoteModal.modal-properties-only #quoteForm,
+#quoteModal.modal-properties-only .modal-header {
+  flex: 0 0 auto;
+}
+#quoteModal.modal-properties-only .modal-body {
+  flex: 0 0 auto;
+  min-width: 0;
+  overflow: visible;
+  border-radius: 0;
+  /* Side/bottom padding off — footer spans full width; inset title + lane only */
+  padding-left: 0;
+  padding-right: 0;
+  padding-bottom: 0;
+}
+#quoteModal.modal-properties-only #quoteForm {
+  display: flex;
+  flex-direction: column;
+}
+#quoteModal.modal-properties-only .quote-modal-title-row {
+  flex: 0 0 auto;
+  padding-left: var(--d-pad-md);
+  padding-right: var(--d-pad-md);
+}
 #quoteModal.modal-properties-only .quote-modal-lanes {
-  flex: 0 1 auto !important;
+  flex: 0 1 auto;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  grid-template-columns: 1fr !important;
+  padding-left: var(--d-pad-md);
+  padding-right: var(--d-pad-md);
+  box-sizing: border-box;
 }
-#quoteModal.modal-properties-only .quote-modal-actions,
+#quoteModal.modal-properties-only .quote-modal-lane-properties {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+#quoteModal.modal-properties-only .quote-modal-lane-properties .quote-modal-lane-body {
+  overflow: visible;
+}
+#quoteModal.modal-properties-only .form-actions {
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  row-gap: 0.35rem;
+  width: 100%;
+  box-sizing: border-box;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  margin-bottom: 0 !important;
+  border-radius: 0 0 10px 10px;
+}
+
+@media (min-width: 1101px) {
+  #quoteModal.modal-properties-only .modal-content.modal-wide:not(.modal-expanded) {
+    height: auto;
+    max-height: min(820px, 90vh);
+  }
+
+  /* Footer sits below full lane height — do not shrink lane for flex fill */
+  #quoteModal.modal-properties-only .modal-content.modal-wide:not(.modal-expanded) .quote-modal-lanes {
+    flex: 0 1 auto !important;
+  }
+
+  #quoteModal.modal-properties-only .modal-content.modal-wide:not(.modal-expanded) #quoteForm {
+    flex: 0 1 auto !important;
+  }
+}
+#quoteModal.modal-properties-only .quote-modal-commands,
 #quoteModal.modal-properties-only .quote-modal-lane-image,
 #quoteModal.modal-properties-only .quote-modal-lane-text {
   display: none !important;
-}
-#quoteModal.modal-properties-only .quote-modal-lanes {
-  grid-template-columns: 1fr !important;
-}
-
-/* Shared action row — Add attachment / Encrypt / Add text */
-.quote-modal-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.35rem;
-  margin-top: 0.25rem;
-  margin-bottom: 0.45rem;
-}
-
-.quote-modal-actions .btn-attach-toggle.hidden {
-  display: none !important;
-}
-
-#quoteModal .quote-modal-props-toggle {
-  margin-left: auto;
-}
-
-#quoteModal .quote-modal-props-toggle:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.quote-modal-actions .quote-attach-picker-actions {
-  display: none;
-  flex: 1 1 100%;
-  gap: 0.35rem;
-}
-
-#quoteModal.attach-picker-open .quote-modal-actions .quote-attach-picker-actions {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .quote-modal-lane.hidden {
   display: none !important;
 }
+
+#quoteModal .quote-modal-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0 0 0.45rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--border);
+}
+
+#quoteModal .quote-modal-title-row .quote-modal-title-group {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0 !important;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+#quoteModal .quote-modal-commands {
+  position: relative;
+  flex: 0 0 auto;
+  align-self: flex-start;
+  margin-top: 0.05rem;
+}
+
+#quoteModal .quote-modal-commands.hidden {
+  display: none !important;
+}
+
+#quoteModal .quote-modal-commands-btn {
+  font-weight: 500;
+  min-width: 7.5rem;
+}
+
+#quoteModal .quote-modal-commands-menu {
+  left: auto;
+  right: 0;
+  width: max-content;
+  min-width: 100%;
+  max-width: min(18rem, calc(100vw - 2rem));
+  text-align: left;
+}
+
+#quoteModal .quote-modal-cmd-item {
+  width: 100%;
+  min-height: 1.85rem;
+  padding: 0.35rem 0.55rem;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.2;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
+#quoteModal .quote-modal-cmd-item:hover:not(:disabled):not(.quote-modal-cmd-disabled) {
+  background: var(--card-hover-bg);
+}
+
+#quoteModal .quote-modal-cmd-item.hidden {
+  display: none !important;
+}
+
+#quoteModal .quote-modal-cmd-item:disabled,
+#quoteModal .quote-modal-cmd-item.quote-modal-cmd-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+#quoteModal .quote-modal-commands-sep {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 0.15rem 0;
+}
+
+#quoteModal .quote-modal-commands-group-label {
+  padding: 0.2rem 0.55rem 0.05rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+#quoteModal .quote-modal-cmd-sub {
+  padding-left: 1.15rem;
+  font-size: 0.8rem;
+}
+
+@media (min-width: 1101px) {
+  #quoteModal .quote-modal-cmd-attach-submenu-viewport {
+    display: none !important;
+  }
+}
+
+@media (max-width: 1100px) {
+  #quoteModal .quote-modal-cmd-attach-desktop {
+    display: none !important;
+  }
+}
+
 #quoteModal .quote-modal-title-group {
   margin: 0 0 0.3rem !important;
   padding-bottom: 0.35rem;
@@ -621,9 +763,9 @@
   vertical-align: top;
 }
 
-#quoteModal.modal-properties-only .form-group:has(#noteTitle) #noteTitle {
+#quoteModal.modal-properties-only .quote-modal-title-group #noteTitle {
   border-bottom: none;
-  padding-bottom: 0.15rem;
+  padding-bottom: 0;
 }
 
 /* Three-lane note editor layout — stacked by default; side-by-side on wide desktop */
@@ -1566,6 +1708,33 @@ textarea {
 
 #quoteModal .form-actions {
   margin-top: 0.45rem;
+}
+
+/* List-pane Properties footer — after shared .form-actions (full bleed, no gap below) */
+#quoteModal.modal-properties-only .modal-body {
+  flex: 0 0 auto !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  padding-bottom: 0 !important;
+  border-radius: 0 !important;
+}
+#quoteModal.modal-properties-only #quoteForm {
+  flex: 0 0 auto !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+#quoteModal.modal-properties-only .modal-content.modal-wide:not(.modal-expanded) .modal-body,
+#quoteModal.modal-properties-only .modal-content.modal-wide:not(.modal-expanded) #quoteForm {
+  flex: 0 0 auto !important;
+}
+#quoteModal.modal-properties-only .form-actions {
+  width: 100% !important;
+  max-width: none !important;
+  margin-top: 0.45rem !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  margin-bottom: 0 !important;
+  border-radius: 0 0 10px 10px !important;
 }
 
 /* Author modal - white cancel button */
