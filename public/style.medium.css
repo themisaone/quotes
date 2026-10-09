@@ -493,27 +493,32 @@
     height: 54px;
   }
 
-  #quoteModal .modal-content #quoteEditor .ql-toolbar {
+  #quoteModal .modal-content .quote-modal-editor-col > .quill-editor-shell > .ql-toolbar.ql-snow {
     flex: 0 0 auto;
+    order: 2;
   }
 
   #quoteModal .modal-content .form-actions {
     flex: 0 0 auto;
   }
 
-  #quoteModal .modal-content #quoteEditor {
-    height: auto !important;
+  #quoteModal .modal-content .quote-modal-editor-col > .quill-editor-shell {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
     min-height: 6rem !important;
+    height: auto !important;
   }
 
-  #quoteModal .modal-content #quoteEditor .ql-container {
+  #quoteModal .modal-content .quote-modal-editor-col > .quill-editor-shell > .ql-container.ql-snow {
     flex: 1 1 auto;
+    order: 1;
     height: auto !important;
     min-height: 0 !important;
     overflow: hidden;
   }
 
-  #quoteModal .modal-content #quoteEditor .ql-editor {
+  #quoteModal .modal-content .quote-modal-editor-col > .quill-editor-shell .ql-editor {
     overflow-y: auto !important;
   }
 

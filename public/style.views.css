@@ -921,11 +921,24 @@
   overflow: hidden;
 }
 .lp-pane-editor-wrap > .quill-editor-shell {
+  display: flex;
+  flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
   border-left: none;
   border-right: none;
   border-radius: 0;
+}
+
+.lp-pane-editor-wrap > .quill-editor-shell > .ql-container.ql-snow {
+  flex: 1 1 auto;
+  min-height: 0;
+  order: 1;
+}
+
+.lp-pane-editor-wrap > .quill-editor-shell > .ql-toolbar.ql-snow {
+  flex: 0 0 auto;
+  order: 2;
 }
 #lpPaneQuill.ql-container.ql-snow {
   flex: 1 1 auto;
