@@ -1311,15 +1311,14 @@
   }
 
   #quoteModal .quote-modal-inline-action.btn.btn-primary {
-    min-width: 4.1rem !important;
+    flex: 0 0 3.55rem !important;
+    width: 3.55rem !important;
+    min-width: 3.55rem !important;
+    max-width: 3.55rem !important;
     height: 32px !important;
     min-height: 32px !important;
-    padding: 0 0.55rem !important;
+    padding: 0 0.35rem !important;
     line-height: 1 !important;
-  }
-
-  #quoteModal #addTagBtn.quote-modal-inline-action {
-    min-width: 5.7rem !important;
   }
   
   /* Compact form elements */

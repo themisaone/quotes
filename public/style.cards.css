@@ -339,11 +339,17 @@
 #noteTitle {
   width: 100%;
   border: none;
-  border-bottom: 1px solid var(--border);
   background: transparent;
-  padding: 0.1rem 0 0.5rem;
+  padding: 0;
   outline: none;
   font-family: inherit;
+  resize: none;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+#quoteModal #noteTitle {
+  border-bottom: none;
 }
 
 #quoteForm .form-group:has(#noteTitle) {

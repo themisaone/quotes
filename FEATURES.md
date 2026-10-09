@@ -65,7 +65,7 @@ Cards are displayed in a grid (1, 2, or 3 columns depending on screen width). Th
 
 **Column layout (Settings / toolbar):** 1, 2, 3, or **4** columns on desktop (>1100px); medium screens (768–1100px) offer 2, 3, and Gallery only. **Gallery mode** shows only notes with image attachments, uses a larger page size, and forces image-related filters — toggled from the column-count control (`gallery` option).
 
-**List + pane view:** Alternative to the card grid — compact list on the left, full note in the right pane (reuses the edit modal). **Training** notes always use this layout (no Cards option); **Calendar / List** is chosen from the page header (before **Add New**), same slot as **Cards / List + Pane** on other types. The left column has **no redundant type header** — the main page title already shows the context. Training **list** mode uses Year/Month filters in the search bar; **calendar** mode hides those (the calendar has its own month navigation). **All Notes** and every other type (except Training) toggle **Cards** vs **List + Pane** via **DISPLAY_MODE** in the header. List rows show title (or **No title**), one line of note text, optional **score** (right-aligned), **type / author / source** when set (card-style meta), and an optional **80×80px** thumbnail. Up to **12** notes per page in list-pane mode (minimum pane height matches a full page even when filters return fewer rows). Long note text scrolls inside the Quill editor. Select a note from the list to open it in the right pane (no Prev/Next bar). Pane layout: **title** (modal typography) with **score** dice (if set), **⚙ Properties**, and **💾 Save**; optional **group G** (clickable), **author/source** (or training date/type), and **tags** (right-aligned, clickable) on one row; **comment** below when set; an **attachment gallery** when present (all images up to **512px** each in one scrollable row, removable via **✕**; no empty-state box — **Add / Add more / Encrypt & attach** sit in the title row beside **Properties**), then an **inline Quill editor** (always shown — text can be added on image-only notes). **Properties** modal keeps the score row and a single separator below the title (attachments are managed in the pane, not Properties). **💾 Save** saves text only; switching notes with unsaved text prompts **Save / Don't save / Cancel**. Per-type view preference: `viewMode_all` or `viewMode_<type>`; training sub-mode: `lpTrainingSubMode` (`calendar` | `list`). Implemented in `listPaneView.js`, `paneEditor.js`, and `trainingCalendar.js`.
+**List + pane view:** Alternative to the card grid — compact list on the left, full note in the right pane (reuses the edit modal). **Training** notes always use this layout (no Cards option); **Calendar / List** is chosen from the page header (before **Add New**), same slot as **Cards / List + Pane** on other types. The left column has **no redundant type header** — the main page title already shows the context. Training **list** mode uses Year/Month filters in the search bar; **calendar** mode hides those (the calendar has its own month navigation). **All Notes** and every other type (except Training) toggle **Cards** vs **List + Pane** via **DISPLAY_MODE** in the header. List rows show title (or **No title**), one line of note text, optional **score** (right-aligned), **type / author / source** when set (card-style meta), and an optional **80×80px** thumbnail. Up to **12** notes per page in list-pane mode (minimum pane height matches a full page even when filters return fewer rows). Long note text scrolls inside the Quill editor. Select a note from the list to open it in the right pane (no Prev/Next bar). Pane layout: **title** (modal typography) with **score** dice (if set), **⚙ Properties**, and **💾 Save**; optional **group G** (clickable), **author/source** (or training date/type), and **tags** (right-aligned, clickable) on one row; **comment** below when set; an **attachment gallery** when present (all images up to **512px** each in one scrollable row, removable via **✕**; no empty-state box — **Add / Add more / Encrypt & attach** sit in the title row beside **Properties**), then an **inline Quill editor** (always shown — text can be added on image-only notes). **Properties** modal keeps the score row and a single separator below the title (attachments are managed in the pane, not Properties). On **wide desktop** it is **560px wide** (properties lane fills the modal); the modal grows to fit all fields and the Save/Delete/Cancel/HTML footer sits **below** the lane. On **medium (768–1100px)** it is **500px wide**, height is capped, and the **properties lane scrolls** internally while the footer stays below the lane. **💾 Save** saves text only; switching notes with unsaved text prompts **Save / Don't save / Cancel**. Per-type view preference: `viewMode_all` or `viewMode_<type>`; training sub-mode: `lpTrainingSubMode` (`calendar` | `list`). Implemented in `listPaneView.js`, `paneEditor.js`, and `trainingCalendar.js`.
 
 **Attachment thumbnail:** Shown inline in card if present. Clicking opens the full attachment viewer or prompts for decryption if encrypted.
 
@@ -77,22 +77,23 @@ Cards are displayed in a grid (1, 2, or 3 columns depending on screen width). Th
 
 Opens for both creating and editing notes. Fields shown depend on `note_type` behavior.
 
+**Three-lane layout (wide / medium screens):**
+- **Commands** menu (right-aligned beside the title): **Add attachment** (shows the attachment placeholder on desktop so you can click or **paste**; on medium/small opens a **Gallery / Camera / Files** submenu), **Add additional attachment** when attachments exist, **Encrypt & attach**, **Add text** (disabled when text already shown), and **Hide properties** / **Show properties** (disabled when the text lane is hidden, e.g. compact mode — always listed).
+- **Image lane:** shown when an attachment exists or after **Add attachment** (empty placeholder for click-to-browse or paste) — multi-attachment strip when 2+.
+- **Text lane:** shown when the note has body text, when adding a new note, or after **Add text** — Quill toolbar at the **bottom** of the editor.
+- **Properties lane (right):** score dice (all note types; label and dice on one row), comment, tags, and type-specific fields — each with label **above** the field (comment and group use full column width).
+
+On **medium screens (768–1100px)** lanes sit **side by side** with a **narrower properties column (300px max)** and **tighter field label spacing (0.5rem; 0.3rem after Score)**. With text visible the modal uses **full viewport width** and height capped to **100svh** so mobile browser chrome does not cover the header or Save strip. Without text it **shrinks** to the **same compact width as wide desktop** (220px + 360px lanes) until **Add text** expands it. **Hide properties** widens the text lane on both medium and wide desktop. On **phone (≤767px)** lanes **stack vertically**: Image → Text → Properties. On **wide desktop (>1100px)** the three lanes also sit side by side (compact width when text is hidden applies here only).
+
 **Common fields:**
-- Note type selector (changes which other fields are visible)
-- Main text editor (Quill rich-text)
-- Tags (autocomplete, comma-separated, multi-language supported)
-- Comment / side-notes field
-- Attachment panel
+- Note type selector (in modal header)
+- Title (optional, full width above lanes)
 
-**Quote fields:**
-- Author (autocomplete → author entity)
-- Source (autocomplete → source entity)
-- Source sub-type (book, movie, etc.)
-- Score (numeric)
+**Quote properties:** Author, Source, Source sub-type
 
-**Training fields:**
-- Date picker (Norwegian format dd.mm.yyyy internally)
-- Training sub-type (dropdown from settings)
+**Score:** Available for all note types (optional 1–6 dice, or “-” for none)
+
+**Training properties:** Date picker (Norwegian dd.mm.yyyy), Training sub-type, Group
 
 **Attachment panel:**
 - Shows current attachment with preview

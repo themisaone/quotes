@@ -129,55 +129,6 @@ async function _insertInlineImageFor(quill, base64) {
   }
 }
 
-function _ensureQuillEditorShell(container, toolbar) {
-  if (!container || !toolbar || container.parentElement?.classList.contains('quill-editor-shell')) {
-    return container.parentElement?.classList.contains('quill-editor-shell')
-      ? container.parentElement
-      : null;
-  }
-
-  const parent = container.parentElement;
-  if (!parent) return null;
-
-  const shell = document.createElement('div');
-  shell.className = 'quill-editor-shell';
-  if (container.id) shell.dataset.quillHost = container.id;
-
-  for (const prop of ['height', 'minHeight', 'maxHeight']) {
-    if (container.style[prop]) {
-      shell.style[prop] = container.style[prop];
-      container.style[prop] = '';
-    }
-  }
-
-  parent.insertBefore(shell, container);
-  shell.appendChild(container);
-  shell.appendChild(toolbar);
-  return shell;
-}
-
-/** Quill snow theme inserts the toolbar as a sibling before the editor container. */
-export function moveQuillToolbarToBottom(hostEl) {
-  if (!hostEl) return;
-
-  const container = hostEl.classList.contains('ql-container')
-    ? hostEl
-    : hostEl.querySelector(':scope > .ql-container');
-  if (!container) return;
-
-  let toolbar = container.previousElementSibling;
-  if (!toolbar?.classList.contains('ql-toolbar')) {
-    toolbar = container.parentElement?.querySelector(':scope > .ql-toolbar') || null;
-  }
-  if (!toolbar || toolbar === container) return;
-
-  if (toolbar.compareDocumentPosition(container) & Node.DOCUMENT_POSITION_FOLLOWING) {
-    container.after(toolbar);
-  }
-
-  _ensureQuillEditorShell(container, toolbar);
-}
-
 function _isEmptyPasteBlock(el) {
   if (!el || !/^(P|DIV)$/i.test(el.tagName)) return false;
   return !el.textContent.trim() && !el.querySelector('img');
@@ -363,6 +314,55 @@ function _patchQuillClipboard(quill) {
 /** Ensure paste/copy normalization is active (e.g. after recovering an existing instance). */
 export function ensureQuillPasteHandler(quill) {
   if (quill) _patchQuillClipboard(quill);
+}
+
+function _ensureQuillEditorShell(container, toolbar) {
+  if (!container || !toolbar || container.parentElement?.classList.contains('quill-editor-shell')) {
+    return container.parentElement?.classList.contains('quill-editor-shell')
+      ? container.parentElement
+      : null;
+  }
+
+  const parent = container.parentElement;
+  if (!parent) return null;
+
+  const shell = document.createElement('div');
+  shell.className = 'quill-editor-shell';
+  if (container.id) shell.dataset.quillHost = container.id;
+
+  for (const prop of ['height', 'minHeight', 'maxHeight']) {
+    if (container.style[prop]) {
+      shell.style[prop] = container.style[prop];
+      container.style[prop] = '';
+    }
+  }
+
+  parent.insertBefore(shell, container);
+  shell.appendChild(container);
+  shell.appendChild(toolbar);
+  return shell;
+}
+
+/** Quill snow theme inserts the toolbar as a sibling before the editor container. */
+export function moveQuillToolbarToBottom(hostEl) {
+  if (!hostEl) return;
+
+  const container = hostEl.classList.contains('ql-container')
+    ? hostEl
+    : hostEl.querySelector(':scope > .ql-container');
+  if (!container) return;
+
+  let toolbar = container.previousElementSibling;
+  if (!toolbar?.classList.contains('ql-toolbar')) {
+    toolbar = container.parentElement?.querySelector(':scope > .ql-toolbar') || null;
+  }
+  if (!toolbar || toolbar === container) return;
+
+  if (toolbar.compareDocumentPosition(container) & Node.DOCUMENT_POSITION_FOLLOWING) {
+    container.after(toolbar);
+  }
+
+  _ensureQuillEditorShell(container, toolbar);
 }
 
 function _wireQuillInstance(quill, hiddenInputId, { onTextChange } = {}) {

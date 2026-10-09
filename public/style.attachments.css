@@ -436,7 +436,7 @@
 .btn-attach-toggle {
   height: var(--d-btn-height);
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 500;
   padding: 0 0.55rem;
   border-radius: 6px;
   border: 1px solid var(--border);
