@@ -176,41 +176,45 @@ function _wirePaneQuill() {
 
 const PANE_SHELL_HTML = `
   <div class="lp-pane-shell">
-    <div class="lp-pane-info">
-      <div class="lp-pane-title-row">
-        <div class="lp-pane-title note-title-heading" id="lpPaneTitle"></div>
-        <div class="lp-pane-title-actions">
-          <span class="lp-pane-score-slot" id="lpPaneScore"></span>
-          <button type="button" class="lp-pane-attach-btn" id="lpPaneAddAttach" title="Add an attachment" aria-label="Add an attachment">
-            <span class="lp-pane-btn-icon" aria-hidden="true">📎</span>
-            <span class="lp-pane-btn-label lp-pane-btn-label-full">Add attachment</span>
-            <span class="lp-pane-btn-label lp-pane-btn-label-short">Add</span>
-          </button>
-          <button type="button" class="lp-pane-attach-btn" id="lpPaneEncryptAttach" title="Encrypt a file and attach it" aria-label="Encrypt a file and attach it">
-            <span class="lp-pane-btn-icon" aria-hidden="true">🔒</span>
-            <span class="lp-pane-btn-label lp-pane-btn-label-full">Encrypt &amp; attach</span>
-            <span class="lp-pane-btn-label lp-pane-btn-label-short">Encrypt</span>
-          </button>
-          <button type="button" class="lp-pane-props-btn" id="lpPropsBtn" title="Tags, author, source, and other properties (not text or attachments)" aria-label="Properties">
-            <span class="lp-pane-btn-icon" aria-hidden="true">⚙</span>
-            <span class="lp-pane-btn-label lp-pane-btn-label-full">Properties</span>
-            <span class="lp-pane-btn-label lp-pane-btn-label-short">Props</span>
-          </button>
-          <button type="button" class="lp-pane-save-btn" id="lpSaveBtn" title="Save note text" aria-label="Save note text" disabled>
-            <span class="lp-pane-btn-icon" aria-hidden="true">💾</span>
-            <span class="lp-pane-btn-label">Save</span>
-          </button>
+    <div class="paper-surface lp-pane-paper-header">
+      <div class="lp-pane-info">
+        <div class="lp-pane-title-row">
+          <div class="lp-pane-title note-title-heading" id="lpPaneTitle"></div>
+          <div class="lp-pane-title-actions">
+            <span class="lp-pane-score-slot" id="lpPaneScore"></span>
+            <button type="button" class="lp-pane-attach-btn" id="lpPaneAddAttach" title="Add an attachment" aria-label="Add an attachment">
+              <span class="lp-pane-btn-icon" aria-hidden="true">📎</span>
+              <span class="lp-pane-btn-label lp-pane-btn-label-full">Add attachment</span>
+              <span class="lp-pane-btn-label lp-pane-btn-label-short">Add</span>
+            </button>
+            <button type="button" class="lp-pane-attach-btn" id="lpPaneEncryptAttach" title="Encrypt a file and attach it" aria-label="Encrypt a file and attach it">
+              <span class="lp-pane-btn-icon" aria-hidden="true">🔒</span>
+              <span class="lp-pane-btn-label lp-pane-btn-label-full">Encrypt &amp; attach</span>
+              <span class="lp-pane-btn-label lp-pane-btn-label-short">Encrypt</span>
+            </button>
+            <button type="button" class="lp-pane-props-btn" id="lpPropsBtn" title="Tags, author, source, and other properties (not text or attachments)" aria-label="Properties">
+              <span class="lp-pane-btn-icon" aria-hidden="true">⚙</span>
+              <span class="lp-pane-btn-label lp-pane-btn-label-full">Properties</span>
+              <span class="lp-pane-btn-label lp-pane-btn-label-short">Props</span>
+            </button>
+            <button type="button" class="lp-pane-save-btn" id="lpSaveBtn" title="Save note text" aria-label="Save note text" disabled>
+              <span class="lp-pane-btn-icon" aria-hidden="true">💾</span>
+              <span class="lp-pane-btn-label">Save</span>
+            </button>
+          </div>
         </div>
+        <div class="lp-pane-meta" id="lpPaneMeta"></div>
+        <div class="lp-pane-comment" id="lpPaneComment"></div>
       </div>
-      <div class="lp-pane-meta" id="lpPaneMeta"></div>
-      <div class="lp-pane-comment" id="lpPaneComment"></div>
+      <div class="lp-pane-attach-section" id="lpPaneAttachSection" hidden>
+        <div class="lp-pane-attach-row" id="lpPaneAttachRow"></div>
+      </div>
     </div>
-    <div class="lp-pane-attach-section" id="lpPaneAttachSection" hidden>
-      <div class="lp-pane-attach-row" id="lpPaneAttachRow"></div>
-    </div>
-    <div class="lp-pane-editor-wrap">
-      <div id="lpPaneQuill"></div>
-      <input type="hidden" id="lpPaneText" />
+    <div class="paper-surface lp-pane-paper-body">
+      <div class="lp-pane-editor-wrap">
+        <div id="lpPaneQuill"></div>
+        <input type="hidden" id="lpPaneText" />
+      </div>
     </div>
   </div>`;
 
@@ -234,7 +238,30 @@ export function ensurePaneEditorShell(pane, { onProperties, onSave }) {
     _saveBtn = pane.querySelector('#lpSaveBtn');
     _ensureQuillInstance(pane);
     _migratePaneInfoOrder(pane);
+    _migratePanePaperSplit(pane);
   }
+}
+
+/** Split list-pane into header + body paper surfaces (legacy single-sheet shells). */
+function _migratePanePaperSplit(pane) {
+  const shell = pane?.querySelector('.lp-pane-shell');
+  if (!shell || shell.querySelector('.lp-pane-paper-header')) return;
+
+  const info = shell.querySelector('.lp-pane-info');
+  const attach = shell.querySelector('.lp-pane-attach-section');
+  const editorWrap = shell.querySelector('.lp-pane-editor-wrap');
+  if (!info || !editorWrap) return;
+
+  const header = document.createElement('div');
+  header.className = 'paper-surface lp-pane-paper-header';
+  shell.insertBefore(header, info);
+  header.appendChild(info);
+  if (attach) header.appendChild(attach);
+
+  const body = document.createElement('div');
+  body.className = 'paper-surface lp-pane-paper-body';
+  shell.insertBefore(body, editorWrap);
+  body.appendChild(editorWrap);
 }
 
 /** Meta row (G / author / tags) must sit above comment in list-pane shells. */

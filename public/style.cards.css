@@ -111,17 +111,272 @@
 }
 
 .quote-card {
-  background: var(--surface);
   padding: var(--d-card-pad);
-  border-radius: var(--bradius-medium);
-  border: 2px solid var(--border);
-  transition: all 0.3s ease;
   position: relative;
+  transition: all 0.3s ease;
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
+}
+
+/* ── Card presentation: Classic ───────────────────────────── */
+.card-presentation-classical .quote-card {
+  background: var(--surface);
+  border-radius: var(--bradius-medium);
+  border: 2px solid var(--border);
+}
+
+.card-presentation-classical .quote-card::before {
+  content: none;
+}
+
+/* ── Card presentation: Paper curl ────────────────────────── */
+.card-presentation-paper-curl {
+  --paper-sheet-gap: 1rem; /* same as .quotes-list grid gap between cards */
+  --paper-curl: 34px;
+  --paper-highlight: color-mix(in srgb, var(--surface) 88%, white 12%);
+  --paper-shade: color-mix(in srgb, var(--surface) 78%, black 10%);
+  --paper-curl-top: color-mix(in srgb, var(--surface) 74%, #b5aea3 26%);
+  --paper-curl-under: color-mix(in srgb, var(--surface) 52%, #6b6560 48%);
+  --paper-fill: linear-gradient(
+    148deg,
+    var(--paper-highlight) 0%,
+    var(--surface) 44%,
+    var(--paper-shade) 100%
+  );
+  /* Paper rim — classic-like frame (grid + modal; list pane keeps curl on .paper-surface) */
+  --paper-border-width: 2px;
+  --paper-border-color: var(--border);
+  --paper-border-radius: var(--bradius-medium);
+  /* Flat paper shadow — grid cards + modal text lane (no clip-path) */
+  --paper-shadow-x: 10px;
+  --paper-shadow-y: 10px;
+  --paper-shadow-blur: 10px;
+  --paper-shadow-spread: -8px;
+  --paper-shadow-color: rgba(180, 180, 180, 0.6);
+}
+
+/* List+pane sheets only — curl cut + fold (grid + modal use flat paper below) */
+.card-presentation-paper-curl .paper-surface {
+  position: relative;
+  background: var(--paper-fill);
+  border-radius: var(--paper-border-radius);
+  border: var(--paper-border-width) solid var(--paper-border-color);
+  box-shadow: none;
+  box-sizing: border-box;
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    100% calc(100% - var(--paper-curl)),
+    calc(100% - var(--paper-curl)) 100%,
+    0 100%
+  );
+  overflow: visible;
+  isolation: isolate;
+}
+
+.card-presentation-paper-curl .paper-surface::before {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: calc(var(--paper-curl) + 2px);
+  height: calc(var(--paper-curl) + 2px);
+  background: linear-gradient(
+    225deg,
+    var(--paper-curl-top) 0%,
+    var(--paper-curl-under) 100%
+  );
+  clip-path: polygon(100% 0, 0 100%, 100% 100%);
+  box-shadow:
+    -2px -2px 5px rgba(0, 0, 0, 0.12),
+    2px 4px 10px rgba(0, 0, 0, 0.14);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.card-presentation-paper-curl .paper-surface > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* Grid cards: flat paper + border + unclipped box-shadow (same model as modal) */
+.card-presentation-paper-curl .quote-card {
+  position: relative;
+  background: var(--paper-fill);
+  border-radius: var(--paper-border-radius);
+  border: var(--paper-border-width) solid var(--paper-border-color);
+  box-sizing: border-box;
+  clip-path: none;
+  overflow: visible;
+  box-shadow:
+    var(--paper-shadow-x)
+    var(--paper-shadow-y)
+    var(--paper-shadow-blur)
+    var(--paper-shadow-spread)
+    var(--paper-shadow-color);
+  transition: transform 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
+}
+
+.card-presentation-paper-curl .quote-card::before {
+  content: none;
+}
+
+.card-presentation-paper-curl .quotes-list {
+  overflow: visible;
+}
+
+.card-presentation-paper-curl #quoteModal .quote-modal-lane-text:not(.hidden) > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* Modal / pane editors: transparent stack inside paper body (gradient on body + .ql-editor) */
+.card-presentation-paper-curl #quoteModal .quote-modal-lane-text .quote-modal-editor-col,
+.card-presentation-paper-curl #quoteModal .quote-modal-lane-text .quill-editor-shell,
+.card-presentation-paper-curl #quoteModal .quote-modal-lane-text .ql-container.ql-snow,
+.card-presentation-paper-curl .lp-pane-paper-body .lp-pane-editor-wrap,
+.card-presentation-paper-curl .lp-pane-paper-body .quill-editor-shell,
+.card-presentation-paper-curl .lp-pane-paper-body .ql-container.ql-snow {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.card-presentation-paper-curl #quoteModal .quote-modal-lane-text .ql-editor,
+.card-presentation-paper-curl .lp-pane-paper-body .ql-editor {
+  background: var(--paper-fill) !important;
+  box-shadow: none !important;
+}
+
+/* Modal toolbar: same as classic (--card-hover-bg). List pane keeps paper-tinted bar. */
+.card-presentation-paper-curl .lp-pane-paper-body .ql-toolbar.ql-snow {
+  background: color-mix(in srgb, var(--paper-shade) 55%, var(--surface) 45%) !important;
+  border-top-color: color-mix(in srgb, var(--surface) 68%, black 12%) !important;
+}
+
+/*
+ * REVERT — Modal paper shadow experiment (2026-10-10)
+ * Before: modal text lane was in the shared .paper-surface rule (clip-path + curl on the section).
+ * Modal experiment: flat rectangle + box-shadow (no curl, no filter — filter duplicated all text).
+ * To revert: delete this block; re-add #quoteModal .quote-modal-lane-text to shared rules
+ * above (::before, > *, .ql-editor background); bump style.cards.css ?v= in index.html.
+ *
+ * Knobs at top (~line 149): --paper-border-*, --paper-shadow-*
+ */
+.card-presentation-paper-curl #quoteModal .modal-content,
+.card-presentation-paper-curl #quoteModal .modal-body,
+.card-presentation-paper-curl #quoteModal #quoteForm,
+.card-presentation-paper-curl #quoteModal .quote-modal-lanes {
+  overflow: visible !important;
+}
+
+.card-presentation-paper-curl #quoteModal .quote-modal-lanes {
+  gap: 1rem;
+  /* Right padding only — bottom padding caused a gap above the footer buttons */
+  padding: 0 20px 0 0;
+}
+
+.card-presentation-paper-curl #quoteModal .quote-modal-lane-text:not(.hidden) {
+  position: relative;
+  z-index: 2;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  clip-path: none;
+  filter: none;
+  overflow: visible;
+}
+
+/* Flat paper sheet — no curl/clip-path so box-shadow works normally */
+.card-presentation-paper-curl #quoteModal .quote-modal-lane-text:not(.hidden) > .quote-modal-lane-body {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  background: var(--paper-fill) !important;
+  border-radius: var(--paper-border-radius);
+  border: var(--paper-border-width) solid var(--paper-border-color) !important;
+  box-sizing: border-box;
+  clip-path: none;
+  overflow: visible !important;
+  box-shadow:
+    var(--paper-shadow-x)
+    var(--paper-shadow-y)
+    var(--paper-shadow-blur)
+    var(--paper-shadow-spread)
+    var(--paper-shadow-color) !important;
+}
+
+.card-presentation-paper-curl #quoteModal .quote-modal-lane-text:not(.hidden) > .quote-modal-lane-body::before {
+  content: none;
+}
+
+.card-presentation-paper-curl .lp-pane {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  clip-path: none;
+  overflow: visible;
+}
+
+.card-presentation-paper-curl .lp-layout:not(.lp-layout-calendar) .lp-pane-shell,
+.card-presentation-paper-curl .lp-layout-calendar .lp-pane-shell {
+  display: flex !important;
+  flex-direction: column;
+  gap: var(--paper-sheet-gap) !important;
+  background: transparent;
+  overflow: visible !important;
+}
+
+/*
+ * List pane: curl needs clip-path + ::before together (like grid cards).
+ * Header = flat sheet only. Body = full curl cut + fold.
+ */
+.card-presentation-paper-curl .lp-pane-paper-header.paper-surface {
+  clip-path: none;
+}
+
+.card-presentation-paper-curl .lp-pane-paper-header.paper-surface::before {
+  content: none;
+  display: none;
+}
+
+.card-presentation-paper-curl .lp-pane-paper-body.paper-surface {
+  --paper-curl: 26px;
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    100% calc(100% - var(--paper-curl)),
+    calc(100% - var(--paper-curl)) 100%,
+    0 100%
+  );
+  padding-bottom: 2px;
+}
+
+.card-presentation-paper-curl .lp-pane-paper-body.paper-surface::before {
+  width: calc(var(--paper-curl) + 2px);
+  height: calc(var(--paper-curl) + 2px);
+}
+
+.card-presentation-paper-curl .lp-pane-paper-body .lp-pane-editor-wrap,
+.card-presentation-paper-curl .lp-pane-paper-body .quill-editor-shell {
+  overflow: visible !important;
+}
+
+/* Quill link/color popovers — sit above the curl fold */
+.card-presentation-paper-curl .lp-pane-paper-body .ql-tooltip {
+  z-index: 10;
+}
+
+.card-presentation-paper-curl .lp-pane-paper-header .lp-pane-info {
+  border-bottom-color: color-mix(in srgb, var(--paper-shade) 45%, var(--border) 55%);
+}
+
+.card-presentation-paper-curl .lp-pane-paper-header .lp-pane-attach-section:not([hidden]) {
+  border-bottom: none;
 }
 
 /* Allow text selection when card is expanded */
@@ -145,13 +400,40 @@
   border: 8px double #f0b429;
 }
 
+.card-presentation-paper-curl .welcome-quote-container .quote-card {
+  clip-path: none;
+  filter: none;
+  box-shadow:
+    var(--paper-shadow-x)
+    var(--paper-shadow-y)
+    var(--paper-shadow-blur)
+    var(--paper-shadow-spread)
+    var(--paper-shadow-color);
+}
+
 /* Expanded card - takes full width */
 .quote-card.expanded-card {
   grid-column: 1 / -1;
+}
+
+.card-presentation-classical .quote-card.expanded-card {
   background: #fffef5;
   border-color: #667eea;
   box-shadow: 0 8px 30px rgba(102, 126, 234, 0.3);
   transform: scale(1.02);
+}
+
+.card-presentation-paper-curl .quote-card.expanded-card {
+  --paper-highlight: color-mix(in srgb, var(--surface) 90%, white 10%);
+  --paper-shade: color-mix(in srgb, var(--surface) 72%, black 12%);
+  --paper-fill: linear-gradient(
+    148deg,
+    var(--paper-highlight) 0%,
+    var(--surface) 44%,
+    var(--paper-shade) 100%
+  );
+  background: var(--paper-fill);
+  transform: scale(1.01);
 }
 
 /* In grid mode cards share row height — make card-content a flex column

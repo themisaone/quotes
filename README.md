@@ -221,6 +221,7 @@ quotes/
 | Settings & note type config | `<vaultPath>/config/settings.json` or `config/settings.json` |
 | Machine-local config | `config/local.json` |
 | Color palettes | `<vaultPath>/palettes/*.json` (falls back to `./palettes/` if vault path not configured) |
+| Card presentation manifests | `<vaultPath>/card-presentations/*.json` (falls back to `./card-presentations/`) |
 
 ---
 

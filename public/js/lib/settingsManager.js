@@ -429,6 +429,9 @@ function applySettingsToUI() {
     populateAppFontSelect(appFontSelect);
     appFontSelect.value = activeFont;
   }
+
+  applyCardPresentation(globalSettings.cardPresentation || DEFAULT_CARD_PRESENTATION);
+  refreshCardPresentationSelect(globalSettings.cardPresentation || DEFAULT_CARD_PRESENTATION);
   
   // Apply all checkbox settings
   const checkboxMappings = [
@@ -1082,6 +1085,90 @@ function applyAppFont(fontKey) {
   return font.value;
 }
 
+// ============= DISPLAY MODE (cardPresentation setting) =============
+
+const DEFAULT_CARD_PRESENTATION = 'classical';
+const CARD_PRESENTATION_CLASS_PREFIX = 'card-presentation-';
+let cachedCardPresentations = null;
+
+function cardPresentationBodyClass(id) {
+  return `${CARD_PRESENTATION_CLASS_PREFIX}${id}`;
+}
+
+function clearCardPresentationBodyClasses() {
+  [...document.body.classList].forEach((cls) => {
+    if (cls.startsWith(CARD_PRESENTATION_CLASS_PREFIX)) {
+      document.body.classList.remove(cls);
+    }
+  });
+}
+
+function applyCardPresentation(presentationId) {
+  const id = presentationId || DEFAULT_CARD_PRESENTATION;
+  clearCardPresentationBodyClasses();
+  document.body.classList.add(cardPresentationBodyClass(id));
+  document.body.dataset.cardPresentation = id;
+  return id;
+}
+
+const BUILTIN_CARD_PRESENTATIONS = [
+  { id: 'classical', label: 'Classic', description: 'Standard UI with bordered cards and flat panels.' },
+  { id: 'paper-curl', label: 'Paper', description: 'Paper sheets with gradient fill and curled corner — cards, modals, list pane.' },
+];
+
+function cardPresentationFallback(reason) {
+  console.warn('Using built-in card presentations:', reason);
+  return BUILTIN_CARD_PRESENTATIONS.slice();
+}
+
+async function loadCardPresentations() {
+  if (cachedCardPresentations?.length) return cachedCardPresentations;
+  try {
+    const r = await fetch(`${API_URL}/card-presentations`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    if (!Array.isArray(data) || data.length === 0) {
+      throw new Error('Empty card presentation list');
+    }
+    cachedCardPresentations = data;
+  } catch (e) {
+    cachedCardPresentations = cardPresentationFallback(e.message || e);
+  }
+  return cachedCardPresentations;
+}
+
+function populateCardPresentationSelect(select, presentations, selectedId) {
+  if (!select) return DEFAULT_CARD_PRESENTATION;
+
+  select.innerHTML = '';
+  presentations.forEach((presentation) => {
+    const option = document.createElement('option');
+    option.value = presentation.id;
+    option.textContent = presentation.label;
+    option.title = presentation.description || presentation.label;
+    select.appendChild(option);
+  });
+
+  const validIds = presentations.map((presentation) => presentation.id);
+  const active = validIds.includes(selectedId) ? selectedId : DEFAULT_CARD_PRESENTATION;
+  select.value = active;
+  return active;
+}
+
+async function refreshCardPresentationSelect(selectedId) {
+  const select = getElementByIdSafe('cardPresentationSelect');
+  const desc = getElementByIdSafe('cardPresentationDescription');
+  if (!select) return DEFAULT_CARD_PRESENTATION;
+
+  const presentations = await loadCardPresentations();
+  const active = populateCardPresentationSelect(select, presentations, selectedId);
+  if (desc) {
+    const current = presentations.find((presentation) => presentation.id === active);
+    desc.textContent = current?.description || '';
+  }
+  return active;
+}
+
 // ============= COLOR MANAGEMENT =============
 
 /**
@@ -1478,6 +1565,28 @@ export function initializeSettings(callbacks = {}) {
       updateSetting('appFont', fontKey);
     });
   }
+
+  const cardPresentationSelect = getElementByIdSafe('cardPresentationSelect');
+  if (cardPresentationSelect) {
+    const initial = applyCardPresentation(globalSettings?.cardPresentation || DEFAULT_CARD_PRESENTATION);
+    refreshCardPresentationSelect(initial).then((active) => {
+      applyCardPresentation(active);
+      if (active !== (globalSettings?.cardPresentation || DEFAULT_CARD_PRESENTATION)) {
+        updateSetting('cardPresentation', active);
+      }
+    });
+    cardPresentationSelect.addEventListener('change', async (e) => {
+      const id = applyCardPresentation(e.target.value);
+      e.target.value = id;
+      await updateSetting('cardPresentation', id);
+      const desc = getElementByIdSafe('cardPresentationDescription');
+      if (desc) {
+        const presentations = await loadCardPresentations();
+        const current = presentations.find((presentation) => presentation.id === id);
+        desc.textContent = current?.description || '';
+      }
+    });
+  }
   
   // Tag Operations setting
   if (enableTagOpsCheckbox) {
@@ -1556,7 +1665,8 @@ export function initializeSettings(callbacks = {}) {
       if (vaultInfo) {
         if (d.error) { vaultInfo.textContent = '⚠️ ' + d.error; return; }
         const label = d.isDefault ? ' (default, inside app folder)' : '';
-        vaultInfo.textContent = `Active vault: ${d.vaultPath || '(default)'}${label} — ${d.totalFiles} files, ${d.totalSizeMB} MB | Settings: ${d.settingsFile} | Palettes: ${d.palettesDir}`;
+        const presentationsDir = d.cardPresentationsDir ? ` | Card styles: ${d.cardPresentationsDir}` : '';
+        vaultInfo.textContent = `Active vault: ${d.vaultPath || '(default)'}${label} — ${d.totalFiles} files, ${d.totalSizeMB} MB | Settings: ${d.settingsFile} | Palettes: ${d.palettesDir}${presentationsDir}`;
       }
     } catch(e) { if (vaultInfo) vaultInfo.textContent = ''; }
   }

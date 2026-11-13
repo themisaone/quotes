@@ -66,6 +66,7 @@ function makeSettingsDeps(t, overrides = {}) {
   const dir = makeTempDir(t);
   const defaultSettingsFile = path.join(dir, "config", "settings.json");
   const defaultPalettesDir = path.join(dir, "palettes");
+  const defaultCardPresentationsDir = path.join(dir, "card-presentations");
   const modesFile = path.join(dir, "modes.json");
   let localConfig = overrides.localConfig || {};
   const fileStorageCalls = [];
@@ -80,6 +81,7 @@ function makeSettingsDeps(t, overrides = {}) {
     dir,
     defaultSettingsFile,
     defaultPalettesDir,
+    defaultCardPresentationsDir,
     modesFile,
     getLocalConfig: () => localConfig,
     options: {
@@ -106,6 +108,7 @@ function makeSettingsDeps(t, overrides = {}) {
       },
       defaultSettingsFile,
       defaultPalettesDir,
+      defaultCardPresentationsDir,
       modesFile,
       modesState: { ...(overrides.modes || { DEFAULT: ["quote"], ALL: ["quote"] }) },
       getActiveModeName: () => overrides.activeModeName || "DEFAULT",
@@ -277,8 +280,14 @@ test("PUT /api/settings writes settings and syncs modes", async (t) => {
   });
 
   assert.equal(response.status, 200);
-  assert.deepEqual(response.body, { success: true, settings });
-  assert.deepEqual(JSON.parse(fs.readFileSync(deps.defaultSettingsFile, "utf8")), settings);
+  assert.deepEqual(response.body, {
+    success: true,
+    settings: { ...settings, cardPresentation: "classical" },
+  });
+  assert.deepEqual(JSON.parse(fs.readFileSync(deps.defaultSettingsFile, "utf8")), {
+    ...settings,
+    cardPresentation: "classical",
+  });
   assert.deepEqual(JSON.parse(fs.readFileSync(deps.modesFile, "utf8")), {
     DEFAULT: ["quote"],
     ALL: ["quote", "note"],
@@ -300,6 +309,8 @@ test("PUT /api/settings moves vault config without erasing activeMode", async (t
   );
   fs.mkdirSync(deps.defaultPalettesDir, { recursive: true });
   fs.writeFileSync(path.join(deps.defaultPalettesDir, "main.json"), "{}");
+  fs.mkdirSync(deps.defaultCardPresentationsDir, { recursive: true });
+  fs.writeFileSync(path.join(deps.defaultCardPresentationsDir, "classical.json"), "{}");
   const routes = makeRouteCollector(deps.options);
   const settings = {
     vaultPath: vaultDir,
@@ -319,8 +330,10 @@ test("PUT /api/settings moves vault config without erasing activeMode", async (t
   });
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(vaultDir, "config", "settings.json"), "utf8")), {
     noteTypes: [{ value: "note" }],
+    cardPresentation: "classical",
   });
   assert.equal(fs.existsSync(path.join(vaultDir, "palettes", "main.json")), true);
+  assert.equal(fs.existsSync(path.join(vaultDir, "card-presentations", "classical.json")), true);
   assert.deepEqual(deps.fileStorageCalls, [
     ["setAttachmentsDir", vaultDir],
     ["ensureDirectories"],

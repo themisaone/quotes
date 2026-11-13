@@ -98,9 +98,11 @@ test("GET /api/vault/info returns vault, settings, palette, and file stats", asy
   const attachmentsDir = path.join(vaultRoot, "attachments");
   const settingsFile = path.join(vaultRoot, "config", "settings.json");
   const palettesDir = path.join(vaultRoot, "palettes");
+  const cardPresentationsDir = path.join(vaultRoot, "card-presentations");
   fs.mkdirSync(path.dirname(settingsFile), { recursive: true });
   fs.mkdirSync(path.join(attachmentsDir, "note"), { recursive: true });
   fs.mkdirSync(palettesDir, { recursive: true });
+  fs.mkdirSync(cardPresentationsDir, { recursive: true });
   fs.writeFileSync(path.join(attachmentsDir, "note", "1.txt"), "1234");
   fs.writeFileSync(settingsFile, JSON.stringify({ noteTypes: [{ value: "note" }] }));
 
@@ -112,6 +114,7 @@ test("GET /api/vault/info returns vault, settings, palette, and file stats", asy
     readLocalConfig: () => ({ vaultPath: vaultRoot }),
     getSettingsFile: () => settingsFile,
     getPalettesDir: () => palettesDir,
+    getCardPresentationsDir: () => cardPresentationsDir,
   });
 
   const response = await invoke(routes, { routePath: "/api/vault/info" });
@@ -127,6 +130,7 @@ test("GET /api/vault/info returns vault, settings, palette, and file stats", asy
     settingsNoteTypeValues: ["note"],
     settingsParseError: null,
     palettesDir,
+    cardPresentationsDir,
     isDefault: false,
     totalFiles: 1,
     totalSizeMB: "0.0",

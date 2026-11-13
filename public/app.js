@@ -74,7 +74,7 @@ import {
   getNoteTypeDefaultDisplayMode,
   initializeSettings as initializeSettingsLib,
   refreshSettingsForOptionsPanel
-} from './js/lib/settingsManager.js?v=20260730countervars1';
+} from './js/lib/settingsManager.js?v=20261009displaymode1';
 
 import {
   loadServicesPanel,
@@ -188,14 +188,14 @@ import {
   setTrainingSubMode,
   getListPanePageSize,
   restoreTrainingDateFiltersToBar
-} from './js/lib/listPaneView.js?v=20260731diaryleftmeta1';
+} from './js/lib/listPaneView.js?v=20261009panesave1';
 import {
   configurePaneEditor,
   syncPaneTextToModalHidden,
   applyPaneSavedNote,
   getPaneEditorHtml,
   getPaneEditorNoteId,
-} from './js/lib/paneEditor.js?v=20260712paneautofocus2';
+} from './js/lib/paneEditor.js?v=20261009panepaper1';
 import {
   configurePaneAttachments,
   renderPaneAttachments,

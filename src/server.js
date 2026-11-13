@@ -19,6 +19,7 @@ const { registerInstanceRoutes } = require("./routes/instances");
 const { registerMaintenanceRoutes } = require("./routes/maintenance");
 const { registerModeRoutes } = require("./routes/mode");
 const { registerPaletteRoutes } = require("./routes/palettes");
+const { registerCardPresentationRoutes } = require("./routes/cardPresentations");
 const { registerPdfExportRoutes } = require("./routes/pdfExport");
 const { registerQuoteBulkRoutes } = require("./routes/quoteBulk");
 const { registerQuoteRoutes } = require("./routes/quotes");
@@ -52,6 +53,7 @@ const PORT = process.env.PORT || 4000;
 // ── Local config (vault path only — stays inside the app, never synced) ──
 const DEFAULT_SETTINGS_FILE = path.join(__dirname, '../config/settings.json');
 const DEFAULT_PALETTES_DIR  = path.join(__dirname, '../palettes');
+const DEFAULT_CARD_PRESENTATIONS_DIR = path.join(__dirname, '../card-presentations');
 
 // ── Active mode (set via MODE env var or PUT /api/mode, persisted in local.json) ──
 const MODES_FILE = path.join(__dirname, '../config/modes.json');
@@ -80,6 +82,10 @@ function getSettingsFile() {
 function getPalettesDir() {
   const { vaultPath } = readLocalConfig();
   return vaultPath ? path.join(vaultPath, 'palettes') : DEFAULT_PALETTES_DIR;
+}
+function getCardPresentationsDir() {
+  const { vaultPath } = readLocalConfig();
+  return vaultPath ? path.join(vaultPath, 'card-presentations') : DEFAULT_CARD_PRESENTATIONS_DIR;
 }
 
 function getDateBasedNoteTypes() {
@@ -242,6 +248,7 @@ registerSettingsRoutes(app, {
   writeLocalConfig,
   defaultSettingsFile: DEFAULT_SETTINGS_FILE,
   defaultPalettesDir: DEFAULT_PALETTES_DIR,
+  defaultCardPresentationsDir: DEFAULT_CARD_PRESENTATIONS_DIR,
   modesFile: MODES_FILE,
   modesState: _modes,
   getActiveModeName: () => _modeName,
@@ -277,6 +284,10 @@ registerAttachmentRoutes(app, { pool, fileStorage, upload });
 
 // ============= PALETTE API =============
 registerPaletteRoutes(app, { getPalettesDir });
+registerCardPresentationRoutes(app, {
+  getCardPresentationsDir,
+  defaultCardPresentationsDir: DEFAULT_CARD_PRESENTATIONS_DIR,
+});
 
 // ============= VAULT API =============
 
@@ -285,6 +296,7 @@ registerVaultRoutes(app, {
   readLocalConfig,
   getSettingsFile,
   getPalettesDir,
+  getCardPresentationsDir,
 });
 
 // ============= AUTHORS API =============

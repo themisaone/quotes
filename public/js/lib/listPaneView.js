@@ -30,7 +30,7 @@ import {
   confirmLeavePaneEditor,
   flushPendingPaneNoteSaved,
   resetPaneEditor,
-} from './paneEditor.js?v=20260712paneautofocus2';
+} from './paneEditor.js?v=20261009panepaper1';
 import {
   renderPaneAttachments,
   resetPaneAttachments,

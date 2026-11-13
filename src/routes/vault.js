@@ -103,6 +103,7 @@ function registerVaultRoutes(app, {
   readLocalConfig,
   getSettingsFile,
   getPalettesDir,
+  getCardPresentationsDir,
 }) {
   if (!app) throw new Error("Express app is required");
   if (!fileStorage) throw new Error("fileStorage is required");
@@ -124,6 +125,7 @@ function registerVaultRoutes(app, {
         settingsFileExists: fs.existsSync(settingsFile),
         ...settingsSummary,
         palettesDir: getPalettesDir(),
+        cardPresentationsDir: getCardPresentationsDir ? getCardPresentationsDir() : "",
         isDefault: !vaultPath,
         totalFiles,
         totalSizeMB: (totalBytes / 1024 / 1024).toFixed(1),

@@ -62,6 +62,7 @@ function createDefaultSettings() {
     ],
     downscaleQuoteImages: true,
     appFont: "system",
+    cardPresentation: "classical",
     externalStorageThreshold: 1,
     compactMode: false,
     enableTagOperations: true,
@@ -193,6 +194,11 @@ function normalizeSettingsForRuntime(settings, defaults = createDefaultSettings(
     }
   }
 
+  if (!settings.cardPresentation) {
+    settings.cardPresentation = defaults.cardPresentation || "classical";
+    changed = true;
+  }
+
   return { settings, changed };
 }
 
@@ -226,17 +232,21 @@ async function cleanupStaleSubtypes(settings, pool, logger = console) {
   }
 }
 
-function copyPalettes(defaultPalettesDir, destPalettes) {
-  fs.mkdirSync(destPalettes, { recursive: true });
-  if (!fs.existsSync(defaultPalettesDir)) return;
+function copyJsonDir(defaultDir, destDir) {
+  fs.mkdirSync(destDir, { recursive: true });
+  if (!fs.existsSync(defaultDir)) return;
 
-  for (const f of fs.readdirSync(defaultPalettesDir)) {
+  for (const f of fs.readdirSync(defaultDir)) {
     if (!f.endsWith(".json")) continue;
-    const dest = path.join(destPalettes, f);
+    const dest = path.join(destDir, f);
     if (!fs.existsSync(dest)) {
-      fs.copyFileSync(path.join(defaultPalettesDir, f), dest);
+      fs.copyFileSync(path.join(defaultDir, f), dest);
     }
   }
+}
+
+function copyPalettes(defaultPalettesDir, destPalettes) {
+  copyJsonDir(defaultPalettesDir, destPalettes);
 }
 
 function registerSettingsRoutes(app, {
@@ -247,6 +257,7 @@ function registerSettingsRoutes(app, {
   writeLocalConfig,
   defaultSettingsFile,
   defaultPalettesDir,
+  defaultCardPresentationsDir,
   modesFile,
   modesState,
   getActiveModeName,
@@ -310,6 +321,9 @@ function registerSettingsRoutes(app, {
               fs.copyFileSync(defaultSettingsFile, destSettings);
             }
             copyPalettes(defaultPalettesDir, path.join(newVaultPath, "palettes"));
+            if (defaultCardPresentationsDir) {
+              copyJsonDir(defaultCardPresentationsDir, path.join(newVaultPath, "card-presentations"));
+            }
           }
           fileStorage.setAttachmentsDir(newVaultPath);
           fileStorage.ensureDirectories();

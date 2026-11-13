@@ -31,6 +31,7 @@ body.selection-mode .quote-card:not(.expanded-card):hover {
   background: transparent;
   transition: all 0.15s ease;
   pointer-events: none;
+  z-index: 3;
 }
 
 body.selection-mode .quote-card::after {
@@ -339,7 +340,7 @@ body.saf-locked .quote-card .note-select-checkbox {
 
 /* ─────────────────────────────────────────────────────────── */
 
-.quote-card:hover {
+.card-presentation-classical .quote-card:hover {
   background: var(--card-hover-bg);
   border-color: var(--border);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -347,14 +348,41 @@ body.saf-locked .quote-card .note-select-checkbox {
   cursor: pointer;
 }
 
+.card-presentation-paper-curl .quote-card:hover {
+  --paper-highlight: color-mix(in srgb, var(--surface) 86%, white 14%);
+  --paper-shade: color-mix(in srgb, var(--surface) 74%, black 12%);
+  --paper-fill: linear-gradient(
+    148deg,
+    var(--paper-highlight) 0%,
+    var(--surface) 44%,
+    var(--paper-shade) 100%
+  );
+  background: var(--paper-fill);
+  transform: translateY(-3px);
+  cursor: pointer;
+}
+
 /* Suppress the light-blue hover treatment while in bulk selection mode —
    cards shouldn't look like they're about to be opened when the user is
    actually picking items for a bulk operation. Selected-card highlighting
    (the .selected class) still applies. */
-body.selection-mode .quote-card:hover {
+body.selection-mode .card-presentation-classical .quote-card:hover {
   background: inherit;
   border-color: var(--border);
   box-shadow: none;
+  transform: none;
+}
+
+body.selection-mode .card-presentation-paper-curl .quote-card:hover {
+  --paper-highlight: color-mix(in srgb, var(--surface) 88%, white 12%);
+  --paper-shade: color-mix(in srgb, var(--surface) 78%, black 10%);
+  --paper-fill: linear-gradient(
+    148deg,
+    var(--paper-highlight) 0%,
+    var(--surface) 44%,
+    var(--paper-shade) 100%
+  );
+  background: var(--paper-fill);
   transform: none;
 }
 

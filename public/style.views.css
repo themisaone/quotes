@@ -671,6 +671,23 @@
   overflow: hidden;
 }
 
+.lp-pane-paper-header,
+.lp-pane-paper-body {
+  flex-shrink: 0;
+}
+
+.lp-pane-paper-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.lp-pane-paper-body .lp-pane-editor-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 .lp-pane-nav {
   display: flex;
   align-items: center;
