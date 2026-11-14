@@ -19,6 +19,7 @@
 //   });
 
 import { showNotification } from './notifications.js';
+import { openModal as openOverlayModal, closeModal as closeOverlayModal } from './modalVisibility.js';
 
 let _deps = {
   getApiUrl: () => '/api',
@@ -98,14 +99,14 @@ function showRenameModal(type, currentName) {
   input.value       = currentName;
   if (warning) warning.style.display = 'none';
 
-  modal.style.display = 'flex';
+  openOverlayModal(modal);
   input.focus();
   input.select();
 }
 
 function hideRenameModal() {
   const modal = $('renameModal');
-  if (modal) modal.style.display = 'none';
+  if (modal) closeOverlayModal(modal);
   renameContext = { type: null, id: null, oldName: null };
 }
 

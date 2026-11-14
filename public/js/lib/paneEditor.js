@@ -218,8 +218,15 @@ const PANE_SHELL_HTML = `
     </div>
   </div>`;
 
+/** Latest Properties / Save callbacks — refreshed every ensurePaneEditorShell call. */
+let _onProperties = null;
+let _onSave = null;
+
 /** Ensure pane shell (nav + header + editor) exists; init Quill once. */
 export function ensurePaneEditorShell(pane, { onProperties, onSave }) {
+  _onProperties = onProperties || null;
+  _onSave = onSave || null;
+
   if (!pane.querySelector('.lp-pane-shell')) {
     pane.innerHTML = PANE_SHELL_HTML;
     _saveBtn = pane.querySelector('#lpSaveBtn');
@@ -227,12 +234,12 @@ export function ensurePaneEditorShell(pane, { onProperties, onSave }) {
       placeholder: 'Edit note text here…',
     });
     _wirePaneQuill();
-    pane.querySelector('#lpPropsBtn')?.addEventListener('click', () => onProperties?.());
+    pane.querySelector('#lpPropsBtn')?.addEventListener('click', () => _onProperties?.());
     pane.querySelector('#lpSaveBtn')?.addEventListener('click', async (e) => {
       e.preventDefault();
       e.stopPropagation();
       await savePaneEditorText();
-      onSave?.();
+      _onSave?.();
     });
   } else {
     _saveBtn = pane.querySelector('#lpSaveBtn');

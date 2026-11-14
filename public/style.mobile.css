@@ -1236,7 +1236,7 @@
   }
 
   /* Note editor: fill the viewport (overrides margins + centered flex layout) */
-  #quoteModal.modal[style*="display: block"] {
+  #quoteModal.modal.is-open {
     align-items: stretch !important;
     justify-content: stretch !important;
     z-index: 1100 !important;

@@ -26,6 +26,7 @@ import {
 } from './cardRenderer.js';
 import {
   ensurePaneEditorShell,
+  getPaneEditorNoteId,
   loadPaneNote,
   confirmLeavePaneEditor,
   flushPendingPaneNoteSaved,
@@ -239,15 +240,18 @@ function buildTitledRowHtml(note, idx, isSelected, opts) {
     </div>`;
 }
 
-/** Right pane keeps at least the left list height, but can grow with the note. */
+/** Right pane keeps at least the left list height when side-by-side; clear when stacked. */
 function syncTitledPaneHeight(container) {
   const list = container.querySelector('.lp-list-titled');
   const pane = container.querySelector('.lp-pane');
+  const layout = container.querySelector('.lp-layout');
   if (!list || !pane) return;
   requestAnimationFrame(() => {
     pane.style.height = '';
     pane.style.maxHeight = '';
-    pane.style.minHeight = `${list.offsetHeight}px`;
+    const cols = layout ? getComputedStyle(layout).gridTemplateColumns.trim() : '';
+    const stacked = !cols || cols.split(/\s+/).length <= 1;
+    pane.style.minHeight = stacked ? '' : `${list.offsetHeight}px`;
   });
 }
 
@@ -390,7 +394,12 @@ function renderPane(pane, note) {
 
   ensurePaneEditorShell(pane, {
     onProperties: () => {
-      const current = _notes[_selectedIndex];
+      // Prefer the note actually loaded in the pane editor (source of truth),
+      // not only _selectedIndex — those can briefly diverge after re-renders.
+      const paneId = getPaneEditorNoteId();
+      const current =
+        (paneId != null ? _notes.find((n) => n.id == paneId) : null)
+        || _notes[_selectedIndex];
       if (current) _opts.openPropertiesModal?.(current);
     },
     onSave: () => {},

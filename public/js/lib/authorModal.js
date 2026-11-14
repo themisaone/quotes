@@ -13,6 +13,7 @@
 
 import { createEntityModalManager } from './entityModal.js';
 import { getElementByIdSafe, BUTTON_IDS } from '../constants.js';
+import { closeModal as closeOverlayModal } from './modalVisibility.js';
 
 // ============= CONFIGURATION =============
 
@@ -121,7 +122,7 @@ export function setupAuthorModalHandlers(callbacks = {}) {
       const name = getElementByIdSafe('authorName', 'authorModalShowNotes')?.value?.trim();
       if (!name) return;
       const modal = getElementByIdSafe('authorModal', 'authorModalShowNotes');
-      if (modal) modal.style.display = 'none';
+      if (modal) closeOverlayModal(modal);
       if (typeof window.filterByAuthor === 'function') {
         window.filterByAuthor(name);
       }

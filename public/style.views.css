@@ -600,12 +600,13 @@
 }
 
 .lp-layout:not(.lp-layout-calendar) .lp-pane-shell,
+.lp-layout:not(.lp-layout-calendar) .lp-pane-paper-body,
 .lp-layout:not(.lp-layout-calendar) .lp-pane-editor-wrap,
 .lp-layout:not(.lp-layout-calendar) .lp-pane-editor-wrap > .quill-editor-shell,
 .lp-layout:not(.lp-layout-calendar) #lpPaneQuill {
   display: block;
   flex: none;
-  height: auto;
+  height: max-content;
   max-height: none;
   min-height: 0;
   overflow: visible;
@@ -613,7 +614,7 @@
 
 .lp-layout:not(.lp-layout-calendar) #lpPaneQuill .ql-container.ql-snow,
 .lp-layout:not(.lp-layout-calendar) #lpPaneQuill .ql-editor {
-  height: auto;
+  height: max-content;
   max-height: none;
   overflow: visible;
 }
@@ -630,12 +631,13 @@
 }
 
 .lp-layout-calendar .lp-pane-shell,
+.lp-layout-calendar .lp-pane-paper-body,
 .lp-layout-calendar .lp-pane-editor-wrap,
 .lp-layout-calendar .lp-pane-editor-wrap > .quill-editor-shell,
 .lp-layout-calendar #lpPaneQuill {
   display: block;
   flex: none;
-  height: auto;
+  height: max-content;
   max-height: none;
   min-height: 0;
   overflow: visible;
@@ -643,7 +645,7 @@
 
 .lp-layout-calendar #lpPaneQuill .ql-container.ql-snow,
 .lp-layout-calendar #lpPaneQuill .ql-editor {
-  height: auto;
+  height: max-content;
   max-height: none;
   overflow: visible;
 }
@@ -669,7 +671,7 @@
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .lp-pane-paper-header,
@@ -941,13 +943,15 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: visible;
 }
 .lp-pane-editor-wrap > .quill-editor-shell {
   display: flex;
   flex-direction: column;
-  flex: 1 1 auto;
+  flex: none;
+  height: max-content;
   min-height: 0;
+  overflow: visible;
   border-left: none;
   border-right: none;
   border-radius: 0;
@@ -964,17 +968,17 @@
   order: 2;
 }
 #lpPaneQuill.ql-container.ql-snow {
-  flex: 1 1 auto;
-  min-height: 0;
-  height: auto; /* override cards.css fixed ~4-line height */
-  overflow-y: auto;
-  /* !important: Quill's unlayered .ql-container { font-size: 13px } would
-     otherwise beat this layered rule (Step 3a). Removable in Step 3b when
-     Quill moves into @layer vendor. */
+  flex: none;
+  /* max-content beats cards.css .ql-container fixed ~4-line height and
+     prevents a short flex residual (~66px) from clipping long notes. */
+  height: max-content;
+  max-height: none;
+  min-height: calc(6.4rem + 24px);
+  overflow: visible;
   font-size: var(--d-font-base);
 }
 #lpPaneQuill .ql-editor {
-  min-height: 100%;
+  min-height: 12rem;
   height: auto;
   max-height: none;
   overflow-y: visible;

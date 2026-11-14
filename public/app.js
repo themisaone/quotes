@@ -12,6 +12,12 @@ import {
 } from './js/lib/utils.js';
 
 import {
+  openModal as openOverlayModal,
+  closeModal as closeOverlayModal,
+  isModalOpen as isOverlayModalOpen
+} from './js/lib/modalVisibility.js';
+
+import {
   readAttachmentFile as readAttachmentFileLib,
   readImageFile as readImageFileLib,
   handlePasteEvent,
@@ -1614,7 +1620,7 @@ function setupEventListeners() {
     noteTitleEl.addEventListener('input', syncNoteTitleHeight);
   }
   window.addEventListener('resize', () => {
-    if (quoteModal?.style.display === 'block') {
+    if (isOverlayModalOpen(quoteModal)) {
       syncModalLaneLayout();
     }
   });
@@ -1698,19 +1704,19 @@ function setupEventListeners() {
         selectFileBtn: getElementByIdSafe("selectFileBtn"),
         importFileInput: getElementByIdSafe("importFileInput"),
       });
-      importModal.style.display = "block";
+      openOverlayModal(importModal);
     });
   }
 
   if (closeImportModal) {
     closeImportModal.addEventListener("click", () => {
-      importModal.style.display = "none";
+      closeOverlayModal(importModal);
     });
   }
 
   if (cancelImportBtn) {
     cancelImportBtn.addEventListener("click", () => {
-      importModal.style.display = "none";
+      closeOverlayModal(importModal);
     });
   }
 
@@ -3243,7 +3249,7 @@ function openAddModal() {
   ensureQuoteModalViewportLayout();
   
   // Show modal
-  quoteModal.style.display = "block";
+  openOverlayModal(quoteModal);
   
   // Set focus to Quote text editor after modal is displayed
   setTimeout(() => {
@@ -3253,8 +3259,9 @@ function openAddModal() {
   }, 100); // Small delay to ensure modal is fully rendered
 }
 
+/** List-pane Properties: same full edit modal as card click (not properties-only). */
 function openPropertiesModal(quote) {
-  openEditModal(quote, { propertiesOnly: true });
+  openEditModal(quote);
 }
 
 function openEditModal(quote, options = {}) {
@@ -3342,7 +3349,7 @@ function openEditModal(quote, options = {}) {
 
 
   // Show modal
-  quoteModal.style.display = "block";
+  openOverlayModal(quoteModal);
   if (propertiesOnly) {
     scheduleNoteTitleHeightSync();
     syncPropertiesOnlyModalLayout();
@@ -3356,7 +3363,7 @@ function openEditModal(quote, options = {}) {
 }
 
 function closeQuoteModal() {
-  quoteModal.style.display = "none";
+  closeOverlayModal(quoteModal);
   quoteModal.classList.remove('modal-properties-only');
   quoteModal.classList.remove('has-attachment');
   quoteModal.classList.remove('attach-picker-open');
@@ -4101,8 +4108,7 @@ function clearSourceImage() {
 
 // Keep the author image action and preview in sync with the selected image.
 function isEntityModalOpen(modal) {
-  if (!modal) return false;
-  return modal.style.display === "block" || getComputedStyle(modal).display !== "none";
+  return isOverlayModalOpen(modal);
 }
 
 function toggleAuthorAttachmentPanel() {

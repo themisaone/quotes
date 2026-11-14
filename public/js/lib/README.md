@@ -8,6 +8,10 @@ Cache busting is automatic: the server injects an import map into `index.html` t
 
 ## Module Reference
 
+### `modalVisibility.js`
+Open/close overlay `.modal` dialogs via class `is-open` (no inline `display`).
+- `openModal(el)`, `closeModal(el)`, `isModalOpen(el)`
+
 ### `utils.js`
 Pure utility functions. No imports.
 - `escapeHtml(text)` — XSS escape

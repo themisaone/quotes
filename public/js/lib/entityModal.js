@@ -22,6 +22,7 @@ import { API_URL } from './api.js';
 import { displayImage, clearImagePreview } from './attachments.js';
 import { getElementByIdSafe } from '../constants.js';
 import { showConfirm } from './confirmDialog.js';
+import { openModal as openOverlayModal, closeModal as closeOverlayModal } from './modalVisibility.js';
 
 // ============= 1. DOM HELPERS =============
 
@@ -155,16 +156,14 @@ function configureDeleteButton(elements, entity, quoteCount, config) {
  * Show modal
  */
 function showModal(modal) {
-  modal.style.display = "block";
+  openOverlayModal(modal);
 }
 
 /**
  * Hide modal
  */
 function hideModal(modal) {
-  if (modal) {
-    modal.style.display = "none";
-  }
+  closeOverlayModal(modal);
 }
 
 // ============= 4. API OPERATIONS =============

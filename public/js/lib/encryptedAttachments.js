@@ -14,6 +14,8 @@
 // are exposed on `window` because they're invoked from inline `onclick`
 // handlers rendered by cardRenderer.js (the 🔒 lock badge on cards).
 //
+import { openModal as openOverlayModal, closeModal as closeOverlayModal } from './modalVisibility.js';
+
 // Usage:
 //   import { initEncryptedAttachments } from './js/lib/encryptedAttachments.js';
 //   initEncryptedAttachments({
@@ -99,7 +101,7 @@ function _promptPassword(mode) {
     pwInput.value = '';
     confirmInput.value = '';
 
-    modal.style.display = 'block';
+    openOverlayModal(modal);
 
     // Remove readonly after a tick so autofill triggers on load are
     // ignored, but the user can still type.  The HTML keeps the attribute
@@ -111,7 +113,7 @@ function _promptPassword(mode) {
     }, 80);
 
     function cleanup() {
-      modal.style.display = 'none';
+      closeOverlayModal(modal);
       okBtn.removeEventListener('click', onOk);
       cancelBtn.removeEventListener('click', onCancel);
       modal.removeEventListener('keydown', onKey);

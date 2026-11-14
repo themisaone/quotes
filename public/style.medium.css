@@ -158,11 +158,16 @@
     font-size: 0.75rem !important;
   }
 
-  /* Main content uses side-menu width */
+  /* Main content follows side-menu width; collapsed wins by specificity.
+     No !important — responsive layer already beats components. */
   .main-content {
-    margin-left: var(--side-menu-width) !important;
-    width: calc(100% - var(--side-menu-width)) !important;
+    margin-left: var(--side-menu-width);
+    width: calc(100% - var(--side-menu-width));
     padding: var(--m-pad-2xl) !important;
+  }
+  .app-layout.menu-collapsed .main-content {
+    margin-left: 48px;
+    width: calc(100% - 48px);
   }
 
   /* Landing-page tablet elements hidden (side menu replaces them) */
@@ -685,12 +690,14 @@
     margin-top: var(--m-pad-base) !important;
   }
 
-  /* Quote editor */
+  /* Quote editor (modal only — do not shrink list-pane #lpPaneQuill) */
   #quoteEditor {
     height: calc(3.4rem + 42px + 12px) !important;
   }
 
-  .ql-container {
+  #quoteModal .ql-container,
+  #authorModal .ql-container,
+  #sourceModal .ql-container {
     height: calc(3.4rem + 12px) !important;
   }
   
@@ -1432,8 +1439,8 @@
 
 }
 
-/* List-pane on medium: list views use the tuned split below; calendar keeps
-   the older 50/50 split for a wider calendar grid. */
+/* List-pane on medium: always side-by-side (list | note), including when the
+   side menu is expanded and #lpWrapper is under 900px. Calendar keeps 50/50. */
 @media (min-width: 768px) and (max-width: 1100px) {
   .lp-layout,
   .lp-layout.lp-layout-titled {
@@ -1441,6 +1448,94 @@
   }
   .lp-layout.lp-layout-calendar {
     grid-template-columns: 1fr 1fr;
+  }
+
+  /* Undo any leftover stack caps if CQ matched before a resize. */
+  .lp-list:not(.lp-list-calendar) {
+    max-height: none;
+  }
+}
+
+/*
+ * Stack list+pane when #lpWrapper is narrow — but not on medium tablets.
+ * Expanded menu on 768–1100 often leaves lp < 900px; stacking there only
+ * showed ~3 list rows. Phone + wide desktop still stack via this CQ.
+ */
+@media (max-width: 767px), (min-width: 1101px) {
+  @container lp (max-width: 900px) {
+    .lp-layout,
+    .lp-layout.lp-layout-titled,
+    .lp-layout.lp-layout-calendar {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    .lp-list:not(.lp-list-calendar) {
+      max-height: 300px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      min-height: 0;
+    }
+
+    .lp-list.lp-list-calendar {
+      max-height: none;
+    }
+
+    .lp-layout,
+    .lp-layout > .lp-list,
+    .lp-layout > .lp-pane {
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
+    }
+
+    .lp-layout:not(.lp-layout-calendar) .lp-pane {
+      height: auto;
+      max-height: none;
+      overflow: visible;
+    }
+
+    /* Paper body + Quill shell must grow with note text. */
+    .lp-layout:not(.lp-layout-calendar) .lp-pane-shell,
+    .lp-layout:not(.lp-layout-calendar) .lp-pane-paper-body,
+    .lp-layout:not(.lp-layout-calendar) .lp-pane-editor-wrap,
+    .lp-layout:not(.lp-layout-calendar) .lp-pane-editor-wrap > .quill-editor-shell,
+    .lp-layout:not(.lp-layout-calendar) #lpPaneQuill {
+      display: block;
+      flex: none;
+      width: 100%;
+      max-width: 100%;
+      height: max-content;
+      max-height: none;
+      min-height: 0;
+      min-width: 0;
+      box-sizing: border-box;
+      overflow: visible;
+    }
+
+    .lp-layout:not(.lp-layout-calendar) #lpPaneQuill .ql-toolbar.ql-snow,
+    .lp-layout:not(.lp-layout-calendar) #lpPaneQuill .ql-container.ql-snow,
+    .lp-layout:not(.lp-layout-calendar) #lpPaneQuill .ql-editor {
+      width: 100%;
+      max-width: 100%;
+      height: max-content;
+      max-height: none;
+      min-width: 0;
+      box-sizing: border-box;
+      overflow: visible;
+    }
+
+    .lp-layout:not(.lp-layout-calendar) #lpPaneQuill .ql-toolbar.ql-snow {
+      display: flex;
+      flex-wrap: nowrap;
+      white-space: nowrap;
+    }
+
+    .lp-layout:not(.lp-layout-calendar) #lpPaneQuill .ql-editor {
+      min-height: 12rem;
+      overflow-wrap: anywhere;
+    }
   }
 }
 

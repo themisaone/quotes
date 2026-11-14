@@ -28,6 +28,8 @@
 // exposed on `window` so the bulk-ops UI (still in app.js) can launch
 // the modal from a click.
 
+import { openModal as openOverlayModal, closeModal as closeOverlayModal } from './modalVisibility.js';
+
 let _deps = {
   escapeHtml: (s) => s,
   getApiUrl: () => '/api',
@@ -69,11 +71,11 @@ export function openMergeModal(notes) {
   mergeMainNoteId = notes[0].id;
   renderMergeNotesList();
   document.getElementById('mergeCountLabel').textContent = `${notes.length} notes`;
-  document.getElementById('mergeModal').style.display = 'block';
+  openOverlayModal(document.getElementById('mergeModal'));
 }
 
 function closeMergeModal() {
-  document.getElementById('mergeModal').style.display = 'none';
+  closeOverlayModal(document.getElementById('mergeModal'));
   mergeModalNotes = [];
   mergeMainNoteId = null;
   // Re-enable the execute button without rewriting its inner HTML — the

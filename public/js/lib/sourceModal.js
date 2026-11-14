@@ -15,6 +15,7 @@ import { createEntityModalManager } from './entityModal.js';
 import { displayImage } from './attachments.js';
 import { getElementByIdSafe, BUTTON_IDS } from '../constants.js';
 import { API_URL } from './api.js';
+import { closeModal as closeOverlayModal } from './modalVisibility.js';
 
 // ============= CONFIGURATION =============
 
@@ -218,7 +219,7 @@ export function setupSourceModalHandlers(callbacks = {}) {
       const name = getElementByIdSafe('sourceName', 'sourceModalShowNotes')?.value?.trim();
       if (!name) return;
       const modal = getElementByIdSafe('sourceModal', 'sourceModalShowNotes');
-      if (modal) modal.style.display = 'none';
+      if (modal) closeOverlayModal(modal);
       if (typeof window.filterBySource === 'function') {
         window.filterBySource(name);
       }

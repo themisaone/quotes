@@ -94,84 +94,8 @@
   }
 }
 
-/* ── List+pane: stack when the list-pane area is narrow (was max-width: 900px) ── */
-@container lp (max-width: 900px) {
-  .lp-layout {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-  }
-
-  .lp-list:not(.lp-list-calendar) {
-    max-height: 300px;
-    overflow-y: auto;
-    overflow-x: hidden;
-    min-height: 0;
-  }
-
-  .lp-list.lp-list-calendar {
-    max-height: none;
-  }
-
-  .lp-layout,
-  .lp-layout > .lp-list,
-  .lp-layout > .lp-pane {
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-    box-sizing: border-box;
-  }
-
-  .lp-layout:not(.lp-layout-calendar) .lp-pane {
-    height: auto;
-    max-height: none;
-    overflow-x: hidden;
-    overflow-y: visible;
-  }
-
-  .lp-layout:not(.lp-layout-calendar) .lp-pane-shell,
-  .lp-layout:not(.lp-layout-calendar) .lp-pane-editor-wrap,
-  .lp-layout:not(.lp-layout-calendar) #lpPaneQuill {
-    display: block;
-    flex: none;
-    width: 100%;
-    max-width: 100%;
-    height: auto;
-    max-height: none;
-    min-height: 0;
-    min-width: 0;
-    box-sizing: border-box;
-    overflow-x: hidden;
-    overflow-y: visible;
-  }
-
-  .lp-layout:not(.lp-layout-calendar) #lpPaneQuill .ql-toolbar.ql-snow,
-  .lp-layout:not(.lp-layout-calendar) #lpPaneQuill .ql-container.ql-snow,
-  .lp-layout:not(.lp-layout-calendar) #lpPaneQuill .ql-editor {
-    width: 100%;
-    max-width: 100%;
-    height: auto;
-    max-height: none;
-    min-width: 0;
-    box-sizing: border-box;
-    overflow-x: hidden;
-  }
-
-  .lp-layout:not(.lp-layout-calendar) #lpPaneQuill .ql-toolbar.ql-snow {
-    display: flex;
-    flex-wrap: nowrap;
-    white-space: nowrap;
-  }
-
-  .lp-layout:not(.lp-layout-calendar) #lpPaneQuill .ql-container.ql-snow,
-  .lp-layout:not(.lp-layout-calendar) #lpPaneQuill .ql-editor {
-    overflow-y: visible;
-  }
-
-  .lp-layout:not(.lp-layout-calendar) #lpPaneQuill .ql-editor {
-    min-height: 12rem;
-    overflow-wrap: anywhere;
-  }
-}
+/* List+pane stack @container lives in style.medium.css (responsive layer)
+   so it can beat medium’s 10fr/20fr grid. #lpWrapper is still named `lp` here. */
 
 }
 

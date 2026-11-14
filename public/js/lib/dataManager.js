@@ -14,6 +14,7 @@ import { getNoteTypeConfig } from './noteTypes.js';
 import { buildExportParams } from './displayManager.js';
 import { getSearchValues } from './searchManager.js';
 import { showConfirm } from './confirmDialog.js';
+import { closeModal as closeOverlayModal } from './modalVisibility.js';
 
 // ============= CONSTANTS =============
 
@@ -698,7 +699,7 @@ function handleImportSuccess(result, importStatus, selectFileBtn, importModal, o
     reloadBtn.style.marginTop = "12px";
     reloadBtn.textContent = "Reload page";
     reloadBtn.addEventListener("click", () => {
-      importModal.style.display = "none";
+      closeOverlayModal(importModal);
       if (onImportComplete) onImportComplete();
       location.reload();
     });
@@ -708,7 +709,7 @@ function handleImportSuccess(result, importStatus, selectFileBtn, importModal, o
 
   // Reload data after delay (happy path)
   setTimeout(() => {
-    importModal.style.display = "none";
+    closeOverlayModal(importModal);
     if (onImportComplete) {
       onImportComplete();
     }

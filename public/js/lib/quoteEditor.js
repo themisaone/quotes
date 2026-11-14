@@ -21,6 +21,7 @@ import { downscaleImage } from './attachments.js';
 import { getNoteTypeConfig, hasDateField, hasGenericSubTypeField } from './noteTypes.js';
 import { showConfirm } from './confirmDialog.js';
 import { escapeHtml } from './utils.js';
+import { closeModal as closeOverlayModal } from './modalVisibility.js';
 
 // ============= CONSTANTS =============
 
@@ -664,7 +665,7 @@ export async function deleteQuote(id, apiUrl, callbacks) {
  */
 export function closeModal(elements, resetStateCallback) {
   if (elements.modal) {
-    elements.modal.style.display = "none";
+    closeOverlayModal(elements.modal);
   }
   
   if (elements.form) {

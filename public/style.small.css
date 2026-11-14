@@ -221,7 +221,7 @@
     margin-bottom: 0.32rem !important;
   }
 
-  #quoteModal.modal-properties-only.modal[style*="display: block"] {
+  #quoteModal.modal-properties-only.modal.is-open {
     align-items: center !important;
     justify-content: center !important;
   }

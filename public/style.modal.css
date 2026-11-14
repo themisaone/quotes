@@ -20,7 +20,9 @@
   animation: fadeIn 0.2s;
 }
 
-.modal[style*="display: block"] {
+/* Open state is a class (see modalVisibility.js) so layers can own display
+   without fighting inline style="display: block" or using !important. */
+.modal.is-open {
   display: flex;
   align-items: center;
   justify-content: center;

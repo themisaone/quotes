@@ -13,6 +13,7 @@
 
 import { getElementByIdSafe } from '../constants.js';
 import { showConfirm } from './confirmDialog.js';
+import { openModal as openOverlayModal, closeModal as closeOverlayModal } from './modalVisibility.js';
 
 // ============================================
 // Constants
@@ -204,14 +205,14 @@ function resetForm() {
  * Show the modal
  */
 function showModal() {
-  bulkModal.style.display = 'block';
+  openOverlayModal(bulkModal);
 }
 
 /**
  * Hide the modal
  */
 function hideModal() {
-  bulkModal.style.display = 'none';
+  closeOverlayModal(bulkModal);
 }
 
 /**
