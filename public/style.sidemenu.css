@@ -34,7 +34,7 @@
 .side-menu { scrollbar-width: auto; scrollbar-color: rgba(255, 255, 255, 0.2) transparent; }
 
 /* ── Page (html) scrollbar — slim, same style as side-menu but inverted ── */
-html::-webkit-scrollbar-thumb       { background: rgba(0, 0, 0, 0.2); border-radius: 3px; }
+html::-webkit-scrollbar-thumb       { background: rgba(0, 0, 0, 0.2); border-radius: var(--radius-sm); }
 html::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.4); }
 html { scrollbar-width: thin; scrollbar-color: rgba(0, 0, 0, 0.2) transparent; }
 
@@ -219,7 +219,7 @@ html { scrollbar-width: thin; scrollbar-color: rgba(0, 0, 0, 0.2) transparent; }
   padding: 0;
   background: transparent;
   border: none;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   color: rgba(255, 255, 255, 0.75);
   cursor: pointer;
   font-size: 0;

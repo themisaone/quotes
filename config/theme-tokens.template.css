@@ -1,0 +1,51 @@
+/* ============================================================
+   Misa Notes — personal theme overrides
+   This file is loaded after every other stylesheet. Uncomment a line and
+   change its value, save, then reload the browser (no restart needed).
+   The full list of tokens and their defaults is in public/style.tokens.css.
+   Delete this file to get a fresh copy of the template.
+   ============================================================ */
+
+/* ── Classic display mode (and defaults shared by both modes) ── */
+:root {
+  /* --radius-sm: 4px; */
+  /* --radius-md: 6px; */
+  /* --radius-lg: 8px; */
+  /* --radius-xl: 12px; */
+
+  /* --card-border: 2px solid var(--border); */
+  /* --card-radius: var(--radius-lg); */
+  /* --card-shadow: none; */
+  /* --card-hover-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); */
+  /* --card-hover-transform: translateY(-2px); */
+  /* --card-expanded-transform: scale(1.02); */
+  /* --card-selected-ring: 0 0 0 1px var(--primary-color); */
+
+  /* --pane-shell-border: 2px solid var(--border); */
+  /* --pane-shell-radius: var(--radius-lg); */
+  /* --pane-shell-shadow: var(--shadow); */
+
+  /* --text-lane-shell-border: 1px solid var(--border); */
+  /* --text-lane-shell-radius: var(--radius-lg); */
+
+  /* --toolbar-bg: var(--card-hover-bg); */
+}
+
+/* ── Paper display mode ──
+   Paper values must stay under this selector, otherwise Paper's own
+   defaults win over them. */
+.card-presentation-paper-curl {
+  /* --paper-border-width: 2px; */
+  /* --paper-border-color: var(--border); */
+  /* --paper-border-radius: var(--radius-lg); */   /* 0 = square corners */
+
+  /* --paper-shadow-x: 10px; */
+  /* --paper-shadow-y: 10px; */
+  /* --paper-shadow-blur: 10px; */
+  /* --paper-shadow-spread: -8px; */
+  /* --paper-shadow-color: rgba(180, 180, 180, 0.6); */
+
+  /* --card-hover-transform: translateY(-3px); */
+  /* --card-expanded-transform: scale(1.01); */
+  /* --pane-sheet-gap: 1rem; */
+}

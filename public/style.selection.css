@@ -55,8 +55,8 @@ body.selection-mode .quote-card::after {
 
 /* Selected card state */
 .quote-card.selected {
-  background: #1f2f3f !important;
-  box-shadow: 0 0 0 1px #7f9fc7 !important;
+  background: var(--card-selected-bg) !important;
+  box-shadow: var(--card-selected-ring) !important;
 }
 
 /* ─── New Select-Action Bar (below "Latest" header) ───────────────────── */
@@ -340,50 +340,11 @@ body.saf-locked .quote-card .note-select-checkbox {
 
 /* ─────────────────────────────────────────────────────────── */
 
-.card-presentation-classical .quote-card:hover {
-  background: var(--card-hover-bg);
-  border-color: var(--border);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
+.quote-card:hover {
+  background: var(--card-hover-fill);
+  box-shadow: var(--card-hover-shadow);
+  transform: var(--card-hover-transform);
   cursor: pointer;
-}
-
-.card-presentation-paper-curl .quote-card:hover {
-  --paper-highlight: color-mix(in srgb, var(--surface) 86%, white 14%);
-  --paper-shade: color-mix(in srgb, var(--surface) 74%, black 12%);
-  --paper-fill: linear-gradient(
-    148deg,
-    var(--paper-highlight) 0%,
-    var(--surface) 44%,
-    var(--paper-shade) 100%
-  );
-  background: var(--paper-fill);
-  transform: translateY(-3px);
-  cursor: pointer;
-}
-
-/* Suppress the light-blue hover treatment while in bulk selection mode —
-   cards shouldn't look like they're about to be opened when the user is
-   actually picking items for a bulk operation. Selected-card highlighting
-   (the .selected class) still applies. */
-body.selection-mode .card-presentation-classical .quote-card:hover {
-  background: inherit;
-  border-color: var(--border);
-  box-shadow: none;
-  transform: none;
-}
-
-body.selection-mode .card-presentation-paper-curl .quote-card:hover {
-  --paper-highlight: color-mix(in srgb, var(--surface) 88%, white 12%);
-  --paper-shade: color-mix(in srgb, var(--surface) 78%, black 10%);
-  --paper-fill: linear-gradient(
-    148deg,
-    var(--paper-highlight) 0%,
-    var(--surface) 44%,
-    var(--paper-shade) 100%
-  );
-  background: var(--paper-fill);
-  transform: none;
 }
 
 .quote-image-thumb {
@@ -525,7 +486,7 @@ body.selection-mode .card-presentation-paper-curl .quote-card:hover {
 .att-strip-thumb {
   width: 64px;
   height: 64px;
-  border-radius: 5px;
+  border-radius: var(--radius-md);
   overflow: hidden;
   cursor: pointer;
   flex-shrink: 0;

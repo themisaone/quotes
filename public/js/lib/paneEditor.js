@@ -176,7 +176,7 @@ function _wirePaneQuill() {
 
 const PANE_SHELL_HTML = `
   <div class="lp-pane-shell">
-    <div class="paper-surface lp-pane-paper-header">
+    <div class="lp-pane-paper-header">
       <div class="lp-pane-info">
         <div class="lp-pane-title-row">
           <div class="lp-pane-title note-title-heading" id="lpPaneTitle"></div>
@@ -210,7 +210,7 @@ const PANE_SHELL_HTML = `
         <div class="lp-pane-attach-row" id="lpPaneAttachRow"></div>
       </div>
     </div>
-    <div class="paper-surface lp-pane-paper-body">
+    <div class="lp-pane-paper-body">
       <div class="lp-pane-editor-wrap">
         <div id="lpPaneQuill"></div>
         <input type="hidden" id="lpPaneText" />
@@ -253,13 +253,13 @@ function _migratePanePaperSplit(pane) {
   if (!info || !editorWrap) return;
 
   const header = document.createElement('div');
-  header.className = 'paper-surface lp-pane-paper-header';
+  header.className = 'lp-pane-paper-header';
   shell.insertBefore(header, info);
   header.appendChild(info);
   if (attach) header.appendChild(attach);
 
   const body = document.createElement('div');
-  body.className = 'paper-surface lp-pane-paper-body';
+  body.className = 'lp-pane-paper-body';
   shell.insertBefore(body, editorWrap);
   body.appendChild(editorWrap);
 }

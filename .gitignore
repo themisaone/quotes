@@ -15,3 +15,6 @@ config/local.sqlite.json
 config/local.postgres.json
 config/running-instances.json
 config/logs/
+
+# Theme overrides when no vault is configured
+config/theme/

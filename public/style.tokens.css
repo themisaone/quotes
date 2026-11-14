@@ -1,0 +1,130 @@
+/* ============================================================
+   Misa Notes — design tokens
+   Every visual decision for cards, list-pane sheets and the modal text
+   lane is a variable here. Components only read these variables; a display
+   mode is a block of values (Classic = :root, Paper = .card-presentation-paper-curl).
+
+   Override any of them without touching the code in <vault>/theme/tokens.css
+   (loaded after all other stylesheets; just reload the browser).
+   Palette colours (--surface, --border, --primary-color, ...) live in style.css
+   and are set by the palette files.
+   ============================================================ */
+
+:root {
+  /* ── Scales ── */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+
+  /* ── Grid cards (Classic) ── */
+  --card-bg: var(--surface);
+  --card-border: 2px solid var(--border);
+  --card-radius: var(--radius-lg);
+  --card-shadow: none;
+  --card-transition: all 0.3s ease;
+  --card-hover-fill: var(--card-hover-bg);
+  --card-hover-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --card-hover-transform: translateY(-2px);
+  --card-expanded-bg: color-mix(in srgb, var(--surface) 92%, var(--primary-color));
+  --card-expanded-border-color: var(--primary-color);
+  --card-expanded-shadow: 0 8px 30px color-mix(in srgb, var(--primary-color) 30%, transparent);
+  --card-expanded-transform: scale(1.02);
+  --card-selected-bg: color-mix(in srgb, var(--surface) 75%, var(--primary-color));
+  --card-selected-ring: 0 0 0 1px var(--primary-color);
+
+  /* ── List pane: the shell is the outer box, sheets are header + body inside it ── */
+  --pane-shell-bg: var(--surface);
+  --pane-shell-border: 2px solid var(--border);
+  --pane-shell-radius: var(--radius-lg);
+  --pane-shell-shadow: var(--shadow);
+  --pane-sheet-bg: transparent;
+  --pane-sheet-border: none;
+  --pane-sheet-radius: 0;
+  --pane-sheet-shadow: none;
+  --pane-sheet-gap: 0;
+
+  /* ── Note modal text lane: same shell / sheet pair ── */
+  --text-lane-shell-bg: var(--surface);
+  --text-lane-shell-border: 1px solid var(--border);
+  --text-lane-shell-radius: var(--radius-lg);
+  --text-lane-shell-overflow: hidden;
+  --text-lane-sheet-bg: transparent;
+  --text-lane-sheet-border: none;
+  --text-lane-sheet-radius: 0;
+  --text-lane-sheet-shadow: none;
+  --text-lane-sheet-overflow: hidden;
+
+  /* ── Quill toolbar ── */
+  --toolbar-bg: var(--card-hover-bg);
+}
+
+/* ── Paper: gradient sheets with a frame and a soft drop shadow ── */
+.card-presentation-paper-curl {
+  --paper-highlight: color-mix(in srgb, var(--surface) 88%, white 12%);
+  --paper-shade: color-mix(in srgb, var(--surface) 78%, black 10%);
+  --paper-fill: linear-gradient(
+    148deg,
+    var(--paper-highlight) 0%,
+    var(--surface) 44%,
+    var(--paper-shade) 100%
+  );
+  --paper-border-width: 2px;
+  --paper-border-color: var(--border);
+  --paper-border-radius: var(--radius-lg);
+  --paper-shadow-x: 10px;
+  --paper-shadow-y: 10px;
+  --paper-shadow-blur: 10px;
+  --paper-shadow-spread: -8px;
+  --paper-shadow-color: rgba(180, 180, 180, 0.6);
+  --paper-shadow:
+    var(--paper-shadow-x)
+    var(--paper-shadow-y)
+    var(--paper-shadow-blur)
+    var(--paper-shadow-spread)
+    var(--paper-shadow-color);
+  --paper-frame: var(--paper-border-width) solid var(--paper-border-color);
+
+  --card-bg: var(--paper-fill);
+  --card-border: var(--paper-frame);
+  --card-radius: var(--paper-border-radius);
+  --card-shadow: var(--paper-shadow);
+  --card-transition: transform 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
+  --card-hover-fill: linear-gradient(
+    148deg,
+    color-mix(in srgb, var(--surface) 86%, white 14%) 0%,
+    var(--surface) 44%,
+    color-mix(in srgb, var(--surface) 74%, black 12%) 100%
+  );
+  --card-hover-shadow: var(--paper-shadow);
+  --card-hover-transform: translateY(-3px);
+  --card-expanded-bg: linear-gradient(
+    148deg,
+    color-mix(in srgb, var(--surface) 90%, white 10%) 0%,
+    var(--surface) 44%,
+    color-mix(in srgb, var(--surface) 72%, black 12%) 100%
+  );
+  --card-expanded-border-color: var(--paper-border-color);
+  --card-expanded-shadow: var(--paper-shadow);
+  --card-expanded-transform: scale(1.01);
+
+  --pane-shell-bg: transparent;
+  --pane-shell-border: none;
+  --pane-shell-radius: 0;
+  --pane-shell-shadow: none;
+  --pane-sheet-bg: var(--paper-fill);
+  --pane-sheet-border: var(--paper-frame);
+  --pane-sheet-radius: var(--paper-border-radius);
+  --pane-sheet-shadow: var(--paper-shadow);
+  --pane-sheet-gap: 1rem;
+
+  --text-lane-shell-bg: transparent;
+  --text-lane-shell-border: none;
+  --text-lane-shell-radius: 0;
+  --text-lane-shell-overflow: visible;
+  --text-lane-sheet-bg: var(--paper-fill);
+  --text-lane-sheet-border: var(--paper-frame);
+  --text-lane-sheet-radius: var(--paper-border-radius);
+  --text-lane-sheet-shadow: var(--paper-shadow);
+  --text-lane-sheet-overflow: visible;
+}

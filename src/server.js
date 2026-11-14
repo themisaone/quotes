@@ -11,6 +11,7 @@ const { registerAttachmentMigrationRoutes } = require("./routes/attachmentMigrat
 const { registerAuthorRoutes } = require("./routes/authors");
 const fileStorage = require("./fileStorage");
 const { registerIndexRoute } = require("./frontendAssets");
+const { registerThemeOverrideRoute } = require("./themeOverrides");
 const instanceManager = require("./instanceManager");
 const { registerDbAttachmentExportRoutes } = require("./routes/dbAttachmentExport");
 const { registerDedupRoutes } = require("./routes/dedup");
@@ -55,6 +56,8 @@ const PORT = process.env.PORT || 4000;
 const DEFAULT_SETTINGS_FILE = path.join(__dirname, '../config/settings.json');
 const DEFAULT_PALETTES_DIR  = path.join(__dirname, '../palettes');
 const DEFAULT_CARD_PRESENTATIONS_DIR = path.join(__dirname, '../card-presentations');
+const DEFAULT_THEME_DIR = path.join(__dirname, '../config/theme');
+const THEME_TOKENS_TEMPLATE = path.join(__dirname, '../config/theme-tokens.template.css');
 
 // ── Active mode (set via MODE env var or PUT /api/mode, persisted in local.json) ──
 const MODES_FILE = path.join(__dirname, '../config/modes.json');
@@ -87,6 +90,10 @@ function getPalettesDir() {
 function getCardPresentationsDir() {
   const { vaultPath } = readLocalConfig();
   return vaultPath ? path.join(vaultPath, 'card-presentations') : DEFAULT_CARD_PRESENTATIONS_DIR;
+}
+function getThemeDir() {
+  const { vaultPath } = readLocalConfig();
+  return vaultPath ? path.join(vaultPath, 'theme') : DEFAULT_THEME_DIR;
 }
 
 function getDateBasedNoteTypes() {
@@ -146,6 +153,7 @@ registerMaintenanceRoutes(app, {
 });
 
 registerIndexRoute(app, { publicDir: path.join(__dirname, "../public") });
+registerThemeOverrideRoute(app, { getThemeDir, templateFile: THEME_TOKENS_TEMPLATE });
 app.use(express.static(path.join(__dirname, "../public")));
 // Serve attachment files from the configured vault (dynamic — honours vaultPath setting)
 app.get('/attachments/*', (req, res) => {

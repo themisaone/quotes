@@ -321,10 +321,11 @@ The `/api/quotes` listing endpoint, `/api/quotes/count`, and filtered bulk endpo
 
 ## CSS File Layout
 
-Styles are split across **15 files** so each one is small enough to read without burning huge tokens. They are loaded **in this exact order** by `index.html`; the order mirrors the original line order in the pre-split monolith so cascade behaviour is preserved.
+Styles are split across **16 files** so each one is small enough to read without burning huge tokens. They are loaded **in this exact order** by `index.html`; the order mirrors the original line order in the pre-split monolith so cascade behaviour is preserved. A 17th, optional stylesheet — the personal override file — loads last (see *Design Tokens* below).
 
 ```
 public/style.css              ← base — root vars, body, scrollbar, app-layout (~95 lines)
+public/style.tokens.css       ← design tokens: radius scale + card / pane / modal-lane values per display mode
 public/style.sidemenu.css     ← left-side menu (~310 lines)
 public/style.search.css       ← search panel + filters + counters (~600 lines)
 public/style.buttons.css      ← all button variants + refresh animations (~200 lines)
@@ -339,6 +340,8 @@ public/style.views.css        ← gallery + list-pane + training calendar + encr
 public/style.mobile.css       ← all max-width @media queries (mobile + 480 + 720 + 767 + 900 tablet)
 public/style.small.css        ← portrait-phone refinements (max-width 767px + orientation: portrait); hand-maintained
 public/style.medium.css       ← all (min-width: 768px) and (max-width: 1100px) @media queries
+(Quill CDN css)
+/theme/tokens.css             ← personal token overrides from <vault>/theme/tokens.css (optional)
 ```
 
 **Why this order matters.** CSS picks the *last* rule when specificity ties. The feature files load in the same order their rules originally appeared in the monolith, then the responsive overlays come last so they override base rules at their breakpoints. Load order among responsive files: `mobile` → `small` → `medium` (portrait tweaks sit between broad mobile and the medium-width band).
@@ -346,6 +349,23 @@ public/style.medium.css       ← all (min-width: 768px) and (max-width: 1100px)
 A few features had non-contiguous content in the original (e.g. `.search-section` rules appeared at lines 405-899 *and* 1709-1810). Both fragments now live in the **same** feature file, in their original relative order — verified that no selector in the gap (buttons, modal, selection) overlaps the fragments, so the cascade outcome is unchanged.
 
 **Cache-busting.** The `<link>` tags in `index.html` carry no `?v=`; the server adds `?v=<file mtime>` to each local stylesheet when serving the page (`src/frontendAssets.js`), so CSS changes are picked up on reload without bumping anything.
+
+### Design Tokens and Display Modes
+
+Every visual value for grid cards, the list-pane editor and the note-modal text lane is a CSS custom property in `public/style.tokens.css`. Component rules only read tokens (`background: var(--card-bg)`, `border: var(--pane-shell-border)`, …); a **display mode is just a block of token values**:
+
+- **Classic** — the `:root` block.
+- **Paper** — the `.card-presentation-paper-curl` block (body class set by `settingsManager.js`). Paper knobs: `--paper-border-*`, `--paper-shadow-*`, `--paper-fill`.
+
+Token groups: radius scale (`--radius-sm/md/lg/xl` = 4/6/8/12px — single-value radii in the stylesheets use it), `--card-*` (base, hover, expanded, selected), `--pane-shell-*` / `--pane-sheet-*`, `--text-lane-shell-*` / `--text-lane-sheet-*`, `--toolbar-bg`. Expanded and selected cards derive from the palette (`--primary-color`, `--surface`), so they follow light and dark palettes.
+
+**Shell / sheet pattern.** The list pane (`.lp-pane` → `.lp-pane-paper-header` + `.lp-pane-paper-body`) and the modal text lane (`.quote-modal-lane-text` → `.quote-modal-lane-body`) each have an outer *shell* and inner *sheets*. Classic frames the shell and leaves sheets transparent; Paper makes the shell transparent and frames each sheet with gradient, border and drop shadow (`--pane-sheet-gap` separates the two pane sheets).
+
+Paper sheets are flat (no curl). Do not reintroduce `clip-path` on a framed element — it clips `box-shadow`. The only Paper-specific rules left in `style.cards.css` are structural: `overflow: visible` on the modal containers so sheet shadows are not cut off, lane gap/padding, text-lane `z-index`, and making Quill's wrappers transparent so the sheet gradient shows through.
+
+Custom properties that reference other variables are resolved where they are declared, so a state that changes a gradient (hover, expanded) defines its own full gradient token rather than overriding `--paper-highlight` locally.
+
+**Personal overrides.** `index.html` loads `theme/tokens.css` after every other stylesheet. `src/themeOverrides.js` serves it from `<vault>/theme/tokens.css` (or `config/theme/tokens.css` when no vault is set, git-ignored), uncached. On first request it seeds a fully commented template from `config/theme-tokens.template.css`; a missing or unreadable file yields empty CSS. Editing it needs only a browser reload. Paper values must be overridden under `.card-presentation-paper-curl`, not `:root`, or Paper's own block wins.
 
 **Adding new rules:**
 - Pick the file whose theme matches (e.g. button styles → `style.buttons.css`, anything inside the note modal → `style.modal.css`).

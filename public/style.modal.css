@@ -164,7 +164,7 @@
   background: rgba(255,255,255,0.15);
   color: white;
   border: 1px solid rgba(255,255,255,0.35);
-  border-radius: 5px;
+  border-radius: var(--radius-md);
   font-size: 0.8rem;
   padding: 0.15rem 0.3rem;
   cursor: pointer;
@@ -890,6 +890,23 @@
   overflow: hidden;
 }
 
+#quoteModal .quote-modal-lane-text {
+  background: var(--text-lane-shell-bg);
+  border: var(--text-lane-shell-border);
+  border-radius: var(--text-lane-shell-radius);
+  overflow: var(--text-lane-shell-overflow);
+}
+
+#quoteModal .quote-modal-lane-text > .quote-modal-lane-body {
+  height: 100%;
+  box-sizing: border-box;
+  background: var(--text-lane-sheet-bg);
+  border: var(--text-lane-sheet-border);
+  border-radius: var(--text-lane-sheet-radius);
+  box-shadow: var(--text-lane-sheet-shadow);
+  overflow: var(--text-lane-sheet-overflow);
+}
+
 .quote-modal-lane-properties .quote-modal-lane-body {
   padding: 0.55rem 0.5rem;
   overflow-y: auto;
@@ -1356,7 +1373,7 @@ label {
 
 .score-radio-label span i {
   background: white;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1421,7 +1438,7 @@ label {
 .fa-dice-six {
   color: #dc2626;
   background: white;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   display: inline-flex;
   align-items: center;
   justify-content: center;
