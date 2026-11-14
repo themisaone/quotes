@@ -23,7 +23,8 @@
     "brain": "node scripts/run-mode.js BRAIN",
     "training": "node scripts/run-mode.js TRAINING",
     "job": "node scripts/run-mode.js JOB",
-    "tegneserie": "node scripts/run-mode.js TEGNESERIE"
+    "tegneserie": "node scripts/run-mode.js TEGNESERIE",
+    "css-snapshot": "node scripts/css-snapshot.js"
   },
   "keywords": [
     "quotes",

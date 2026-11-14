@@ -350,6 +350,17 @@ A few features had non-contiguous content in the original (e.g. `.search-section
 
 **Cache-busting.** The `<link>` tags in `index.html` carry no `?v=`; the server adds `?v=<file mtime>` to each local stylesheet when serving the page (`src/frontendAssets.js`), so CSS changes are picked up on reload without bumping anything.
 
+### CSS regression snapshots (Step 3 safety net)
+
+Before changing cascade / responsive CSS, capture computed styles with the Puppeteer script `scripts/css-snapshot.js` (npm script `css-snapshot`). It opens the running app read-only at three widths (phone / medium / desktop), four scenes (grid, modal, list, options) and both display modes, then diffs two JSON dumps. Pixel `rect` jitter is ignored by default (`--include-rect` to include it). Snapshots go under `tmp/` (git-ignored).
+
+```
+npm run css-snapshot -- snapshot tmp/css-snapshots/before.json
+# … edit CSS …
+npm run css-snapshot -- snapshot tmp/css-snapshots/after.json
+npm run css-snapshot -- diff tmp/css-snapshots/before.json tmp/css-snapshots/after.json
+```
+
 ### Design Tokens and Display Modes
 
 Every visual value for grid cards, the list-pane editor and the note-modal text lane is a CSS custom property in `public/style.tokens.css`. Component rules only read tokens (`background: var(--card-bg)`, `border: var(--pane-shell-border)`, …); a **display mode is just a block of token values**:
