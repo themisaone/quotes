@@ -321,9 +321,10 @@ The `/api/quotes` listing endpoint, `/api/quotes/count`, and filtered bulk endpo
 
 ## CSS File Layout
 
-Styles are split across **16 files** so each one is small enough to read without burning huge tokens. They are loaded **in this exact order** by `index.html`; the order mirrors the original line order in the pre-split monolith so cascade behaviour is preserved. A 17th, optional stylesheet — the personal override file — loads last (see *Design Tokens* below).
+Styles are split across **17 files** so each one is small enough to read without burning huge tokens. They are loaded **in this exact order** by `index.html`; the order mirrors the original line order in the pre-split monolith so cascade behaviour is preserved. An 18th, optional stylesheet — the personal override file — loads last (see *Design Tokens* below).
 
 ```
+public/style.layers.css       ← @layer order only (vendor → base → components → modes → responsive → app)
 public/style.css              ← base — root vars, body, scrollbar, app-layout (~95 lines)
 public/style.tokens.css       ← design tokens: radius scale + card / pane / modal-lane values per display mode
 public/style.sidemenu.css     ← left-side menu (~310 lines)
@@ -340,9 +341,11 @@ public/style.views.css        ← gallery + list-pane + training calendar + encr
 public/style.mobile.css       ← all max-width @media queries (mobile + 480 + 720 + 767 + 900 tablet)
 public/style.small.css        ← portrait-phone refinements (max-width 767px + orientation: portrait); hand-maintained
 public/style.medium.css       ← all (min-width: 768px) and (max-width: 1100px) @media queries
-(Quill CDN css)
+(Font Awesome + Quill CDN — still unlayered, after the app sheets)
 /theme/tokens.css             ← personal token overrides from <vault>/theme/tokens.css (optional)
 ```
+
+Every local feature / responsive sheet wraps its rules in `@layer app { … }` (Step 3a). They share one layer so relative priority among our own rules is unchanged. Empty layer names (`vendor`, `base`, `components`, `modes`, `responsive`) are reserved for Step 3b (`!important` cleanup + moving the CDN sheets into `vendor`). Unlayered styles always beat layered ones — that is why Quill/FA and `theme/tokens.css` keep their old weight today.
 
 **Why this order matters.** CSS picks the *last* rule when specificity ties. The feature files load in the same order their rules originally appeared in the monolith, then the responsive overlays come last so they override base rules at their breakpoints. Load order among responsive files: `mobile` → `small` → `medium` (portrait tweaks sit between broad mobile and the medium-width band).
 

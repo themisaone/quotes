@@ -1,3 +1,4 @@
+@layer app {
 /* ============================================================
    Misa Notes — design tokens
    Every visual decision for cards, list-pane sheets and the modal text
@@ -127,4 +128,5 @@
   --text-lane-sheet-radius: var(--paper-border-radius);
   --text-lane-sheet-shadow: var(--paper-shadow);
   --text-lane-sheet-overflow: visible;
+}
 }

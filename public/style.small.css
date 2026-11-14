@@ -1,3 +1,4 @@
+@layer app {
 /* ============================================================
    Misa Notes — phone portrait refinements
    Applies when the viewport is portrait and no wider than 767px — the same
@@ -394,4 +395,5 @@
     max-width: 3.55rem !important;
     padding: 0 0.35rem !important;
   }
+}
 }

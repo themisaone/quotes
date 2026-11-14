@@ -1,0 +1,19 @@
+/* ============================================================
+   Cascade layer order for Misa Notes (Step 3a).
+
+   Declared now so later steps can fill them without reshuffling files:
+     vendor      — Font Awesome / Quill (still loaded as unlayered <link>s
+                   after the app sheets, same as before Step 3a; moving them
+                   into this layer is Step 3b, together with !important cleanup)
+     base        — reserved (style.css)
+     components  — reserved (feature sheets)
+     modes       — reserved (style.tokens.css)
+     responsive  — reserved (mobile / small / medium)
+     app         — every local stylesheet today (single layer = no change to
+                   how our own rules beat each other)
+
+   Unlayered styles beat every layered rule. That keeps today's look for
+   the CDN sheets and for <vault>/theme/tokens.css (loaded last).
+   ============================================================ */
+
+@layer vendor, base, components, modes, responsive, app;
