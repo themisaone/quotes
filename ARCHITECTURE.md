@@ -345,7 +345,19 @@ public/style.medium.css       ← all (min-width: 768px) and (max-width: 1100px)
 /theme/tokens.css             ← personal token overrides from <vault>/theme/tokens.css (optional)
 ```
 
-Every local feature / responsive sheet wraps its rules in `@layer app { … }` (Step 3a). They share one layer so relative priority among our own rules is unchanged. Empty layer names (`vendor`, `base`, `components`, `modes`, `responsive`) are reserved for Step 3b (`!important` cleanup + moving the CDN sheets into `vendor`). Unlayered styles always beat layered ones — that is why Quill/FA and `theme/tokens.css` keep their old weight today.
+Local sheets wrap in real cascade layers (Step 3b):
+
+| Layer | Files |
+|---|---|
+| `vendor` | `public/vendor/quill.snow.css` |
+| `base` | `style.css` |
+| `components` | feature sheets (modal, cards, views, …) |
+| `modes` | `style.tokens.css` |
+| `responsive` | `style.mobile.css`, `style.small.css`, `style.medium.css` |
+
+Later layers beat earlier ones for normal declarations, so responsive overrides no longer need to out-`!important` every component rule. Component sheets dropped most `!important`s (kept only where Quill SVG colours / search-clear / results-count specificity still require them). Responsive sheets still use `!important` for *intra-file* duplicates (an earlier `--m-*` rule vs a later hardcoded twin). Font Awesome stays an unlayered CDN `<link>` (webfont URLs). `theme/tokens.css` stays unlayered last.
+
+`!important` reverses layer order — do not put competing `!important`s in `components` and `responsive` for the same property. Rebuild helper: `scripts/done-once/rebuild-3b-layers.js`.
 
 **Why this order matters.** CSS picks the *last* rule when specificity ties. The feature files load in the same order their rules originally appeared in the monolith, then the responsive overlays come last so they override base rules at their breakpoints. Load order among responsive files: `mobile` → `small` → `medium` (portrait tweaks sit between broad mobile and the medium-width band).
 
