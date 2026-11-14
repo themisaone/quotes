@@ -25,6 +25,7 @@ const LAYERS = {
   "style.settings.css": "components",
   "style.dialogs.css": "components",
   "style.views.css": "components",
+  "style.containers.css": "components",
   "style.mobile.css": "responsive",
   "style.small.css": "responsive",
   "style.medium.css": "responsive",

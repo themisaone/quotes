@@ -784,7 +784,10 @@
   margin-bottom: 0.3rem;
 }
 
-/* Side-by-side lanes: medium (768px+) and desktop */
+/* Side-by-side lanes: medium (768px+) and desktop.
+   Still viewport-based for now: desktop modals are often ~65vw (<1101px)
+   while still wanting the wide lane template; containerizing this lands in
+   a later pass once expanded/compact widths are tokenized. */
 @media (min-width: 768px) {
   /* Stretch every visible lane so borders share one full row height */
   #quoteModal .quote-modal-lane-properties,

@@ -130,12 +130,7 @@
     margin-bottom: var(--m-pad-xs);
   }
 
-  .quote-card.has-image .quote-image-thumb {
-    max-width: 160px;
-  }
-  .quote-card.has-image .quote-image-thumb img {
-    max-width: 160px;
-  }
+  /* Card thumb sizing moved to @container card in style.containers.css */
   .side-menu-title {
     font-size: var(--m-font-meny-top) !important;
     margin-bottom: var(--m-pad-xs) !important;

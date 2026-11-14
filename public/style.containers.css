@@ -1,0 +1,178 @@
+@layer components {
+/* ============================================================
+   Container queries (Step 3c).
+
+   Cards, the list pane and the modal adapt to their own width, not only
+   the viewport. Viewport files (mobile / small / medium) keep chrome that
+   truly depends on screen size (nav, full-bleed modal, options layout).
+
+   Named containers:
+     quotes  — .quotes-section (list grid / column count)
+     card    — .quote-card (image stack, thumb size, meta columns)
+     lp      — #lpWrapper (list+pane side-by-side vs stack)
+     pane    — .lp-pane (reserved for later editor-density rules)
+     modal   — #quoteModal .modal-content (reserved for later lane rules)
+   ============================================================ */
+
+/* ── Establish query containers ── */
+.quotes-section {
+  container-type: inline-size;
+  container-name: quotes;
+}
+
+.quote-card {
+  container-type: inline-size;
+  container-name: card;
+}
+
+#lpWrapper {
+  container-type: inline-size;
+  container-name: lp;
+}
+
+.lp-pane {
+  container-type: inline-size;
+  container-name: pane;
+}
+
+#quoteModal .modal-content {
+  container-type: inline-size;
+  container-name: modal;
+}
+
+/* ── Narrow quotes section: single column (was phone media) ── */
+@container quotes (max-width: 560px) {
+  .quotes-list {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .quotes-list.natural-sizing {
+    display: block;
+    column-count: 1;
+    column-gap: 0.5rem;
+  }
+}
+
+/* ── Mid-width card: smaller image thumb (was medium media) ── */
+@container card (max-width: 520px) {
+  .quote-card.has-image .quote-image-thumb {
+    max-width: 160px;
+  }
+
+  .quote-card.has-image .quote-image-thumb img {
+    max-width: 160px;
+  }
+}
+
+/* ── Narrow card: stack image + meta columns (typography stays in
+     mobile/medium viewport sheets so --m-* / phone sizes still apply) ── */
+@container card (max-width: 400px) {
+  .quote-card.has-image .quote-top-section {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .quote-card.has-image .quote-image-thumb {
+    width: 100%;
+    max-width: 300px;
+    margin: 0.5rem auto;
+  }
+
+  .quote-card.has-image .quote-image-thumb img {
+    max-width: 300px;
+  }
+
+  .quote-top-section.image-only-thumb .quote-image-thumb {
+    width: auto;
+    max-width: 240px;
+    margin: 0;
+  }
+
+  .quote-meta {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── List+pane: stack when the list-pane area is narrow (was max-width: 900px) ── */
+@container lp (max-width: 900px) {
+  .lp-layout {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .lp-list:not(.lp-list-calendar) {
+    max-height: 300px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+  }
+
+  .lp-list.lp-list-calendar {
+    max-height: none;
+  }
+
+  .lp-layout,
+  .lp-layout > .lp-list,
+  .lp-layout > .lp-pane {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .lp-layout:not(.lp-layout-calendar) .lp-pane {
+    height: auto;
+    max-height: none;
+    overflow-x: hidden;
+    overflow-y: visible;
+  }
+
+  .lp-layout:not(.lp-layout-calendar) .lp-pane-shell,
+  .lp-layout:not(.lp-layout-calendar) .lp-pane-editor-wrap,
+  .lp-layout:not(.lp-layout-calendar) #lpPaneQuill {
+    display: block;
+    flex: none;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    max-height: none;
+    min-height: 0;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow-x: hidden;
+    overflow-y: visible;
+  }
+
+  .lp-layout:not(.lp-layout-calendar) #lpPaneQuill .ql-toolbar.ql-snow,
+  .lp-layout:not(.lp-layout-calendar) #lpPaneQuill .ql-container.ql-snow,
+  .lp-layout:not(.lp-layout-calendar) #lpPaneQuill .ql-editor {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    max-height: none;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+
+  .lp-layout:not(.lp-layout-calendar) #lpPaneQuill .ql-toolbar.ql-snow {
+    display: flex;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+  }
+
+  .lp-layout:not(.lp-layout-calendar) #lpPaneQuill .ql-container.ql-snow,
+  .lp-layout:not(.lp-layout-calendar) #lpPaneQuill .ql-editor {
+    overflow-y: visible;
+  }
+
+  .lp-layout:not(.lp-layout-calendar) #lpPaneQuill .ql-editor {
+    min-height: 12rem;
+    overflow-wrap: anywhere;
+  }
+}
+
+}
+
+

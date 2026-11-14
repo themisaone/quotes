@@ -321,10 +321,10 @@ The `/api/quotes` listing endpoint, `/api/quotes/count`, and filtered bulk endpo
 
 ## CSS File Layout
 
-Styles are split across **17 files** so each one is small enough to read without burning huge tokens. They are loaded **in this exact order** by `index.html`; the order mirrors the original line order in the pre-split monolith so cascade behaviour is preserved. An 18th, optional stylesheet — the personal override file — loads last (see *Design Tokens* below).
+Styles are split across **18 files** so each one is small enough to read without burning huge tokens. They are loaded **in this exact order** by `index.html`; the order mirrors the original line order in the pre-split monolith so cascade behaviour is preserved. A 19th, optional stylesheet — the personal override file — loads last (see *Design Tokens* below).
 
 ```
-public/style.layers.css       ← @layer order only (vendor → base → components → modes → responsive → app)
+public/style.layers.css       ← @layer order only (vendor → base → components → modes → responsive)
 public/style.css              ← base — root vars, body, scrollbar, app-layout (~95 lines)
 public/style.tokens.css       ← design tokens: radius scale + card / pane / modal-lane values per display mode
 public/style.sidemenu.css     ← left-side menu (~310 lines)
@@ -338,10 +338,11 @@ public/style.entities.css     ← author/source/tag cards, rename modal, tag-ops
 public/style.settings.css     ← settings page, type management, translations, dedup panel (~540 lines)
 public/style.dialogs.css      ← merge modal + custom confirm dialog (~300 lines)
 public/style.views.css        ← gallery + list-pane + training calendar + encryption UI + banners (~710 lines)
-public/style.mobile.css       ← all max-width @media queries (mobile + 480 + 720 + 767 + 900 tablet)
+public/style.containers.css   ← container queries (cards / quotes section / list-pane); Step 3c
+public/style.mobile.css       ← all max-width @media queries (mobile + 480 + 720 + 767 + tablet chrome)
 public/style.small.css        ← portrait-phone refinements (max-width 767px + orientation: portrait); hand-maintained
 public/style.medium.css       ← all (min-width: 768px) and (max-width: 1100px) @media queries
-(Font Awesome + Quill CDN — still unlayered, after the app sheets)
+(Font Awesome CDN — unlayered; Quill is vendored in @layer vendor)
 /theme/tokens.css             ← personal token overrides from <vault>/theme/tokens.css (optional)
 ```
 
@@ -351,13 +352,15 @@ Local sheets wrap in real cascade layers (Step 3b):
 |---|---|
 | `vendor` | `public/vendor/quill.snow.css` |
 | `base` | `style.css` |
-| `components` | feature sheets (modal, cards, views, …) |
+| `components` | feature sheets (modal, cards, views, containers, …) |
 | `modes` | `style.tokens.css` |
 | `responsive` | `style.mobile.css`, `style.small.css`, `style.medium.css` |
 
 Later layers beat earlier ones for normal declarations, so responsive overrides no longer need to out-`!important` every component rule. Component sheets dropped most `!important`s (kept only where Quill SVG colours / search-clear / results-count specificity still require them). Responsive sheets still use `!important` for *intra-file* duplicates (an earlier `--m-*` rule vs a later hardcoded twin). Font Awesome stays an unlayered CDN `<link>` (webfont URLs). `theme/tokens.css` stays unlayered last.
 
 `!important` reverses layer order — do not put competing `!important`s in `components` and `responsive` for the same property. Rebuild helper: `scripts/done-once/rebuild-3b-layers.js`.
+
+**Container queries (Step 3c).** `style.containers.css` marks `.quotes-section` (`quotes`), `.quote-card` (`card`), `#lpWrapper` (`lp`), `.lp-pane` (`pane`), and `#quoteModal .modal-content` (`modal`) with `container-type: inline-size`. Layout that depends on the component’s own width lives there: single-column quotes when the section is narrow, image/meta stacking inside a narrow card, and list+pane stacking when `#lpWrapper` is ≤900px. Viewport sheets keep true screen chrome (nav, full-bleed modal, Options). Modal lane column templates stay on `@media` for now — desktop modals are often ~65vw (under 1101px) yet still want the wide lane grid.
 
 **Why this order matters.** CSS picks the *last* rule when specificity ties. The feature files load in the same order their rules originally appeared in the monolith, then the responsive overlays come last so they override base rules at their breakpoints. Load order among responsive files: `mobile` → `small` → `medium` (portrait tweaks sit between broad mobile and the medium-width band).
 

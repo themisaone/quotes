@@ -621,44 +621,28 @@
     padding: 0.2rem 0.35rem !important;
   }
   
-  /* Stack text above attachment only when a thumb exists; avoids extra gap rules on text-only cards. */
-  .quote-card.has-image .quote-top-section {
-    flex-direction: column !important;
-    gap: 0.5rem !important;
-  }
+  /* Image stack / thumb layout: @container card in style.containers.css */
 
-  .quote-image-thumb {
-    width: 100% !important;
-    max-width: 300px !important;
-    margin: 0.5rem auto !important;
-  }
-
-  /* Empty-text cards: keep thumbnail at natural size, not full mobile width */
-  .quote-top-section.image-only-thumb .quote-image-thumb {
-    width: auto !important;
-    max-width: 240px !important;
-    margin: 0 !important;
-  }
-  
   .quote-note-title {
     font-size: 0.8rem !important;
     text-align: right !important;
   }
-  
+
+  /* 1-col list also from @container quotes; keep !important here so phone
+     wins over JS --card-column-count if the section is somehow wider. */
   .quotes-list {
     grid-template-columns: 1fr !important;
     gap: 0.5rem !important;
   }
-  
-  /* Natural sizing still works on tablet */
+
   .quotes-list.natural-sizing {
     display: block !important;
     column-count: 1 !important;
     column-gap: 0.5rem !important;
   }
-  
+
   .quote-text {
-    font-size: 0.8rem !important;  /* Was 1rem, now 20% smaller */
+    font-size: 0.8rem !important;
     line-height: 1.5 !important;
     margin-bottom: 0.3rem !important;
   }
@@ -668,14 +652,14 @@
     line-height: 1.5 !important;
     padding: 10px 12px !important;
   }
-  
+
   .quote-meta {
-    font-size: 0.55rem !important;  /* Reduced even more */
+    font-size: 0.55rem !important;
     gap: 0.3rem !important;
-    grid-template-columns: 1fr !important;  /* Stack vertically on mobile */
+    grid-template-columns: 1fr !important;
     padding-top: 0.3rem !important;
   }
-  
+
   .meta-item {
     font-size: 0.55rem !important;
     display: block !important;
@@ -1639,83 +1623,6 @@
   }
 }
 
-/* Responsive: stack on narrow screens */
-@media (max-width: 900px) {
-  .lp-layout {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-  }
-  /* List mode: bounded scroll so the preview pane stays on-screen below */
-  .lp-list:not(.lp-list-calendar) {
-    max-height: 300px;
-    overflow-y: auto;
-    overflow-x: hidden;
-    min-height: 0;
-  }
-  /* Training calendar is taller than 300px — do not cap or it visually
-     overlaps the note pane stacked beneath this column */
-  .lp-list.lp-list-calendar {
-    max-height: none;
-  }
-
-  .lp-layout,
-  .lp-layout > .lp-list,
-  .lp-layout > .lp-pane {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    box-sizing: border-box !important;
-  }
-
-  .lp-layout:not(.lp-layout-calendar) .lp-pane {
-    height: auto !important;
-    max-height: none !important;
-    overflow-x: hidden !important;
-    overflow-y: visible !important;
-  }
-
-  .lp-layout:not(.lp-layout-calendar) .lp-pane-shell,
-  .lp-layout:not(.lp-layout-calendar) .lp-pane-editor-wrap,
-  .lp-layout:not(.lp-layout-calendar) #lpPaneQuill {
-    display: block;
-    flex: none !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    height: auto !important;
-    max-height: none !important;
-    min-height: 0 !important;
-    min-width: 0 !important;
-    box-sizing: border-box !important;
-    overflow-x: hidden !important;
-    overflow-y: visible !important;
-  }
-
-  .lp-layout:not(.lp-layout-calendar) #lpPaneQuill .ql-toolbar.ql-snow,
-  .lp-layout:not(.lp-layout-calendar) #lpPaneQuill .ql-container.ql-snow,
-  .lp-layout:not(.lp-layout-calendar) #lpPaneQuill .ql-editor {
-    width: 100% !important;
-    max-width: 100% !important;
-    height: auto !important;
-    max-height: none !important;
-    min-width: 0 !important;
-    box-sizing: border-box !important;
-    overflow-x: hidden !important;
-  }
-
-  .lp-layout:not(.lp-layout-calendar) #lpPaneQuill .ql-toolbar.ql-snow {
-    display: flex !important;
-    flex-wrap: nowrap !important;
-    white-space: nowrap !important;
-  }
-
-  .lp-layout:not(.lp-layout-calendar) #lpPaneQuill .ql-container.ql-snow,
-  .lp-layout:not(.lp-layout-calendar) #lpPaneQuill .ql-editor {
-    overflow-y: visible !important;
-  }
-
-  .lp-layout:not(.lp-layout-calendar) #lpPaneQuill .ql-editor {
-    min-height: 12rem !important;
-    overflow-wrap: anywhere !important;
-  }
+/* List+pane stack on narrow #lpWrapper: @container lp in style.containers.css */
 }
-}
+
