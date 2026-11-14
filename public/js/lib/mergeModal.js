@@ -11,7 +11,7 @@
 //
 // Usage:
 //   import { initMergeModal, openMergeModal, fetchNotesByIds }
-//     from './js/lib/mergeModal.js?v=20260502a';
+//     from './js/lib/mergeModal.js';
 //
 //   initMergeModal({
 //     escapeHtml,

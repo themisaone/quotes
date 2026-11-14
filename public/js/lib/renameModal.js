@@ -12,13 +12,13 @@
 // nodes) can be deleted.
 //
 // Usage:
-//   import { initRenameModal } from './js/lib/renameModal.js?v=20260502a';
+//   import { initRenameModal } from './js/lib/renameModal.js';
 //   initRenameModal({
 //     getApiUrl: () => API_URL,
 //     loadTags, loadAuthors, loadSources,
 //   });
 
-import { showNotification } from './notifications.js?v=20260502a';
+import { showNotification } from './notifications.js';
 
 let _deps = {
   getApiUrl: () => '/api',

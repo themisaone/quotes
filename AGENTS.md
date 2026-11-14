@@ -28,7 +28,7 @@ There is no separate frontend build step; static assets are served directly from
 
 Use 2-space indentation and match nearby JavaScript style. Backend files use CommonJS; frontend files in `public/js/lib/` use browser ES modules. Prefer `camelCase` for functions and variables, `UPPER_CASE` for mode constants, and descriptive file names.
 
-When editing frontend modules, preserve cache-busting import suffixes such as `?v=YYYYMMDDx`. Imports of the same module must use the same suffix string or browser module state can split.
+Frontend modules import each other by plain relative path with no `?v=` suffix. Cache busting is automatic: the server injects an import map (and stylesheet versions) into `index.html` from file modification times (`src/frontendAssets.js`). Do not add `?v=` to imports, and do not load modules with `<script type="module" src=...>`; both bypass the import map and can split module state.
 
 ## Testing Guidelines
 

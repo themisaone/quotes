@@ -2,8 +2,8 @@
  * paneEditor.js — inline Quill editor for list-pane right column.
  */
 
-import { normalizeTextColors } from './utils.js?v=20260703color1';
-import { createQuillEditor, ensureQuillPasteHandler, moveQuillToolbarToBottom } from './quoteEditor.js?v=20260922toolbar2';
+import { normalizeTextColors } from './utils.js';
+import { createQuillEditor, ensureQuillPasteHandler, moveQuillToolbarToBottom } from './quoteEditor.js';
 import { showUnsavedChangesConfirm } from './confirmDialog.js';
 
 let _apiUrl = '';

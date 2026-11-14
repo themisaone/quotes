@@ -4,12 +4,12 @@ import {
   updateUrlHash as updateUrlHashLib,
   updateActiveMenuState as updateActiveMenuStateLib,
   updatePageTitle as updatePageTitleLib
-} from './js/lib/viewManager.js?v=20260730statictotal1';
+} from './js/lib/viewManager.js';
 
 import {
   escapeHtml,
   getAttachmentIcon
-} from './js/lib/utils.js?v=20260703color1';
+} from './js/lib/utils.js';
 
 import {
   readAttachmentFile as readAttachmentFileLib,
@@ -20,7 +20,7 @@ import {
   displayAttachmentPreview as displayAttachmentPreviewLib,
   downscaleAndMoveToDb as downscaleAndMoveToDbLib,
   resizeImage as resizeImageLib
-} from './js/lib/attachments.js?v=20260720pastesource1';
+} from './js/lib/attachments.js';
 
 import {
   getNoteTypeConfig,
@@ -38,12 +38,12 @@ import {
 
 import {
   createQuoteCard as createQuoteCardLib
-} from './js/lib/cardRenderer.js?v=20260731listmetadata2';
+} from './js/lib/cardRenderer.js';
 
 import {
   setupAddModal,
   setupEditModal
-} from './js/lib/modalRenderer.js?v=20260704trainingdate1';
+} from './js/lib/modalRenderer.js';
 
 import {
   exportToPdf as exportToPdfLib,
@@ -55,7 +55,7 @@ import {
   rehomeAttachmentsRequest,
   vaultHealthCheckRequest,
   runtimeInfoRequest,
-} from './js/lib/dataManager.js?v=20260727fullbackup1';
+} from './js/lib/dataManager.js';
 
 import {
   loadSettings,
@@ -74,24 +74,24 @@ import {
   getNoteTypeDefaultDisplayMode,
   initializeSettings as initializeSettingsLib,
   refreshSettingsForOptionsPanel
-} from './js/lib/settingsManager.js?v=20261009displaymode1';
+} from './js/lib/settingsManager.js';
 
 import {
   loadServicesPanel,
   wireServicesRefresh
-} from './js/lib/servicesManager.js?v=20260613services5';
+} from './js/lib/servicesManager.js';
 
 import {
   openAuthorModal as openAuthorModalLib,
   setupAuthorModalHandlers
-} from './js/lib/authorModal.js?v=20260721entityimages1';
+} from './js/lib/authorModal.js';
 
 import {
   openSourceModal as openSourceModalLib,
   setupSourceModalHandlers
-} from './js/lib/sourceModal.js?v=20260721entityimages1';
+} from './js/lib/sourceModal.js';
 
-import { initDedupSuspectsPanel } from './js/lib/dedupSuspectsPanel.js?v=20260708noimagewide1';
+import { initDedupSuspectsPanel } from './js/lib/dedupSuspectsPanel.js';
 
 import {
   loadTags as loadTagsLib,
@@ -102,7 +102,7 @@ import {
   removeFromBrowseStack as removeFromBrowseStackLib,
   clearBrowseStack as clearBrowseStackLib,
   showNotesForStack as showNotesForStackLib
-} from './js/lib/tagsManager.js?v=20260317f';
+} from './js/lib/tagsManager.js';
 
 import {
   loadQuotes as loadQuotesLib,
@@ -112,7 +112,7 @@ import {
   setCurrentPage as setLibCurrentPage,
   setQuotesPerPage,
   getQuotesPerPage
-} from './js/lib/displayManager.js?v=20260731resultsummary5';
+} from './js/lib/displayManager.js';
 
 import {
   populateTypeFilterCheckboxes as populateTypeFilterCheckboxesLib,
@@ -122,7 +122,7 @@ import {
   clearFilters as clearFiltersLib,
   updateSourcesFilterVisibility as updateSourcesFilterVisibilityLib2,
   initializeFilterHandlers
-} from './js/lib/filterManager.js?v=20260730filtercompact1';
+} from './js/lib/filterManager.js';
 
 import {
   filterByAuthor as filterByAuthorLib,
@@ -130,12 +130,12 @@ import {
   initializeSearchHandlers,
   registerGlobalSearchFunctions,
   clearSearchFields
-} from './js/lib/searchManager.js?v=20260730fieldclear2';
+} from './js/lib/searchManager.js';
 
 import {
   initializeAutocomplete,
   setupAutocompleteInput
-} from './js/lib/autocompleteManager.js?v=20260512entityshow';
+} from './js/lib/autocompleteManager.js';
 
 import {
   FILTER_IDS,
@@ -150,7 +150,7 @@ import {
   initializeQuillEditor,
   handleFormSubmit as handleFormSubmitLib,
   deleteQuote as deleteQuoteLib
-} from './js/lib/quoteEditor.js?v=20260922toolbar2';
+} from './js/lib/quoteEditor.js';
 
 import {
   initializeBulkImport,
@@ -167,14 +167,14 @@ import {
   showVideoPlayer,
   showAudioPlayer,
   downloadAttachment
-} from './js/lib/attachmentViewer.js?v=20260318f';
+} from './js/lib/attachmentViewer.js';
 
 import {
   switchView as switchViewLib,
   setupMenuNavigation as setupMenuNavigationLib,
   handleHashChange,
   initializeHashChangeListener
-} from './js/lib/pageCoordinator.js?v=20260704sourcesdropdown1';
+} from './js/lib/pageCoordinator.js';
 import { showConfirm, showPdfExportConfirm } from './js/lib/confirmDialog.js';
 import { encryptFileBuffer, decryptFileBuffer } from './js/lib/cryptoUtils.js';
 import {
@@ -188,41 +188,41 @@ import {
   setTrainingSubMode,
   getListPanePageSize,
   restoreTrainingDateFiltersToBar
-} from './js/lib/listPaneView.js?v=20261009panesave1';
+} from './js/lib/listPaneView.js';
 import {
   configurePaneEditor,
   syncPaneTextToModalHidden,
   applyPaneSavedNote,
   getPaneEditorHtml,
   getPaneEditorNoteId,
-} from './js/lib/paneEditor.js?v=20261009panepaper1';
+} from './js/lib/paneEditor.js';
 import {
   configurePaneAttachments,
   renderPaneAttachments,
-} from './js/lib/paneAttachments.js?v=20260712paneactions2';
+} from './js/lib/paneAttachments.js';
 import {
   buildResultsViewOptions,
   getResultsViewScreen,
-} from './js/lib/viewSelector.js?v=20260731combinedview1';
+} from './js/lib/viewSelector.js';
 // They are kept as local functions due to tight coupling with app-specific state
 
 // ── Round-1 extracted modules (May 2026 split — see lib/README.md) ────────
-import { showNotification } from './js/lib/notifications.js?v=20260502a';
-import { initHtmlSourceViewer } from './js/lib/htmlSourceViewer.js?v=20260502a';
+import { showNotification } from './js/lib/notifications.js';
+import { initHtmlSourceViewer } from './js/lib/htmlSourceViewer.js';
 import {
   initMergeModal,
   openMergeModal,
   fetchNotesByIds
-} from './js/lib/mergeModal.js?v=20260502a';
-import { initEncryptedAttachments } from './js/lib/encryptedAttachments.js?v=20260502a';
-import { initRenameModal } from './js/lib/renameModal.js?v=20260502a';
+} from './js/lib/mergeModal.js';
+import { initEncryptedAttachments } from './js/lib/encryptedAttachments.js';
+import { initRenameModal } from './js/lib/renameModal.js';
 import {
   initEntityListPage,
   loadAuthors,
   loadSources,
   displayAuthors,
   displaySources
-} from './js/lib/entityListPage.js?v=20260721entityimages1';
+} from './js/lib/entityListPage.js';
 
 // ============= CONSTANTS =============
 // Same origin as the page (correct when port is omitted, e.g. http://localhost or reverse proxy)

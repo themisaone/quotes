@@ -3,7 +3,7 @@
  * quote cards side-by-side (same HTML as the main list).
  */
 
-import { escapeHtml } from './utils.js?v=20260703color1';
+import { escapeHtml } from './utils.js';
 
 /**
  * @param {Object} opts

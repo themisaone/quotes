@@ -11,8 +11,8 @@
  * - entityModal.js for modal management
  */
 
-import { createEntityModalManager } from './entityModal.js?v=20260721entityimages1';
-import { displayImage } from './attachments.js?v=20260720pastesource1';
+import { createEntityModalManager } from './entityModal.js';
+import { displayImage } from './attachments.js';
 import { getElementByIdSafe, BUTTON_IDS } from '../constants.js';
 import { API_URL } from './api.js';
 

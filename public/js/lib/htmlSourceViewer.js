@@ -8,7 +8,7 @@
 // inline `onclick="toggleHtmlSource()" / onclick="applyHtmlSource()"`.
 //
 // Usage:
-//   import { initHtmlSourceViewer } from './js/lib/htmlSourceViewer.js?v=20260502a';
+//   import { initHtmlSourceViewer } from './js/lib/htmlSourceViewer.js';
 //   initHtmlSourceViewer({ getQuillEditor: () => quillEditor });
 //
 // The `getQuillEditor` callback is read every time the user toggles the

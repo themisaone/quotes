@@ -1,8 +1,8 @@
 # Frontend JS Modules
 
-All files in this folder are ES modules, imported with a `?v=YYYYMMDD[x]` cache-busting suffix.
+All files in this folder are ES modules, imported by plain relative path (`./utils.js`) with **no `?v=` suffix**.
 
-**CRITICAL:** Every file that imports the same module must use **the exact same suffix string** or it gets a separate module instance with separate state. Check `app.js` for the canonical suffix for each module.
+Cache busting is automatic: the server injects an import map into `index.html` that gives every module one versioned URL based on its modification time (`src/frontendAssets.js`, see `ARCHITECTURE.md`). Adding `?v=` to an import would bypass the map and load a second module instance with separate state.
 
 ---
 
@@ -40,7 +40,7 @@ Note type configuration and field visibility logic.
 - `updateModalLabels(type)` — relabel fields
 - `prepareSubmissionData(type, data)` — clean up form data before POST/PUT
 
-**Note:** `_noteTypeList` is populated lazily from settings. All imports of this module must use the same `?v=` suffix or the list will be empty in some modules.
+**Note:** `_noteTypeList` is populated lazily from settings and is shared module state (one instance via the import map).
 
 ---
 
@@ -186,7 +186,7 @@ Two-column **list + pane** layout (alternative to the card grid). Left: compact 
 Monthly calendar for training notes in list-pane left column. Days with trainings show **icons** per distinct sub-type (from settings). Legend lists sub-types by icon + label. Fetches month data via API; `onSelectNote` opens the matching row in the pane.
 - `renderTrainingCalendar(container, opts)` — `getTrainingTypes`, `onSelectNote`, optional `initialYear` / `initialMonth` / `initialNoteId`
 
-**Import notes:** `app.js` imports `listPaneView.js` with a `?v=` suffix (cache bust). **`paneEditor.js` and `paneAttachments.js` must use the identical `?v=` in `app.js` and `listPaneView.js`** — mismatched suffixes load two module instances. `trainingCalendar.js` imports `api.js` without `?v=`; that can diverge from `api.js?v=…` used elsewhere — avoid adding a second import path for `api.js` from this chain.
+**Import notes:** `app.js` and `listPaneView.js` both import `paneEditor.js` and `paneAttachments.js`; the import map guarantees they share one instance.
 
 ### `paneAttachments.js`
 List-pane attachment gallery above the inline Quill editor — all files in one horizontal row (images max 512px each; primary ★ with ✕ like extras). Add / encrypt controls; wired from `app.js` via `configurePaneAttachments()`.

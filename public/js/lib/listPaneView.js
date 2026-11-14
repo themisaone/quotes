@@ -17,25 +17,25 @@
  *   Call after saving a note to refresh the pane content in-place.
  */
 
-import { escapeHtml, resolveAttachmentUrl } from './utils.js?v=20260703color1';
-import { renderTrainingCalendar } from './trainingCalendar.js?v=20260708calendarselect1';
+import { escapeHtml, resolveAttachmentUrl } from './utils.js';
+import { renderTrainingCalendar } from './trainingCalendar.js';
 import {
   buildPaneMetaSections,
   buildPaneScoreHtml,
   buildListPaneRowMetaHtml,
-} from './cardRenderer.js?v=20260731listmetadata2';
+} from './cardRenderer.js';
 import {
   ensurePaneEditorShell,
   loadPaneNote,
   confirmLeavePaneEditor,
   flushPendingPaneNoteSaved,
   resetPaneEditor,
-} from './paneEditor.js?v=20261009panepaper1';
+} from './paneEditor.js';
 import {
   renderPaneAttachments,
   resetPaneAttachments,
-} from './paneAttachments.js?v=20260712paneactions2';
-import { getNoteTypeDefaultDisplayMode } from './settingsManager.js?v=20260713bulkaddbutton1';
+} from './paneAttachments.js';
+import { getNoteTypeDefaultDisplayMode } from './settingsManager.js';
 
 // ─────────────────────────────────────────────────────────────
 // Internal state (reset on every renderListPaneView call)

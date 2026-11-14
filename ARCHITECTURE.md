@@ -153,28 +153,21 @@ Six tables:
 
 ---
 
-## Frontend Module System — CRITICAL GOTCHA
+## Frontend Module System — Import Map Cache Busting
 
-The frontend uses native ES modules with a **`?v=` version suffix** on imports for cache busting.
-
-**Rule: every file that imports a shared module must use the SAME version string.**
+The frontend uses native ES modules. **Source files import each other by plain relative path, with no `?v=` suffix:**
 
 ```js
-// ✅ Correct — all files use the same suffix → single module instance
-import { getGlobalSettings } from './settingsManager.js?v=20260318j';
-
-// ❌ Wrong — different suffix or no suffix → separate module instance
-import { getGlobalSettings } from './settingsManager.js';   // different instance!
-import { getGlobalSettings } from './settingsManager.js?v=123'; // different instance!
+import { getGlobalSettings } from './settingsManager.js';
 ```
 
-**Why this matters:** ES modules are singletons — but only per URL. Two different URL strings = two separate instances = separate state. `globalSettings` in one instance is `null` even after it was loaded in another.
+Cache busting is done by the server (`src/frontendAssets.js`). When it serves `index.html` (`Cache-Control: no-cache`), it replaces the `<!-- importmap -->` placeholder with an import map that maps every module URL (`/app.js`, `/js/**/*.js`) to one versioned URL, `?v=<file mtime>`. It also stamps `?v=<mtime>` on the local stylesheet links. Editing a file changes its version automatically; there is nothing to bump by hand.
 
-**This has caused bugs before:**
-- `noteTypes.js` was imported with and without `?v=` → `_noteTypeList` was empty in some modules → all cards fell back to `generic` layout
-- `displayManager.js` importing `settingsManager.js` without the suffix → `getGlobalSettings()` always returned null → `hideEncryptedNotes` and `hideNotesWithTag` filters never fired
+**Why an import map:** ES modules are singletons, but only per URL. The old scheme put hand-edited `?v=` suffixes on each import; whenever two files used different suffixes for the same module, the browser loaded two instances with separate state (empty `_noteTypeList`, `getGlobalSettings()` returning null, List-mode Save talking to an unconfigured `paneEditor.js`). With the import map every module has exactly one URL.
 
-**Current convention:** Check existing imports in `app.js` to find the canonical suffix for each module, then use exactly that string everywhere.
+**Rules:**
+- Never add `?v=` to an import (`tests/frontendAssets.test.js` fails if one appears).
+- Load module entry points with an inline `<script type="module">import "./x.js";</script>`, not `<script type="module" src=...>`: import maps apply to `import` specifiers only, so a `src=` URL would bypass the map and create a second instance.
 
 ---
 
@@ -352,7 +345,7 @@ public/style.medium.css       ← all (min-width: 768px) and (max-width: 1100px)
 
 A few features had non-contiguous content in the original (e.g. `.search-section` rules appeared at lines 405-899 *and* 1709-1810). Both fragments now live in the **same** feature file, in their original relative order — verified that no selector in the gap (buttons, modal, selection) overlaps the fragments, so the cascade outcome is unchanged.
 
-**Cache-busting.** All `<link>` tags use the same `?v=` query string. Bump the version on every link together when shipping CSS changes.
+**Cache-busting.** The `<link>` tags in `index.html` carry no `?v=`; the server adds `?v=<file mtime>` to each local stylesheet when serving the page (`src/frontendAssets.js`), so CSS changes are picked up on reload without bumping anything.
 
 **Adding new rules:**
 - Pick the file whose theme matches (e.g. button styles → `style.buttons.css`, anything inside the note modal → `style.modal.css`).

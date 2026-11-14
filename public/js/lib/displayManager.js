@@ -14,9 +14,9 @@
  * - cardRenderer.js for createQuoteCard
  */
 
-import { API_URL, fetchWithRetry } from './api.js?v=20260510apiorigin';
-import { createQuoteCard } from './cardRenderer.js?v=20260731listmetadata2';
-import { getSearchValues, getTrainingFilters } from './searchManager.js?v=20260614searchany1';
+import { API_URL, fetchWithRetry } from './api.js';
+import { createQuoteCard } from './cardRenderer.js';
+import { getSearchValues, getTrainingFilters } from './searchManager.js';
 import { 
   FILTER_IDS,
   CONTAINER_IDS,
@@ -27,7 +27,7 @@ import {
   getCheckedValues
 } from '../constants.js';
 import { getNoteTypeConfig, hasDateField, hasGenericSubTypeField } from './noteTypes.js';
-import { updateResultsSummary } from './resultSummary.js?v=20260731resultsummary5';
+import { updateResultsSummary } from './resultSummary.js';
 
 // ============= MODULE STATE =============
 

@@ -17,10 +17,10 @@
  */
 
 import { MODAL_IDS, getElementByIdSafe, getElementValue } from '../constants.js';
-import { downscaleImage } from './attachments.js?v=20260720pastesource1';
+import { downscaleImage } from './attachments.js';
 import { getNoteTypeConfig, hasDateField, hasGenericSubTypeField } from './noteTypes.js';
 import { showConfirm } from './confirmDialog.js';
-import { escapeHtml } from './utils.js?v=20260703color1';
+import { escapeHtml } from './utils.js';
 
 // ============= CONSTANTS =============
 

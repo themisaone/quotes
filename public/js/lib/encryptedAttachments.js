@@ -15,7 +15,7 @@
 // handlers rendered by cardRenderer.js (the 🔒 lock badge on cards).
 //
 // Usage:
-//   import { initEncryptedAttachments } from './js/lib/encryptedAttachments.js?v=20260502a';
+//   import { initEncryptedAttachments } from './js/lib/encryptedAttachments.js';
 //   initEncryptedAttachments({
 //     encryptFileBuffer, decryptFileBuffer,                 // from cryptoUtils.js
 //     showFullImage, showPDFViewer, showVideoPlayer,

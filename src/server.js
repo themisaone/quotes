@@ -10,6 +10,7 @@ const {
 const { registerAttachmentMigrationRoutes } = require("./routes/attachmentMigration");
 const { registerAuthorRoutes } = require("./routes/authors");
 const fileStorage = require("./fileStorage");
+const { registerIndexRoute } = require("./frontendAssets");
 const instanceManager = require("./instanceManager");
 const { registerDbAttachmentExportRoutes } = require("./routes/dbAttachmentExport");
 const { registerDedupRoutes } = require("./routes/dedup");
@@ -144,6 +145,7 @@ registerMaintenanceRoutes(app, {
   getAllowedTypes: () => _allowedTypes,
 });
 
+registerIndexRoute(app, { publicDir: path.join(__dirname, "../public") });
 app.use(express.static(path.join(__dirname, "../public")));
 // Serve attachment files from the configured vault (dynamic — honours vaultPath setting)
 app.get('/attachments/*', (req, res) => {

@@ -6,7 +6,7 @@
 // (which keeps a private fallback for now; see lib/README.md).
 //
 // Usage:
-//   import { showNotification } from './js/lib/notifications.js?v=20260502a';
+//   import { showNotification } from './js/lib/notifications.js';
 //   showNotification('✅ Saved', 'success');
 //   showNotification('❌ Could not load', 'error');
 //   showNotification('Heads up', 'info');   // default

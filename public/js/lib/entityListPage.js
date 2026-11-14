@@ -9,7 +9,7 @@
 //
 // Usage:
 //   import { initEntityListPage, loadAuthors, loadSources, displayAuthors, displaySources }
-//     from './js/lib/entityListPage.js?v=20260614sourceclick';
+//     from './js/lib/entityListPage.js';
 //
 //   initEntityListPage({
 //     escapeHtml,
@@ -18,7 +18,7 @@
 //     showFetchError: window.showFetchError,
 //   });
 
-import { resolveAttachmentUrl } from './utils.js?v=20260703color1';
+import { resolveAttachmentUrl } from './utils.js';
 
 let _deps = {
   escapeHtml: (s) => String(s),

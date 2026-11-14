@@ -28,7 +28,7 @@
  * - No hardcoded values - everything configurable!
  */
 
-import { escapeHtml, resolveAttachmentUrl, normalizeTextColors } from './utils.js?v=20260703color1';
+import { escapeHtml, resolveAttachmentUrl, normalizeTextColors } from './utils.js';
 import { getNoteTypeBadgeHtml, getNoteTypeConfig, getGenericSubTypes } from './noteTypes.js';
 
 /**
