@@ -499,18 +499,23 @@ function registerQuoteRoutes(app, {
         existingNoteType: existingRow.rows[0]?.note_type,
       });
       const keepAuthorSource = noteTypeHasAuthorSource(effectiveNoteType);
-      const authorProvided = keepAuthorSource ? author !== undefined : true;
-      const sourceProvided = keepAuthorSource ? source !== undefined : true;
-      const authorId = keepAuthorSource && author !== undefined
-        ? await getOrCreateQuoteAuthorId(author, client)
+      // Only touch author/source when the client sent those fields. Pane text-only
+      // saves send { note_text } alone — must not null out author_id/source_id
+      // (old logic forced authorProvided=true for non-quote types).
+      const authorProvided = author !== undefined;
+      const sourceProvided = source !== undefined;
+      const authorId = authorProvided
+        ? (keepAuthorSource ? await getOrCreateQuoteAuthorId(author, client) : null)
         : null;
-      const newSourceId = keepAuthorSource && source !== undefined
-        ? await getOrCreateQuoteSourceId({
-          source,
-          sourceType: sourceType || "BOOK",
-          client,
-          updateTypeOnConflict: false,
-        })
+      const newSourceId = sourceProvided
+        ? (keepAuthorSource
+          ? await getOrCreateQuoteSourceId({
+            source,
+            sourceType: sourceType || "BOOK",
+            client,
+            updateTypeOnConflict: false,
+          })
+          : null)
         : null;
 
       const updateFields = [];

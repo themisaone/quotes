@@ -1234,120 +1234,120 @@
                 <input type="file" id="paletteFileInput" accept=".json" style="display: none;" />
                 <span id="paletteSaveStatus" style="color: var(--text-secondary); font-size: 0.82rem; margin-left: auto;"></span>
               </div>
-              <div style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin: 0.25rem 0 0.5rem; padding-bottom: 0.25rem; border-bottom: 1px solid var(--border);">Background &amp; Surface</div>
-              <div style="display: grid; grid-template-columns: 140px 50px 90px 70px 1fr; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem;">
-                <span style="font-weight: 600;">App Background</span>
-                <input type="color" id="appBgColor" value="#f8fafc" style="width: 50px; height: 32px; cursor: pointer; border: 2px solid var(--border); border-radius: 6px;" />
-                <input type="text" id="appBgColorText" value="#f8fafc" readonly style="width: 90px; font-family: monospace; font-size: 0.85rem; background: var(--bg-secondary); padding: 0.35rem; border: 1px solid var(--border); border-radius: 4px; text-align: center;" />
-                <button type="button" id="resetAppBgColor" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;">Reset</button>
-                <span style="color: var(--text-secondary); font-size: 0.85rem;">Main application background color</span>
+              <div class="palette-color-section">Background &amp; Surface</div>
+              <div class="palette-color-row">
+                <span class="palette-color-label">App Background</span>
+                <input type="color" id="appBgColor" value="#f8fafc" class="palette-color-swatch" />
+                <input type="text" id="appBgColorText" value="#f8fafc" readonly class="palette-color-hex" />
+                <button type="button" id="resetAppBgColor" class="btn btn-secondary palette-color-reset">Reset</button>
+                <span class="palette-color-help">Main application background color</span>
               </div>
-              <div style="display: grid; grid-template-columns: 140px 50px 90px 70px 1fr; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem;">
-                <span style="font-weight: 600;">Card Background</span>
-                <input type="color" id="cardColor" value="#ffffff" style="width: 50px; height: 32px; cursor: pointer; border: 2px solid var(--border); border-radius: 6px;" />
-                <input type="text" id="cardColorText" value="#ffffff" readonly style="width: 90px; font-family: monospace; font-size: 0.85rem; background: var(--bg-secondary); padding: 0.35rem; border: 1px solid var(--border); border-radius: 4px; text-align: center;" />
-                <button type="button" id="resetCardColor" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;">Reset</button>
-                <span style="color: var(--text-secondary); font-size: 0.85rem;">Note card &amp; modal body background</span>
+              <div class="palette-color-row">
+                <span class="palette-color-label">Card Background</span>
+                <input type="color" id="cardColor" value="#ffffff" class="palette-color-swatch" />
+                <input type="text" id="cardColorText" value="#ffffff" readonly class="palette-color-hex" />
+                <button type="button" id="resetCardColor" class="btn btn-secondary palette-color-reset">Reset</button>
+                <span class="palette-color-help">Note card &amp; modal body background</span>
               </div>
-              <div style="display: grid; grid-template-columns: 140px 50px 90px 70px 1fr; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem;">
-                <span style="font-weight: 600;">Card Hover</span>
-                <input type="color" id="cardHoverColor" value="#f0fff4" style="width: 50px; height: 32px; cursor: pointer; border: 2px solid var(--border); border-radius: 6px;" />
-                <input type="text" id="cardHoverColorText" value="#f0fff4" readonly style="width: 90px; font-family: monospace; font-size: 0.85rem; background: var(--bg-secondary); padding: 0.35rem; border: 1px solid var(--border); border-radius: 4px; text-align: center;" />
-                <button type="button" id="resetCardHoverColor" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;">Reset</button>
-                <span style="color: var(--text-secondary); font-size: 0.85rem;">Note card background when hovering</span>
+              <div class="palette-color-row">
+                <span class="palette-color-label">Card Hover</span>
+                <input type="color" id="cardHoverColor" value="#f0fff4" class="palette-color-swatch" />
+                <input type="text" id="cardHoverColorText" value="#f0fff4" readonly class="palette-color-hex" />
+                <button type="button" id="resetCardHoverColor" class="btn btn-secondary palette-color-reset">Reset</button>
+                <span class="palette-color-help">Note card background when hovering</span>
               </div>
-              <div style="display: grid; grid-template-columns: 140px 50px 90px 70px 1fr; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem;">
-                <span style="font-weight: 600;">Input Background</span>
-                <input type="color" id="inputBgColor" value="#ffffff" style="width: 50px; height: 32px; cursor: pointer; border: 2px solid var(--border); border-radius: 6px;" />
-                <input type="text" id="inputBgColorText" value="#ffffff" readonly style="width: 90px; font-family: monospace; font-size: 0.85rem; background: var(--bg-secondary); padding: 0.35rem; border: 1px solid var(--border); border-radius: 4px; text-align: center;" />
-                <button type="button" id="resetInputBgColor" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;">Reset</button>
-                <span style="color: var(--text-secondary); font-size: 0.85rem;">Text fields, dropdowns &amp; search boxes</span>
+              <div class="palette-color-row">
+                <span class="palette-color-label">Input Background</span>
+                <input type="color" id="inputBgColor" value="#ffffff" class="palette-color-swatch" />
+                <input type="text" id="inputBgColorText" value="#ffffff" readonly class="palette-color-hex" />
+                <button type="button" id="resetInputBgColor" class="btn btn-secondary palette-color-reset">Reset</button>
+                <span class="palette-color-help">Text fields, dropdowns &amp; search boxes</span>
               </div>
-              <div style="display: grid; grid-template-columns: 140px 50px 90px 70px 1fr; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem;">
-                <span style="font-weight: 600;">Input Border</span>
-                <input type="color" id="inputBorderColor" value="#e2e8f0" style="width: 50px; height: 32px; cursor: pointer; border: 2px solid var(--border); border-radius: 6px;" />
-                <input type="text" id="inputBorderColorText" value="#e2e8f0" readonly style="width: 90px; font-family: monospace; font-size: 0.85rem; background: var(--bg-secondary); padding: 0.35rem; border: 1px solid var(--border); border-radius: 4px; text-align: center;" />
-                <button type="button" id="resetInputBorderColor" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;">Reset</button>
-                <span style="color: var(--text-secondary); font-size: 0.85rem;">Border around inputs, cards &amp; dividers</span>
+              <div class="palette-color-row">
+                <span class="palette-color-label">Input Border</span>
+                <input type="color" id="inputBorderColor" value="#e2e8f0" class="palette-color-swatch" />
+                <input type="text" id="inputBorderColorText" value="#e2e8f0" readonly class="palette-color-hex" />
+                <button type="button" id="resetInputBorderColor" class="btn btn-secondary palette-color-reset">Reset</button>
+                <span class="palette-color-help">Border around inputs, cards &amp; dividers</span>
               </div>
-              <div style="display: grid; grid-template-columns: 140px 50px 90px 70px 1fr; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem;">
-                <span style="font-weight: 600;">Text Color</span>
-                <input type="color" id="textColorColor" value="#1e293b" style="width: 50px; height: 32px; cursor: pointer; border: 2px solid var(--border); border-radius: 6px;" />
-                <input type="text" id="textColorColorText" value="#1e293b" readonly style="width: 90px; font-family: monospace; font-size: 0.85rem; background: var(--bg-secondary); padding: 0.35rem; border: 1px solid var(--border); border-radius: 4px; text-align: center;" />
-                <button type="button" id="resetTextColorColor" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;">Reset</button>
-                <span style="color: var(--text-secondary); font-size: 0.85rem;">Main body text color</span>
+              <div class="palette-color-row">
+                <span class="palette-color-label">Text Color</span>
+                <input type="color" id="textColorColor" value="#1e293b" class="palette-color-swatch" />
+                <input type="text" id="textColorColorText" value="#1e293b" readonly class="palette-color-hex" />
+                <button type="button" id="resetTextColorColor" class="btn btn-secondary palette-color-reset">Reset</button>
+                <span class="palette-color-help">Main body text color</span>
               </div>
-              <div style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin: 0.5rem 0; padding-bottom: 0.25rem; border-bottom: 1px solid var(--border);">Navigation &amp; Modals</div>
-              <div style="display: grid; grid-template-columns: 140px 50px 90px 70px 1fr; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem;">
-                <span style="font-weight: 600;">Side Menu</span>
-                <input type="color" id="menuColor" value="#2c3e50" style="width: 50px; height: 32px; cursor: pointer; border: 2px solid var(--border); border-radius: 6px;" />
-                <input type="text" id="menuColorText" value="#2c3e50" readonly style="width: 90px; font-family: monospace; font-size: 0.85rem; background: var(--bg-secondary); padding: 0.35rem; border: 1px solid var(--border); border-radius: 4px; text-align: center;" />
-                <button type="button" id="resetMenuColor" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;">Reset</button>
-                <span style="color: var(--text-secondary); font-size: 0.85rem;">Side/navigation menu background</span>
+              <div class="palette-color-section">Navigation &amp; Modals</div>
+              <div class="palette-color-row">
+                <span class="palette-color-label">Side Menu</span>
+                <input type="color" id="menuColor" value="#2c3e50" class="palette-color-swatch" />
+                <input type="text" id="menuColorText" value="#2c3e50" readonly class="palette-color-hex" />
+                <button type="button" id="resetMenuColor" class="btn btn-secondary palette-color-reset">Reset</button>
+                <span class="palette-color-help">Side/navigation menu background</span>
               </div>
-              <div style="display: grid; grid-template-columns: 140px 50px 90px 70px 1fr; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem;">
-                <span style="font-weight: 600;">Modal Header</span>
-                <input type="color" id="headerColor" value="#166534" style="width: 50px; height: 32px; cursor: pointer; border: 2px solid var(--border); border-radius: 6px;" />
-                <input type="text" id="headerColorText" value="#166534" readonly style="width: 90px; font-family: monospace; font-size: 0.85rem; background: var(--bg-secondary); padding: 0.35rem; border: 1px solid var(--border); border-radius: 4px; text-align: center;" />
-                <button type="button" id="resetHeaderColor" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;">Reset</button>
-                <span style="color: var(--text-secondary); font-size: 0.85rem;">Background color for modal dialog headers</span>
+              <div class="palette-color-row">
+                <span class="palette-color-label">Modal Header</span>
+                <input type="color" id="headerColor" value="#166534" class="palette-color-swatch" />
+                <input type="text" id="headerColorText" value="#166534" readonly class="palette-color-hex" />
+                <button type="button" id="resetHeaderColor" class="btn btn-secondary palette-color-reset">Reset</button>
+                <span class="palette-color-help">Background color for modal dialog headers</span>
               </div>
-              <div style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin: 0.5rem 0; padding-bottom: 0.25rem; border-bottom: 1px solid var(--border);">Buttons &amp; Badges</div>
-              <div style="display: grid; grid-template-columns: 140px 50px 90px 70px 1fr; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem;">
-                <span style="font-weight: 600;">Default Button</span>
-                <input type="color" id="buttonColor" value="#1e40af" style="width: 50px; height: 32px; cursor: pointer; border: 2px solid var(--border); border-radius: 6px;" />
-                <input type="text" id="buttonColorText" value="#1e40af" readonly style="width: 90px; font-family: monospace; font-size: 0.85rem; background: var(--bg-secondary); padding: 0.35rem; border: 1px solid var(--border); border-radius: 4px; text-align: center;" />
-                <button type="button" id="resetButtonColor" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;">Reset</button>
-                <span style="color: var(--text-secondary); font-size: 0.85rem;">All action buttons (Refresh, Add, Save, etc.)</span>
+              <div class="palette-color-section">Buttons &amp; Badges</div>
+              <div class="palette-color-row">
+                <span class="palette-color-label">Default Button</span>
+                <input type="color" id="buttonColor" value="#1e40af" class="palette-color-swatch" />
+                <input type="text" id="buttonColorText" value="#1e40af" readonly class="palette-color-hex" />
+                <button type="button" id="resetButtonColor" class="btn btn-secondary palette-color-reset">Reset</button>
+                <span class="palette-color-help">All action buttons (Refresh, Add, Save, etc.)</span>
               </div>
-              <div style="display: grid; grid-template-columns: 140px 50px 90px 70px 1fr; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem;">
-                <span style="font-weight: 600;">Links &amp; Headings</span>
-                <input type="color" id="linkColorColor" value="#1e40af" style="width: 50px; height: 32px; cursor: pointer; border: 2px solid var(--border); border-radius: 6px;" />
-                <input type="text" id="linkColorColorText" value="#1e40af" readonly style="width: 90px; font-family: monospace; font-size: 0.85rem; background: var(--bg-secondary); padding: 0.35rem; border: 1px solid var(--border); border-radius: 4px; text-align: center;" />
-                <button type="button" id="resetLinkColorColor" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;">Reset</button>
-                <span style="color: var(--text-secondary); font-size: 0.85rem;">Author/Source links, h2 headings, training strip, expand buttons</span>
+              <div class="palette-color-row">
+                <span class="palette-color-label">Links &amp; Headings</span>
+                <input type="color" id="linkColorColor" value="#1e40af" class="palette-color-swatch" />
+                <input type="text" id="linkColorColorText" value="#1e40af" readonly class="palette-color-hex" />
+                <button type="button" id="resetLinkColorColor" class="btn btn-secondary palette-color-reset">Reset</button>
+                <span class="palette-color-help">Author/Source links, h2 headings, training strip, expand buttons</span>
               </div>
-              <div style="display: grid; grid-template-columns: 140px 50px 90px 70px 1fr; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem;">
-                <span style="font-weight: 600;">Delete Button</span>
-                <input type="color" id="deleteColor" value="#ef4444" style="width: 50px; height: 32px; cursor: pointer; border: 2px solid var(--border); border-radius: 6px;" />
-                <input type="text" id="deleteColorText" value="#ef4444" readonly style="width: 90px; font-family: monospace; font-size: 0.85rem; background: var(--bg-secondary); padding: 0.35rem; border: 1px solid var(--border); border-radius: 4px; text-align: center;" />
-                <button type="button" id="resetDeleteColor" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;">Reset</button>
-                <span style="color: var(--text-secondary); font-size: 0.85rem;">Delete button (modal)</span>
+              <div class="palette-color-row">
+                <span class="palette-color-label">Delete Button</span>
+                <input type="color" id="deleteColor" value="#ef4444" class="palette-color-swatch" />
+                <input type="text" id="deleteColorText" value="#ef4444" readonly class="palette-color-hex" />
+                <button type="button" id="resetDeleteColor" class="btn btn-secondary palette-color-reset">Reset</button>
+                <span class="palette-color-help">Delete button (modal)</span>
               </div>
-              <div style="display: grid; grid-template-columns: 140px 50px 90px 70px 1fr; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem;">
-                <span style="font-weight: 600;">Cancel Button</span>
-                <input type="color" id="cancelColor" value="#6b7280" style="width: 50px; height: 32px; cursor: pointer; border: 2px solid var(--border); border-radius: 6px;" />
-                <input type="text" id="cancelColorText" value="#6b7280" readonly style="width: 90px; font-family: monospace; font-size: 0.85rem; background: var(--bg-secondary); padding: 0.35rem; border: 1px solid var(--border); border-radius: 4px; text-align: center;" />
-                <button type="button" id="resetCancelColor" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;">Reset</button>
-                <span style="color: var(--text-secondary); font-size: 0.85rem;">Cancel button (modal)</span>
+              <div class="palette-color-row">
+                <span class="palette-color-label">Cancel Button</span>
+                <input type="color" id="cancelColor" value="#6b7280" class="palette-color-swatch" />
+                <input type="text" id="cancelColorText" value="#6b7280" readonly class="palette-color-hex" />
+                <button type="button" id="resetCancelColor" class="btn btn-secondary palette-color-reset">Reset</button>
+                <span class="palette-color-help">Cancel button (modal)</span>
               </div>
-              <div style="display: grid; grid-template-columns: 140px 50px 90px 70px 1fr; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem;">
-                <span style="font-weight: 600;">Tags</span>
-                <input type="color" id="tagColor" value="#2d6a4f" style="width: 50px; height: 32px; cursor: pointer; border: 2px solid var(--border); border-radius: 6px;" />
-                <input type="text" id="tagColorText" value="#2d6a4f" readonly style="width: 90px; font-family: monospace; font-size: 0.85rem; background: var(--bg-secondary); padding: 0.35rem; border: 1px solid var(--border); border-radius: 4px; text-align: center;" />
-                <button type="button" id="resetTagColor" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;">Reset</button>
-                <span style="color: var(--text-secondary); font-size: 0.85rem;">Tag badges in quote cards</span>
+              <div class="palette-color-row">
+                <span class="palette-color-label">Tags</span>
+                <input type="color" id="tagColor" value="#2d6a4f" class="palette-color-swatch" />
+                <input type="text" id="tagColorText" value="#2d6a4f" readonly class="palette-color-hex" />
+                <button type="button" id="resetTagColor" class="btn btn-secondary palette-color-reset">Reset</button>
+                <span class="palette-color-help">Tag badges in quote cards</span>
               </div>
-              <div style="display: grid; grid-template-columns: 140px 50px 90px 70px 1fr; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem;">
-                <span style="font-weight: 600;">Active Counter</span>
-                <input type="color" id="activeCounterColor" value="#dc2626" style="width: 50px; height: 32px; cursor: pointer; border: 2px solid var(--border); border-radius: 6px;" />
-                <input type="text" id="activeCounterColorText" value="#dc2626" readonly style="width: 90px; font-family: monospace; font-size: 0.85rem; background: var(--bg-secondary); padding: 0.35rem; border: 1px solid var(--border); border-radius: 4px; text-align: center;" />
-                <button type="button" id="resetActiveCounterColor" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;">Reset</button>
-                <span style="color: var(--text-secondary); font-size: 0.85rem;">Filtered/active count badges (left number)</span>
+              <div class="palette-color-row">
+                <span class="palette-color-label">Active Counter</span>
+                <input type="color" id="activeCounterColor" value="#dc2626" class="palette-color-swatch" />
+                <input type="text" id="activeCounterColorText" value="#dc2626" readonly class="palette-color-hex" />
+                <button type="button" id="resetActiveCounterColor" class="btn btn-secondary palette-color-reset">Reset</button>
+                <span class="palette-color-help">Filtered/active count badges (left number)</span>
               </div>
-              <div style="display: grid; grid-template-columns: 140px 50px 90px 70px 1fr; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem;">
-                <span style="font-weight: 600;">Total Counter</span>
-                <input type="color" id="totalCounterColor" value="#047857" style="width: 50px; height: 32px; cursor: pointer; border: 2px solid var(--border); border-radius: 6px;" />
-                <input type="text" id="totalCounterColorText" value="#047857" readonly style="width: 90px; font-family: monospace; font-size: 0.85rem; background: var(--bg-secondary); padding: 0.35rem; border: 1px solid var(--border); border-radius: 4px; text-align: center;" />
-                <button type="button" id="resetTotalCounterColor" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;">Reset</button>
-                <span style="color: var(--text-secondary); font-size: 0.85rem;">Total count badges (right number)</span>
+              <div class="palette-color-row">
+                <span class="palette-color-label">Total Counter</span>
+                <input type="color" id="totalCounterColor" value="#047857" class="palette-color-swatch" />
+                <input type="text" id="totalCounterColorText" value="#047857" readonly class="palette-color-hex" />
+                <button type="button" id="resetTotalCounterColor" class="btn btn-secondary palette-color-reset">Reset</button>
+                <span class="palette-color-help">Total count badges (right number)</span>
               </div>
-              <div style="display: grid; grid-template-columns: 140px 50px 90px 70px 1fr; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem;">
-                <span style="font-weight: 600;">Modal Footer</span>
-                <input type="color" id="modalFooterColor" value="#fde68a" style="width: 50px; height: 32px; cursor: pointer; border: 2px solid var(--border); border-radius: 6px;" />
-                <input type="text" id="modalFooterColorText" value="#fde68a" readonly style="width: 90px; font-family: monospace; font-size: 0.85rem; background: var(--bg-secondary); padding: 0.35rem; border: 1px solid var(--border); border-radius: 4px; text-align: center;" />
-                <button type="button" id="resetModalFooterColor" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;">Reset</button>
-                <span style="color: var(--text-secondary); font-size: 0.85rem;">Background for modal button area (Note, Author & Source modals)</span>
+              <div class="palette-color-row">
+                <span class="palette-color-label">Modal Footer</span>
+                <input type="color" id="modalFooterColor" value="#fde68a" class="palette-color-swatch" />
+                <input type="text" id="modalFooterColorText" value="#fde68a" readonly class="palette-color-hex" />
+                <button type="button" id="resetModalFooterColor" class="btn btn-secondary palette-color-reset">Reset</button>
+                <span class="palette-color-help">Background for modal button area (Note, Author & Source modals)</span>
               </div>
               </div>
             </div>

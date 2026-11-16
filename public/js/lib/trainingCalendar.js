@@ -189,12 +189,18 @@ async function fetchMonthTrainings(year, month) {
   params.append('limit',     '500');
   params.append('offset',    '0');
 
-  // Honour the training sub-type filter: if the user unchecks e.g. "Cardio",
-  // cardio days shouldn't dot the calendar.  Reading directly from the DOM
-  // keeps the calendar auto-in-sync when the user toggles the filter (the
-  // calling code re-renders on every filter change).
+  // Honour a *partial* sub-type filter only.  When every configured subtype is
+  // checked (or none), omit training_types so notes with empty/null type still
+  // appear — same rule as displayManager.addTrainingTypeFilters.
   const selectedTypes = _opts.enableSubtypeFilter ? readSelectedTrainingTypes() : [];
-  if (selectedTypes.length > 0) {
+  const configuredTypes = typeof _opts.getTrainingTypes === 'function'
+    ? (_opts.getTrainingTypes() || [])
+    : [];
+  if (
+    selectedTypes.length > 0 &&
+    configuredTypes.length > 0 &&
+    selectedTypes.length < configuredTypes.length
+  ) {
     params.append('training_types', selectedTypes.join(','));
   }
   try {

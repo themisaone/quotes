@@ -712,11 +712,12 @@ test("PUT /api/quotes/:id rolls back when the update target is missing", async (
   assert.deepEqual(client.calls.map((call) => call.sql), [
     "BEGIN",
     "SELECT thumbnail, attachment_full, note_type FROM notes WHERE id = $1",
-    "UPDATE notes SET note_text = $1, author_id = $2, source_id = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4 RETURNING *",
+    // Text-only body must not null out author_id/source_id
+    "UPDATE notes SET note_text = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *",
     "ROLLBACK",
   ]);
   const update = client.calls.find((call) => /UPDATE notes SET/.test(call.sql));
-  assert.deepEqual(update.params, ["updated", null, null, "55"]);
+  assert.deepEqual(update.params, ["updated", "55"]);
   assert.equal(client.released, true);
 });
 

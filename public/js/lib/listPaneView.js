@@ -625,13 +625,19 @@ export function refreshPaneNote(noteId, updatedNote, { updatePaneEditor = true }
     }
   }
 
+  // Refresh the right pane when this note is selected *or* currently loaded
+  // in the editor (calendar selection can briefly diverge from _selectedIndex).
   const pane = _container.querySelector('.lp-pane');
-  if (idx === _selectedIndex && pane) {
+  const paneEditorId = getPaneEditorNoteId();
+  const isCurrentPaneNote =
+    idx === _selectedIndex ||
+    (paneEditorId != null && String(paneEditorId) === String(noteId));
+
+  if (isCurrentPaneNote && pane && !pane.querySelector('.lp-pane-empty')) {
     updatePaneNoteDisplay(pane, updatedNote);
     renderPaneAttachments(pane, updatedNote);
-  }
-
-  if (updatePaneEditor && idx === _selectedIndex) {
-    _opts.onPaneNoteUpdated?.(updatedNote);
+    if (updatePaneEditor) {
+      _opts.onPaneNoteUpdated?.(updatedNote);
+    }
   }
 }

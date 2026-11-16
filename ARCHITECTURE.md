@@ -362,6 +362,14 @@ Later layers beat earlier ones for normal declarations, so responsive overrides 
 
 **Container queries (Step 3c).** `style.containers.css` marks `.quotes-section` (`quotes`), `.quote-card` (`card`), `#lpWrapper` (`lp`), `.lp-pane` (`pane`), and `#quoteModal .modal-content` (`modal`) with `container-type: inline-size`. Layout that depends on the component’s own width lives there: single-column quotes when the section is narrow, and image/meta stacking inside a narrow card. **List+pane stack** (`@container lp (max-width: 900px)`) lives in `style.medium.css` (`@layer responsive`), gated to phone / wide desktop only — medium tablets keep the `10fr 20fr` side-by-side split even when `#lpWrapper` is under 900px with the menu open. Viewport sheets keep true screen chrome (nav, full-bleed modal, Options). Modal lane column templates stay on `@media` for now — desktop modals are often ~65vw (under 1101px) yet still want the wide lane grid.
 
+**Cascade plan status.** Steps **3a** (layer scaffolding), **3b** (real layers + strip component `!important`), and **3c** (container queries) are done. There is **no Step 4** in this series (Step 2 was design tokens). Optional follow-ups when something hurts — not numbered steps:
+
+| Later idea | Notes |
+|---|---|
+| Modal lane `@container modal` | Move lane column templates off `@media` only with a clear rule that wide-but-short desktop modals still get the wide lane grid; use `css-snapshot` before/after. |
+| Rules for named `pane` / `modal` containers | Containers are declared in `style.containers.css` but have little/no query logic yet. |
+| Responsive `!important` cleanup | `style.mobile.css` / `small` / `medium` still use `!important` for intra-file duplicates; strip carefully with snapshots. |
+
 **Why this order matters.** CSS picks the *last* rule when specificity ties. The feature files load in the same order their rules originally appeared in the monolith, then the responsive overlays come last so they override base rules at their breakpoints. Load order among responsive files: `mobile` → `small` → `medium` (portrait tweaks sit between broad mobile and the medium-width band).
 
 A few features had non-contiguous content in the original (e.g. `.search-section` rules appeared at lines 405-899 *and* 1709-1810). Both fragments now live in the **same** feature file, in their original relative order — verified that no selector in the gap (buttons, modal, selection) overlaps the fragments, so the cascade outcome is unchanged.
@@ -485,7 +493,7 @@ Gallery and list-pane are mutually exclusive (gallery always uses the card grid)
 | `public/style.small.css` | Portrait-phone overrides (loads after mobile) |
 | `public/style.medium.css` | `(768px – 1100px)` @media queries |
 | `public/js/lib/listPaneView.js` | List + detail pane layout |
-| `public/js/lib/trainingCalendar.js` | Training calendar in list-pane left column |
+| `public/js/lib/trainingCalendar.js` | Training/diary calendar in list-pane left column; applies `training_types` only on partial subtype selection (same as list fetch) |
 | `public/js/lib/mergeModal.js` | Note merge UI |
 | `public/js/lib/dedupSuspectsPanel.js` | Duplicate inspection (Options) |
 | `<vaultPath>/config/settings.json` or `config/settings.json` | Note types, sub-types, colors, feature flags |

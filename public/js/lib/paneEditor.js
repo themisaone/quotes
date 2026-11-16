@@ -17,6 +17,7 @@ let _saveBtn = null;
 let _pendingSavedNote = null;
 /** Explicit UI dirty flag — Quill HTML comparison alone is unreliable after save. */
 let _uiDirty = false;
+let _saveInFlight = false;
 
 function _isCompactViewport() {
   return typeof window !== 'undefined' && window.matchMedia
@@ -72,9 +73,21 @@ function _recoverQuillFromDom(pane) {
 }
 
 function _ensureQuillInstance(pane) {
-  if (_quill) return _quill;
+  // Prefer the Quill still attached to the live pane DOM — a detached instance
+  // after re-render would make Save read stale HTML and look "saved" wrongly.
+  if (_quill) {
+    const root = _quill.root || _quill.container;
+    if (root && pane?.contains(root) && document.contains(root)) {
+      return _quill;
+    }
+    _quill = null;
+    _wiredQuill = null;
+  }
   _quill = _recoverQuillFromDom(pane);
-  if (_quill) return _quill;
+  if (_quill) {
+    _wirePaneQuill();
+    return _quill;
+  }
 
   const host = pane?.querySelector('#lpPaneQuill');
   if (!host) return null;
@@ -86,6 +99,12 @@ function _ensureQuillInstance(pane) {
   return _quill;
 }
 
+function _contentDiffersFromBaseline() {
+  if (!_quill) return false;
+  return _normalizeComparable(_quill.root.innerHTML)
+    !== _normalizeComparable(_baselineHtml);
+}
+
 export function resetPaneEditor() {
   _quill = null;
   _wiredQuill = null;
@@ -94,6 +113,7 @@ export function resetPaneEditor() {
   _baselineHtml = '';
   _pendingSavedNote = null;
   _uiDirty = false;
+  _saveInFlight = false;
 }
 
 export function configurePaneEditor({ apiUrl, onNoteSaved, onDirtyChange } = {}) {
@@ -103,9 +123,9 @@ export function configurePaneEditor({ apiUrl, onNoteSaved, onDirtyChange } = {})
 }
 
 export function isPaneEditorDirty() {
-  if (!_uiDirty) return false;
   if (!_quill || _currentNoteId == null) return false;
-  return true;
+  if (_uiDirty) return true;
+  return _contentDiffersFromBaseline();
 }
 
 export function getPaneEditorNoteId() {
@@ -300,26 +320,46 @@ export function syncPaneTextToModalHidden() {
 }
 
 export async function savePaneEditorText({ deferNotify = false } = {}) {
-  if (!_quill || _currentNoteId == null || !_apiUrl) return false;
+  const pane = document.querySelector('.lp-pane');
+  _ensureQuillInstance(pane);
 
-  if (!_uiDirty) {
+  if (!_quill || _currentNoteId == null) return false;
+  if (!_apiUrl) {
+    alert('Cannot save note text: app is not ready. Please refresh and try again.');
+    return false;
+  }
+  if (_saveInFlight) return false;
+
+  // Quill sometimes skips a user text-change (IME / first keystroke edge cases).
+  // If the live HTML differs from baseline, still persist — never fake-clean.
+  const needsSave = _uiDirty || _contentDiffersFromBaseline();
+  if (!needsSave) {
     _markEditorClean();
     return true;
   }
 
   const note_text = _quill.root.innerHTML;
+  const noteId = _currentNoteId;
+  _saveInFlight = true;
+  _syncSaveButton(false);
+
   try {
-    const response = await fetch(`${_apiUrl}/quotes/${_currentNoteId}`, {
+    const response = await fetch(`${_apiUrl}/quotes/${noteId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ note_text }),
     });
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
+      _uiDirty = true;
+      _syncSaveButton(true);
       alert('Failed to save note text: ' + (err.error || 'Please try again.'));
       return false;
     }
     const saved = await response.json();
+
+    // Ignore late responses if the user switched notes while saving.
+    if (_currentNoteId != noteId) return true;
 
     _markEditorClean();
 
@@ -327,13 +367,19 @@ export async function savePaneEditorText({ deferNotify = false } = {}) {
       _pendingSavedNote = saved;
     } else {
       _onNoteSaved?.(saved);
-      requestAnimationFrame(() => _markEditorClean());
+      requestAnimationFrame(() => {
+        if (_currentNoteId == noteId && !_uiDirty) _markEditorClean();
+      });
     }
     return true;
   } catch (e) {
     console.error('Pane text save failed:', e);
+    _uiDirty = true;
+    _syncSaveButton(true);
     alert('Failed to save note text. Please try again.');
     return false;
+  } finally {
+    _saveInFlight = false;
   }
 }
 
@@ -357,8 +403,14 @@ export async function confirmLeavePaneEditor() {
   return 'proceed';
 }
 
+/**
+ * After a modal / Properties save, reload the pane editor from the saved note.
+ * Modal is source of truth — overwrites any local pane dirty state for this id.
+ */
 export function applyPaneSavedNote(updatedNote) {
-  if (!updatedNote || updatedNote.id != _currentNoteId) return;
-  if (_uiDirty) return;
-  _markEditorClean();
+  if (!updatedNote || updatedNote.id == null) return;
+  if (_currentNoteId != null && updatedNote.id != _currentNoteId) return;
+  const pane = document.querySelector('.lp-pane');
+  if (!pane || pane.querySelector('.lp-pane-empty')) return;
+  _loadNoteIntoEditor(updatedNote, pane);
 }

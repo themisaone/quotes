@@ -538,13 +538,14 @@ export async function handleFormSubmit(e, config) {
   const { apiUrl, state, callbacks } = config;
   const quoteData = collectFormData(state);
 
-  // Validate training sub-type only when this type actually uses training sub-types.
-  const isTrainingBehavior = getNoteTypeConfig(quoteData.note_type).behavior === 'training';
+  // Validate date-behavior sub-type (training / diary) when options exist.
+  const noteBehavior = getNoteTypeConfig(quoteData.note_type).behavior;
+  const usesDateSubtype = noteBehavior === 'training' || noteBehavior === 'diary';
   const trainingTypeSelect = document.getElementById('trainingType');
   const hasTrainingTypeOptions = trainingTypeSelect
     ? Array.from(trainingTypeSelect.options).some((option) => option.value)
     : false;
-  if (isTrainingBehavior && hasTrainingTypeOptions && !quoteData.sourceType) {
+  if (usesDateSubtype && hasTrainingTypeOptions && !quoteData.sourceType) {
     const select = trainingTypeSelect;
     if (select) {
       select.style.outline = '2px solid #e74c3c';
@@ -554,7 +555,9 @@ export async function handleFormSubmit(e, config) {
         select.style.borderColor = '';
       }, 3000);
     }
-    alert('⚠️ Please select a Training Type before saving.');
+    alert(noteBehavior === 'diary'
+      ? '⚠️ Please select a diary type before saving.'
+      : '⚠️ Please select a Training Type before saving.');
     return;
   }
 
