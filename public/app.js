@@ -3679,6 +3679,8 @@ function displayQuotes(quotes) {
     if (lpWrapper) lpWrapper.style.display = 'none';
     quotesList.innerHTML =
       '<div class="no-quotes">No quotes found. Add your first quote!</div>';
+    quotesList.classList.remove('card-packed', 'row-ordered');
+    quotesList.style.removeProperty('height');
     return;
   }
 
@@ -3740,6 +3742,9 @@ function displayQuotes(quotes) {
   const realSizeEnabled = currentNoteTypeFilter === 'training'
     ? false
     : getDisplaySetting('displayByRealSize', currentNoteTypeFilter);
+  // Training stays in equal-height rows. Every other card list is packed so
+  // the space under a short card is --card-gap, not the neighbour's height.
+  if (quotesList) quotesList.classList.toggle('row-ordered', currentNoteTypeFilter === 'training');
   applyQuoteSizingMode(realSizeEnabled);
 
   // In "All notes" (currentNoteTypeFilter is null), resolve showLongExpanded per card

@@ -325,9 +325,9 @@ Styles are split across **18 files** so each one is small enough to read without
 
 ```
 public/style.layers.css       ← @layer order only (vendor → base → components → modes → responsive)
-public/style.css              ← base — root vars, body, scrollbar, app-layout (~95 lines)
+public/style.css              ← base — root vars, body (100dvh, no page scroll), scrollbar
 public/style.tokens.css       ← design tokens: radius scale + card / pane / modal-lane values per display mode
-public/style.sidemenu.css     ← left-side menu (~310 lines)
+public/style.sidemenu.css     ← side menu + main-content / #quotesView fill shell
 public/style.search.css       ← search panel + filters + counters (~600 lines)
 public/style.buttons.css      ← all button variants + refresh animations (~200 lines)
 public/style.modal.css        ← note-editor modal + form fields + score dice (~620 lines)
@@ -415,7 +415,7 @@ Custom properties that reference other variables are resolved where they are dec
 
 ## Medium-Screen Layout (768px – 1100px)
 
-The medium file (`public/style.medium.css`) overrides font sizes using `--m-font-*` variables (e.g. `--m-font-base: 0.75rem`, `--m-font-xl: 1.0rem`) declared inside its first `@media` block. These are *separate* from the desktop `--d-font-*` variables in `style.css`. The card grid is locked to 2 columns on medium screens.
+Spacing, type, and control size are three knob sets: `--d-*` in `style.css` (`:root`, desktop), `--m-*` in `style.medium.css` (768–1100px), `--s-*` in `style.mobile.css` (≤767px). Component rules use the active names (`--pad-*`, `--gap-*`, `--font-*`, `--btn-height`, `--card-pad`, `--card-gap`). `--card-gap` is the space under a card and between columns (`--d-card-gap`, `--m-card-gap`, `--s-card-gap`); `--card-pad` is the padding inside a card. Each breakpoint re-points those names at its own knobs, so editing `--m-pad-md` rescales every medium consumer of `--pad-md`. `--font-h2-quote` stays on the desktop size at every width. `--m-pad-2xl` is a two-value main-content padding pair, not a step of `--pad-*`. The phone page header is tighter than `--s-pad-*`; it reads `--s-header-margin` and `--s-header-gap`. Many responsive rules still set a raw length with `!important` and ignore the knobs until that declaration is switched to a variable. The card grid is locked to 2 columns on medium screens. In that grid a short card used to stretch to the tallest card in the row, so the vertical space under it ignored `--card-gap`. The list now packs each column (`.card-packed`): the next card in a column starts `--card-gap` below the one above it, and the side gutter is the same value. Training keeps equal-height rows (`.row-ordered`) so a log still reads across the row. Natural Height still uses CSS columns. Medium fonts live on `--m-font-*` (e.g. `--m-font-base: 0.75rem`, `--m-font-xl: 1.0rem`).
 
 **Adding medium overrides:** Always put them inside the `@media (min-width: 768px) and (max-width: 1100px)` block in `style.medium.css` and use `!important` (the same pattern as existing rules).
 
@@ -477,12 +477,12 @@ Gallery and list-pane are mutually exclusive (gallery always uses the card grid)
 | `public/js/lib/settingsManager.js` | Settings load/save, settings panel UI |
 | `public/js/lib/cryptoUtils.js` | Encryption/decryption |
 | `public/js/lib/noteTypes.js` | Note type config, field visibility rules |
-| `public/style.css` | Base — root vars, body, scrollbar, app-layout |
-| `public/style.sidemenu.css` | Left-side menu |
+| `public/style.css` | Base — root vars, body (`overflow: hidden` + `100dvh`), scrollbar |
+| `public/style.sidemenu.css` | Side menu + main-content column; `#quotesView` flex fill shell |
 | `public/style.search.css` | Search panel + filters + counters |
 | `public/style.buttons.css` | Button variants + refresh animations |
 | `public/style.modal.css` | Note-editor modal + form fields + score dice |
-| `public/style.cards.css` | Note cards (grid + content + Quill text) |
+| `public/style.cards.css` | Note cards + `.quotes-scroll-area` (internal results scroll; pagination pinned below) |
 | `public/style.selection.css` | Bulk-select mode + select-action-bar |
 | `public/style.attachments.css` | Attachment uploads & viewers |
 | `public/style.entities.css` | Author/source/tag cards, rename, tag-ops, notifications |

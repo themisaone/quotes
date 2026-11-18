@@ -131,7 +131,7 @@
 .modal-header {
   background: var(--header-color);
   color: white;
-  padding: var(--d-pad-md) var(--d-pad-md);
+  padding: var(--pad-md) var(--pad-md);
   border-radius: 12px 12px 0 0;
   display: flex;
   align-items: center;
@@ -301,7 +301,7 @@
 
 /* Modal body padding */
 .modal-body {
-  padding: var(--d-pad-md);
+  padding: var(--pad-md);
   background-color: var(--surface);
   border-radius: 0 0 12px 12px; /* Round bottom corners */
   overflow-y: auto; /* Allow scrolling within modal body */
@@ -393,7 +393,7 @@
   #quoteModal .modal-content.modal-wide.modal-lanes-compact:not(.modal-expanded) {
     --quote-compact-image: 220px;
     --quote-compact-props: 360px;
-    --quote-compact-pad: calc(2 * var(--d-pad-md) + 4px);
+    --quote-compact-pad: calc(2 * var(--pad-md) + 4px);
     --quote-compact-gap: 0.65rem;
     width: min(calc(var(--quote-compact-image) + var(--quote-compact-props) + var(--quote-compact-gap) + var(--quote-compact-pad)), 94vw);
     max-width: min(calc(var(--quote-compact-image) + var(--quote-compact-props) + var(--quote-compact-gap) + var(--quote-compact-pad)), 94vw);
@@ -550,7 +550,7 @@
 
 /* Form */
 .form-group {
-  margin-bottom: var(--d-pad-xl);
+  margin-bottom: var(--pad-xl);
 }
 
 /*
@@ -584,8 +584,8 @@
 }
 #quoteModal.modal-properties-only .quote-modal-title-row {
   flex: 0 0 auto;
-  padding-left: var(--d-pad-md);
-  padding-right: var(--d-pad-md);
+  padding-left: var(--pad-md);
+  padding-right: var(--pad-md);
 }
 #quoteModal.modal-properties-only .quote-modal-lanes {
   flex: 0 1 auto;
@@ -593,8 +593,8 @@
   width: 100%;
   max-width: 100%;
   grid-template-columns: 1fr;
-  padding-left: var(--d-pad-md);
-  padding-right: var(--d-pad-md);
+  padding-left: var(--pad-md);
+  padding-right: var(--pad-md);
   box-sizing: border-box;
 }
 #quoteModal.modal-properties-only .quote-modal-lane-properties {
@@ -1303,9 +1303,9 @@ label {
 
 .date-picker-control {
   position: relative;
-  flex: 0 0 var(--d-btn-height);
-  width: var(--d-btn-height);
-  height: var(--d-btn-height);
+  flex: 0 0 var(--btn-height);
+  width: var(--btn-height);
+  height: var(--btn-height);
 }
 
 .date-picker-trigger {
@@ -1370,7 +1370,7 @@ label {
 }
 
 .score-radio-label span {
-  font-size: var(--d-font-h2-quote);
+  font-size: var(--font-h2-quote);
   color: #9ca3af;
   display: flex;
   align-items: center;
@@ -1423,13 +1423,13 @@ label {
 /* Dice score dropdown styling (legacy, may not be needed) */
 #quoteScore,
 .score-dropdown {
-  font-size: var(--d-font-h2-quote);
+  font-size: var(--font-h2-quote);
   font-family: 'Segoe UI Symbol', 'DejaVu Sans', Arial, sans-serif;
 }
 
 #quoteScore option,
 .score-dropdown option {
-  font-size: var(--d-font-h2-quote);
+  font-size: var(--font-h2-quote);
   padding: 0.5rem;
 }
 
@@ -1519,10 +1519,10 @@ input[type="text"],
 input[type="date"],
 textarea,
 select {
-  padding: var(--d-pad-sm);
+  padding: var(--pad-sm);
   border: 1px solid var(--input-border);
   border-radius: var(--bradius-small);
-  font-size: var(--d-font-base);
+  font-size: var(--font-base);
   font-family: inherit;
   transition: all 0.2s;
   background-color: var(--input-bg);
@@ -1562,8 +1562,8 @@ textarea {
 
 .form-actions {
   display: flex;
-  gap: var(--d-gap-base);
-  margin-top: var(--d-pad-xl);
+  gap: var(--gap-base);
+  margin-top: var(--pad-xl);
 }
 
 /* Primary action separated from Save / Cancel (author & source entity modals) */
@@ -1577,7 +1577,7 @@ textarea {
 .form-actions.form-actions-split .form-actions-end {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--d-gap-base);
+  gap: var(--gap-base);
   align-items: center;
   justify-content: flex-end;
   margin-left: auto;
@@ -1609,8 +1609,8 @@ textarea {
   width: 3.55rem;
   min-width: 3.55rem;
   max-width: 3.55rem;
-  height: var(--d-btn-height);
-  min-height: var(--d-btn-height);
+  height: var(--btn-height);
+  min-height: var(--btn-height);
   padding: 0 0.35rem;
   display: inline-flex;
   align-items: center;
@@ -1723,14 +1723,14 @@ textarea {
   }
 }
 
-/* Shared yellowish footer bar — negative margins must match .modal-body padding (--d-pad-md) */
+/* Shared yellowish footer bar — negative margins must match .modal-body padding (--pad-md) */
 #authorModal .form-actions,
 #sourceModal .form-actions,
 #quoteModal .form-actions,
 #encPasswordModal .form-actions {
   background: var(--modal-footer-bg);
-  margin: var(--d-pad-xl) calc(-1 * var(--d-pad-md)) calc(-1 * var(--d-pad-md)) calc(-1 * var(--d-pad-md));
-  padding: var(--d-pad-md);
+  margin: var(--pad-xl) calc(-1 * var(--pad-md)) calc(-1 * var(--pad-md)) calc(-1 * var(--pad-md));
+  padding: var(--pad-md);
   border-radius: 0 0 12px 12px;
 }
 

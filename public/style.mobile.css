@@ -7,6 +7,55 @@
    ============================================================ */
 
 @media (max-width: 767px) {
+  /* Phone knobs. Steps match desktop until you change them, so components
+     that already use the active scale keep their current phone size.
+     The page header is tighter than that scale — it reads --s-header-*. */
+  :root {
+    --s-pad-xs:     0.225rem;
+    --s-pad-sm:     0.450rem;
+    --s-pad-base:   0.675rem;
+    --s-pad-md:     0.900rem;
+    --s-pad-lg:     1.125rem;
+    --s-pad-xl:     1.350rem;
+    --s-pad-2xl:    1.800rem;
+    --s-gap-sm:     0.450rem;
+    --s-gap-base:   0.900rem;
+    --s-gap-lg:     1.350rem;
+    --s-font-xs:    0.675rem;
+    --s-font-sm:    0.788rem;
+    --s-font-base:  0.900rem;
+    --s-font-md:    0.990rem;
+    --s-font-lg:    1.013rem;
+    --s-font-xl:    1.350rem;
+    --s-font-2xl:   2.250rem;
+    --s-btn-height: 2.25rem;
+    --s-card-pad:   1.125rem;
+    --s-card-gap:   0.5rem;    /* space under a card and between columns */
+    --s-header-margin: 0.15rem;
+    --s-header-gap: 0.2rem;
+
+    --pad-xs: var(--s-pad-xs);
+    --pad-sm: var(--s-pad-sm);
+    --pad-base: var(--s-pad-base);
+    --pad-md: var(--s-pad-md);
+    --pad-lg: var(--s-pad-lg);
+    --pad-xl: var(--s-pad-xl);
+    --pad-2xl: var(--s-pad-2xl);
+    --gap-sm: var(--s-gap-sm);
+    --gap-base: var(--s-gap-base);
+    --gap-lg: var(--s-gap-lg);
+    --font-xs: var(--s-font-xs);
+    --font-sm: var(--s-font-sm);
+    --font-base: var(--s-font-base);
+    --font-md: var(--s-font-md);
+    --font-lg: var(--s-font-lg);
+    --font-xl: var(--s-font-xl);
+    --font-2xl: var(--s-font-2xl);
+    --btn-height: var(--s-btn-height);
+    --card-pad: var(--s-card-pad);
+    --card-gap: var(--s-card-gap);
+  }
+
   .column-count-select { display: none !important; }
 
   /* Phone bottom bar: note-type + Menu dropdowns (replaces icon row) */
@@ -582,11 +631,12 @@
     padding-top: 0rem !important;
   }
   
-  /* Compact header */
+  /* Compact header — edit --s-header-margin / --s-header-gap above */
   header {
-    margin-bottom: 0.15rem !important;
+    margin-bottom: var(--s-header-margin) !important;
     margin-top: 0rem !important;
-    gap: 0.2rem !important;
+    padding-bottom: var(--pad-xl) !important;
+    gap: var(--s-header-gap) !important;
   }
   
   h1 {
@@ -632,13 +682,17 @@
      wins over JS --card-column-count if the section is somehow wider. */
   .quotes-list {
     grid-template-columns: 1fr !important;
-    gap: 0.5rem !important;
+    gap: var(--card-gap) !important;
   }
 
   .quotes-list.natural-sizing {
     display: block !important;
     column-count: 1 !important;
-    column-gap: 0.5rem !important;
+    column-gap: var(--card-gap) !important;
+  }
+
+  .quotes-list.natural-sizing .quote-card {
+    margin-bottom: var(--card-gap) !important;
   }
 
   .quote-text {
@@ -718,7 +772,7 @@
   .search-section {
     padding: 0 !important;
     padding-bottom: 0.45rem !important;
-    margin-bottom: 0.5rem !important;
+    margin-bottom: var(--pad-sm) !important;
     border-radius: 0 !important;
     border-bottom: 2px solid var(--border) !important;
     background: transparent !important;
@@ -730,7 +784,7 @@
 
   #tagsView .search-tags-panel {
     padding-bottom: 0.45rem !important;
-    margin-bottom: 0.5rem !important;
+    margin-bottom: var(--pad-sm) !important;
   }
 
   .search-section:has(.type-filter-dropdown.show) {
@@ -1213,8 +1267,8 @@
   
   .pagination-container {
     gap: 0.25rem !important;
-    margin-top: 0.5rem !important;
-    margin-bottom: 0.5rem !important;
+    margin-top: 0.35rem !important;
+    margin-bottom: 0 !important;
     padding: 0.3rem !important;
   }
   
@@ -1362,16 +1416,16 @@
   #sourcesView .entity-sort-select,
   #tagsView .entity-sort-select,
   #tagsView .tag-type-select {
-    height: var(--d-btn-height) !important;
-    min-height: var(--d-btn-height) !important;
+    height: var(--btn-height) !important;
+    min-height: var(--btn-height) !important;
     padding: 0 2.25rem 0 0.65rem !important;
     border-radius: var(--bradius-small) !important;
     font-size: 0.9rem !important;
   }
 
   #sourcesView .sources-type-filter .type-filter-toggle {
-    height: var(--d-btn-height) !important;
-    min-height: var(--d-btn-height) !important;
+    height: var(--btn-height) !important;
+    min-height: var(--btn-height) !important;
     padding: 0 0.65rem !important;
     border-radius: var(--bradius-small) !important;
     font-size: 0.9rem !important;

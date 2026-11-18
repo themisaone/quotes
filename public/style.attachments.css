@@ -312,7 +312,7 @@
 }
 
 #authorModal .form-actions {
-  margin-top: var(--d-pad-md);
+  margin-top: var(--pad-md);
 }
 
 /* Source cover follows the same image/field layout as the Author modal. */
@@ -391,7 +391,7 @@
 }
 
 #sourceModal .form-actions {
-  margin-top: var(--d-pad-md);
+  margin-top: var(--pad-md);
 }
 
 @media (max-width: 767px) {
@@ -435,7 +435,7 @@
 
 /* Attachment toggle button — lives in the label row alongside Note text */
 .btn-attach-toggle {
-  height: var(--d-btn-height);
+  height: var(--btn-height);
   font-size: 0.8rem;
   font-weight: 500;
   padding: 0 0.55rem;
@@ -624,17 +624,17 @@
   display: inline-block;
   background: var(--tag-color);
   color: white;
-  padding: var(--d-pad-xs) var(--d-pad-base);
+  padding: var(--pad-xs) var(--pad-base);
   border-radius: 12px;
-  font-size: var(--d-font-xs);
+  font-size: var(--font-xs);
 }
 
 .tag-removable {
   background: var(--tag-color);
   color: white;
-  padding: var(--d-pad-xs) var(--d-pad-base);
+  padding: var(--pad-xs) var(--pad-base);
   border-radius: 12px;
-  font-size: var(--d-font-sm);
+  font-size: var(--font-sm);
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
@@ -841,13 +841,14 @@
   background: var(--surface);
 }
 
-/* Pagination Controls */
+/* Pagination Controls — pinned under the scrollable results pane */
 .pagination-container {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 1rem;
-  padding: 1rem;
+  flex-shrink: 0;
+  margin-top: 0.5rem;
+  padding: 0.75rem 1rem;
   background: var(--surface);
   border-radius: var(--bradius);
   border: 2px solid var(--border);

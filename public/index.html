@@ -741,11 +741,14 @@
                 </div>
               </div>
 
-              <div id="quotesList" class="quotes-list">
-                <div class="loading">Loading quotes...</div>
+              <!-- Cards / list-pane scroll here; pagination stays pinned below. -->
+              <div class="quotes-scroll-area">
+                <div id="quotesList" class="quotes-list">
+                  <div class="loading">Loading quotes...</div>
+                </div>
+                <!-- List-Pane view renders here (separate from the card grid) -->
+                <div id="lpWrapper" style="display:none;"></div>
               </div>
-              <!-- List-Pane view renders here (separate from the card grid) -->
-              <div id="lpWrapper" style="display:none;"></div>
 
               <!-- Pagination Controls -->
               <div id="paginationControls" class="pagination-container"></div>

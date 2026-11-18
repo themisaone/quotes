@@ -9,10 +9,10 @@
 
 /* Buttons */
 .btn {
-  padding: var(--d-pad-base) var(--d-pad-xl);
+  padding: var(--pad-base) var(--pad-xl);
   border: none;
   border-radius: var(--bradius-small);
-  font-size: var(--d-font-md);
+  font-size: var(--font-md);
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
@@ -56,9 +56,9 @@
 /* Icon-only buttons (compact) */
 .btn-icon-only {
   font-size: 1.17rem;
-  padding: var(--d-pad-sm) 0.54rem;
+  padding: var(--pad-sm) 0.54rem;
   min-width: 2.7rem;
-  height: var(--d-btn-height);
+  height: var(--btn-height);
   text-align: center;
   display: inline-flex;
   align-items: center;
@@ -135,8 +135,8 @@
 /* Header action buttons — match display-mode-select height */
 .header-actions .btn-add,
 .header-actions .btn-bulk {
-  height: var(--d-btn-height);
-  padding: 0 var(--d-pad-xl);
+  height: var(--btn-height);
+  padding: 0 var(--pad-xl);
   box-sizing: border-box;
   align-items: center;
   justify-content: center;

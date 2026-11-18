@@ -14,7 +14,7 @@
 /* Combined results-view selector (legacy class names remain for compatibility). */
 .display-mode-select,
 .column-count-select {
-  height: var(--d-btn-height);
+  height: var(--btn-height);
   padding: 0 0.5rem;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -48,13 +48,13 @@
 
 .compact-select-button {
   width: 100%;
-  height: var(--d-btn-height);
+  height: var(--btn-height);
   padding: 0 0.65rem;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--primary-color);
   color: var(--text-primary);
-  font-size: var(--d-font-md);
+  font-size: var(--font-md);
   font-weight: 500;
   line-height: 1;
   cursor: pointer;
@@ -280,7 +280,7 @@
   border-radius: var(--bradius);
   box-shadow: var(--shadow);
   border: 2px solid var(--border);
-  /* No internal scroll — paging controls handle navigation; page scrolls naturally */
+  /* Outer .quotes-scroll-area scrolls the list+pane layout; page chrome stays fixed */
 }
 
 /* Shared header band height — list column header + pane Prev/Next row */
@@ -296,7 +296,7 @@
   border-bottom: 1px solid var(--border);
   border-radius: 12px 12px 0 0;
   box-sizing: border-box;
-  min-height: calc(var(--lp-band-pad-top) + var(--lp-band-pad-bottom) + var(--d-btn-height));
+  min-height: calc(var(--lp-band-pad-top) + var(--lp-band-pad-bottom) + var(--btn-height));
 }
 .lp-list-header-type {
   font-size: 0.9rem;
@@ -373,7 +373,7 @@
 .lp-list-header-dates .search-item select {
   width: 100%;
   min-width: 0;
-  height: var(--d-btn-height);
+  height: var(--btn-height);
   padding: 0.3rem 0.5rem;
   font-size: 0.9rem;
 }
@@ -707,7 +707,7 @@
   padding: var(--lp-band-pad-top, 0.9rem) var(--lp-band-pad-x, 0.9rem) var(--lp-band-pad-bottom, 0.75rem);
   border-bottom: 1px solid var(--border);
   box-sizing: border-box;
-  min-height: calc(var(--lp-band-pad-top, 0.9rem) + var(--lp-band-pad-bottom, 0.75rem) + var(--d-btn-height));
+  min-height: calc(var(--lp-band-pad-top, 0.9rem) + var(--lp-band-pad-bottom, 0.75rem) + var(--btn-height));
 }
 .lp-pane-nav-left {
   display: flex;
@@ -782,7 +782,7 @@
 .lp-pane-props-btn,
 .lp-pane-save-btn,
 .lp-pane-attach-btn {
-  height: var(--d-btn-height);
+  height: var(--btn-height);
   padding: 0 0.55rem;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -975,7 +975,7 @@
   max-height: none;
   min-height: calc(6.4rem + 24px);
   overflow: visible;
-  font-size: var(--d-font-base);
+  font-size: var(--font-base);
 }
 #lpPaneQuill .ql-editor {
   min-height: 12rem;

@@ -10,7 +10,9 @@
 /* App Layout with Side Menu */
 .app-layout {
   display: flex;
-  min-height: 100vh;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .side-menu {
@@ -20,7 +22,7 @@
   width: var(--side-menu-width);
   background: linear-gradient(135deg, #2c3e50 0%, #34495e 50%, #3d566e 100%);
   border-right: 1px solid #1a252f;
-  padding: var(--d-pad-2xl) var(--d-pad-xl) var(--d-pad-xl);
+  padding: var(--pad-2xl) var(--pad-xl) var(--pad-xl);
   position: fixed;
   height: 100vh;
   overflow-y: auto;
@@ -40,9 +42,9 @@ html::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.4); }
 html { scrollbar-width: thin; scrollbar-color: rgba(0, 0, 0, 0.2) transparent; }
 
 .side-menu-title {
-  font-size: var(--d-font-xl);
-  margin-top: var(--d-pad-sm);;
-  margin-bottom: var(--d-pad-xl);
+  font-size: var(--font-xl);
+  margin-top: var(--pad-sm);;
+  margin-bottom: var(--pad-xl);
   color: white;
 }
 
@@ -70,7 +72,7 @@ html { scrollbar-width: thin; scrollbar-color: rgba(0, 0, 0, 0.2) transparent; }
 }
 
 .menu-operations .menu-item {
-  font-size: var(--d-font-md);
+  font-size: var(--font-md);
 }
 
 .menu-item {
@@ -78,11 +80,11 @@ html { scrollbar-width: thin; scrollbar-color: rgba(0, 0, 0, 0.2) transparent; }
   min-height: var(--menu-row-min-height);
   box-sizing: border-box;
   text-align: left;
-  padding: var(--d-pad-base) var(--d-pad-md);
+  padding: var(--pad-base) var(--pad-md);
   background: none;
   border: none;
   border-radius: 8px;
-  font-size: var(--d-font-md);
+  font-size: var(--font-md);
   color: rgba(255, 255, 255, 0.85);
   cursor: pointer;
   transition: all 0.2s;
@@ -145,7 +147,7 @@ html { scrollbar-width: thin; scrollbar-color: rgba(0, 0, 0, 0.2) transparent; }
 .menu-divider {
   height: 1px;
   background: rgba(255, 255, 255, 0.25);
-  margin: calc(var(--d-pad-xl) + 0.1rem) 0 1rem;
+  margin: calc(var(--pad-xl) + 0.1rem) 0 1rem;
 }
 
 /* ── Side-menu header (title + collapse toggle) ──────────────────────────
@@ -203,7 +205,7 @@ html { scrollbar-width: thin; scrollbar-color: rgba(0, 0, 0, 0.2) transparent; }
 }
 .backend-status-label {
   color: rgba(255, 255, 255, 0.72);
-  font-size: var(--d-font-md);
+  font-size: var(--font-md);
   line-height: 2.2;
   letter-spacing: 0;
   white-space: nowrap;
@@ -357,8 +359,8 @@ html { scrollbar-width: thin; scrollbar-color: rgba(0, 0, 0, 0.2) transparent; }
   width: 100%;
   min-height: var(--menu-row-min-height);
   box-sizing: border-box;
-  padding: var(--d-pad-base) var(--d-pad-md) var(--d-pad-base) calc(var(--d-pad-md) + 1.4rem);
-  font-size: var(--d-font-md);
+  padding: var(--pad-base) var(--pad-md) var(--pad-base) calc(var(--pad-md) + 1.4rem);
+  font-size: var(--font-md);
   color: rgba(255, 255, 255, 0.75);
   cursor: pointer;
   border-radius: 8px;
@@ -414,25 +416,55 @@ html { scrollbar-width: thin; scrollbar-color: rgba(0, 0, 0, 0.2) transparent; }
 }
 
 .menu-section-title {
-  font-size: var(--d-font-xs);
+  font-size: var(--font-xs);
   font-weight: 600;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.7);
-  margin-bottom: var(--d-pad-base);
-  margin-top: var(--d-pad-base);
+  margin-bottom: var(--pad-base);
+  margin-top: var(--pad-base);
   letter-spacing: 0.05em;
 }
 
 .main-content {
   margin-left: var(--side-menu-width);
   flex: 1;
-  padding: var(--d-pad-2xl);
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  padding: var(--pad-2xl);
   width: calc(100% - var(--side-menu-width));
   transition: margin-left 0.25s ease, width 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .view-container {
   width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto; /* authors / sources / tags / settings */
+}
+
+/* Quotes: fill the main column; only the results list scrolls. */
+#quotesView.view-container {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#quotesView .container {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#quotesView header,
+#quotesView .search-section {
+  flex-shrink: 0;
 }
 
 .container {
@@ -444,11 +476,11 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--d-pad-md);
-  padding-bottom: var(--d-pad-xl);
+  margin-bottom: var(--pad-md);
+  padding-bottom: var(--pad-xl);
   border-bottom: 2px solid var(--border);
   flex-wrap: wrap;
-  gap: var(--d-gap-base);
+  gap: var(--gap-base);
 }
 
 header h1 {

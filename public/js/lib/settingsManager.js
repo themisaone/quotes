@@ -1456,16 +1456,131 @@ export function toggleMetadataSearchSection(show) {
 }
 
 /**
- * Apply quote sizing mode
+ * Apply quote sizing mode.
+ * Natural height uses CSS columns. Otherwise each column is packed so the
+ * space under a card is --card-gap, not the leftover height of a taller
+ * neighbour. .row-ordered (training) stays an equal-height grid.
  */
+const packedWatchers = new WeakMap();
+
+function clearPackedLayout(list) {
+  if (!list) return;
+  list.classList.remove('card-packed');
+  list.style.removeProperty('height');
+  list.dataset.packing = '0';
+  list.querySelectorAll(':scope > .quote-card').forEach((card) => {
+    card.style.removeProperty('--packed-width');
+    card.style.removeProperty('--packed-left');
+    card.style.removeProperty('--packed-top');
+  });
+}
+
+function watchPackedCards(list) {
+  let entry = packedWatchers.get(list);
+  if (!entry) {
+    const ro = new ResizeObserver(() => {
+      if (list.dataset.packing === '1' || !list.classList.contains('card-packed')) return;
+      packCardColumns(list);
+    });
+    entry = { ro, cards: new Set() };
+    packedWatchers.set(list, entry);
+    ro.observe(list);
+  }
+  const live = new Set(list.querySelectorAll(':scope > .quote-card'));
+  entry.cards.forEach((card) => {
+    if (!live.has(card)) {
+      entry.ro.unobserve(card);
+      entry.cards.delete(card);
+    }
+  });
+  live.forEach((card) => {
+    if (!entry.cards.has(card)) {
+      entry.ro.observe(card);
+      entry.cards.add(card);
+    }
+  });
+}
+
+function packCardColumns(list) {
+  if (!list || list.dataset.packing === '1') return;
+
+  const cards = [...list.querySelectorAll(':scope > .quote-card')];
+  const skip = list.classList.contains('row-ordered')
+    || list.classList.contains('natural-sizing')
+    || list.classList.contains('gallery-mode')
+    || cards.length === 0
+    || list.clientWidth === 0;
+  if (skip) {
+    clearPackedLayout(list);
+    return;
+  }
+
+  list.dataset.packing = '1';
+  list.classList.add('card-packed');
+
+  const cs = getComputedStyle(list);
+  const tracks = cs.gridTemplateColumns.split(' ').map(parseFloat).filter((n) => n > 0);
+  const gap = parseFloat(cs.columnGap);
+  const gapPx = Number.isFinite(gap) ? gap : 0;
+  if (tracks.length === 0) {
+    list.dataset.packing = '0';
+    clearPackedLayout(list);
+    return;
+  }
+
+  const cols = tracks.length;
+  const lefts = [];
+  let x = 0;
+  tracks.forEach((w) => {
+    lefts.push(x);
+    x += w + gapPx;
+  });
+
+  const colHeights = Array(cols).fill(0);
+  let flow = 0;
+  cards.forEach((card) => {
+    if (card.classList.contains('expanded-card')) {
+      const top = Math.max(0, ...colHeights);
+      card.style.setProperty('--packed-width', `${list.clientWidth}px`);
+      card.style.setProperty('--packed-left', '0px');
+      card.style.setProperty('--packed-top', `${top}px`);
+      const h = card.offsetHeight;
+      for (let c = 0; c < cols; c += 1) colHeights[c] = top + h + gapPx;
+      flow = 0;
+      return;
+    }
+    const col = flow % cols;
+    flow += 1;
+    const top = colHeights[col];
+    card.style.setProperty('--packed-width', `${tracks[col]}px`);
+    card.style.setProperty('--packed-left', `${lefts[col]}px`);
+    card.style.setProperty('--packed-top', `${top}px`);
+    colHeights[col] = top + card.offsetHeight + gapPx;
+  });
+
+  const bottom = Math.max(0, ...colHeights);
+  list.style.height = `${Math.max(0, bottom - gapPx)}px`;
+  watchPackedCards(list);
+  requestAnimationFrame(() => {
+    list.dataset.packing = '0';
+  });
+}
+
 export function applyQuoteSizingMode(useRealSize) {
   const quotesList = getElementByIdSafe('quotesList');
   if (!quotesList) return;
-  
-  if (useRealSize) {
+
+  const rowOrdered = quotesList.classList.contains('row-ordered');
+  if (useRealSize && !rowOrdered) {
     quotesList.classList.add('natural-sizing');
   } else {
     quotesList.classList.remove('natural-sizing');
+  }
+
+  if (!useRealSize && !rowOrdered) {
+    packCardColumns(quotesList);
+  } else {
+    clearPackedLayout(quotesList);
   }
 }
 

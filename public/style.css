@@ -86,7 +86,39 @@
 
   /* Components */
   --d-btn-height: 2.25rem;   /* was 2.5   */
-  --d-card-pad:   1.125rem;  /* was 1.25  */
+  --d-card-pad:   1.125rem;  /* was 1.25 — padding inside a card */
+  --d-card-gap:   0.5rem;      /* space under a card and between columns */
+
+  /* Active scale. Component rules use these names.
+     Desktop (here) points them at --d-*.
+     Medium re-points them at --m-* in style.medium.css.
+     Phone re-points them at --s-* in style.mobile.css.
+     Edit the breakpoint knobs (--d-* / --m-* / --s-*), not these aliases. */
+  --pad-xs: var(--d-pad-xs);
+  --pad-sm: var(--d-pad-sm);
+  --pad-base: var(--d-pad-base);
+  --pad-md: var(--d-pad-md);
+  --pad-lg: var(--d-pad-lg);
+  --pad-xl: var(--d-pad-xl);
+  --pad-2xl: var(--d-pad-2xl);
+  --gap-sm: var(--d-gap-sm);
+  --gap-base: var(--d-gap-base);
+  --gap-lg: var(--d-gap-lg);
+  --font-xs: var(--d-font-xs);
+  --font-sm: var(--d-font-sm);
+  --font-base: var(--d-font-base);
+  --font-md: var(--d-font-md);
+  --font-lg: var(--d-font-lg);
+  --font-xl: var(--d-font-xl);
+  --font-2xl: var(--d-font-2xl);
+  --font-h2-quote: var(--d-font-h2-quote);
+  --btn-height: var(--d-btn-height);
+  --card-pad: var(--d-card-pad);
+  --card-gap: var(--d-card-gap);
+}
+
+html {
+  height: 100%;
 }
 
 body {
@@ -95,6 +127,15 @@ body {
   color: var(--text-primary);
   line-height: 1.6;
   border-top: 1px solid var(--border);
+  height: 100%;
+  overflow: hidden; /* page scroll lives inside main views / quotes-scroll-area */
+}
+
+@supports (height: 100dvh) {
+  html,
+  body {
+    height: 100dvh;
+  }
 }
 
 button,

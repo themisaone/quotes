@@ -747,7 +747,7 @@
 
 .search-tags-title {
   margin: 0;
-  font-size: var(--d-font-xl);
+  font-size: var(--font-xl);
   font-weight: 600;
   color: var(--text-primary);
 }

@@ -91,7 +91,7 @@ body.selection-mode .quote-card::after {
 .select-action-bar .sab-selection-count {
   display: inline-flex;
   align-items: center;
-  gap: var(--d-gap-sm);
+  gap: var(--gap-sm);
   flex: 0 0 auto;
   margin-right: auto;
 }
@@ -110,24 +110,24 @@ body.selection-mode .quote-card::after {
 }
 
 .select-action-bar .sab-tagop-select {
-  height: calc(var(--d-btn-height) - 6px);
+  height: calc(var(--btn-height) - 6px);
   padding: 0 0.5rem;
   background: var(--input-bg);
   color: var(--text-primary);
   border: 1px solid var(--border);
   border-radius: var(--bradius-small);
-  font-size: var(--d-font-base);
+  font-size: var(--font-base);
   cursor: pointer;
 }
 
 .select-action-bar .sab-tagop-input {
-  height: calc(var(--d-btn-height) - 6px);
+  height: calc(var(--btn-height) - 6px);
   padding: 0 0.7rem;
   background: var(--input-bg);
   color: var(--text-primary);
   border: 1px solid var(--border);
   border-radius: var(--bradius-small);
-  font-size: var(--d-font-base);
+  font-size: var(--font-base);
   width: 240px;
   min-width: 180px;
   max-width: 100%;
@@ -150,10 +150,10 @@ body.selection-mode .quote-card::after {
 .select-action-bar .btn-sab {
   background: var(--primary-color);
   color: white;
-  padding: var(--d-pad-base) var(--d-pad-xl);
+  padding: var(--pad-base) var(--pad-xl);
   border: none;
   border-radius: var(--bradius-small);
-  font-size: var(--d-font-md);
+  font-size: var(--font-md);
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
@@ -273,7 +273,7 @@ body.saf-locked .quote-card .note-select-checkbox {
 .btn-select-mode {
   background: var(--primary-color);
   color: white;
-  height: var(--d-btn-height);
+  height: var(--btn-height);
   white-space: nowrap;
 }
 

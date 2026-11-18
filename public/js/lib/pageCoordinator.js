@@ -280,7 +280,9 @@ function showSettingsView(callbacks) {
 function showView(viewId) {
   const view = getElementByIdSafe(viewId, 'showView');
   if (view) {
-    view.style.display = 'block';
+    // Quotes view is a column flex shell so the results area can scroll
+    // internally with pagination pinned to the bottom of the viewport.
+    view.style.display = viewId === VIEW_IDS.QUOTES ? 'flex' : 'block';
   }
 }
 

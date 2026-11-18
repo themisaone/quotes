@@ -70,24 +70,50 @@
 
     /* Spacing */
     --m-pad-xs:     0.20rem;   /* strip padding, tight gaps */
-    --m-pad-sm:     0.65rem;   /* modal header, small elements - MISA */
-    --m-pad-base:   0.65rem;   /* form-group gap, card gap */
-    --m-pad-md:     0.65rem;   /* modal body padding */
+    --m-pad-sm:     0.65rem;   /* modal header block, small elements */
+    --m-pad-base:   2rem;   /* page-header gap, form-group gap */
+    --m-pad-md:     0.2rem;   /* modal body, page-header margin-bottom, container block, search section margin */
     --m-pad-lg:     0.90rem;   /* card inner padding */
-    --m-pad-xl:     1.10rem;   /* main poadding inside cards,search section, section header */
+    --m-pad-xl:     0.3rem;   /* page-header padding-bottom, container inline, results-title space, side menu */
 
     /* Buttons */
     --m-btn-height: 2.0rem;
 
     /* Cards */
-    --m-card-pad:   0.70rem; /* MISA */
-    --m-card-gap:   0.55rem; /* MISA */
+    --m-card-pad:   0.70rem; /* padding inside a card */
+    --m-card-gap:   0.5rem; /* space under a card and between columns */
 
     /* Tag pills */
     --m-tag-pad-v:  0.2rem;
     --m-tag-pad-h:  1.0rem;
 
-    --m-pad-2xl:    0.5rem 0rem;  /* was 2.0   */
+    --m-pad-2xl:    0.5rem 0rem;  /* main-content padding pair, not a single step */
+
+    /* Gaps — separate from padding. Header gap uses --m-pad-base. */
+    --m-gap-sm:     0.450rem;
+    --m-gap-base:   0.900rem;
+    --m-gap-lg:     1.350rem;
+
+    /* Active scale for this breakpoint. Component rules read --pad-* / --font-* / … */
+    --pad-xs: var(--m-pad-xs);
+    --pad-sm: var(--m-pad-sm);
+    --pad-base: var(--m-pad-base);
+    --pad-md: var(--m-pad-md);
+    --pad-lg: var(--m-pad-lg);
+    --pad-xl: var(--m-pad-xl);
+    --gap-sm: var(--m-gap-sm);
+    --gap-base: var(--m-gap-base);
+    --gap-lg: var(--m-gap-lg);
+    --font-xs: var(--m-font-xs);
+    --font-sm: var(--m-font-sm);
+    --font-base: var(--m-font-base);
+    --font-md: var(--m-font-md);
+    --font-lg: var(--m-font-lg);
+    --font-xl: var(--m-font-xl);
+    --font-2xl: var(--m-font-2xl);
+    --btn-height: var(--m-btn-height);
+    --card-pad: var(--m-card-pad);
+    --card-gap: var(--m-card-gap);
   }
 
   /* Gallery option is available on medium screens; JS hides the numbered options */
@@ -332,7 +358,7 @@
   #quoteModal .modal-content.modal-lanes-compact {
     --quote-compact-image: 220px;
     --quote-compact-props: 360px;
-    --quote-compact-pad: calc(2 * var(--d-pad-md) + 4px);
+    --quote-compact-pad: calc(2 * var(--pad-md) + 4px);
     --quote-compact-gap: 0.65rem;
     --quote-modal-vh-inset: calc(1rem + env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px));
     width: min(calc(var(--quote-compact-image) + var(--quote-compact-props) + var(--quote-compact-gap) + var(--quote-compact-pad)), 94vw) !important;
@@ -815,10 +841,10 @@
     background: #4b5563;
   }
   
-  /* Header adjustments for tablet — margin below border matches compact search row */
+  /* Page header — spacing comes from the medium knobs above */
   header {
-    margin-bottom: 0.75rem !important;
-    padding-bottom: 1rem !important;
+    margin-bottom: var(--pad-md) !important;
+    padding-bottom: var(--pad-xl) !important;
     border-bottom-width: 1px !important;
   }
   
@@ -837,7 +863,7 @@
   }
   
   .container {
-    padding: 0.5rem 1rem;
+    padding: var(--pad-md) var(--pad-xl);
   }
   
   .side-menu-title {
@@ -864,10 +890,6 @@
     margin: 0.3rem 0 0.8rem;
   }
   
-  .modal-header {
-    padding: 0.75rem 1.1rem;
-  }
-
   /* ── Global ~10% size reduction for medium screens ── */
 
   /* Header and title */
@@ -988,7 +1010,7 @@
   /* Search section — flat bottom rule (matches style.search.css; no extra bottom pad) */
   .search-section {
     padding: 0 !important;
-    margin-bottom: 1rem !important;
+    margin-bottom: var(--pad-md) !important;
     border-radius: 0 !important;
     border-bottom: 1px solid var(--border) !important;
     background: transparent !important;
@@ -997,12 +1019,12 @@
   #authorsView .search-section,
   #sourcesView .search-section,
   #tagsView .search-tags-panel {
-    padding-bottom: 1rem !important;
+    padding-bottom: var(--pad-xl) !important;
   }
 
   #tagsView .tag-type-select {
-    height: var(--d-btn-height) !important;
-    min-height: var(--d-btn-height) !important;
+    height: var(--btn-height) !important;
+    min-height: var(--btn-height) !important;
     padding: 0 2.25rem 0 0.65rem !important;
     font-size: 0.9rem !important;
   }
@@ -1010,16 +1032,16 @@
   #authorsView .entity-sort-select,
   #sourcesView .entity-sort-select,
   #tagsView .entity-sort-select {
-    height: var(--d-btn-height) !important;
-    min-height: var(--d-btn-height) !important;
+    height: var(--btn-height) !important;
+    min-height: var(--btn-height) !important;
     padding: 0 2.25rem 0 0.65rem !important;
     border-radius: var(--bradius-small) !important;
     font-size: 0.9rem !important;
   }
 
   #sourcesView .sources-type-filter .type-filter-toggle {
-    height: var(--d-btn-height) !important;
-    min-height: var(--d-btn-height) !important;
+    height: var(--btn-height) !important;
+    min-height: var(--btn-height) !important;
     padding: 0 0.65rem !important;
     border-radius: var(--bradius-small) !important;
     font-size: 0.9rem !important;
@@ -1085,7 +1107,7 @@
   .quotes-section-header {
     background: transparent !important;
     padding: 0rem 0 0rem !important;
-    margin: 0 0 1rem 0 !important;
+    margin: 0 0 var(--pad-xl) 0 !important;
     border-radius: 0 !important;
     border: none !important;
     box-shadow: none !important;
@@ -1115,7 +1137,7 @@
   .quotes-list {
     display: grid;
     grid-template-columns: repeat(var(--card-column-count, 2), 1fr) !important;
-    gap: var(--m-card-gap) !important;
+    gap: var(--card-gap) !important;
     margin: 0 !important;
     padding: 0 !important;
   }
@@ -1123,11 +1145,11 @@
   .quotes-list.natural-sizing {
     display: block !important;
     column-count: var(--card-column-count, 2) !important;
-    column-gap: var(--m-card-gap) !important;
+    column-gap: var(--card-gap) !important;
   }
 
   .quotes-list.natural-sizing .quote-card {
-    margin-bottom: var(--m-card-gap) !important;
+    margin-bottom: var(--card-gap) !important;
   }
 
   .quotes-list.gallery-mode,
@@ -1290,7 +1312,7 @@
     flex-wrap: nowrap !important;
     align-items: center !important;
     justify-content: space-between !important;
-    gap: var(--m-pad-base) !important;
+    gap: var(--pad-base) !important;
   }
 
   header h1 {
@@ -1431,7 +1453,7 @@
   /* Note title: modal + list-pane use desktop card size on medium, card gets smaller */
   #noteTitle,
   .lp-pane-title.note-title-heading {
-    font-size: var(--d-font-h2-quote) !important;
+    font-size: var(--font-h2-quote) !important;
   }
   .card-note-title {
     font-size: var(--m-font-xl);

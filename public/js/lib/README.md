@@ -126,6 +126,7 @@ All settings logic. Module-level `globalSettings` object.
 - `getQuoteTypes()`, `getTrainingTypes()` — from `globalSettings.noteTypes` / `globalSettings.trainingTypes`
 - `renderQuoteTypesList()`, `renderTrainingTypesList()` — render settings UI lists
 - `initializeSettings(callbacks)` — wire up entire settings panel
+- `applyQuoteSizingMode(useRealSize)` — natural-height columns, or packed columns so `--card-gap` is the space under every card. `.row-ordered` (training) stays an equal-height grid
 
 **Settings that affect filtering (stored in `globalSettings`):**
 - `hideEncryptedNotes` (bool) — hide notes with encrypted attachments
