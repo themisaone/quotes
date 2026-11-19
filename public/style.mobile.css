@@ -364,10 +364,6 @@
     min-width: 0;
     width: 100%;
   }
-
-  .quote-meta {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 767px) {
@@ -707,13 +703,6 @@
     padding: 10px 12px !important;
   }
 
-  .quote-meta {
-    font-size: 0.55rem !important;
-    gap: 0.3rem !important;
-    grid-template-columns: 1fr !important;
-    padding-top: 0.3rem !important;
-  }
-
   .meta-item {
     font-size: 0.55rem !important;
     display: block !important;
@@ -724,16 +713,6 @@
   }
   
   .meta-value {
-    font-size: 0.55rem !important;
-  }
-  
-  .quote-author,
-  .quote-source {
-    font-size: 0.55rem !important;  /* Reduced from 0.65rem */
-  }
-  
-  .quote-author strong,
-  .quote-source strong {
     font-size: 0.55rem !important;
   }
   
@@ -755,12 +734,6 @@
   
   .quote-tags {
     gap: 0.25rem !important;
-  }
-  
-  .tag {
-    padding: 0.15rem 0.4rem !important;
-    font-size: 0.5rem !important;
-    border-radius: 12px !important;
   }
   
   .quote-actions {
@@ -1189,6 +1162,15 @@
     box-sizing: border-box !important;
   }
 
+  /* Modal footer keeps the shared height knob; the 30px rule above is for the page buttons. */
+  #quoteModal .form-actions .btn,
+  #authorModal .form-actions .btn,
+  #sourceModal .form-actions .btn,
+  #encPasswordModal .form-actions .btn {
+    height: var(--btn-height) !important;
+    min-height: var(--btn-height) !important;
+  }
+
   .header-actions .btn-add.desktop-text,
   .header-actions .btn-bulk.desktop-text {
     display: none !important;
@@ -1260,16 +1242,11 @@
     border-radius: 4px !important;
   }
   
-  /* Compact pagination */
-  .pagination-info {
-    font-size: 0.7rem !important;  /* Was 0.875rem, now 20% smaller */
-  }
-  
   .pagination-container {
     gap: 0.25rem !important;
     margin-top: 0.35rem !important;
     margin-bottom: 0 !important;
-    padding: 0.3rem !important;
+    padding-top: var(--pad-md) !important;
   }
   
   .pagination-buttons {
@@ -1565,11 +1542,6 @@
     gap: 0.3rem !important;
   }
   
-  .welcome-quote-tags .tag {
-    font-size: 0.65rem !important;  /* Reduced by 25% */
-    padding: 0.2rem 0.5rem !important;
-  }
-
   /* All Notes — metadata filter chips: base layout is 3 columns + nowrap, which
      overflows narrow viewports; stack one column and allow wrapping. */
   #metadataFiltersContainer {

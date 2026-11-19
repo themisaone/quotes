@@ -52,7 +52,7 @@ When a single-type instance is running (`npm run tegneserie`, etc.), Options →
 
 ## Note Cards
 
-**Results chrome:** Title / Add New, Search, and the Displayed / view controls stay fixed. Cards, gallery, and List+Pane scroll inside `.quotes-scroll-area`; the **Showing x–y of z** pagination bar stays pinned to the bottom of the visible main area (outer page scrollbar is off). Same on phone, medium, and wide desktop.
+**Results chrome:** Title / Add New, Search, and the Displayed / view controls stay fixed. Cards, gallery, and List+Pane scroll inside `.quotes-scroll-area`; the **Showing x–y of z** line stays pinned to the bottom of the visible main area, separated by a single top rule, and is hidden when the results fit on one page (outer page scrollbar is off). Same on phone, medium, and wide desktop.
 
 Cards are displayed in a grid (1, 2, or 3 columns depending on screen width). Three visual sizes selectable in Settings.
 

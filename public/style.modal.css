@@ -1566,6 +1566,22 @@ textarea {
   margin-top: var(--pad-xl);
 }
 
+/* Save / Delete / Cancel / HTML — same height knob as the other controls. */
+#quoteModal .form-actions .btn,
+#authorModal .form-actions .btn,
+#sourceModal .form-actions .btn,
+#encPasswordModal .form-actions .btn {
+  height: var(--btn-height);
+  min-height: var(--btn-height);
+  box-sizing: border-box;
+  padding-top: 0;
+  padding-bottom: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
 /* Primary action separated from Save / Cancel (author & source entity modals) */
 .form-actions.form-actions-split {
   justify-content: space-between;

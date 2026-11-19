@@ -4899,8 +4899,10 @@ function updatePaginationControls() {
   const startItem = filteredQuotes === 0 ? 0 : (currentPage - 1) * qpp + 1;
   const endItem = Math.min(currentPage * qpp, filteredQuotes);
 
-  if (filteredQuotes === 0) {
+  // One page (or none) needs no pager and no separator line.
+  if (filteredQuotes === 0 || totalPages <= 1) {
     paginationContainer.innerHTML = "";
+    paginationContainer.style.display = "none";
     return;
   }
 

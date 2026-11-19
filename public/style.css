@@ -61,11 +61,11 @@
      Original values noted in comments for easy reference.        ──────── */
 
   /* Typography */
-  --d-font-xs:    0.675rem;  /* was 0.75  */
-  --d-font-sm:    0.788rem;  /* was 0.875 */
-  --d-font-base:  0.900rem;  /* was 1.0   */
+  --d-font-xs:    0.85rem;  /* menu section titles (like: META INFO), in cards: tag pills (.tag),  'by', 'from', author and source, 'Show more' */
+  --d-font-sm:    1.0rem;   /* tag in modal,    ny, secondary text, labels, strips */
+  --d-font-base:  3.0rem;  /* was 1.0   */
   --d-font-md:    0.990rem;  /* was 1.1   */
-  --d-font-lg:    1.013rem;  /* was 1.125 */
+  --d-font-lg:    1.0rem;  /* was 1.125 */
   --d-font-xl:    1.350rem;  /* was 1.5   */
   --d-font-2xl:   2.250rem;  /* was 2.5   */
   --d-font-h2-quote: 1.3rem; 
@@ -86,8 +86,10 @@
 
   /* Components */
   --d-btn-height: 2.25rem;   /* was 2.5   */
+
+  /* Cards */
   --d-card-pad:   1.125rem;  /* was 1.25 — padding inside a card */
-  --d-card-gap:   0.5rem;      /* space under a card and between columns */
+  --d-card-gap:   0.9rem;      /* space under a card and between columns */
 
   /* Active scale. Component rules use these names.
      Desktop (here) points them at --d-*.

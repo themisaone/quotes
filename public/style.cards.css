@@ -509,12 +509,12 @@
 }
 
 .quote-tags-inline .tag {
-  font-size: var(--font-base);
+  font-size: var(--font-xs);
   padding: var(--pad-xs) var(--pad-base);
 }
 
 .meta-item-combined {
-  font-size: 0.875rem;
+  font-size: var(--font-xs);
   display: flex;
   align-items: center;
   gap: 0.4rem;
@@ -524,7 +524,7 @@
 .meta-from, .meta-by {
   color: var(--text-secondary);
   font-style: italic;
-  font-size: 0.8rem;
+  font-size: var(--font-xs);
 }
 
 .type-icon-badge {
@@ -801,7 +801,7 @@
   background: none;
   border: none;
   color: var(--link-color);
-  font-size: 0.875rem;
+  font-size: var(--font-xs);
   cursor: pointer;
   padding: 0.1rem 0;
   margin-top: 0.3rem;
@@ -817,17 +817,8 @@
   text-decoration: underline;
 }
 
-.quote-meta {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--border);
-}
-
 .meta-item {
-  font-size: 0.875rem;
+  font-size: var(--font-xs);
 }
 
 .meta-label {

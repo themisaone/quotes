@@ -848,15 +848,16 @@
   align-items: center;
   flex-shrink: 0;
   margin-top: 0.5rem;
-  padding: 0.75rem 1rem;
-  background: var(--surface);
-  border-radius: var(--bradius);
-  border: 2px solid var(--border);
-  box-shadow: var(--shadow);
+  padding: var(--pad-md) 0 0.15rem;
+  background: transparent;
+  border: none;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .pagination-info {
-  font-size: 0.95rem;
+  font-size: var(--font-lg);
   color: var(--text-secondary);
   font-weight: 500;
 }
@@ -879,6 +880,7 @@
 
 .page-info {
   padding: 0 1rem;
+  font-size: var(--font-lg);
   font-weight: 500;
   color: var(--text-primary);
 }

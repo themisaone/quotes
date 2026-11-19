@@ -58,12 +58,12 @@
      multiply by 0.8 (or just set them directly).               ──────── */
   :root {
     /* Typography */
-    --m-font-xs:    0.75rem;   /* tag pills (.tag) AND menu section titles */
-    --m-font-sm:    0.8rem;   /* meny, secondary text, labels, strips */
-    --m-font-base:  0.75rem;   /* main ...body / card text, inputs - MISA */
+    --m-font-xs:    0.75rem;  /* menu section titles (like: META INFO), in cards: tag pills (.tag),  'by', 'from', author and source, 'Show more' */
+    --m-font-sm:    0.825rem; /* tag in modal,    ny, secondary text, labels, strips */
+    --m-font-base:  2.8rem;   /* inputs, search fields, form labels */
     --m-font-md:    0.75rem;   /* button text, minor headings - MISA, can be biger than base */
     --m-font-meny-top:    1.1rem;   /* meny top title - MISA */
-    --m-font-lg:    0.9rem;   /* modal header icons, welcome text */
+    --m-font-lg:    0.8rem;   /* card body text and pagination; also modal header, welcome quote, icon buttons */
     --m-font-xl:    1.0rem;   /* section h2 - MISA */
     --m-font-2xl:   1.0rem;   /* page h1 */
     --m-font-tts:   0.7rem;  /* filter-type-summary line (training types / quote sources) */
@@ -82,10 +82,6 @@
     /* Cards */
     --m-card-pad:   0.70rem; /* padding inside a card */
     --m-card-gap:   0.5rem; /* space under a card and between columns */
-
-    /* Tag pills */
-    --m-tag-pad-v:  0.2rem;
-    --m-tag-pad-h:  1.0rem;
 
     --m-pad-2xl:    0.5rem 0rem;  /* main-content padding pair, not a single step */
 
@@ -162,12 +158,7 @@
     margin-bottom: var(--m-pad-xs) !important;
   }
   .menu-item {
-    font-size: var(--m-font-sm) !important;
     padding: var(--m-pad-xs) var(--m-pad-sm) !important;
-  }
-  .backend-status-label,
-  .backend-indicator {
-    font-size: var(--m-font-sm) !important;
   }
   .note-type-filter-li.has-subtags > .note-type-row > .menu-item {
     padding-right: 2.45rem !important;
@@ -176,7 +167,6 @@
     font-size: var(--m-font-xs) !important;
   }
   .menu-sub-item {
-    font-size: var(--m-font-sm) !important;
     padding: var(--m-pad-xs) var(--m-pad-sm) var(--m-pad-xs) calc(var(--m-pad-sm) + 0.75rem) !important;
   }
   .note-type-expand-btn {
@@ -259,10 +249,6 @@
 
   #quoteModal .quote-modal-cmd-sub {
     font-size: var(--m-font-md) !important;
-  }
-
-  #quoteModal .quote-modal-commands-group-label {
-    font-size: var(--m-font-sm) !important;
   }
 
   #quoteModal .quote-modal-cmd-attach-submenu .quote-modal-commands-group-label {
@@ -877,7 +863,6 @@
   
   .menu-item {
     padding: 0.6rem 0.8rem;
-    font-size: 0.9rem;
     line-height: 1.2;
   }
   
@@ -901,13 +886,6 @@
     font-size: var(--m-font-meny-top) !important;
   }
 
-  /* Counter badges */
-  .quote-counts,
-  .results-counts,
-  .select-action-bar .sab-selection-count {
-    font-size: var(--m-font-sm);
-  }
-
   .quote-counts #filteredQuotesCount,
   .quote-counts #typeQuotesCount,
   .quote-counts #totalQuotesCount,
@@ -917,7 +895,6 @@
   .quote-counts #totalSourcesCount,
   .quote-counts #filteredTagsCount,
   .quote-counts #totalTagsCount,
-  .backend-status #totalQuotesCount,
   .results-count-badge,
   .select-action-bar .sab-count {
     font-size: var(--m-font-base);
@@ -1182,7 +1159,7 @@
     box-sizing: border-box !important;
     margin: 0 !important;
     padding: var(--m-card-pad) !important;
-    font-size: var(--m-font-base) !important;
+    font-size: var(--font-lg) !important;
   }
 
   .quotes-list .quote-card {
@@ -1197,47 +1174,25 @@
     padding: var(--m-card-pad) !important;
   }
 
-  /* Strip / metadata bar inside training cards */
-  .training-strip,
-  .quote-strip,
-  .note-strip {
-    font-size: var(--m-font-sm) !important;
-    padding: var(--m-pad-xs) 0.6rem !important;
-  }
-
-  /* Quote text inside cards */
+  /* Quote text inside cards — same step as desktop (.quote-text uses --font-lg) */
   .quote-text {
-    font-size: var(--m-font-base) !important;
+    font-size: var(--font-lg) !important;
     line-height: 1.5 !important;
   }
 
   /* Modal Quill editor — match card text size */
   .ql-editor {
-    font-size: var(--m-font-base) !important;
+    font-size: var(--font-lg) !important;
     line-height: 1.5 !important;
   }
   .ql-editor h2 {
     font-size: 1.3em !important;
   }
 
-  /* Author / source line */
-  .quote-author,
-  .quote-source,
-  .quote-meta {
-    font-size: var(--m-font-sm) !important;
-  }
-
   /* Training card top line — match medium h2 size */
   .training-meta-top .meta-item,
   .training-meta-top .meta-item-combined {
     font-size: var(--m-font-xl) !important;
-  }
-
-  /* Tag pills on cards and modal — actual class is .tag / .tag-removable */
-  .tag,
-  .tag-removable {
-    font-size: var(--m-font-xs) !important;
-    padding: var(--m-tag-pad-v) var(--m-tag-pad-h) !important;
   }
 
   /* Type-filter toggle button ("Select Quote Sources" / "Select Training Types") */
@@ -1281,19 +1236,6 @@
     gap: var(--m-pad-xs) !important;
   }
   .type-filter-option .type-icon {
-    font-size: var(--m-font-base) !important;
-  }
-  /* Select All / Clear All action buttons */
-  .type-action-btn {
-    font-size: var(--m-font-sm) !important;
-    height: 1.65rem !important;
-    min-height: 1.65rem !important;
-    max-height: 1.65rem !important;
-    padding: var(--m-pad-xs) var(--m-pad-sm) !important;
-    gap: var(--m-pad-xs) !important;
-    line-height: 1.2 !important;
-  }
-  .type-action-btn .type-icon {
     font-size: var(--m-font-base) !important;
   }
 
@@ -1362,12 +1304,6 @@
   .modal-body select,
   .modal-body textarea {
     font-size: var(--m-font-base) !important;
-  }
-
-  #quoteModal #selectedTags .tag-removable {
-    font-size: var(--m-font-base) !important;
-    padding: 0.12rem 0.45rem !important;
-    line-height: 1.2 !important;
   }
 
   .lp-pane-title.note-title-heading {

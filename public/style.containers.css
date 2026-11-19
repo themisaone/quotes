@@ -88,10 +88,6 @@
     max-width: 240px;
     margin: 0;
   }
-
-  .quote-meta {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* List+pane stack @container lives in style.medium.css (responsive layer)
