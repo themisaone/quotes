@@ -355,7 +355,7 @@
 
 .type-filter-field-label {
   color: var(--text-secondary);
-  font-size: var(--m-font-base);
+  font-size: var(--font-base);
   font-weight: 500;
   white-space: nowrap;
   flex: 0 0 auto;
@@ -860,7 +860,7 @@ h2 {
 }
 
 .search-item label {
-  font-size: var(--m-font-base);
+  font-size: var(--font-base);
   display: block;
   margin-bottom: 0;
   white-space: nowrap;

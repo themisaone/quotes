@@ -413,7 +413,7 @@
 /* Note title — modal input and list-pane display (same typography) */
 .note-title-heading,
 #noteTitle {
-  font-size: 1.8rem;
+  font-size: var(--font-xl);
   font-weight: 700;
   color: var(--link-color);
   line-height: 1.2;

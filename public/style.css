@@ -63,7 +63,7 @@
   /* Typography */
   --d-font-xs:    0.85rem;  /* menu section titles (like: META INFO), in cards: tag pills (.tag),  'by', 'from', author and source, 'Show more' */
   --d-font-sm:    1.0rem;   /* tag in modal,    ny, secondary text, labels, strips */
-  --d-font-base:  3.0rem;  /* was 1.0   */
+  --d-font-base:  0.8rem;  /* was 1.0   */
   --d-font-md:    0.990rem;  /* was 1.1   */
   --d-font-lg:    1.0rem;  /* was 1.125 */
   --d-font-xl:    1.350rem;  /* was 1.5   */
