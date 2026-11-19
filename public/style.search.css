@@ -152,7 +152,7 @@
   margin: 0;
 }
 
-/* Compact row: Search title → broad search input → optional subtype dropdown */
+/* Compact row: Search title → broad search input → optional subtype dropdown → advanced arrow */
 .search-compact-bar {
   display: flex;
   align-items: center;
@@ -209,10 +209,15 @@
 }
 
 .search-any-field {
-  flex: 1 1 18rem;
+  flex: 1 1 auto;
   min-width: 0;
-  margin-left: 0.5rem;
-  margin-right: 0.8rem;
+  margin: 0;
+}
+
+.search-any-field .search-input-clear-wrap {
+  width: 100%;
+  margin-left: 0;
+  margin-right: 0;
 }
 
 .search-any-field label {
@@ -699,7 +704,7 @@ body.mode-single-type #quotesQuoteCounts .quote-count-grand-total {
   user-select: none;
 }
 
-/* Shared counter badge styles — all 10 badges use same sizing */
+/* Shared counter badge styles — same height and font as toolbar buttons. */
 .quote-counts #filteredQuotesCount,
 .quote-counts #typeQuotesCount,
 .quote-counts #totalQuotesCount,
@@ -712,12 +717,18 @@ body.mode-single-type #quotesQuoteCounts .quote-count-grand-total {
 .backend-status #totalQuotesCount,
 .results-count-badge,
 .select-action-bar .sab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: var(--btn-height);
+  min-height: var(--btn-height);
   color: white;
-  padding: 0.115rem var(--pad-base);
+  padding: 0 var(--pad-base);
   border-radius: 6px;
   font-weight: 600;
-  font-size: var(--font-base);
-  line-height: 1.6;
+  font-size: var(--font-md);
+  line-height: 1;
 }
 
 .quote-counts #filteredQuotesCount,
@@ -869,9 +880,19 @@ h2 {
 }
 
 /* Quote search uses two rows. Fix the paired label widths so the fields in
-   each grid column begin on the same vertical line. */
+   each grid column begin on the same vertical line.
+   Column 1 (Tags / Author) matches the quick-search title, so those inputs
+   start on the same line as the quick-search field. --search-title-width is
+   set from the title's rendered width. */
 #searchTagsContainer > label,
-#searchAuthorContainer > label,
+#searchAuthorContainer > label {
+  width: auto;
+  min-width: var(--search-title-width, 5rem);
+  max-width: none;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+}
+
 #searchTextContainer > label,
 #searchSourceContainer > label {
   width: 5rem;
@@ -879,6 +900,16 @@ h2 {
   max-width: 5rem;
   flex: 0 0 5rem;
   box-sizing: border-box;
+}
+
+.search-grid #searchTagsContainer,
+.search-grid #searchAuthorContainer {
+  gap: 0.65rem;
+}
+
+.search-grid #searchTagsContainer > .search-input-clear-wrap,
+.search-grid #searchAuthorContainer > .search-input-clear-wrap {
+  margin-left: 0;
 }
 
 .search-item input[type="text"],

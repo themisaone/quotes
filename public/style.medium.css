@@ -895,7 +895,7 @@
   .quote-counts #totalTagsCount,
   .results-count-badge,
   .select-action-bar .sab-count {
-    padding: 0.25rem 0.55rem;
+    padding: 0 0.55rem;
   }
 
   /* All toolbar buttons: uniform height, same padding baseline. */
@@ -1025,6 +1025,14 @@
   .search-grid #searchSourceContainer { grid-column: 2 !important; }
   .search-item {
     gap: 0.35rem !important;
+  }
+  .search-grid #searchTagsContainer,
+  .search-grid #searchAuthorContainer {
+    gap: 0.45rem !important;
+  }
+  .search-grid #searchTagsContainer > label,
+  .search-grid #searchAuthorContainer > label {
+    min-width: var(--search-title-width, 5rem) !important;
   }
   .search-item label {
     min-width: 0 !important;

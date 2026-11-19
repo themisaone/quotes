@@ -131,6 +131,11 @@
   background: var(--card-hover-bg);
 }
 
+.quotes-section-actions .compact-select[data-select-id="columnCountSelect"] .compact-select-option {
+  text-align: left;
+  justify-content: flex-start;
+}
+
 .compact-select.gallery-active .compact-select-button {
   background: var(--total-counter-color);
   color: white;

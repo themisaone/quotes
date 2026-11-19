@@ -413,6 +413,24 @@ function setupSearchCollapse() {
   });
 }
 
+/* Keep the Tags / Author inputs on the same left edge as the quick-search field. */
+function setupSearchFieldAlignment() {
+  const title = document.querySelector('.search-compact-title');
+  const section = document.querySelector('#quotesView .search-section');
+  if (!title || !section) return;
+
+  const sync = () => {
+    section.style.setProperty('--search-title-width', `${title.getBoundingClientRect().width}px`);
+  };
+  sync();
+  if (typeof ResizeObserver === 'function') {
+    new ResizeObserver(sync).observe(title);
+  }
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(sync).catch(() => {});
+  }
+}
+
 // ============= INITIALIZATION =============
 
 /**
@@ -425,6 +443,7 @@ export function initializeSearchHandlers(callbacksParam) {
   setupTextSearchInputs();
   setupSearchFieldClearButtons();
   setupSearchCollapse();
+  setupSearchFieldAlignment();
   setupYearFilter();
   setupMonthFilter();
   
