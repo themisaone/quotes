@@ -168,8 +168,11 @@
   color: white;
   border: 1px solid rgba(255,255,255,0.35);
   border-radius: var(--radius-md);
-  font-size: 0.8rem;
-  padding: 0.15rem 0.3rem;
+  height: var(--btn-height);
+  box-sizing: border-box;
+  font-size: var(--font-md);
+  line-height: 1;
+  padding: 0 0.45rem;
   cursor: pointer;
   outline: none;
   flex-shrink: 0;
@@ -178,6 +181,67 @@
 .modal-notetype-select option {
   background: var(--header-color);
   color: white;
+  font-size: var(--font-md);
+}
+
+/* Header note-type list uses the same menu as Commands, so the open values
+   are not the system picker. */
+.modal-notetype-facade {
+  max-width: 160px;
+  min-width: 0;
+}
+
+.modal-notetype-facade > .compact-select-button {
+  width: auto;
+  max-width: 160px;
+  min-width: 0;
+  height: var(--btn-height);
+  padding: 0 0.45rem;
+  border: 1px solid rgba(255,255,255,0.35);
+  border-radius: var(--radius-md);
+  background: rgba(255,255,255,0.15);
+  color: white;
+  font-size: var(--font-md);
+  font-weight: 500;
+  justify-content: space-between;
+  overflow: hidden;
+}
+
+.modal-notetype-facade > .compact-select-button:hover,
+.modal-notetype-facade.open > .compact-select-button {
+  background: rgba(255,255,255,0.25);
+  border-color: rgba(255,255,255,0.6);
+}
+
+.modal-notetype-facade .compact-select-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.modal-notetype-facade .compact-select-arrow {
+  color: white;
+  flex-shrink: 0;
+}
+
+.modal-notetype-facade .compact-select-menu {
+  left: 0;
+  right: auto;
+  width: max-content;
+  min-width: 100%;
+  max-width: min(18rem, calc(100vw - 2rem));
+}
+
+.modal-notetype-facade .compact-select-option {
+  justify-content: flex-start;
+  text-align: left;
+  font-size: var(--font-md);
+  white-space: nowrap;
+}
+
+#quoteModal .modal-header:has(.modal-notetype-facade.open) {
+  overflow: visible;
+  z-index: 4;
 }
 .modal-notetype-select:hover,
 .modal-notetype-select:focus {
@@ -693,7 +757,7 @@
   background: transparent;
   color: var(--text-primary);
   font: inherit;
-  font-size: 0.82rem;
+  font-size: var(--font-md);
   font-weight: 500;
   line-height: 1.2;
   text-align: left;
@@ -1529,14 +1593,35 @@ select {
   color: var(--text-primary);
 }
 
+/* Single-line fields match the Search box. Textareas stay multi-line. */
+input[type="text"],
+input[type="search"],
+input[type="password"],
+input[type="number"],
+input[type="date"] {
+  height: var(--btn-height);
+  box-sizing: border-box;
+}
+
 .modal-body select:not([multiple]) {
   appearance: none;
   -webkit-appearance: none;
+  height: var(--btn-height);
+  min-height: var(--btn-height);
+  box-sizing: border-box;
+  font-size: var(--font-md);
+  line-height: 1;
+  padding-top: 0;
+  padding-bottom: 0;
   padding-right: 2.25rem;
   background-image: url("data:image/svg+xml,%3Csvg width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 0.75rem center;
   background-size: 0.875rem 0.875rem;
+}
+
+.modal-body select:not([multiple]) option {
+  font-size: var(--font-md);
 }
 
 #quoteText {

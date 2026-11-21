@@ -122,15 +122,25 @@
     line-height: 1 !important;
   }
 
-  .tc-title-month {
+  .tc-title-month,
+  .tc-title-month-facade {
     width: 4.8rem !important;
     min-width: 4.8rem !important;
   }
 
-  .tc-title-year {
+  .tc-title-year,
+  .tc-title-year-facade {
     width: 4.15rem !important;
     min-width: 4.15rem !important;
     margin-left: 0.15rem !important;
+  }
+
+  .tc-title-facade > .compact-select-button {
+    height: 26px !important;
+    min-height: 26px !important;
+    max-width: 100% !important;
+    padding: 0 0.3rem !important;
+    font-size: 0.68rem !important;
   }
 
   .tc-nav-btn {
@@ -177,10 +187,17 @@
     display: none !important;
   }
 
-  #quoteModal .modal-notetype-select {
+  #quoteModal .modal-notetype-select,
+  #quoteModal .modal-notetype-facade,
+  #quoteModal .modal-notetype-facade > .compact-select-button {
     max-width: 5.8rem !important;
     min-width: 0 !important;
     font-size: 0.72rem !important;
+  }
+
+  #quoteModal .modal-header:has(.modal-notetype-facade.open) {
+    overflow: visible !important;
+    z-index: 4 !important;
   }
 
   #quoteModal .quote-metadata-header {

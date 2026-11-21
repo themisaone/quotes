@@ -1360,6 +1360,18 @@
     padding: 0.5rem !important;
     font-size: 11px !important;  /* Was 14px, now 20% smaller */
   }
+
+  input[type="text"],
+  input[type="search"],
+  input[type="password"],
+  input[type="number"],
+  input[type="date"],
+  .modal-body select:not([multiple]),
+  .modal-notetype-select,
+  .modal-notetype-facade > .compact-select-button {
+    height: var(--mobile-search-control-height, 2rem) !important;
+    box-sizing: border-box !important;
+  }
   
   textarea {
     min-height: 100px !important;

@@ -248,6 +248,91 @@ function buildYearOptions() {
   return Array.from(set).sort((a, b) => b - a);
 }
 
+let _titleMenuDismissReady = false;
+
+function closeCalendarTitleMenus(exceptWrapper = null) {
+  if (!_container) return;
+  _container.querySelectorAll('.tc-title-facade.open').forEach((wrapper) => {
+    if (wrapper === exceptWrapper) return;
+    wrapper.classList.remove('open');
+    wrapper.querySelector('.compact-select-button')?.setAttribute('aria-expanded', 'false');
+  });
+}
+
+function ensureCalendarTitleMenuDismiss() {
+  if (_titleMenuDismissReady) return;
+  _titleMenuDismissReady = true;
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('.tc-title-facade')) closeCalendarTitleMenus();
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeCalendarTitleMenus();
+  });
+}
+
+/** Custom menu so month/year values use --font-md instead of the system picker. */
+function mountCalendarTitleMenus() {
+  if (!_container) return;
+  _container.querySelectorAll('.tc-title-select').forEach((select) => {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'compact-select tc-title-facade';
+    if (select.classList.contains('tc-title-month')) wrapper.classList.add('tc-title-month-facade');
+    if (select.classList.contains('tc-title-year')) wrapper.classList.add('tc-title-year-facade');
+    select.parentNode.insertBefore(wrapper, select);
+    wrapper.appendChild(select);
+    select.classList.add('compact-select-native');
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'compact-select-button';
+    button.title = select.title || '';
+    button.setAttribute('aria-haspopup', 'listbox');
+    button.setAttribute('aria-expanded', 'false');
+
+    const label = document.createElement('span');
+    label.className = 'compact-select-label';
+    label.textContent = select.selectedOptions?.[0]?.textContent?.trim() || '';
+    const arrow = document.createElement('span');
+    arrow.className = 'compact-select-arrow';
+    arrow.setAttribute('aria-hidden', 'true');
+    arrow.textContent = '▼';
+    button.append(label, arrow);
+
+    const menu = document.createElement('div');
+    menu.className = 'compact-select-menu';
+    menu.setAttribute('role', 'listbox');
+    Array.from(select.options).forEach((option) => {
+      const optionBtn = document.createElement('button');
+      optionBtn.type = 'button';
+      optionBtn.className = 'compact-select-option';
+      optionBtn.dataset.value = option.value;
+      optionBtn.setAttribute('role', 'option');
+      const selected = option.value === select.value;
+      optionBtn.classList.toggle('selected', selected);
+      optionBtn.setAttribute('aria-selected', selected ? 'true' : 'false');
+      optionBtn.textContent = option.textContent;
+      optionBtn.addEventListener('click', () => {
+        closeCalendarTitleMenus();
+        if (select.value !== option.value) {
+          select.value = option.value;
+          select.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      });
+      menu.appendChild(optionBtn);
+    });
+
+    wrapper.append(button, menu);
+    button.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const willOpen = !wrapper.classList.contains('open');
+      closeCalendarTitleMenus(wrapper);
+      wrapper.classList.toggle('open', willOpen);
+      button.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+    });
+  });
+  ensureCalendarTitleMenuDismiss();
+}
+
 function renderHeader() {
   const years = buildYearOptions();
   const yearOpts  = years.map(y =>
@@ -263,9 +348,9 @@ function renderHeader() {
   // stepping; the Year dropdown stands apart as a jumper.
   return `
     <div class="tc-header">
-      <button type="button" class="tc-nav-btn" data-tc-nav="prev" title="Previous month">◀</button>
+      <button type="button" class="tc-nav-btn" data-tc-nav="prev" title="Previous month">◀&#xFE0E;</button>
       <select class="tc-title-select tc-title-month" data-tc-sel="month" title="Pick month">${monthOpts}</select>
-      <button type="button" class="tc-nav-btn" data-tc-nav="next" title="Next month">▶</button>
+      <button type="button" class="tc-nav-btn" data-tc-nav="next" title="Next month">▶&#xFE0E;</button>
       <select class="tc-title-select tc-title-year"  data-tc-sel="year"  title="Pick year">${yearOpts}</select>
       <button type="button" class="tc-nav-btn tc-today-btn" data-tc-nav="today" title="Jump to today">Today</button>
     </div>`;
@@ -370,6 +455,8 @@ function render() {
       ${_loading ? '<div class="tc-loading">Loading…</div>' : renderGrid(typeMap)}
       ${renderLegend(typeMap)}
     </div>`;
+
+  mountCalendarTitleMenus();
 
   // Header navigation (prev / next / today)
   _container.querySelectorAll('.tc-nav-btn').forEach(btn => {

@@ -61,6 +61,7 @@
      Original values noted in comments for easy reference.        ──────── */
 
   /* Typography */
+  --d-font-xxs:   0.72rem;   /* checked - day on calender */
   --d-font-xs:    0.9rem;    /* checked - menu section titles (like: META INFO), in cards: tag pills (.tag),  'by', 'from', author and source, 'Show more' */
   --d-font-sm:    0.9rem;    /* checked - tag in modal,    ny, secondary text, labels, strips */
   --d-font-base:  0.8rem;    /* checked - labels, text in search fields, text in text-fields to fill */
@@ -89,8 +90,8 @@
   --d-btn-height: 2.25rem;   /* was 2.5   */
 
   /* Cards */
-  --d-card-pad:   1.125rem;  /* was 1.25 — padding inside a card */
-  --d-card-gap:   0.9rem;      /* space under a card and between columns */
+  --d-card-pad:   1.125rem;  /* checked - card pad */
+  --d-card-gap:   0.9rem;    /* schecked - space under a card and between columns */
 
   /* Active scale. Component rules use these names.
      Desktop (here) points them at --d-*.
@@ -107,6 +108,7 @@
   --gap-sm: var(--d-gap-sm);
   --gap-base: var(--d-gap-base);
   --gap-lg: var(--d-gap-lg);
+  --font-xxs: var(--d-font-xxs);
   --font-xs: var(--d-font-xs);
   --font-sm: var(--d-font-sm);
   --font-base: var(--d-font-base);

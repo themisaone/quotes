@@ -52,7 +52,7 @@
 
 .search-box input {
   width: 100%;
-  padding: 0.75rem;
+  padding: 0 0.75rem;
   border: 1px solid var(--border);
   border-radius: 8px;
   font-size: 1rem;
@@ -105,7 +105,7 @@
   border-radius: var(--bradius-small);
   background-color: var(--surface);
   color: var(--text-primary);
-  font-size: 0.9rem;
+  font-size: var(--font-md);
   line-height: 1;
 }
 
@@ -354,7 +354,7 @@
   align-items: center;
   gap: 0.75rem;
   flex: 0 0 auto;
-  margin-left: 0;
+  margin-left: 30px;
   min-width: 0;
 }
 
@@ -499,14 +499,19 @@
 
 /* Training Date Filters */
 .training-date-select {
-  width: 100%;
-  padding: 0.65rem;
-  padding-right: 2.5rem; /* Extra space for dropdown arrow */
+  width: auto;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: var(--btn-height);
+  min-height: var(--btn-height);
+  box-sizing: border-box;
+  padding: 0 2.5rem 0 0.75rem; /* Right inset keeps the arrow clear of the label */
   background: var(--input-bg);
   color: var(--text-primary);
   border: 1px solid var(--border);
   border-radius: 6px;
-  font-size: 1rem;
+  font-size: var(--font-md);
+  line-height: 1;
   cursor: pointer;
   transition: all 0.2s;
   appearance: none;
@@ -547,6 +552,7 @@
 .training-date-select option {
   background: var(--surface, var(--input-bg));
   color: var(--text-primary);
+  font-size: var(--font-md);
 }
 
 .type-filter-toggle {
@@ -559,7 +565,7 @@
   border: 1px solid var(--border);
   border-radius: 6px;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: var(--font-md);
   font-weight: 500;
   transition: all 0.2s;
   min-width: 160px;
@@ -612,9 +618,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 1.75rem;
-  min-height: 1.75rem;
-  max-height: 1.75rem;
+  height: 1.5rem;
+  min-height: 1.5rem;
+  max-height: 1.5rem;
   gap: 0.35rem;
   padding: 0.25rem 0.65rem;
   flex: 1;
@@ -622,7 +628,7 @@
   border: none;
   cursor: pointer;
   transition: background 0.2s;
-  font-size: 1rem;
+  font-size: var(--font-md);
   font-weight: 500;
   line-height: 1.2;
   color: var(--text-primary);
@@ -650,7 +656,12 @@
   padding: 0.1rem 1rem;
   cursor: pointer;
   transition: background 0.2s;
-  font-size: 1rem;
+  font-size: var(--font-md);
+}
+
+.search-item .type-filter-option,
+.search-header-subtype .type-filter-option {
+  font-size: var(--font-md);
 }
 
 .type-filter-option:hover {
@@ -670,7 +681,7 @@
 .type-filter-separator {
   height: 1px;
   background: var(--border);
-  margin: 0.5rem 0;
+  margin: var(--pad-xs) 0;
 }
 
 .quote-counts {
@@ -852,6 +863,10 @@ h2 {
 .search-grid #searchAuthorContainer { grid-column: 1 / span 1; grid-row: 2; }
 .search-grid #searchSourceContainer { grid-column: 2 / span 1; grid-row: 2; }
 
+/* Training list mode: Year sits under Tags, Month under Text. */
+.search-grid #trainingYearContainer  { grid-column: 1; grid-row: 2; }
+.search-grid #trainingMonthContainer { grid-column: 2; grid-row: 2; }
+
 /* Clear button lives inside the grid now; it has no label to align with */
 .search-grid .search-clear-item {
   display: flex;
@@ -885,7 +900,8 @@ h2 {
    start on the same line as the quick-search field. --search-title-width is
    set from the title's rendered width. */
 #searchTagsContainer > label,
-#searchAuthorContainer > label {
+#searchAuthorContainer > label,
+#trainingYearContainer > label {
   width: auto;
   min-width: var(--search-title-width, 5rem);
   max-width: none;
@@ -894,7 +910,8 @@ h2 {
 }
 
 #searchTextContainer > label,
-#searchSourceContainer > label {
+#searchSourceContainer > label,
+#trainingMonthContainer > label {
   width: 5rem;
   min-width: 5rem;
   max-width: 5rem;
@@ -903,7 +920,8 @@ h2 {
 }
 
 .search-grid #searchTagsContainer,
-.search-grid #searchAuthorContainer {
+.search-grid #searchAuthorContainer,
+.search-grid #trainingYearContainer {
   gap: 0.65rem;
 }
 
@@ -912,10 +930,39 @@ h2 {
   margin-left: 0;
 }
 
+/* Year/Month sit in a facade so medium can open a custom menu. On a wide
+   screen the native select stays the visible control. The text fields above
+   sit in a wrap with margin-right 0.8rem, and Text also has margin-left 0.5rem. */
+.search-grid #trainingYearContainer > .training-date-facade,
+.search-grid #trainingMonthContainer > .training-date-facade {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  margin-right: 0.8rem;
+}
+.search-grid #trainingMonthContainer > .training-date-facade {
+  margin-left: 0.5rem;
+}
+.training-date-facade > .compact-select-button,
+.training-date-facade > .compact-select-menu {
+  display: none;
+}
+.training-date-facade > .training-date-select {
+  position: static;
+  inset: auto;
+  width: 100%;
+  height: var(--btn-height);
+  opacity: 1;
+  pointer-events: auto;
+  margin: 0;
+}
+
 .search-item input[type="text"],
 .search-item select {
   flex: 1;
   min-width: 0;
+  height: var(--btn-height);
+  box-sizing: border-box;
 }
 
 .search-item .autocomplete-wrapper {

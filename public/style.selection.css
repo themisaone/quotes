@@ -110,18 +110,18 @@ body.selection-mode .quote-card::after {
 }
 
 .select-action-bar .sab-tagop-select {
-  height: calc(var(--btn-height) - 6px);
+  height: var(--btn-height);
   padding: 0 0.5rem;
   background: var(--input-bg);
   color: var(--text-primary);
   border: 1px solid var(--border);
   border-radius: var(--bradius-small);
-  font-size: var(--font-base);
+  font-size: var(--font-md);
   cursor: pointer;
 }
 
 .select-action-bar .sab-tagop-input {
-  height: calc(var(--btn-height) - 6px);
+  height: var(--btn-height);
   padding: 0 0.7rem;
   background: var(--input-bg);
   color: var(--text-primary);

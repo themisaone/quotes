@@ -135,7 +135,8 @@ import {
   filterBySource as filterBySourceLib,
   initializeSearchHandlers,
   registerGlobalSearchFunctions,
-  clearSearchFields
+  clearSearchFields,
+  populateTrainingYears
 } from './js/lib/searchManager.js';
 
 import {
@@ -664,6 +665,12 @@ function initCompactSelectFacade(select) {
 
   const wrapper = document.createElement('div');
   wrapper.className = 'compact-select';
+  if (select.classList.contains('training-date-select')) {
+    wrapper.classList.add('training-date-facade');
+  }
+  if (select.classList.contains('modal-notetype-select')) {
+    wrapper.classList.add('modal-notetype-facade');
+  }
   wrapper.dataset.selectId = select.id || '';
   select.parentNode.insertBefore(wrapper, select);
   wrapper.appendChild(select);
@@ -728,6 +735,9 @@ function initCompactSelectFacade(select) {
 
 function initCompactToolbarSelects() {
   initCompactSelectFacade(columnCountSelect);
+  initCompactSelectFacade(document.getElementById('trainingYearFilter'));
+  initCompactSelectFacade(document.getElementById('trainingMonthFilter'));
+  initCompactSelectFacade(document.getElementById('noteType'));
 }
 
 function syncResultsViewSelectOptions() {
@@ -2565,8 +2575,14 @@ function updateBulkButtonVisibility() {
 // Wrapper for filterManager library
 function updateSourcesFilterVisibility() {
   updateSourcesFilterVisibilityLib2(currentNoteTypeFilter, getQuoteTypes, getTrainingTypes);
-  if (isDateBehaviorType(currentNoteTypeFilter) && getTrainingSubMode(currentNoteTypeFilter) === 'calendar') {
+  const dateMode = isDateBehaviorType(currentNoteTypeFilter);
+  const calendar = dateMode && getTrainingSubMode(currentNoteTypeFilter) === 'calendar';
+  if (calendar) {
     restoreTrainingDateFiltersToBar({ hide: true });
+  } else if (dateMode) {
+    // Fill Year before the menu opens. A focus-only fetch lands after the
+    // native popup has already been built, so it stays on "All Years".
+    populateTrainingYears();
   }
 }
 

@@ -67,7 +67,7 @@ function createYearOption(year) {
 /**
  * Populate training years dropdown from API
  */
-async function populateTrainingYears() {
+export async function populateTrainingYears() {
   try {
     const yearSelect = getElementByIdSafe(FILTER_IDS.YEAR_FILTER, 'populateTrainingYears');
     if (!yearSelect) {

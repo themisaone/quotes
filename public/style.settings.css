@@ -23,7 +23,7 @@
   background: transparent;
   color: var(--text-secondary);
   padding: 0.45rem 1.1rem;
-  font-size: 0.9rem;
+  font-size: var(--font-xl);
   font-weight: 600;
   cursor: pointer;
   line-height: 1.2;
@@ -137,7 +137,7 @@
 
 .settings-section-heading {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: var(--font-xl);
   font-weight: 600;
   color: var(--text-primary);
   flex: 1 1 auto;
@@ -260,7 +260,7 @@ details.settings-section-desc .settings-section-lead {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  font-size: 1rem;
+  font-size: var(--font-lg);
   font-weight: 500;
   cursor: pointer;
   color: var(--text-primary);

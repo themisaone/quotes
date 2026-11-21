@@ -40,7 +40,7 @@
   }
   .select-action-bar .sab-tagop-select,
   .select-action-bar .sab-tagop-input {
-    height: calc(var(--m-btn-height) - 6px) !important;
+    height: var(--m-btn-height) !important;
   }
 }
 
@@ -57,6 +57,7 @@
      multiply by 0.8 (or just set them directly).               ──────── */
   :root {
     /* Typography */
+    --m-font-xxs:   0.5rem;   /* checked - day on calender */
     --m-font-xs:    0.75rem;  /* menu section titles (like: META INFO), in cards: tag pills (.tag),  'by', 'from', author and source, 'Show more' */
     --m-font-sm:    0.825rem; /* tag in modal,    ny, secondary text, labels, strips */
     --m-font-base:  0.7rem;   /* inputs, search fields, form labels */
@@ -98,6 +99,7 @@
     --gap-sm: var(--m-gap-sm);
     --gap-base: var(--m-gap-base);
     --gap-lg: var(--m-gap-lg);
+    --font-xxs: var(--m-font-xxs);
     --font-xs: var(--m-font-xs);
     --font-sm: var(--m-font-sm);
     --font-base: var(--m-font-base);
@@ -412,9 +414,16 @@
       display: none !important;
     }
 
-    #quoteModal .modal-notetype-select {
+    #quoteModal .modal-notetype-select,
+    #quoteModal .modal-notetype-facade,
+    #quoteModal .modal-notetype-facade > .compact-select-button {
       max-width: 8rem !important;
       min-width: 0 !important;
+    }
+
+    #quoteModal .modal-header:has(.modal-notetype-facade.open) {
+      overflow: visible !important;
+      z-index: 4 !important;
     }
 
     #quoteModal .quote-metadata-header {
@@ -994,7 +1003,7 @@
     height: var(--btn-height) !important;
     min-height: var(--btn-height) !important;
     padding: 0 2.25rem 0 0.65rem !important;
-    font-size: 0.9rem !important;
+    font-size: var(--font-md) !important;
   }
 
   #authorsView .entity-sort-select,
@@ -1004,7 +1013,7 @@
     min-height: var(--btn-height) !important;
     padding: 0 2.25rem 0 0.65rem !important;
     border-radius: var(--bradius-small) !important;
-    font-size: 0.9rem !important;
+    font-size: var(--font-md) !important;
   }
 
   #sourcesView .sources-type-filter .type-filter-toggle {
@@ -1012,7 +1021,7 @@
     min-height: var(--btn-height) !important;
     padding: 0 0.65rem !important;
     border-radius: var(--bradius-small) !important;
-    font-size: 0.9rem !important;
+    font-size: var(--font-md) !important;
   }
 
   /* ── Medium search-grid: compress so Tags|Text|Score|Clear fits in the
@@ -1027,12 +1036,72 @@
     gap: 0.35rem !important;
   }
   .search-grid #searchTagsContainer,
-  .search-grid #searchAuthorContainer {
+  .search-grid #searchAuthorContainer,
+  .search-grid #trainingYearContainer {
     gap: 0.45rem !important;
   }
   .search-grid #searchTagsContainer > label,
-  .search-grid #searchAuthorContainer > label {
+  .search-grid #searchAuthorContainer > label,
+  .search-grid #trainingYearContainer > label {
     min-width: var(--search-title-width, 5rem) !important;
+  }
+  .search-grid .training-date-select {
+    height: var(--m-btn-height) !important;
+    min-height: var(--m-btn-height) !important;
+    padding: 0 1.5rem 0 0.55rem !important;
+    font-size: var(--font-md) !important;
+    line-height: 1 !important;
+  }
+  /* Medium opens a custom menu. The system picker ignores --font-md. */
+  .training-date-facade > .training-date-select {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+  .training-date-facade > .compact-select-button {
+    display: inline-flex !important;
+    width: 100%;
+    height: var(--m-btn-height) !important;
+    min-height: var(--m-btn-height) !important;
+    justify-content: space-between;
+    padding: 0 0.7rem !important;
+    background: var(--input-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: var(--font-md) !important;
+    font-weight: 500;
+    line-height: 1 !important;
+    box-sizing: border-box;
+  }
+  .training-date-facade > .compact-select-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  .training-date-facade .training-date-select.filter-active + .compact-select-button {
+    background: var(--card-hover-bg);
+  }
+  .training-date-facade.open > .compact-select-menu {
+    display: flex !important;
+    max-height: 16rem;
+    overflow-y: auto;
+    padding: 0.35rem 0 !important;
+    border-radius: 8px;
+    background: var(--surface);
+  }
+  .training-date-facade .compact-select-option {
+    height: auto !important;
+    min-height: 0 !important;
+    padding: 0.28rem 0.9rem !important;
+    border-radius: 0;
+    font-size: var(--font-md) !important;
+    font-weight: 500;
+    line-height: 1.2 !important;
+    text-align: left;
+    justify-content: flex-start !important;
   }
   .search-item label {
     min-width: 0 !important;
@@ -1196,7 +1265,6 @@
   }
   .search-header-subtype {
     flex: 0 0 auto !important;
-    margin-left: 0 !important;
   }
   .search-header-subtype .type-filter-toggle {
     min-width: 6.2rem !important;
@@ -1350,14 +1418,17 @@
 }
 
 /* List-pane on medium: always side-by-side (list | note), including when the
-   side menu is expanded and #lpWrapper is under 900px. Calendar keeps 50/50. */
+   side menu is expanded and #lpWrapper is under 900px. Calendar uses the
+   same left-column width as List. min-width: 0 lets the calendar header
+   wrap instead of stretching that column. */
 @media (min-width: 768px) and (max-width: 1100px) {
   .lp-layout,
-  .lp-layout.lp-layout-titled {
-    grid-template-columns: 10fr 20fr;
-  }
+  .lp-layout.lp-layout-titled,
   .lp-layout.lp-layout-calendar {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 12fr 20fr;
+  }
+  .lp-layout.lp-layout-calendar > .lp-list {
+    min-width: 0;
   }
 
   /* Undo any leftover stack caps if CQ matched before a resize. */
