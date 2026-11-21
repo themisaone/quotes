@@ -813,10 +813,15 @@ export function renderNoteTypesList(rebuildMenuFn) {
     return (mode === 'list-pane' || mode === 'cards') ? mode : 'cards';
   };
 
-  const subTypeRowHtml = (sub, ntIdx, sIdx, canDelete, isDefault) => `
+  const safeSubColor = (color) => (
+    /^#[0-9a-fA-F]{6}$/.test(color || '') ? color : '#9ca3af'
+  );
+
+  const subTypeRowHtml = (sub, ntIdx, sIdx, canDelete, isDefault, showColor) => `
     <div class="subtype-item" data-nt="${ntIdx}" data-si="${sIdx}">
       <input type="radio" class="subtype-default" name="subtype-default-${ntIdx}" aria-label="Default sub-type" ${isDefault ? 'checked' : ''} />
       <input type="text" class="subtype-icon"  value="${sub.icon}"  placeholder="📝" maxlength="2" aria-label="Sub-type icon" />
+      ${showColor ? `<input type="color" class="subtype-color" value="${safeSubColor(sub.color)}" aria-label="Sub-type color" />` : ''}
       <input type="text" class="subtype-value" value="${sub.value}" placeholder="VALUE" aria-label="Sub-type internal key" />
       <input type="text" class="subtype-label" value="${sub.label}" placeholder="Label" aria-label="Sub-type display label" />
       ${canDelete ? `<button type="button" class="btn-icon-small btn-delete-subtype" aria-label="Delete sub-type">🗑️</button>` : ''}
@@ -831,21 +836,31 @@ export function renderNoteTypesList(rebuildMenuFn) {
     const subs = type.subTypes || [];
     const behaviorOpts = ['quote','training','diary','generic'].map(b =>
       `<option value="${b}" ${(type.behavior||'generic')===b?'selected':''}>${behaviorLabel(b)}</option>`).join('');
+    const showSubColor = isTrainingType(type);
+    const calendarMarker = type.calendarMarker === 'colors' ? 'colors' : 'icons';
+    const calendarChoiceHtml = showSubColor ? `
+          <div class="subtype-calendar-choice">
+            <span class="subtype-calendar-choice-label">Calendar</span>
+            <label><input type="radio" class="calendar-marker-input" name="calendar-marker-${index}" value="icons" ${calendarMarker === 'icons' ? 'checked' : ''} /> Icons</label>
+            <label><input type="radio" class="calendar-marker-input" name="calendar-marker-${index}" value="colors" ${calendarMarker === 'colors' ? 'checked' : ''} /> Colors</label>
+          </div>` : '';
     const subsHtml = hasSubs ? `
         <div class="subtype-section">
           <div class="subtype-header">
             <span class="subtype-header-title">Sub-types (${subs.length})</span>
             <button type="button" class="btn-add-subtype btn-icon-small" data-nt="${index}" aria-label="Add sub-type">➕</button>
           </div>
+          ${calendarChoiceHtml}
           <div class="subtype-columns-header" aria-hidden="true">
             <span class="subtype-col-default">Default</span>
-            <span>Icon</span>
-            <span>Internal key</span>
-            <span>Display label</span>
+            <span class="subtype-col-icon">Icon</span>
+            ${showSubColor ? '<span class="subtype-col-color">Color</span>' : ''}
+            <span class="subtype-col-key">Internal key</span>
+            <span class="subtype-col-label">Display label</span>
             <span class="subtype-col-actions"></span>
           </div>
           <div class="subtype-list" data-nt="${index}">
-            ${subs.map((s, si) => subTypeRowHtml(s, index, si, subs.length > 1, !!s.isDefault)).join('')}
+            ${subs.map((s, si) => subTypeRowHtml(s, index, si, subs.length > 1, !!s.isDefault, showSubColor)).join('')}
           </div>
         </div>` : `
         <div class="note-type-subtypes-empty">No sub-types for this behavior.</div>`;
@@ -930,6 +945,18 @@ export function renderNoteTypesList(rebuildMenuFn) {
     if (behaviorSel)  behaviorSel.addEventListener('change', updateType);
     if (displayModeSel) displayModeSel.addEventListener('change', updateType);
 
+    row.querySelectorAll('.calendar-marker-input').forEach((markerInput) => {
+      markerInput.addEventListener('change', () => {
+        if (!markerInput.checked) return;
+        const current = getNoteTypesSettings();
+        current[index] = {
+          ...current[index],
+          calendarMarker: markerInput.value === 'colors' ? 'colors' : 'icons',
+        };
+        saveNoteTypesAndRefresh(current, rebuildMenuFn);
+      });
+    });
+
     if (deleteBtn) {
       deleteBtn.addEventListener('click', async () => {
         const current = getNoteTypesSettings();
@@ -952,6 +979,7 @@ export function renderNoteTypesList(rebuildMenuFn) {
       const ntIdx = parseInt(sRow.dataset.nt);
       const siIdx = parseInt(sRow.dataset.si);
       const iconI    = sRow.querySelector('.subtype-icon');
+      const colorI   = sRow.querySelector('.subtype-color');
       const valueI   = sRow.querySelector('.subtype-value');
       const labelI   = sRow.querySelector('.subtype-label');
       const defaultR = sRow.querySelector('.subtype-default');
@@ -960,15 +988,20 @@ export function renderNoteTypesList(rebuildMenuFn) {
       const updateSub = () => {
         const current = getNoteTypesSettings();
         if (!current[ntIdx].subTypes) current[ntIdx].subTypes = [];
-        current[ntIdx].subTypes[siIdx] = {
+        const next = {
           ...current[ntIdx].subTypes[siIdx],
           icon:  iconI.value  || '📝',
           value: (valueI.value || 'CUSTOM').toUpperCase().replace(/[^A-Z0-9/\-_]/g, ''),
           label: labelI.value || 'Custom',
         };
+        if (colorI) {
+          next.color = /^#[0-9a-fA-F]{6}$/.test(colorI.value) ? colorI.value : '';
+        }
+        current[ntIdx].subTypes[siIdx] = next;
         saveNoteTypesAndRefresh(current, rebuildMenuFn);
       };
       iconI.addEventListener('change', updateSub);
+      if (colorI) colorI.addEventListener('change', updateSub);
       valueI.addEventListener('change', updateSub);
       labelI.addEventListener('change', updateSub);
 
@@ -1006,7 +1039,9 @@ export function renderNoteTypesList(rebuildMenuFn) {
         const ntIdx = parseInt(addSubBtn.dataset.nt);
         const current = getNoteTypesSettings();
         if (!current[ntIdx].subTypes) current[ntIdx].subTypes = [];
-        current[ntIdx].subTypes.push({ icon: '📝', value: 'CUSTOM', label: 'New Sub-type' });
+        const added = { icon: '📝', value: 'CUSTOM', label: 'New Sub-type' };
+        if (isTrainingType(current[ntIdx])) added.color = '';
+        current[ntIdx].subTypes.push(added);
         saveNoteTypesAndRefresh(current, rebuildMenuFn);
       });
     }

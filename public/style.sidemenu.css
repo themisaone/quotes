@@ -84,7 +84,7 @@ html { scrollbar-width: thin; scrollbar-color: rgba(0, 0, 0, 0.2) transparent; }
   background: none;
   border: none;
   border-radius: 8px;
-  font-size: var(--font-lg);
+  font-size: var(--font-lg); /* --font-md is also good */ 
   color: rgba(255, 255, 255, 0.85);
   cursor: pointer;
   transition: all 0.2s;

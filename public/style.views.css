@@ -273,10 +273,14 @@
   --lp-band-pad-bottom: var(--card-pad); /* 0.75rem;*/ 
 }
 
-/* Calendar mode keeps the calendar compact while the opened note grows to its
- * natural height. */
+/* Calendar stays its own height. A shorter note stretches to that height;
+ * a longer note still grows past it. */
 .lp-layout-calendar {
   align-items: start;
+}
+
+.lp-layout-calendar > .lp-list {
+  align-self: start;
 }
 
 /* ── Left: list card ── */
@@ -388,7 +392,7 @@
   grid-template-columns: 1fr auto;
   gap: 0.5rem;
   align-items: center;
-  padding: 0.65rem 0.9rem;
+  padding: var(--pad-sm);
   border-bottom: 1px solid var(--border);
   cursor: pointer;
   transition: background 0.12s;
@@ -488,8 +492,8 @@
 
 /* ── Titled list-pane (all types except training): uniform rows; optional 80px thumb ── */
 .lp-list-titled {
-  --lp-titled-thumb-size: 80px;
-  --lp-titled-row-min-height: calc(var(--lp-titled-thumb-size) + 1.3rem);
+  --lp-titled-thumb-size: var(--list-header-thumb-size);;
+  --lp-titled-row-min-height: calc(var(--lp-titled-thumb-size) + 1.0rem); 
   --lp-list-min-rows: 12;
   /* The row floor is set from the current rendered row count in listPaneView.js. */
   min-height: calc(var(--lp-list-min-rows) * var(--lp-titled-row-min-height));
@@ -498,7 +502,7 @@
   grid-template-columns: 1fr;
   gap: 0.75rem;
   align-items: center;
-  min-height: calc(var(--lp-titled-thumb-size) + 1.3rem);
+  min-height: calc(var(--lp-titled-thumb-size) + 1.0rem); 
   box-sizing: border-box;
 }
 .lp-row-titled-has-thumb {
@@ -534,7 +538,7 @@
   flex: 1;
   min-width: 0;
   margin-bottom: 0;
-  font-size: 0.95rem;
+  font-size: var(--font-sm);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -629,20 +633,30 @@
 }
 
 .lp-layout-calendar .lp-pane {
-  align-self: start;
+  align-self: stretch;
   height: auto;
   max-height: none;
   overflow: visible;
 }
 
-.lp-layout-calendar .lp-pane-shell,
+.lp-layout-calendar .lp-pane-shell {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 100%;
+  max-height: none;
+  overflow: visible;
+}
+
 .lp-layout-calendar .lp-pane-paper-body,
 .lp-layout-calendar .lp-pane-editor-wrap,
 .lp-layout-calendar .lp-pane-editor-wrap > .quill-editor-shell,
 .lp-layout-calendar #lpPaneQuill {
-  display: block;
-  flex: none;
-  height: max-content;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  height: auto;
   max-height: none;
   min-height: 0;
   overflow: visible;
@@ -650,7 +664,8 @@
 
 .lp-layout-calendar #lpPaneQuill .ql-container.ql-snow,
 .lp-layout-calendar #lpPaneQuill .ql-editor {
-  height: max-content;
+  flex: 1 1 auto;
+  height: auto;
   max-height: none;
   overflow: visible;
 }
@@ -988,6 +1003,23 @@
   max-height: none;
   overflow-y: visible;
 }
+
+/* Calendar: the note area fills the pane, toolbar stays on the bottom edge.
+   A longer note still grows the pane past the calendar. */
+.lp-layout-calendar #lpPaneQuill.ql-container.ql-snow {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 12rem;
+  max-height: none;
+  overflow: visible;
+}
+
+.lp-layout-calendar #lpPaneQuill.ql-container.ql-snow > .ql-editor {
+  min-height: max(12rem, 100%);
+  height: auto;
+  max-height: none;
+  overflow-y: visible;
+}
 .lp-nav-btn {
   padding: 0.3rem 0.7rem;
   border: 1px solid var(--border);
@@ -1278,7 +1310,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem 0.7rem;
-  font-size: 0.78rem;
+  font-size: var(--font-base);
   color: var(--text-secondary, #888);
   /* Legend now sits below the grid — flip the divider to the top edge so
    * it separates the legend from the grid above rather than the header. */
@@ -1325,7 +1357,7 @@
   padding: 3px 5px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  font-size: 0.78rem;
+  font-size: var(--font-xxs);
   color: var(--text-primary);
   background: transparent;
   user-select: none;
@@ -1382,5 +1414,26 @@
   letter-spacing: 0.5px;
   margin-bottom: 8px;
   margin-left: 2px;
+}
+
+.tc-day-color,
+.tc-legend-swatch {
+  width: var(--font-xxs);
+  height: var(--font-xxs);
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.tc-day-color {
+  margin-bottom: var(--day-gap);
+  margin-left: var(--day-gap);
+}
+
+.tc-legend-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
 }
 }

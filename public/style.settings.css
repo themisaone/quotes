@@ -943,10 +943,38 @@ details.settings-section-desc .settings-section-lead {
   color: var(--text-primary);
 }
 
-.subtype-columns-header > span:nth-child(2) { width: 3rem; }
-.subtype-columns-header > span:nth-child(3) { width: 6.5rem; }
-.subtype-columns-header > span:nth-child(4) { flex: 1; min-width: 4rem; }
+.subtype-columns-header .subtype-col-icon { width: 3rem; }
+.subtype-columns-header .subtype-col-color { width: 2.2rem; }
+.subtype-columns-header .subtype-col-key { width: 6.5rem; }
+.subtype-columns-header .subtype-col-label { flex: 1; min-width: 4rem; }
 .subtype-columns-header .subtype-col-actions { width: 2rem; }
+
+.subtype-calendar-choice {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin: 0 0 0.45rem;
+  font-size: var(--font-base);
+  color: var(--text-primary);
+}
+
+.subtype-calendar-choice label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0;
+  cursor: pointer;
+}
+
+.subtype-color {
+  width: 2.2rem;
+  height: 1.7rem;
+  padding: 0;
+  border: 1px solid var(--border);
+  background: transparent;
+  flex-shrink: 0;
+  cursor: pointer;
+}
 
 .subtype-list {
   display: flex;

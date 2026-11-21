@@ -240,21 +240,6 @@ function buildTitledRowHtml(note, idx, isSelected, opts) {
     </div>`;
 }
 
-/** Right pane keeps at least the left list height when side-by-side; clear when stacked. */
-function syncTitledPaneHeight(container) {
-  const list = container.querySelector('.lp-list-titled');
-  const pane = container.querySelector('.lp-pane');
-  const layout = container.querySelector('.lp-layout');
-  if (!list || !pane) return;
-  requestAnimationFrame(() => {
-    pane.style.height = '';
-    pane.style.maxHeight = '';
-    const cols = layout ? getComputedStyle(layout).gridTemplateColumns.trim() : '';
-    const stacked = !cols || cols.split(/\s+/).length <= 1;
-    pane.style.minHeight = stacked ? '' : `${list.offsetHeight}px`;
-  });
-}
-
 function buildRowHtml(note, idx, isSelected, opts) {
   const { currentNoteTypeFilter, getTrainingTypes, getQuoteTypes } = opts;
   const noteType = note.note_type || currentNoteTypeFilter || 'note';
@@ -538,9 +523,13 @@ export function renderListPaneView(container, notes, opts) {
       initialMonth = now.getMonth() + 1;
     }
 
+    const calendarNoteType = opts.currentNoteTypeFilter || 'training';
+    const calendarType = (opts.globalSettings?.noteTypes || [])
+      .find((type) => type.value === calendarNoteType);
     renderTrainingCalendar(calHost, {
-      noteType:         opts.currentNoteTypeFilter || 'training',
-      getTrainingTypes: () => opts.getTrainingTypes(opts.currentNoteTypeFilter || 'training'),
+      noteType:         calendarNoteType,
+      calendarMarker:   calendarType?.calendarMarker === 'colors' ? 'colors' : 'icons',
+      getTrainingTypes: () => opts.getTrainingTypes(calendarNoteType),
       enableSubtypeFilter: opts.hasTrainingSubTypes === true,
       initialNoteId:    opts.initialNoteId ?? null,
       initialYear,
@@ -601,7 +590,6 @@ export function renderListPaneView(container, notes, opts) {
   const initRow = list.querySelector(`.lp-row[data-lp-idx="${_selectedIndex}"]`);
   if (initRow) initRow.scrollIntoView({ block: 'nearest' });
 
-  if (useTitledLayout) syncTitledPaneHeight(container);
 }
 
 /**

@@ -85,6 +85,7 @@
   --d-gap-sm:     0.450rem;  /* was 0.5   */
   --d-gap-base:   0.900rem;  /* was 1.0   */
   --d-gap-lg:     1.350rem;  /* was 1.5   */
+  --d-day-gap:    5px;
 
   /* Components */
   --d-btn-height: 2.25rem;   /* was 2.5   */
@@ -92,6 +93,8 @@
   /* Cards */
   --d-card-pad:   1.125rem;  /* checked - card pad */
   --d-card-gap:   0.9rem;    /* schecked - space under a card and between columns */
+
+  --d-list-header-thumb-size: 80px;
 
   /* Active scale. Component rules use these names.
      Desktop (here) points them at --d-*.
@@ -120,6 +123,10 @@
   --btn-height: var(--d-btn-height);
   --card-pad: var(--d-card-pad);
   --card-gap: var(--d-card-gap);
+  --day-gap:  var(--d-day-gap);
+  --list-header-thumb-size: var(--d-list-header-thumb-size);
+
+
 }
 
 html {

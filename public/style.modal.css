@@ -487,7 +487,7 @@
 
   #quoteModal .modal-content.modal-wide:not(.modal-expanded) .modal-body,
   #quoteModal .modal-content.modal-wide:not(.modal-expanded) #quoteForm,
-  #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-modal-lane-text,
+  #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-modal-lane-text:not(.hidden),
   #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-modal-text-body:not(.hidden),
   #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-modal-editor-col,
   #quoteModal .modal-content.modal-wide:not(.modal-expanded) #quoteEditor {
@@ -497,7 +497,7 @@
 
   #quoteModal .modal-content.modal-wide:not(.modal-expanded) #quoteForm,
   #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-modal-lanes,
-  #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-modal-lane-text,
+  #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-modal-lane-text:not(.hidden),
   #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-modal-text-body:not(.hidden),
   #quoteModal .modal-content.modal-wide:not(.modal-expanded) .quote-modal-editor-col,
   #quoteModal .modal-content.modal-wide:not(.modal-expanded) #quoteEditor {
@@ -545,7 +545,7 @@
 
 #quoteModal .modal-content.modal-expanded .modal-body,
 #quoteModal .modal-content.modal-expanded #quoteForm,
-#quoteModal .modal-content.modal-expanded .quote-modal-lane-text,
+#quoteModal .modal-content.modal-expanded .quote-modal-lane-text:not(.hidden),
 #quoteModal .modal-content.modal-expanded .quote-modal-text-body:not(.hidden),
 #quoteModal .modal-content.modal-expanded .quote-modal-editor-col,
 #quoteModal .modal-content.modal-expanded #quoteEditor {
@@ -555,7 +555,7 @@
 
 #quoteModal .modal-content.modal-expanded #quoteForm,
 #quoteModal .modal-content.modal-expanded .quote-modal-lanes,
-#quoteModal .modal-content.modal-expanded .quote-modal-lane-text,
+#quoteModal .modal-content.modal-expanded .quote-modal-lane-text:not(.hidden),
 #quoteModal .modal-content.modal-expanded .quote-modal-text-body:not(.hidden),
 #quoteModal .modal-content.modal-expanded .quote-modal-editor-col,
 #quoteModal .modal-content.modal-expanded #quoteEditor {

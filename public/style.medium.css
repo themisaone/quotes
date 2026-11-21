@@ -69,7 +69,7 @@
 
     /* Spacing */
     --m-pad-xs:     0.20rem;   /* strip padding, tight gaps */
-    --m-pad-sm:     0.65rem;   /* modal header block, small elements */
+    --m-pad-sm:     0.4rem;   /* modal header block, small elements */
     --m-pad-base:   0.4rem;   /* page-header gap, form-group gap */
     --m-pad-md:     0.2rem;   /* modal body, page-header margin-bottom, container block, search section margin */
     --m-pad-lg:     0.90rem;   /* card inner padding */
@@ -88,6 +88,10 @@
     --m-gap-sm:     0.450rem;
     --m-gap-base:   0.900rem;
     --m-gap-lg:     1.350rem;
+    --m-day-gap:    2px;
+
+    --m-list-header-thumb-size: 60px;
+
 
     /* Active scale for this breakpoint. Component rules read --pad-* / --font-* / … */
     --pad-xs: var(--m-pad-xs);
@@ -110,6 +114,8 @@
     --btn-height: var(--m-btn-height);
     --card-pad: var(--m-card-pad);
     --card-gap: var(--m-card-gap);
+    --day-gap:  var(--m-day-gap);
+    --list-header-thumb-size: var(--m-list-header-thumb-size);
   }
 
   /* Gallery option is available on medium screens; JS hides the numbered options */
@@ -483,7 +489,7 @@
 
   #quoteModal .modal-content .modal-body,
   #quoteModal .modal-content #quoteForm,
-  #quoteModal .modal-content .quote-modal-lane-text,
+  #quoteModal .modal-content .quote-modal-lane-text:not(.hidden),
   #quoteModal .modal-content .quote-modal-text-body:not(.hidden),
   #quoteModal .modal-content .quote-modal-editor-col,
   #quoteModal .modal-content #quoteEditor {
@@ -493,7 +499,7 @@
 
   #quoteModal .modal-content #quoteForm,
   #quoteModal .modal-content .quote-modal-lanes,
-  #quoteModal .modal-content .quote-modal-lane-text,
+  #quoteModal .modal-content .quote-modal-lane-text:not(.hidden),
   #quoteModal .modal-content .quote-modal-text-body:not(.hidden),
   #quoteModal .modal-content .quote-modal-editor-col,
   #quoteModal .modal-content #quoteEditor {

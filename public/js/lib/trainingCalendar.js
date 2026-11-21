@@ -10,6 +10,8 @@
  * renderTrainingCalendar(container, opts) → void
  *   opts:
  *     getTrainingTypes : () => [{ value, label, icon, color }]
+ *     calendarMarker?  : 'icons' | 'colors'. Day marks use sub-type icons
+ *                        unless this is 'colors'.
  *     onSelectNote     : (monthNotes, idx) => void | false | Promise<void | false>
  *                        Called when the user clicks a day that has trainings.
  *                        monthNotes is the full list of trainings for the
@@ -86,6 +88,14 @@ function monthLabel(year, month) {
  * Build a map: subTypeValue → { label, icon }.  Unknown values fall back to a
  * generic label so we always render something.
  */
+function safeHex(color) {
+  return /^#[0-9a-fA-F]{6}$/.test(color || '') ? color : '';
+}
+
+function usesColorMarkers() {
+  return _opts.calendarMarker === 'colors';
+}
+
 function buildTypeMap(getTrainingTypes) {
   const map = new Map();
   try {
@@ -94,6 +104,7 @@ function buildTypeMap(getTrainingTypes) {
       map.set(t.value, {
         label: t.label || t.value,
         icon:  t.icon  || '',
+        color: safeHex(t.color),
       });
     });
   } catch { /* ignore */ }
@@ -101,7 +112,7 @@ function buildTypeMap(getTrainingTypes) {
 }
 
 function fallbackTypeMeta(value) {
-  return { label: value || 'Unknown', icon: '' };
+  return { label: value || 'Unknown', icon: '', color: '' };
 }
 
 function getCalendarNoteType() {
@@ -357,11 +368,17 @@ function renderHeader() {
 }
 
 function renderLegend(typeMap) {
+  const useColors = usesColorMarkers();
   const items = Array.from(typeMap.entries())
-    .map(([value, meta]) => `
+    .map(([, meta]) => {
+      const mark = useColors
+        ? `<span class="tc-legend-swatch" style="background:${meta.color || '#9ca3af'}"></span> `
+        : (meta.icon ? `${meta.icon} ` : '');
+      return `
       <span class="tc-legend-item">
-        <span class="tc-legend-label">${meta.icon ? meta.icon + ' ' : ''}${meta.label}</span>
-      </span>`)
+        <span class="tc-legend-label">${mark}${meta.label}</span>
+      </span>`;
+    })
     .join('');
   return `<div class="tc-legend">${items || '<span class="tc-legend-empty">No training sub-types configured</span>'}</div>`;
 }
@@ -381,13 +398,17 @@ function renderDayCell(year, month, day, dayTrainings, typeMap, isToday, isSelec
   if (isToday)          cellClasses += ' tc-day-today';
   if (isSelected)       cellClasses += ' tc-day-selected';
 
-  // Icons row — one glyph per distinct sub-type.  Sub-types without a
-  // configured icon are skipped rather than leaving a blank gap.
+  // One mark per distinct sub-type. Icons skip a sub-type with no glyph.
+  // Colors always draw a dot, gray when that sub-type has no color yet.
   const iconsHtml = subs.length
     ? (() => {
-        const glyphs = subs
-          .map(v => (typeMap.get(v) || fallbackTypeMeta(v)).icon)
-          .filter(Boolean);
+        const marks = subs.map(v => typeMap.get(v) || fallbackTypeMeta(v));
+        if (usesColorMarkers()) {
+          return `<div class="tc-day-icons">${marks.map(meta =>
+            `<span class="tc-day-color" style="background:${meta.color || '#9ca3af'}"></span>`
+          ).join('')}</div>`;
+        }
+        const glyphs = marks.map(meta => meta.icon).filter(Boolean);
         if (!glyphs.length) return '';
         return `<div class="tc-day-icons">${
           glyphs.map(g => `<span class="tc-day-icon">${g}</span>`).join('')

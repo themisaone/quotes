@@ -3243,6 +3243,7 @@ function openAddModal() {
     updateModalLabels,
     globalSettings
   );
+  syncCompactSelectFacade(elements.noteTypeSelect);
   
   // Update app state
   editingQuoteId = state.editingQuoteId;
@@ -3314,6 +3315,7 @@ function openEditModal(quote, options = {}) {
       ? { skipTextEditor: true, modalTitleText: 'Properties' }
       : {}
   );
+  syncCompactSelectFacade(elements.noteTypeSelect);
 
   if (propertiesOnly) {
     syncPaneTextToModalHidden();
